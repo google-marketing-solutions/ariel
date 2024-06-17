@@ -1,7 +1,12 @@
-"""An audio processing module of the Google EMEA gPS Data Science Ariel."""
+"""An audio processing module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
 import subprocess
 from absl import logging
+from typing import Mapping, Sequence
+from pyannote.audio import Pipeline
+import torch
+from typing import Mapping, Sequence
+from pyannote.audio import Pipeline
 
 
 def build_demucs_command(
@@ -107,4 +112,31 @@ def execute_demcus_command(command: str) -> None:
     )
     logging.info(result.stdout)
   except subprocess.CalledProcessError as e:
-    logging.warning(f"Error separating audio: {e}\n{e.stderr}")
+    logging.error(f"Error separating audio: {e}\n{e.stderr}")
+
+
+def create_pyannote_timestamps(
+    *,
+    vocals_filepath: str,
+    number_of_speakers: int,
+    pipeline: Pipeline,
+) -> Sequence[Mapping[str, float]]:
+  """Creates timestamps from a vocals file using Pyannote speaker diarization.
+
+  Args:
+      vocals_filepath: The path to the vocals file.
+      number_of_speakers: The number of speakers in the vocal audio file.
+      pipeline: Pre-loaded Pyannote Pipeline object.
+
+  Returns:
+      A list of dictionaries containing start and end timestamps for each
+      speaker segment.
+  """
+  if torch.cuda.is_available():
+    pipeline.to(torch.device("cuda"))
+  diarization = pipeline(vocals_filepath, num_speakers=number_of_speakers)
+  timestamps = [
+      {"start": segment.start, "end": segment.end}
+      for segment, _, _ in diarization.itertracks(yield_label=True)
+  ]
+  return timestamps

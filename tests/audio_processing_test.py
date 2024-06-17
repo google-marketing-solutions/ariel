@@ -1,10 +1,15 @@
 """Tests for utility functions in audio_processing.py."""
 
 import subprocess
+import tempfile
+from unittest.mock import MagicMock
 from unittest.mock import patch
 from absl.testing import absltest
 from absl.testing import parameterized
 from ariel import audio_processing
+from moviepy.audio.AudioClip import AudioArrayClip
+import numpy as np
+from pyannote.audio import Pipeline
 
 
 class BuildDemucsCommandTest(parameterized.TestCase):
@@ -105,7 +110,7 @@ class TestExecuteDemcusCommand(absltest.TestCase):
     mock_run.return_value.stderr = ""
     mock_run.return_value.returncode = 0
     audio_processing.execute_demcus_command(
-        "echo 'Command executed successfully'"
+        command="echo 'Command executed successfully'"
     )
     mock_run.assert_called_once_with(
         "echo 'Command executed successfully'",
@@ -120,7 +125,7 @@ class TestExecuteDemcusCommand(absltest.TestCase):
     mock_run.side_effect = subprocess.CalledProcessError(
         1, "command", "Error message"
     )
-    audio_processing.execute_demcus_command("invalid_command")
+    audio_processing.execute_demcus_command(command="invalid_command")
     mock_run.assert_called_once_with(
         "invalid_command",
         shell=True,
@@ -130,5 +135,29 @@ class TestExecuteDemcusCommand(absltest.TestCase):
     )
 
 
+class CreatePyannoteTimestampsTest(absltest.TestCase):
+
+  def test_create_timestamps_with_silence(self):
+    with tempfile.NamedTemporaryFile(suffix=".wav") as temp_file:
+      silence_duration = 10
+      fps = 44100
+      silence = AudioArrayClip(
+          np.zeros((int(fps * silence_duration), 2), dtype=np.int16),
+          fps=fps,
+      )
+      silence.write_audiofile(temp_file.name)
+      mock_pipeline = MagicMock(spec=Pipeline)
+      mock_pipeline.return_value.itertracks.return_value = [
+          (MagicMock(start=0.0, end=silence_duration), None, None)
+      ]
+      timestamps = audio_processing.create_pyannote_timestamps(
+          vocals_filepath=temp_file.name,
+          number_of_speakers=0,
+          pipeline=mock_pipeline,
+      )
+      self.assertEqual(timestamps, [{"start": 0.0, "end": 10}])
+
+
 if __name__ == "__main__":
   absltest.main()
+
