@@ -186,3 +186,7 @@ class TestCutAndSaveAudio(absltest.TestCase):
             os.path.exists(expected_file) and results == [expected_result],
             f"File not found or dictionary not as expected: {expected_file}",
         )
+
+
+if __name__ == "__main__":
+  absltest.main()

@@ -5,4 +5,4 @@ demucs == 4.0.1
 torch == 2.3.1
 pyannote.audio == 3.3.0
 pydub == 0.25.1
-
+faster-whisper == 1.0.2
