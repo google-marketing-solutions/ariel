@@ -1,4 +1,5 @@
 import os
+import subprocess
 from typing import Final
 from moviepy.editor import VideoFileClip
 import torch
@@ -120,3 +121,21 @@ def build_demucs_command(
 
   command_parts.append(audio_file)
   return " ".join(command_parts)
+
+
+def execute_demcus_command(command: str) -> None:
+  """Executes a Demucs command using subprocess.
+
+  Demucs is a model using AI/ML to detach dialogues
+  from the rest of the audio file.
+
+  Args:
+      command: The string representing the command to execute.
+  """
+  try:
+    result = subprocess.run(
+        command, shell=True, capture_output=True, text=True, check=True
+    )
+    print(result.stdout)
+  except subprocess.CalledProcessError as e:
+    print(f"Error separating audio: {e}\n{e.stderr}")

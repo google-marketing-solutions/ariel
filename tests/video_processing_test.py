@@ -1,5 +1,7 @@
 import os
+import subprocess
 import tempfile
+from unittest.mock import patch
 from absl.testing import absltest
 from absl.testing import parameterized
 from ariel import video_processing
@@ -141,6 +143,37 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           int24=True,
           float32=True,
       )
+
+
+class TestExecuteCommand(absltest.TestCase):
+
+  @patch("subprocess.run")
+  def test_execute_command_success(self, mock_run):
+    mock_run.return_value.stdout = "Command executed successfully"
+    mock_run.return_value.stderr = ""
+    mock_run.return_value.returncode = 0
+    video_processing.execute_demcus_command("echo 'Command executed successfully'")
+    mock_run.assert_called_once_with(
+        "echo 'Command executed successfully'",
+        shell=True,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+  @patch("subprocess.run")
+  def test_execute_command_failure(self, mock_run):
+    mock_run.side_effect = subprocess.CalledProcessError(
+        1, "command", "Error message"
+    )
+    video_processing.execute_demcus_command("invalid_command")
+    mock_run.assert_called_once_with(
+        "invalid_command",
+        shell=True,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
 
 
 if __name__ == "__main__":
