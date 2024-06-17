@@ -1,5 +1,6 @@
 """Tests for utility functions in audio_processing.py."""
 
+import os
 import subprocess
 import tempfile
 from unittest.mock import MagicMock
@@ -158,6 +159,30 @@ class CreatePyannoteTimestampsTest(absltest.TestCase):
       self.assertEqual(timestamps, [{"start": 0.0, "end": 10}])
 
 
-if __name__ == "__main__":
-  absltest.main()
+class TestCutAndSaveAudio(absltest.TestCase):
 
+  def test_cut_and_save_audio(self):
+    with tempfile.NamedTemporaryFile(suffix=".mp3") as temporary_file:
+      silence_duration = 10
+      silence = AudioArrayClip(
+          np.zeros((int(44100 * silence_duration), 2), dtype=np.int16),
+          fps=44100,
+      )
+      silence.write_audiofile(temporary_file.name)
+      input_data = [{"start": 0.0, "end": 5.0}]
+      with tempfile.TemporaryDirectory() as output_folder:
+        results = audio_processing.cut_and_save_audio(
+            input_data=input_data,
+            music_file_path=temporary_file.name,
+            output_folder=output_folder,
+        )
+        expected_file = os.path.join(output_folder, "chunk_0.0_5.0.mp3")
+        expected_result = {
+            "path": os.path.join(output_folder, "chunk_0.0_5.0.mp3"),
+            "start": 0.0,
+            "end": 5.0,
+        }
+        self.assertTrue(
+            os.path.exists(expected_file) and results == [expected_result],
+            f"File not found or dictionary not as expected: {expected_file}",
+        )

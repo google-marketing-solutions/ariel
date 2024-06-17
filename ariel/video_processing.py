@@ -1,4 +1,4 @@
-"""A video processing module of the Google EMEA gPS Data Science Ariel."""
+"""An audio processing module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
 import os
 from typing import Final

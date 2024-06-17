@@ -4,9 +4,8 @@ import subprocess
 from absl import logging
 from typing import Mapping, Sequence
 from pyannote.audio import Pipeline
+from pydub import AudioSegment
 import torch
-from typing import Mapping, Sequence
-from pyannote.audio import Pipeline
 
 
 def build_demucs_command(
@@ -112,7 +111,7 @@ def execute_demcus_command(command: str) -> None:
     )
     logging.info(result.stdout)
   except subprocess.CalledProcessError as e:
-    logging.error(f"Error separating audio: {e}\n{e.stderr}")
+    logging.warning(f"Error separating audio: {e}\n{e.stderr}")
 
 
 def create_pyannote_timestamps(
@@ -140,3 +139,44 @@ def create_pyannote_timestamps(
       for segment, _, _ in diarization.itertracks(yield_label=True)
   ]
   return timestamps
+
+
+def cut_and_save_audio(
+    *,
+    input_data: Sequence[Mapping[str, float]],
+    music_file_path: str,
+    output_folder: str,
+) -> Sequence[Mapping[str, float]]:
+  """Cuts an audio file into chunks based on provided time ranges and saves each chunk to a file.
+
+  Args:
+      input_data: The list of dictionaries, each containing 'start' and 'end'
+        times in seconds.
+      music_file_path: The path to the audio file to be cut.
+      output_folder: The path to the folder where the audio chunks will be
+        saved.
+
+  Returns:
+      A list of dictionaries, each containing the path to the saved chunk, and
+      the original start and end times.
+  """
+
+  audio = AudioSegment.from_file(music_file_path)
+  chunk_results = []
+
+  for item in input_data:
+    start_time_ms = int(item["start"] * 1000)
+    end_time_ms = int(item["end"] * 1000)
+    chunk = audio[start_time_ms:end_time_ms]
+
+    chunk_filename = f"chunk_{item['start']}_{item['end']}.mp3"
+    chunk_path = f"{output_folder}/{chunk_filename}"
+
+    chunk.export(chunk_path, format="mp3")
+    chunk_results.append({
+        "path": chunk_path,
+        "start": item["start"],
+        "end": item["end"],
+    })
+
+  return chunk_results
