@@ -1,8 +1,9 @@
 """An audio processing module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
 import subprocess
-from absl import logging
 from typing import Mapping, Sequence
+from absl import logging
+from typing import  Mapping, Sequence
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
 import torch
