@@ -188,5 +188,66 @@ class TestCutAndSaveAudio(absltest.TestCase):
         )
 
 
+class TestInsertAudioAtTimestamps(absltest.TestCase):
+
+  def test_insert_audio_at_timestamps(self):
+    with tempfile.TemporaryDirectory() as temporary_directory:
+      background_audio_path = f"{temporary_directory}/test_background.mp3"
+      silence_duration = 10
+      silence = AudioArrayClip(
+          np.zeros((int(44100 * silence_duration), 2), dtype=np.int16),
+          fps=44100,
+      )
+      silence.write_audiofile(background_audio_path)
+      audio_chunk_path = f"{temporary_directory}/test_chunk.mp3"
+      chunk_duration = 2
+      chunk = AudioArrayClip(
+          np.zeros((int(44100 * chunk_duration), 2), dtype=np.int16),
+          fps=44100,
+      )
+      chunk.write_audiofile(audio_chunk_path)
+      utterance_metadata = [{
+          "start": 3.0,
+          "end": 5.0,
+          "dubbed_path": audio_chunk_path,
+      }]
+      with tempfile.NamedTemporaryFile(
+          suffix=".mp3", dir=temporary_directory
+      ) as temporary_output:
+        output_path = audio_processing.insert_audio_at_timestamps(
+            utterance_metadata=utterance_metadata,
+            background_audio_path=background_audio_path,
+            output_path=temporary_output.name,
+        )
+        self.assertTrue(os.path.exists(output_path))
+
+
+class MixMusicAndVocalsTest(absltest.TestCase):
+
+  def test_mix_music_and_vocals(self):
+    with tempfile.TemporaryDirectory() as temporary_directory:
+      background_audio_path = f"{temporary_directory}/test_background.mp3"
+      vocals_audio_path = f"{temporary_directory}/test_vocals.mp3"
+      output_audio_path = f"{temporary_directory}/test_mixed.mp3"
+      silence_duration = 10
+      silence_background = AudioArrayClip(
+          np.zeros((int(44100 * silence_duration), 2), dtype=np.int16),
+          fps=44100,
+      )
+      silence_background.write_audiofile(background_audio_path)
+      silence_duration = 5
+      silence_vocals = AudioArrayClip(
+          np.zeros((int(44100 * silence_duration), 2), dtype=np.int16),
+          fps=44100,
+      )
+      silence_vocals.write_audiofile(vocals_audio_path)
+      audio_processing.merge_background_and_vocals(
+          background_path=background_audio_path,
+          vocals_path=vocals_audio_path,
+          output_path=output_audio_path,
+      )
+      self.assertTrue(os.path.exists(output_audio_path))
+
+
 if __name__ == "__main__":
   absltest.main()

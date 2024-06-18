@@ -1,12 +1,16 @@
 """An audio processing module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
 import subprocess
-from typing import Mapping, Sequence
+from typing import Final, Mapping, Sequence
 from absl import logging
-from typing import  Mapping, Sequence
+from typing import Final
+from typing import Mapping, Sequence
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
 import torch
+
+_BACKGROUND_VOLUME_ADJUSTMENT: Final[float] = 5.0
+_VOCALS_VOLUME_ADJUSTMENT: Final[float] = 0.0
 
 
 def build_demucs_command(
@@ -181,3 +185,55 @@ def cut_and_save_audio(
     })
 
   return chunk_results
+
+
+def insert_audio_at_timestamps(
+    *,
+    utterance_metadata: Sequence[Mapping[str, str | float]],
+    background_audio_path: str,
+    output_path: str,
+) -> str:
+  """Inserts audio chunks into a background audio track at specified timestamps.
+
+  Args:
+    utterance_metadata: A sequence of utterance metadata, each represented as a
+      dictionary with keys: "start", "end", "chunk_path", "translated_text",
+      "speaker_id", "ssml_gender" and "dubbed_path".
+    background_audio_path: Path to the background audio file.
+    output_path: Path to save the output audio file.
+
+  Returns:
+    The path to the output audio file.
+  """
+
+  background_audio = AudioSegment.from_mp3(background_audio_path)
+  total_duration = background_audio.duration_seconds
+  output_audio = AudioSegment.silent(duration=total_duration * 1000)
+  for item in utterance_metadata:
+    audio_chunk = AudioSegment.from_mp3(item["dubbed_path"])
+    start_time = int(item["start"] * 1000)
+    output_audio = output_audio.overlay(
+        audio_chunk, position=start_time, loop=False
+    )
+  output_audio.export(output_path, format="mp3")
+  return output_path
+
+
+def merge_background_and_vocals(
+    *, background_path: str, vocals_path: str, output_path: str
+) -> None:
+  """Mixes background music and vocals tracks, normalizes the volume, and exports the result.
+
+  Args:
+      background_path: Path to the background music MP3 file.
+      vocals_path: Path to the vocals MP3 file.
+      output_path: Path to save the mixed MP3 file.
+  """
+
+  background = AudioSegment.from_mp3(background_path).normalize() - _BACKGROUND_VOLUME_ADJUSTMENT
+  vocals = AudioSegment.from_mp3(vocals_path).normalize() - _VOCALS_VOLUME_ADJUSTMENT
+  shortest_length = min(len(background), len(vocals))
+  background = background[:shortest_length]
+  vocals = vocals[:shortest_length]
+  mixed_audio = background.overlay(vocals)
+  mixed_audio.export(output_path, format="mp3")
