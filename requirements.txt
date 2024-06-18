@@ -7,3 +7,4 @@ pyannote.audio == 3.3.0
 pydub == 0.25.1
 faster-whisper == 1.0.2
 google-generativeai == 0.6.0
+google-cloud-texttospeech == 2.16.3
