@@ -55,5 +55,38 @@ class TestSplitAudioVideo(absltest.TestCase):
       )
 
 
+class CombineAudioVideoTest(absltest.TestCase):
+
+  def test_combine_audio_video(self):
+    with tempfile.TemporaryDirectory() as temporary_directory:
+      audio_path = f"{temporary_directory}/audio.mp3"
+      audio_duration = 5
+      audio = AudioArrayClip(
+          np.zeros((int(44100 * audio_duration), 2), dtype=np.int16),
+          fps=44100,
+      )
+      audio.write_audiofile(audio_path)
+      video_duration = 5
+      directory = temporary_directory
+      video_path = os.path.join(directory, "video.mp4")
+      red = ColorClip((256, 200), color=(255, 0, 0)).set_duration(
+          video_duration
+      )
+      green = ColorClip((256, 200), color=(0, 255, 0)).set_duration(
+          video_duration
+      )
+      blue = ColorClip((256, 200), color=(0, 0, 255)).set_duration(
+          video_duration
+      )
+      combined_arrays = clips_array([[red, green, blue]])
+      combined_arrays.fps = 30
+      combined_arrays.write_videofile(video_path)
+      output_path = f"{temporary_directory}/combined.mp4"
+      video_processing.combine_audio_video(
+          video_path=video_path, audio_path=audio_path, output_path=output_path
+      )
+      self.assertTrue(os.path.exists(output_path))
+
+
 if __name__ == "__main__":
   absltest.main()
