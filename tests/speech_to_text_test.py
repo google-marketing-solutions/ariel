@@ -217,5 +217,46 @@ class DiarizeSpeakersTest(absltest.TestCase):
     mock_wait_for_file_active.assert_called_once_with(file=mock_file)
 
 
+class AddSpeakerInfoTest(absltest.TestCase):
+
+  def test_add_speaker_info(self):
+    utterance_metadata = [
+        {"text": "Hello", "start": 0.0, "stop": 1.0},
+        {"text": "world", "start": 1.0, "stop": 2.0},
+    ]
+    speaker_info = [("speaker1", "male"), ("speaker2", "female")]
+    expected_result = [
+        {
+            "text": "Hello",
+            "start": 0.0,
+            "stop": 1.0,
+            "speaker_id": "speaker1",
+            "ssml_gender": "male",
+        },
+        {
+            "text": "world",
+            "start": 1.0,
+            "stop": 2.0,
+            "speaker_id": "speaker2",
+            "ssml_gender": "female",
+        },
+    ]
+    result = speech_to_text.add_speaker_info(utterance_metadata, speaker_info)
+    self.assertEqual(result, expected_result)
+
+  def test_add_speaker_info_unequal_lengths(self):
+    utterance_metadata = [
+        {"text": "Hello", "start": 0.0, "stop": 1.0},
+        {"text": "world", "start": 1.0, "stop": 2.0},
+    ]
+    speaker_info = [("speaker1", "male")]
+    with self.assertRaisesRegex(
+        ValueError,
+        "The length of 'utterance_metadata' and 'speaker_info' must be the"
+        " same.",
+    ):
+      speech_to_text.add_speaker_info(utterance_metadata, speaker_info)
+
+
 if __name__ == "__main__":
   absltest.main()

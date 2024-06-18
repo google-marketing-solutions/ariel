@@ -6,7 +6,6 @@ from absl import logging
 from faster_whisper import WhisperModel
 import google.generativeai as genai
 from google.generativeai.types import file_types
-from google.generativeai.types import HarmBlockThreshold, HarmCategory
 import torch
 
 _DEFAULT_MODEL: Final[str] = "large-v3"
@@ -191,3 +190,45 @@ def diarize_speakers(
   response = chat_session.send_message(prompt)
   chat_session.rewind()
   return process_speaker_diarization_response(response=response.text)
+
+
+def add_speaker_info(
+    utterance_metadata: Sequence[Mapping[str, str | float]],
+    speaker_info: Sequence[tuple[str, str]],
+) -> Sequence[Mapping[str, str | float]]:
+  """Adds speaker information to each utterance metadata.
+
+  Args:
+      utterance_metadata: The sequence of utterance metadata dictionaries. Each
+        dictionary represents a chunk of audio and contains the "text", "start",
+        "stop" keys.
+      speaker_info: The sequence of tuples containing (speaker_id, gender)
+        information. The order of tuples in this list should correspond to the
+        order of utterance_metadata.
+
+  Returns:
+      The sequence of updated utterance metadata dictionaries with speaker
+      information added.
+      Each dictionary will include the "speaker_id" and "ssml_gender" keys.
+
+  Raises:
+      ValueError: If the lengths of "utterance_metadata" and "speaker_info" do
+      not match.
+  """
+
+  if len(utterance_metadata) != len(speaker_info):
+    raise ValueError(
+        "The length of 'utterance_metadata' and 'speaker_info' must be the"
+        " same."
+    )
+
+  return [
+      {
+          "text": chunk["text"],
+          "start": chunk["start"],
+          "stop": chunk["stop"],
+          "speaker_id": speaker_id,
+          "ssml_gender": gender,
+      }
+      for chunk, (speaker_id, gender) in zip(utterance_metadata, speaker_info)
+  ]
