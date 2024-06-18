@@ -6,6 +6,7 @@ from absl import logging
 from faster_whisper import WhisperModel
 import google.generativeai as genai
 from google.generativeai.types import file_types
+from google.generativeai.types import HarmBlockThreshold, HarmCategory
 import torch
 
 _DEFAULT_MODEL: Final[str] = "large-v3"
@@ -19,6 +20,11 @@ _DEFAULT_TRANSCRIPTION_MODEL: Final[WhisperModel] = WhisperModel(
 _PROCESSING: Final[str] = "PROCESSING"
 _ACTIVE: Final[str] = "ACTIVE"
 _SLEEP_TIME: Final[int] = 10
+_DIARIZATION_PROMPT: Final[str] = (
+    "You got the video attached. The transcript is: {}. The number of speakers"
+    " in the video is: {}. You must provide only {} annotations, each for one"
+    " dictionary in the transcript. And the specific instructions are: {}."
+)
 
 
 def transcribe(
@@ -146,3 +152,42 @@ def process_speaker_diarization_response(
   ]
 
   return tuples_list
+
+
+def diarize_speakers(
+    *,
+    video_path: str,
+    video_transcript: Sequence[Mapping[str, str | float]],
+    number_of_speakers: int,
+    model: genai.GenerativeModel,
+    diarization_instructions: str | None = None,
+) -> Sequence[tuple[str, str]]:
+  """Diarizes speakers in a video using a Gemini generative model.
+
+  Args:
+      video_path: The path to the video file.
+      video_transcript: The transcript of the video, represented as a sequence
+        of mappings with keys "start", "stop", and "text".
+      number_of_speakers: The number of speakers in the video.
+      model: The pre-configured Gemini GenerativeModel instance.
+      diarization_instructions: The specific instructions for diarization.
+
+  Returns:
+      A sequence of tuples representing speaker annotations, where each tuple
+      contains the speaker name and the start time of the speaker
+      segment.
+  """
+  file = upload_to_gemini(video_path=video_path)
+  wait_for_file_active(file=file)
+  chat_session = model.start_chat(
+      history=[{"role": "user", "parts": file}]
+  )
+  prompt = _DIARIZATION_PROMPT.format(
+      video_transcript,
+      number_of_speakers,
+      len(video_transcript),
+      diarization_instructions or "",
+  )
+  response = chat_session.send_message(prompt)
+  chat_session.rewind()
+  return process_speaker_diarization_response(response=response.text)
