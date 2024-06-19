@@ -1,22 +1,13 @@
-"""A speech-to-text module of Ariel package from the Google EMEA gTech Ads Data Science."""
+"""A speech-to-text module of the Google EMEA gPS Data Science Ariel."""
 
+import os
 import time
 from typing import Final, Mapping, Sequence
 from absl import logging
 from faster_whisper import WhisperModel
 import google.generativeai as genai
 from google.generativeai.types import file_types
-from google.generativeai.types import HarmBlockThreshold, HarmCategory
-import torch
 
-_DEFAULT_MODEL: Final[str] = "large-v3"
-_DEVICE: Final[str] = "gpu" if torch.cuda.is_available() else "cpu"
-_COMPUTE_TYPE: Final[str] = "float16" if _DEVICE == "gpu" else "int8"
-_DEFAULT_TRANSCRIPTION_MODEL: Final[WhisperModel] = WhisperModel(
-    model_size_or_path=_DEFAULT_MODEL,
-    device=_DEVICE,
-    compute_type=_COMPUTE_TYPE,
-)
 _PROCESSING: Final[str] = "PROCESSING"
 _ACTIVE: Final[str] = "ACTIVE"
 _SLEEP_TIME: Final[int] = 10
@@ -25,6 +16,10 @@ _DIARIZATION_PROMPT: Final[str] = (
     " in the video is: {}. You must provide only {} annotations, each for one"
     " dictionary in the transcript. And the specific instructions are: {}."
 )
+_MIME_TYPE_MAPPING: Final[Mapping[str, str]] = {
+    ".mp4": "video/mp4",
+    ".mp3": "audio/mpeg",
+}
 
 
 def transcribe(
@@ -32,7 +27,7 @@ def transcribe(
     vocals_filepath: str,
     advertiser_name: str,
     original_language: str,
-    model: WhisperModel = _DEFAULT_TRANSCRIPTION_MODEL,
+    model: WhisperModel,
 ) -> str:
   """Transcribes an audio.
 
@@ -59,7 +54,7 @@ def transcribe_audio_chunks(
     utterance_metadata: Sequence[Mapping[str, float | str]],
     advertiser_name: str,
     original_language: str,
-    model: WhisperModel = _DEFAULT_TRANSCRIPTION_MODEL,
+    model: WhisperModel,
 ) -> Sequence[Mapping[str, float | str]]:
   """Transcribes each audio chunk in the provided list and returns a new list with transcriptions added.
 
@@ -87,16 +82,23 @@ def transcribe_audio_chunks(
   return updated_utterance_metadata
 
 
-def upload_to_gemini(*, video_path: str) -> file_types.File:
+def upload_to_gemini(file_path: str) -> file_types.File:
   """Uploads an MP4 video file to Gemini and logs the URI.
 
   Args:
-      video_path: The path to the MP4 video file to upload.
+      file_path: The path to the MP4 video or MP3 audio file to upload.
 
   Returns:
       The uploaded file object.
   """
-  file = genai.upload_file(video_path, mime_type="video/mp4")
+  _, extension = os.path.splitext(file_path)
+  if extension not in _MIME_TYPE_MAPPING.keys():
+    raise ValueError(
+        "The extension must be either"
+        f" {(', ').join(_MIME_TYPE_MAPPING.keys())}. Received: {extension}"
+    )
+  mime_type = _MIME_TYPE_MAPPING[extension]
+  file = genai.upload_file(file_path, mime_type=mime_type)
   logging.info(f"Uploaded file '{file.display_name}' as: {file.uri}")
   return file
 
@@ -156,16 +158,16 @@ def process_speaker_diarization_response(
 
 def diarize_speakers(
     *,
-    video_file: str,
+    file_path: str,
     utterance_metadata: Sequence[Mapping[str, str | float]],
     number_of_speakers: int,
     model: genai.GenerativeModel,
     diarization_instructions: str | None = None,
 ) -> Sequence[tuple[str, str]]:
-  """Diarizes speakers in a video using a Gemini generative model.
+  """Diarizes speakers in a video/audio using a Gemini generative model.
 
   Args:
-      video_file: The path to the video file.
+      file_path: The path to the MP4 video or MP3 audio file.
       utterance_metadata: The transcript of the video, represented as a sequence
         of mappings with keys "start", "stop", and "text".
       number_of_speakers: The number of speakers in the video.
@@ -177,7 +179,7 @@ def diarize_speakers(
       contains the speaker name and the start time of the speaker
       segment.
   """
-  file = upload_to_gemini(video_file=video_file)
+  file = upload_to_gemini(file_path=file_path)
   wait_for_file_active(file=file)
   chat_session = model.start_chat(history=[{"role": "user", "parts": file}])
   prompt = _DIARIZATION_PROMPT.format(

@@ -63,18 +63,34 @@ class TranscribeTests(absltest.TestCase):
       )
 
 
-class UploadToGeminiTest(absltest.TestCase):
+class UploadToGeminiTest(parameterized.TestCase):
 
-  def test_upload_to_gemini(self):
+  @parameterized.named_parameters(
+      ("mp4_success", "test_path.mp4", "test_file.mp4", "video/mp4"),
+      ("mp3_success", "test_path.mp3", "test_file.mp3", "audio/mpeg"),
+  )
+  def test_upload_to_gemini_success(
+      self, file_path, expected_display_name, expected_mime_type
+  ):
     mock_file = MagicMock(spec=file_types.File)
-    mock_file.display_name = "test_file.mp4"
-    mock_file.uri = "gs://test-bucket/test_file.mp4"
-    with patch.object(genai, "upload_file", return_value=mock_file):
-      file = speech_to_text.upload_to_gemini(video_path="test_path.mp4")
+    mock_file.display_name = expected_display_name
+    mock_file.uri = f"gs://test-bucket/{expected_display_name}"
+
+    with patch(
+        "google.generativeai.upload_file", return_value=mock_file
+    ) as mock_upload_file:
+      result_file = speech_to_text.upload_to_gemini(file_path=file_path)
+      self.assertEqual(result_file.display_name, expected_display_name)
       self.assertEqual(
-          [file.display_name, file.uri],
-          ["test_file.mp4", "gs://test-bucket/test_file.mp4"],
+          result_file.uri, f"gs://test-bucket/{expected_display_name}"
       )
+      mock_upload_file.assert_called_once_with(
+          file_path, mime_type=expected_mime_type
+      )
+
+  def test_upload_to_gemini_invalid_extension(self):
+    with self.assertRaises(ValueError):
+      speech_to_text.upload_to_gemini(file_path="test_path.txt")
 
 
 class WaitForFileActiveTest(absltest.TestCase):
@@ -154,7 +170,7 @@ class DiarizeSpeakersTest(absltest.TestCase):
     mock_upload_to_gemini.return_value = mock_file
 
     result = speech_to_text.diarize_speakers(
-        video_file=video_file,
+        file_path=video_file,
         utterance_metadata=utterance_metadata,
         number_of_speakers=number_of_speakers,
         model=model,
@@ -162,7 +178,7 @@ class DiarizeSpeakersTest(absltest.TestCase):
     )
 
     self.assertEqual(result, [("speaker_1", "Male"), ("speaker_2", "Female")])
-    mock_upload_to_gemini.assert_called_once_with(video_file=video_file)
+    mock_upload_to_gemini.assert_called_once_with(file_path=video_file)
     mock_wait_for_file_active.assert_called_once_with(file=mock_file)
     model.start_chat.assert_called_once_with(
         history=[{"role": "user", "parts": mock_file}]
@@ -202,14 +218,14 @@ class DiarizeSpeakersTest(absltest.TestCase):
 
     with self.assertRaises(speech_to_text.FileProcessingError) as context:
       speech_to_text.diarize_speakers(
-          video_file=video_file,
+          file_path=video_file,
           utterance_metadata=utterance_metadata,
           number_of_speakers=number_of_speakers,
           model=model,
       )
 
     self.assertEqual(str(context.exception), "File processing failed.")
-    mock_upload_to_gemini.assert_called_once_with(video_file=video_file)
+    mock_upload_to_gemini.assert_called_once_with(file_path=video_file)
     mock_wait_for_file_active.assert_called_once_with(file=mock_file)
 
 

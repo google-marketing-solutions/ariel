@@ -1,10 +1,7 @@
 """Tests for utility functions in text_to_speech.py."""
 
-from collections import namedtuple
 import tempfile
-from tempfile import NamedTemporaryFile
-from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from absl.testing import absltest
 from absl.testing import parameterized
 from ariel import text_to_speech
