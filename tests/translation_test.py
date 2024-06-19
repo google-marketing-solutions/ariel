@@ -58,8 +58,8 @@ class TranslateScriptTest(absltest.TestCase):
     mock_chat_session.send_message.return_value = MagicMock(text="Test.")
     mock_model.start_chat.return_value = mock_chat_session
     translation_output = translation.translate_script(
-        transcript="Test.",
-        company_name="Advertiser Name",
+        script="Test.",
+        advertiser_name="Advertiser Name",
         translation_instructions="Translate to Polish.",
         target_language="pl-PL",
         model=mock_model,
@@ -140,10 +140,11 @@ class AddTranslationsTest(parameterized.TestCase):
       ),
   )
   def test_add_translations(
-      self, utterance_metadata, text_string, expected_translated_metadata
+      self, utterance_metadata, translated_script, expected_translated_metadata
   ):
     updated_metadata = translation.add_translations(
-        utterance_metadata, text_string
+        utterance_metadata=utterance_metadata,
+        translated_script=translated_script,
     )
     self.assertEqual(updated_metadata, expected_translated_metadata)
 
@@ -157,11 +158,14 @@ class AddTranslationsTest(parameterized.TestCase):
             "ssml_gender": "male",
         },
     ]
-    text_string = "Bonjour<BREAK>Le Monde<BREAK>Another Segment"
+    translated_script = "Bonjour<BREAK>Le Monde<BREAK>Another Segment"
     with self.assertRaisesRegex(
         ValueError, "The utterance metadata must be of the same length"
     ):
-      translation.add_translations(utterance_metadata, text_string)
+      translation.add_translations(
+          utterance_metadata=utterance_metadata,
+          translated_script=translated_script,
+      )
 
 
 class MergeUtterancesTest(parameterized.TestCase):
@@ -251,9 +255,15 @@ class MergeUtterancesTest(parameterized.TestCase):
       ),
   )
   def test_merge_utterances(
-      self, utterances, timestamp_threshold, expected_merged_utterances
+      self,
+      utterance_metadata,
+      minimum_merge_threshold,
+      expected_merged_utterances,
   ):
-    merged = translation.merge_utterances(utterances, timestamp_threshold)
+    merged = translation.merge_utterances(
+        utterance_metadata=utterance_metadata,
+        minimum_merge_threshold=minimum_merge_threshold,
+    )
     self.assertSequenceEqual(merged, expected_merged_utterances)
 
 

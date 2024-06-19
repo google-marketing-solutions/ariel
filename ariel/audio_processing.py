@@ -8,9 +8,14 @@ from typing import Mapping, Sequence
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
 import torch
+import os
+import re
 
 _BACKGROUND_VOLUME_ADJUSTMENT: Final[float] = 5.0
 _VOCALS_VOLUME_ADJUSTMENT: Final[float] = 0.0
+_DEFAULT_DUBBED_VOCALS_AUDIO_FILE: Final[str] = "dubbed_vocals.mp3"
+_DEFAULT_DUBBED_AUDIO_FILE: Final[str] = "dubbed_audio.mp3"
+
 
 
 def build_demucs_command(
@@ -116,19 +121,73 @@ def execute_demcus_command(command: str) -> None:
     )
     logging.info(result.stdout)
   except subprocess.CalledProcessError as e:
-    logging.warning(f"Error separating audio: {e}\n{e.stderr}")
+    logging.error(f"Error separating audio: {e}\n{e.stderr}")
+
+
+def extract_command_info(command: str) -> tuple[str, str, str]:
+  """Extracts folder name, output file extension, and input file name from a Demucs command.
+
+  Args:
+      command: The Demucs command string.
+
+  Returns:
+      tuple: A tuple containing (folder_name, output_file_extension,
+      input_file_name).
+  """
+
+  folder_pattern = r"-o\s+(\S+)"
+  flac_pattern = r"--flac"
+  mp3_pattern = r"--mp3"
+  int24_or_float32_pattern = r"--(int24|float32)"
+  input_file_pattern = r"(\S+)$"
+  folder_match = re.search(folder_pattern, command)
+  flac_match = re.search(flac_pattern, command)
+  mp3_match = re.search(mp3_pattern, command)
+  int24_or_float32_match = re.search(int24_or_float32_pattern, command)
+  input_file_match = re.search(input_file_pattern, command)
+
+  outout_directory = folder_match.group(1)
+  input_file_name_with_ext = input_file_match.group(1)
+  input_file_name_no_ext = os.path.splitext(input_file_name_with_ext)[0]
+  if flac_match:
+    output_file_extension = ".flac"
+  elif mp3_match:
+    output_file_extension = ".mp3"
+  elif int24_or_float32_match:
+    output_file_extension = ".wav"
+  else:
+    output_file_extension = ".wav"
+  return outout_directory, output_file_extension, input_file_name_no_ext
+
+
+def assemble_split_audio_file_paths(command: str) -> tuple[str, str]:
+  """Returns paths to the audio files with vocals and no vocals.
+
+    Args:
+        command: The Demucs command string.
+
+  Returns:
+      A tuple with a path to the file with the audio with vocals only
+      and the other with the background sound only.
+  """
+  outout_directory, output_file_extension, input_file_name = (
+      extract_command_info(command)
+  )
+  audio_vocals_file = f"{outout_directory}/htdemucs/{input_file_name}_audio/vocals{output_file_extension}"
+  audio_background_file = f"{outout_directory}/htdemucs/{input_file_name}_audio/no_vocals{output_file_extension}"
+  return audio_vocals_file, audio_background_file
 
 
 def create_pyannote_timestamps(
     *,
-    vocals_filepath: str,
+    audio_file: str,
     number_of_speakers: int,
     pipeline: Pipeline,
 ) -> Sequence[Mapping[str, float]]:
   """Creates timestamps from a vocals file using Pyannote speaker diarization.
 
   Args:
-      vocals_filepath: The path to the vocals file.
+      audio_file: The path to the audio file with vocals.
       number_of_speakers: The number of speakers in the vocal audio file.
       pipeline: Pre-loaded Pyannote Pipeline object.
 
@@ -138,27 +197,27 @@ def create_pyannote_timestamps(
   """
   if torch.cuda.is_available():
     pipeline.to(torch.device("cuda"))
-  diarization = pipeline(vocals_filepath, num_speakers=number_of_speakers)
-  timestamps = [
+  diarization = pipeline(audio_file, num_speakers=number_of_speakers)
+  utterance_metadata = [
       {"start": segment.start, "end": segment.end}
       for segment, _, _ in diarization.itertracks(yield_label=True)
   ]
-  return timestamps
+  return utterance_metadata
 
 
 def cut_and_save_audio(
     *,
-    input_data: Sequence[Mapping[str, float]],
-    music_file_path: str,
-    output_folder: str,
+    utterance_metadata: Sequence[Mapping[str, float]],
+    audio_file: str,
+    output_directory: str,
 ) -> Sequence[Mapping[str, float]]:
   """Cuts an audio file into chunks based on provided time ranges and saves each chunk to a file.
 
   Args:
-      input_data: The list of dictionaries, each containing 'start' and 'end'
-        times in seconds.
-      music_file_path: The path to the audio file to be cut.
-      output_folder: The path to the folder where the audio chunks will be
+      utterance_metadata: The list of dictionaries, each containing 'start' and
+        'end' times in seconds.
+      audio_file: The path to the audio file to be cut.
+      output_directory: The path to the folder where the audio chunks will be
         saved.
 
   Returns:
@@ -166,32 +225,32 @@ def cut_and_save_audio(
       the original start and end times.
   """
 
-  audio = AudioSegment.from_file(music_file_path)
-  chunk_results = []
+  audio = AudioSegment.from_file(audio_file)
+  updated_utterance_metadata = []
 
-  for item in input_data:
+  for item in utterance_metadata:
     start_time_ms = int(item["start"] * 1000)
     end_time_ms = int(item["end"] * 1000)
     chunk = audio[start_time_ms:end_time_ms]
 
     chunk_filename = f"chunk_{item['start']}_{item['end']}.mp3"
-    chunk_path = f"{output_folder}/{chunk_filename}"
+    chunk_path = f"{output_directory}/{chunk_filename}"
 
     chunk.export(chunk_path, format="mp3")
-    chunk_results.append({
+    updated_utterance_metadata.append({
         "path": chunk_path,
         "start": item["start"],
         "end": item["end"],
     })
 
-  return chunk_results
+  return updated_utterance_metadata
 
 
 def insert_audio_at_timestamps(
     *,
     utterance_metadata: Sequence[Mapping[str, str | float]],
-    background_audio_path: str,
-    output_path: str,
+    background_audio_file: str,
+    output_directory: str,
 ) -> str:
   """Inserts audio chunks into a background audio track at specified timestamps.
 
@@ -199,14 +258,14 @@ def insert_audio_at_timestamps(
     utterance_metadata: A sequence of utterance metadata, each represented as a
       dictionary with keys: "start", "end", "chunk_path", "translated_text",
       "speaker_id", "ssml_gender" and "dubbed_path".
-    background_audio_path: Path to the background audio file.
-    output_path: Path to save the output audio file.
+    background_audio_file: Path to the background audio file.
+    output_directory: Path to save the output audio file.
 
   Returns:
     The path to the output audio file.
   """
 
-  background_audio = AudioSegment.from_mp3(background_audio_path)
+  background_audio = AudioSegment.from_mp3(background_audio_file)
   total_duration = background_audio.duration_seconds
   output_audio = AudioSegment.silent(duration=total_duration * 1000)
   for item in utterance_metadata:
@@ -215,25 +274,41 @@ def insert_audio_at_timestamps(
     output_audio = output_audio.overlay(
         audio_chunk, position=start_time, loop=False
     )
-  output_audio.export(output_path, format="mp3")
-  return output_path
+  dubbed_vocals_audio_file = os.path.join(
+      output_directory, _DEFAULT_DUBBED_VOCALS_AUDIO_FILE
+  )
+  output_audio.export(dubbed_vocals_audio_file, format="mp3")
+  return dubbed_vocals_audio_file
 
 
 def merge_background_and_vocals(
-    *, background_path: str, vocals_path: str, output_path: str
-) -> None:
+    *,
+    background_audio_file: str,
+    dubbed_vocals_audio_file: str,
+    output_directory: str,
+) -> str:
   """Mixes background music and vocals tracks, normalizes the volume, and exports the result.
 
   Args:
-      background_path: Path to the background music MP3 file.
-      vocals_path: Path to the vocals MP3 file.
-      output_path: Path to save the mixed MP3 file.
+      background_audio_file: Path to the background music MP3 file.
+      dubbed_vocals_audio_file: Path to the vocals MP3 file.
+      output_directory: Path to save the mixed MP3 file.
+
+  Returns:
+    The path to the output audio file with merged dubbed vocals and original
+    background audio.
   """
 
-  background = AudioSegment.from_mp3(background_path).normalize() - _BACKGROUND_VOLUME_ADJUSTMENT
-  vocals = AudioSegment.from_mp3(vocals_path).normalize() - _VOCALS_VOLUME_ADJUSTMENT
+  background = AudioSegment.from_mp3(background_audio_file)
+  vocals = AudioSegment.from_mp3(dubbed_vocals_audio_file)
+  background = background.normalize()
+  vocals = vocals.normalize()
+  background = background - _BACKGROUND_VOLUME_ADJUSTMENT
+  vocals = vocals - _VOCALS_VOLUME_ADJUSTMENT
   shortest_length = min(len(background), len(vocals))
   background = background[:shortest_length]
   vocals = vocals[:shortest_length]
   mixed_audio = background.overlay(vocals)
-  mixed_audio.export(output_path, format="mp3")
+  dubbed_audio_file = os.path.join(output_directory, _DEFAULT_DUBBED_AUDIO_FILE)
+  mixed_audio.export(dubbed_audio_file, format="mp3")
+  return dubbed_audio_file

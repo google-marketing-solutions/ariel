@@ -103,6 +103,97 @@ class BuildDemucsCommandTest(parameterized.TestCase):
       )
 
 
+class TestExtractCommandInfo(parameterized.TestCase):
+
+  @parameterized.named_parameters(
+      (
+          "Standard MP3",
+          (
+              "python3 -m demucs.separate -o out_folder --mp3 --two-stems"
+              " audio.mp3"
+          ),
+          "out_folder",
+          ".mp3",
+          "audio",
+      ),
+      (
+          "FLAC Output",
+          "python3 -m demucs.separate -o results --flac --shifts 5 audio.flac",
+          "results",
+          ".flac",
+          "audio",
+      ),
+      (
+          "WAV with Int24",
+          "python3 -m demucs.separate -o wav_output --int24 song.wav",
+          "wav_output",
+          ".wav",
+          "song",
+      ),
+      (
+          "WAV with Float32",
+          "python3 -m demucs.separate -o float32_dir --float32 music.mp3",
+          "float32_dir",
+          ".wav",
+          "music",
+      ),
+  )
+  def test_valid_command(
+      self, command, expected_folder, expected_ext, expected_input
+  ):
+    result = audio_processing.extract_command_info(command)
+    self.assertEqual(
+        result,
+        (expected_folder, expected_ext, expected_input),
+        f"Failed for command: {command}",
+    )
+
+
+class TestAssembleSplitAudioFilePaths(parameterized.TestCase):
+
+  @parameterized.named_parameters(
+      (
+          "Standard MP3",
+          (
+              "python3 -m demucs.separate -o test --device cpu --shifts 10"
+              " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --segment"
+              " 60 audio.mp3"
+          ),
+          "test/htdemucs/audio_audio/vocals.wav",
+          "test/htdemucs/audio_audio/no_vocals.wav",
+      ),
+      (
+          "FLAC Output",
+          "python3 -m demucs.separate -o out_flac --flac audio.mp3",
+          "out_flac/htdemucs/audio_audio/vocals.flac",
+          "out_flac/htdemucs/audio_audio/no_vocals.flac",
+      ),
+      (
+          "WAV Output (int24)",
+          "python3 -m demucs.separate -o out_wav --int24 audio.mp3",
+          "out_wav/htdemucs/audio_audio/vocals.wav",
+          "out_wav/htdemucs/audio_audio/no_vocals.wav",
+      ),
+      (
+          "WAV Output (float32)",
+          "python3 -m demucs.separate -o out_float32 --float32 audio.mp3",
+          "out_float32/htdemucs/audio_audio/vocals.wav",
+          "out_float32/htdemucs/audio_audio/no_vocals.wav",
+      ),
+  )
+  def test_assemble_paths(
+      self, command, expected_vocals_path, expected_background_path
+  ):
+    """Tests assembling paths for various Demucs commands and formats."""
+    actual_vocals_path, actual_background_path = (
+        audio_processing.assemble_split_audio_file_paths(command)
+    )
+    self.assertEqual(
+        [actual_vocals_path, actual_background_path],
+        [expected_vocals_path, expected_background_path],
+    )
+
+
 class TestExecuteDemcusCommand(absltest.TestCase):
 
   @patch("subprocess.run")
@@ -139,20 +230,19 @@ class TestExecuteDemcusCommand(absltest.TestCase):
 class CreatePyannoteTimestampsTest(absltest.TestCase):
 
   def test_create_timestamps_with_silence(self):
-    with tempfile.NamedTemporaryFile(suffix=".wav") as temp_file:
+    with tempfile.NamedTemporaryFile(suffix=".wav") as temporary_file:
       silence_duration = 10
-      fps = 44100
       silence = AudioArrayClip(
-          np.zeros((int(fps * silence_duration), 2), dtype=np.int16),
-          fps=fps,
+          np.zeros((int(44100 * silence_duration), 2), dtype=np.int16),
+          fps=44100,
       )
-      silence.write_audiofile(temp_file.name)
+      silence.write_audiofile(temporary_file.name)
       mock_pipeline = MagicMock(spec=Pipeline)
       mock_pipeline.return_value.itertracks.return_value = [
           (MagicMock(start=0.0, end=silence_duration), None, None)
       ]
       timestamps = audio_processing.create_pyannote_timestamps(
-          vocals_filepath=temp_file.name,
+          audio_file=temporary_file.name,
           number_of_speakers=0,
           pipeline=mock_pipeline,
       )
@@ -169,16 +259,16 @@ class TestCutAndSaveAudio(absltest.TestCase):
           fps=44100,
       )
       silence.write_audiofile(temporary_file.name)
-      input_data = [{"start": 0.0, "end": 5.0}]
-      with tempfile.TemporaryDirectory() as output_folder:
+      utterance_metadata = [{"start": 0.0, "end": 5.0}]
+      with tempfile.TemporaryDirectory() as output_directory:
         results = audio_processing.cut_and_save_audio(
-            input_data=input_data,
-            music_file_path=temporary_file.name,
-            output_folder=output_folder,
+            utterance_metadata=utterance_metadata,
+            audio_file=temporary_file.name,
+            output_directory=output_directory,
         )
-        expected_file = os.path.join(output_folder, "chunk_0.0_5.0.mp3")
+        expected_file = os.path.join(output_directory, "chunk_0.0_5.0.mp3")
         expected_result = {
-            "path": os.path.join(output_folder, "chunk_0.0_5.0.mp3"),
+            "path": os.path.join(output_directory, "chunk_0.0_5.0.mp3"),
             "start": 0.0,
             "end": 5.0,
         }
@@ -192,13 +282,13 @@ class TestInsertAudioAtTimestamps(absltest.TestCase):
 
   def test_insert_audio_at_timestamps(self):
     with tempfile.TemporaryDirectory() as temporary_directory:
-      background_audio_path = f"{temporary_directory}/test_background.mp3"
+      background_audio_file = f"{temporary_directory}/test_background.mp3"
       silence_duration = 10
       silence = AudioArrayClip(
           np.zeros((int(44100 * silence_duration), 2), dtype=np.int16),
           fps=44100,
       )
-      silence.write_audiofile(background_audio_path)
+      silence.write_audiofile(background_audio_file)
       audio_chunk_path = f"{temporary_directory}/test_chunk.mp3"
       chunk_duration = 2
       chunk = AudioArrayClip(
@@ -211,15 +301,12 @@ class TestInsertAudioAtTimestamps(absltest.TestCase):
           "end": 5.0,
           "dubbed_path": audio_chunk_path,
       }]
-      with tempfile.NamedTemporaryFile(
-          suffix=".mp3", dir=temporary_directory
-      ) as temporary_output:
-        output_path = audio_processing.insert_audio_at_timestamps(
-            utterance_metadata=utterance_metadata,
-            background_audio_path=background_audio_path,
-            output_path=temporary_output.name,
-        )
-        self.assertTrue(os.path.exists(output_path))
+      output_path = audio_processing.insert_audio_at_timestamps(
+          utterance_metadata=utterance_metadata,
+          background_audio_file=background_audio_file,
+          output_directory=temporary_directory,
+      )
+      self.assertTrue(os.path.exists(output_path))
 
 
 class MixMusicAndVocalsTest(absltest.TestCase):
@@ -228,7 +315,6 @@ class MixMusicAndVocalsTest(absltest.TestCase):
     with tempfile.TemporaryDirectory() as temporary_directory:
       background_audio_path = f"{temporary_directory}/test_background.mp3"
       vocals_audio_path = f"{temporary_directory}/test_vocals.mp3"
-      output_audio_path = f"{temporary_directory}/test_mixed.mp3"
       silence_duration = 10
       silence_background = AudioArrayClip(
           np.zeros((int(44100 * silence_duration), 2), dtype=np.int16),
@@ -241,10 +327,10 @@ class MixMusicAndVocalsTest(absltest.TestCase):
           fps=44100,
       )
       silence_vocals.write_audiofile(vocals_audio_path)
-      audio_processing.merge_background_and_vocals(
-          background_path=background_audio_path,
-          vocals_path=vocals_audio_path,
-          output_path=output_audio_path,
+      output_audio_path = audio_processing.merge_background_and_vocals(
+          background_audio_file=background_audio_path,
+          dubbed_vocals_audio_file=vocals_audio_path,
+          output_directory=temporary_directory,
       )
       self.assertTrue(os.path.exists(output_audio_path))
 

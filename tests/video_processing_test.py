@@ -81,9 +81,10 @@ class CombineAudioVideoTest(absltest.TestCase):
       combined_arrays = clips_array([[red, green, blue]])
       combined_arrays.fps = 30
       combined_arrays.write_videofile(video_path)
-      output_path = f"{temporary_directory}/combined.mp4"
-      video_processing.combine_audio_video(
-          video_path=video_path, audio_path=audio_path, output_path=output_path
+      output_path = video_processing.combine_audio_video(
+          video_file=video_path,
+          dubbed_audio_file=audio_path,
+          output_directory=temporary_directory,
       )
       self.assertTrue(os.path.exists(output_path))
 

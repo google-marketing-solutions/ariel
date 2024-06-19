@@ -6,6 +6,7 @@ from absl import logging
 from faster_whisper import WhisperModel
 import google.generativeai as genai
 from google.generativeai.types import file_types
+from google.generativeai.types import HarmBlockThreshold, HarmCategory
 import torch
 
 _DEFAULT_MODEL: Final[str] = "large-v3"
@@ -55,7 +56,7 @@ def transcribe(
 
 def transcribe_audio_chunks(
     *,
-    chunk_data_list: Sequence[Mapping[str, float | str]],
+    utterance_metadata: Sequence[Mapping[str, float | str]],
     advertiser_name: str,
     original_language: str,
     model: WhisperModel = _DEFAULT_TRANSCRIPTION_MODEL,
@@ -63,8 +64,8 @@ def transcribe_audio_chunks(
   """Transcribes each audio chunk in the provided list and returns a new list with transcriptions added.
 
   Args:
-      chunk_data_list: A sequence of mappings, each containing information about
-        a single audio chunk, including the 'path' key.
+      utterance_metadata: A sequence of mappings, each containing information
+        about a single audio chunk, including the 'path' key.
       advertiser_name: The name of the advertiser.
       original_language: The original language of the audio.
       model: The pre-initialized transcription model.
@@ -73,8 +74,8 @@ def transcribe_audio_chunks(
       A new sequence of mappings, where each mapping is a copy of the original
       with an added 'text' key containing the transcription.
   """
-  transcribed_chunk_data = []
-  for item in chunk_data_list:
+  updated_utterance_metadata = []
+  for item in utterance_metadata:
     new_item = item.copy()
     new_item["text"] = transcribe(
         vocals_filepath=item["path"],
@@ -82,11 +83,11 @@ def transcribe_audio_chunks(
         original_language=original_language,
         model=model,
     )
-    transcribed_chunk_data.append(new_item)
-  return transcribed_chunk_data
+    updated_utterance_metadata.append(new_item)
+  return updated_utterance_metadata
 
 
-def upload_to_gemini(video_path: str) -> file_types.File:
+def upload_to_gemini(*, video_path: str) -> file_types.File:
   """Uploads an MP4 video file to Gemini and logs the URI.
 
   Args:
@@ -155,8 +156,8 @@ def process_speaker_diarization_response(
 
 def diarize_speakers(
     *,
-    video_path: str,
-    video_transcript: Sequence[Mapping[str, str | float]],
+    video_file: str,
+    utterance_metadata: Sequence[Mapping[str, str | float]],
     number_of_speakers: int,
     model: genai.GenerativeModel,
     diarization_instructions: str | None = None,
@@ -164,8 +165,8 @@ def diarize_speakers(
   """Diarizes speakers in a video using a Gemini generative model.
 
   Args:
-      video_path: The path to the video file.
-      video_transcript: The transcript of the video, represented as a sequence
+      video_file: The path to the video file.
+      utterance_metadata: The transcript of the video, represented as a sequence
         of mappings with keys "start", "stop", and "text".
       number_of_speakers: The number of speakers in the video.
       model: The pre-configured Gemini GenerativeModel instance.
@@ -176,15 +177,13 @@ def diarize_speakers(
       contains the speaker name and the start time of the speaker
       segment.
   """
-  file = upload_to_gemini(video_path=video_path)
+  file = upload_to_gemini(video_file=video_file)
   wait_for_file_active(file=file)
-  chat_session = model.start_chat(
-      history=[{"role": "user", "parts": file}]
-  )
+  chat_session = model.start_chat(history=[{"role": "user", "parts": file}])
   prompt = _DIARIZATION_PROMPT.format(
-      video_transcript,
+      utterance_metadata,
       number_of_speakers,
-      len(video_transcript),
+      len(utterance_metadata),
       diarization_instructions or "",
   )
   response = chat_session.send_message(prompt)

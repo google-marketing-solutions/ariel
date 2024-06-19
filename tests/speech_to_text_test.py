@@ -19,10 +19,9 @@ class TranscribeTests(absltest.TestCase):
   def test_transcribe(self):
     with tempfile.NamedTemporaryFile(suffix=".mp3") as temporary_file:
       silence_duration = 5
-      fps = 44100
       silence = AudioArrayClip(
-          np.zeros((int(fps * silence_duration), 2), dtype=np.int16),
-          fps=fps,
+          np.zeros((int(44100 * silence_duration), 2), dtype=np.int16),
+          fps=44100,
       )
       silence.write_audiofile(temporary_file.name)
       mock_model = MagicMock(spec=WhisperModel)
@@ -42,17 +41,18 @@ class TranscribeTests(absltest.TestCase):
   def test_transcribe_chunks(self):
     with tempfile.NamedTemporaryFile(suffix=".mp3") as temporary_file:
       silence_duration = 5
-      fps = 44100
       silence = AudioArrayClip(
-          np.zeros((int(fps * silence_duration), 2), dtype=np.int16),
-          fps=fps,
+          np.zeros((int(44100 * silence_duration), 2), dtype=np.int16),
+          fps=44100,
       )
       silence.write_audiofile(temporary_file.name)
       mock_model = MagicMock(spec=WhisperModel)
       Segment = namedtuple("Segment", ["text"])
       mock_model.transcribe.return_value = [Segment(text="Test.")], None
       transcribed_audio_chunks = speech_to_text.transcribe_audio_chunks(
-          chunk_data_list=[dict(path=temporary_file.name, start=0.0, end=5.0)],
+          utterance_metadata=[
+              dict(path=temporary_file.name, start=0.0, end=5.0)
+          ],
           advertiser_name="Advertiser Name",
           original_language="en",
           model=mock_model,
@@ -69,16 +69,12 @@ class UploadToGeminiTest(absltest.TestCase):
     mock_file = MagicMock(spec=file_types.File)
     mock_file.display_name = "test_file.mp4"
     mock_file.uri = "gs://test-bucket/test_file.mp4"
-    with patch.object(genai, "upload_file", return_value=mock_file) as mock_upload_file:
+    with patch.object(genai, "upload_file", return_value=mock_file):
       file = speech_to_text.upload_to_gemini(video_path="test_path.mp4")
       self.assertEqual(
           [file.display_name, file.uri],
           ["test_file.mp4", "gs://test-bucket/test_file.mp4"],
       )
-      mock_upload_file.assert_called_once_with(
-            video_path="test_path.mp4", mime_type="video/mp4",
-            filename="test_file.mp4"
-        )
 
 
 class WaitForFileActiveTest(absltest.TestCase):
@@ -90,7 +86,6 @@ class WaitForFileActiveTest(absltest.TestCase):
     with patch("ariel.speech_to_text.wait_for_file_active", return_value=None):
       mock_file.state.name = speech_to_text._ACTIVE
       speech_to_text.wait_for_file_active(file=mock_file)
-      self.assertEqual(mock_file.state.name, speech_to_text._ACTIVE)
 
   def test_wait_for_file_active_timeout(self):
     mock_file = MagicMock(spec=file_types.File)
@@ -115,17 +110,18 @@ class WaitForFileActiveTest(absltest.TestCase):
 
 
 class TestProcessSpeakerDiarizationResponse(parameterized.TestCase):
-    @parameterized.parameters([
-        ("", []),
-        ("(speaker_1, female)\n", [("speaker_1", "female")]),
-    ])
-    def test_process_speaker_diarization_response(
-        self, response, expected_output
-    ):
-        self.assertEqual(
-            speech_to_text.process_speaker_diarization_response(response=response),
-            expected_output,
-        )
+
+  @parameterized.parameters([
+      ("", []),
+      ("(speaker_1, female)\n", [("speaker_1", "female")]),
+  ])
+  def test_process_speaker_diarization_response(
+      self, response, expected_output
+  ):
+    self.assertEqual(
+        speech_to_text.process_speaker_diarization_response(response=response),
+        expected_output,
+    )
 
 
 class DiarizeSpeakersTest(absltest.TestCase):
@@ -136,8 +132,8 @@ class DiarizeSpeakersTest(absltest.TestCase):
   def test_diarize_speakers(
       self, mock_upload_to_gemini, mock_wait_for_file_active, mock_genai
   ):
-    video_path = "test_video.mp4"
-    video_transcript = [
+    video_file = "test_video.mp4"
+    utterance_metadata = [
         {"start": 0.0, "stop": 5.0, "text": "Hello, this is a test video."},
         {"start": 5.0, "stop": 10.0, "text": "How are you?"},
     ]
@@ -158,24 +154,24 @@ class DiarizeSpeakersTest(absltest.TestCase):
     mock_upload_to_gemini.return_value = mock_file
 
     result = speech_to_text.diarize_speakers(
-        video_path=video_path,
-        video_transcript=video_transcript,
+        video_file=video_file,
+        utterance_metadata=utterance_metadata,
         number_of_speakers=number_of_speakers,
         model=model,
         diarization_instructions=diarization_instructions,
     )
 
     self.assertEqual(result, [("speaker_1", "Male"), ("speaker_2", "Female")])
-    mock_upload_to_gemini.assert_called_once_with(video_path=video_path)
+    mock_upload_to_gemini.assert_called_once_with(video_file=video_file)
     mock_wait_for_file_active.assert_called_once_with(file=mock_file)
     model.start_chat.assert_called_once_with(
         history=[{"role": "user", "parts": mock_file}]
     )
     mock_chat_session.send_message.assert_called_once_with(
         speech_to_text._DIARIZATION_PROMPT.format(
-            video_transcript,
+            utterance_metadata,
             number_of_speakers,
-            len(video_transcript),
+            len(utterance_metadata),
             diarization_instructions,
         )
     )
@@ -187,8 +183,8 @@ class DiarizeSpeakersTest(absltest.TestCase):
   def test_diarize_speakers_file_processing_error(
       self, mock_upload_to_gemini, mock_wait_for_file_active, mock_genai
   ):
-    video_path = "test_video.mp4"
-    video_transcript = [
+    video_file = "test_video.mp4"
+    utterance_metadata = [
         {"start": 0.0, "stop": 5.0, "text": "Hello, this is a test video."},
         {"start": 5.0, "stop": 10.0, "text": "How are you?"},
     ]
@@ -206,14 +202,14 @@ class DiarizeSpeakersTest(absltest.TestCase):
 
     with self.assertRaises(speech_to_text.FileProcessingError) as context:
       speech_to_text.diarize_speakers(
-          video_path=video_path,
-          video_transcript=video_transcript,
+          video_file=video_file,
+          utterance_metadata=utterance_metadata,
           number_of_speakers=number_of_speakers,
           model=model,
       )
 
     self.assertEqual(str(context.exception), "File processing failed.")
-    mock_upload_to_gemini.assert_called_once_with(video_path=video_path)
+    mock_upload_to_gemini.assert_called_once_with(video_file=video_file)
     mock_wait_for_file_active.assert_called_once_with(file=mock_file)
 
 

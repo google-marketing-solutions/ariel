@@ -1,4 +1,4 @@
-"""A text-to-speech module of of Ariel package from the Google EMEA gTech Ads Data Science."""
+"""A text-to-speech module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
 import os
 from typing import Final, Mapping, Sequence
