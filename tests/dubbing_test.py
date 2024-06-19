@@ -29,50 +29,6 @@ class TestIsVideo(parameterized.TestCase):
       dubbing.is_video(input_file=input_file)
 
 
-class TestSaveUtteranceMetadata(absltest.TestCase):
-
-  def test_successful_save(self):
-    utterance_metadata = [{
-        "start": 0.0,
-        "end": 5.2,
-        "chunk_path": "chunk_1.wav",
-        "translated_text": "Hello, how are you?",
-        "speaker_id": 1,
-        "ssml_gender": "male",
-        "dubbed_path": "dubbed_1.wav",
-    }]
-
-    with tempfile.TemporaryDirectory() as output_directory:
-      utterance_metadata_file = dubbing.save_utterance_metadata(
-          utterance_metadata=utterance_metadata,
-          output_directory=output_directory,
-      )
-      self.assertTrue(os.path.exists(utterance_metadata_file))
-
-
-class TestCleanDirectory(absltest.TestCase):
-
-  def test_clean_directory(self):
-    with tempfile.TemporaryDirectory() as tempdir:
-      os.makedirs(os.path.join(tempdir, "subdir"))
-      with open(os.path.join(tempdir, "file1.txt"), "w") as f:
-        f.write("Test file 1")
-      with open(os.path.join(tempdir, "file2.txt"), "w") as f:
-        f.write("Test file 2")
-      with open(os.path.join(tempdir, "subdir", "file3.txt"), "w") as f:
-        f.write("Test file 3")
-      keep_files = ["file1.txt", "subdir"]
-      dubbing.clean_directory(directory=tempdir, keep_files=keep_files)
-      actual_output = [
-          os.path.exists(os.path.join(tempdir, "file1.txt")),
-          os.path.exists(os.path.join(tempdir, "subdir")),
-          os.path.exists(os.path.join(tempdir, "file2.txt")),
-          os.path.exists(os.path.join(tempdir, "subdir", "file3.txt")),
-      ]
-      expected_outputs = [True, True, False, True]
-      self.assertEqual(actual_output, expected_outputs)
-
-
 class TestReadSystemSettings(absltest.TestCase):
 
   def test_txt_file_success(self):

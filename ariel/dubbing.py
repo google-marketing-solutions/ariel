@@ -6,6 +6,7 @@ import json
 import os
 import pathlib
 import shutil
+import time
 from typing import Final, Mapping, Sequence
 from absl import logging
 from ariel import audio_processing
@@ -19,6 +20,7 @@ import google.generativeai as genai
 from google.generativeai.types import HarmBlockThreshold, HarmCategory
 from pyannote.audio import Pipeline
 import torch
+from tqdm import tqdm
 
 
 _ACCEPTED_VIDEO_FORMATS: Final[tuple[str, ...]] = (".mp4",)
@@ -59,6 +61,7 @@ _DEFAULT_DIARIZATION_SYSTEM_SETTINGS: Final[str] = os.path.join(
 _DEFAULT_TRANSLATION_SYSTEM_SETTINGS: Final[str] = os.path.join(
     module_path.parent, "assets", "system_settings_translation.txt"
 )
+_NUMBER_OF_STEPS: Final [int] = 6
 
 
 def is_video(*, input_file: str) -> bool:
@@ -85,56 +88,14 @@ def is_video(*, input_file: str) -> bool:
     raise ValueError(f"Unsupported file format: {file_extension}")
 
 
-def save_utterance_metadata(
-    *,
-    utterance_metadata: Sequence[Mapping[str, float | str]],
-    output_directory: str,
-) -> str:
-  """Saves a Python dictionary to a JSON file.
-
-  Args:
-      utterance_metadata: A sequence of utterance metadata, each represented as
-        a dictionary with keys: "start", "end", "chunk_path", "translated_text",
-        "speaker_id", "ssml_gender" and "dubbed_path".
-      output_directory: The directory where utterance metadata should be saved.
-
-  Returns:
-    A path to the saved uttterance metadata.
-  """
-  utterance_metadata_file = os.path.join(
-      output_directory, _UTTERNACE_METADATA_FILE_NAME
-  )
-  try:
-    with open(utterance_metadata_file, "w") as json_file:
-      json.dump(utterance_metadata, json_file)
-    logging.info(
-        f"Utterance metadata saved successfully to '{utterance_metadata_file}'"
-    )
-  except Exception as e:
-    logging.warning(f"Error saving utterance metadata: {e}")
-  return utterance_metadata_file
-
-
-def clean_directory(*, directory: str, keep_files: Sequence[str]) -> None:
-  """Removes all files and directories from a directory, except for those listed in keep_files."""
-  for filename in os.listdir(directory):
-    file_path = os.path.join(directory, filename)
-    if filename in keep_files:
-      continue
-    if os.path.isfile(file_path):
-      os.remove(file_path)
-    elif os.path.isdir(file_path):
-      shutil.rmtree(file_path)
-
-
-def read_system_settings(input_string: str) -> str:
-  """Processes an input string.
+def read_system_settings(system_instructions: str) -> str:
+  """Reads a .txt file with system instructions or returns them directly.
 
   - If it's a .txt file, reads and returns the content. - If it has another
   extension, raises a ValueError. - If it's just a string, returns it as is.
 
   Args:
-      input_string: The string to process.
+      system_instructions: The string to process.
 
   Returns:
       The content of the .txt file or the input string.
@@ -144,21 +105,21 @@ def read_system_settings(input_string: str) -> str:
       TypeError: If the input file doesn't exist.
       FileNotFoundError: If the .txt file doesn't exist.
   """
-  if not isinstance(input_string, str):
+  if not isinstance(system_instructions, str):
     raise TypeError("Input must be a string")
 
-  _, extension = os.path.splitext(input_string)
+  _, extension = os.path.splitext(system_instructions)
 
   if extension == ".txt":
     try:
-      with open(input_string, "r") as file:
+      with open(system_instructions, "r") as file:
         return file.read()
     except FileNotFoundError:
-      raise FileNotFoundError(f"File not found: {input_string}")
+      raise FileNotFoundError(f"File not found: {system_instructions}")
   elif extension:
     raise ValueError(f"Unsupported file type: {extension}")
   else:
-    return input_string
+    return system_instructions
 
 
 @dataclasses.dataclass
@@ -373,7 +334,7 @@ class Dubber:
         input_string=self.translation_system_instructions
     )
 
-  def preprocessing(self, kwargs) -> PreprocessingArtifacts:
+  def run_preprocessing(self) -> PreprocessingArtifacts:
     """Splits audio/video, applies DEMUCS, and segments audio into utterances with PyAnnote.
 
     Returns:
@@ -406,6 +367,8 @@ class Dubber:
         audio_file=audio_file,
         output_directory=self.output_directory,
     )
+    logging.info("Completed preprocessing.")
+    self.progress_bar.update(1)
     return PreprocessingArtifacts(
         video_file=video_file,
         audio_file=audio_file,
@@ -413,24 +376,19 @@ class Dubber:
         utterance_metadata=utterance_metadata,
     )
 
-  def speech_to_text(
-      self,
-      *,
-      media_file: str,
-      utterance_metadata: Sequence[Mapping[str, str | float]],
-  ) -> Sequence[Mapping[str, str | float]]:
+  def run_speech_to_text(self) -> Sequence[Mapping[str, str | float]]:
     """Transcribes audio, applies speaker diarization, and updates metadata with Gemini.
-
-    Args:
-        media_file: Path to the media file (audio or video).
-        utterance_metadata: A list of dictionaries containing utterance
-          metadata.
 
     Returns:
         Updated utterance metadata with speaker information and transcriptions.
     """
+    media_file = (
+        self.preprocesing_output.video_file
+        if self.preprocesing_output.video_file
+        else self.preprocesing_output.audio_file
+    )
     utterance_metadata = speech_to_text.transcribe_audio_chunks(
-        utterance_metadata=utterance_metadata,
+        utterance_metadata=self.preprocesing_output.utterance_metadata,
         advertiser_name=self.advertiser_name,
         original_language=self.original_language,
         model=self.speech_to_text_model,
@@ -445,24 +403,20 @@ class Dubber:
         model=speaker_diarization_model,
         diarization_instructions=self.diarization_instructions,
     )
-
-    return speech_to_text.add_speaker_info(
+    utterance_metadata = speech_to_text.add_speaker_info(
         utterance_metadata=utterance_metadata, speaker_info=speaker_info
     )
+    logging.info("Completed transcription.")
+    self.progress_bar.update(1)
+    return utterance_metadata
 
-  def translation(
-      self, *, utterance_metadata: Sequence[Mapping[str, str | float]]
-  ) -> Sequence[Mapping[str, str | float]]:
+  def run_translation(self) -> Sequence[Mapping[str, str | float]]:
     """Translates transcribed text and potentially merges utterances with Gemini.
-
-    Args:
-        utterance_metadata: A list of dictionaries containing utterance
-          metadata.
 
     Returns:
         Updated utterance metadata with translated text.
     """
-    script = translation.generate_script(utterance_metadata=utterance_metadata)
+    script = translation.generate_script(utterance_metadata=self.speech_to_text_output)
     translation_model = self.configure_gemini_model(
         system_instructions=self.translation_system_instructions
     )
@@ -482,108 +436,144 @@ class Dubber:
           utterance_metadata=utterance_metadata,
           minimum_merge_threshold=self.minimum_merge_threshold,
       )
+    logging.info("Completed translation.")
+    self.progress_bar.update(1)
     return utterance_metadata
 
-  def text_to_speech(
-      self, *, utterance_metadata: Sequence[Mapping[str, str | float]]
-  ) -> Sequence[Mapping[str, str | float]]:
+  def run_text_to_speech(self) -> Sequence[Mapping[str, str | float]]:
     """Converts translated text to speech and dubs utterances with Google's Text-To-Speech.
-
-    Args:
-        utterance_metadata: A list of dictionaries containing utterance
-          metadata.
 
     Returns:
         Updated utterance metadata with generated speech file paths.
     """
 
     assigned_voices = text_to_speech.assign_voices(
-        utterance_metadata=utterance_metadata,
+        utterance_metadata=self.translation_output,
         target_language=self.target_language,
         preferred_voices=self.preferred_voices,
     )
     utterance_metadata = text_to_speech.update_utterance_metadata(
         utterance_metadata=utterance_metadata, assigned_voices=assigned_voices
     )
-    return text_to_speech.dub_utterances(
+    utterance_metadata = text_to_speech.dub_utterances(
         client=self.text_to_speech_client,
         utterance_metadata=utterance_metadata,
         output_directory=self.output_directory,
         target_language=self.target_language,
     )
+    logging.info("Completed converting text to speech.")
+    self.progress_bar.update(1)
+    return utterance_metadata
 
-  def postprocessing(
-      self,
-      *,
-      utterance_metadata: Sequence[Mapping[str, str | float]],
-      audio_background_file: str,
-      video_file: str | None = None,
-  ) -> str:
+  def run_postprocessing(self) -> str:
     """Merges dubbed audio with the original background audio and video (if applicable).
-
-    Args:
-        utterance_metadata: A list of dictionaries containing utterance
-          metadata.
-        audio_background_file: Path to the original background audio file.
-        video_file: Path to the original video file (optional, only if input was
-          a video).
 
     Returns:
         Path to the final dubbed output file (audio or video).
     """
 
     dubbed_audio_vocals_file = audio_processing.insert_audio_at_timestamps(
-        utterance_metadata=utterance_metadata,
-        background_audio_file=audio_background_file,
+        utterance_metadata=self.text_to_speech_output,
+        background_audio_file=self.preprocesing_output.audio_background_file,
         output_directory=self.output_directory,
     )
     dubbed_audio_file = audio_processing.merge_background_and_vocals(
-        background_audio_file=audio_background_file,
+        background_audio_file=self.preprocesing_output.audio_background_file,
         dubbed_vocals_audio_file=dubbed_audio_vocals_file,
         output_directory=self.output_directory,
     )
     if self.is_video:
-      if not video_file:
+      if not self.preprocesing_output.video_file:
         raise ValueError(
             "A video file must be provided if the input file is a video."
         )
       output_file = video_processing.combine_audio_video(
-          video_file=video_file,
+          video_file=self.preprocesing_output.video_file,
           dubbed_audio_file=dubbed_audio_file,
           output_directory=self.output_directory,
       )
     else:
       output_file = dubbed_audio_file
+    logging.info("Completed postprocessing.")
+    self.progress_bar.update(1)
     return output_file
 
-  def dub_ad(self):
-    """Orchestrates the entire ad dubbing process."""
-    preprocessing_artifacts = self.preprocessing()
-    media_file = (
-        preprocessing_artifacts.video_file
-        if preprocessing_artifacts.video_file
-        else preprocessing_artifacts.audio_file
+  def run_clean_directory(self, keep_files: Sequence[str]) -> None:
+    """Removes all files and directories from a directory, except for those listed in keep_files.
+
+    Args:
+      keep_files: A sequence with files to keep.  
+    """
+    keep_files = [self.postprocessing_output, ]
+    for filename in os.listdir(self.output_directory):
+      file_path = os.path.join(self.output_directory, filename)
+      if filename in keep_files:
+        continue
+      if os.path.isfile(file_path):
+        os.remove(file_path)
+      elif os.path.isdir(file_path):
+        shutil.rmtree(file_path)
+    logging.info("Temporary artifacts are now removed.")
+    self.progress_bar.update(1)
+
+  def run_save_utterance_metadata(self) -> str:
+    """Saves a Python dictionary to a JSON file.
+
+    Returns:
+      A path to the saved uttterance metadata.
+    """
+    utterance_metadata_file = os.path.join(
+        self.output_directory, _UTTERNACE_METADATA_FILE_NAME
     )
-    utterance_metadata = self.speech_to_text(
-        media_file=media_file,
-        utterance_metadata=preprocessing_artifacts.utterance_metadata,
-    )
-    utterance_metadata = self.translation(utterance_metadata=utterance_metadata)
-    utterance_metadata = self.text_to_speech(
-        utterance_metadata=utterance_metadata
-    )
-    utterance_metadata_file = save_utterance_metadata(
-        utterance_metadata=utterance_metadata,
-        output_directory=self.output_directory,
-    )
-    output_file = self.postprocessing(
-        utterance_metadata=utterance_metadata,
-        audio_background_file=preprocessing_artifacts.audio_background_file,
-        video_file=preprocessing_artifacts.video_file,
-    )
-    if self.clean_up:
-      clean_directory(
-          directory=self.output_directory,
-          keep_file=[output_file, utterance_metadata_file],
+    try:
+      with open(utterance_metadata_file, "w") as json_file:
+        json.dump(self.text_to_speech_output, json_file)
+      logging.info(
+          f"Utterance metadata saved successfully to '{utterance_metadata_file}'"
       )
-    return output_file
+    except Exception as e:
+      logging.warning(f"Error saving utterance metadata: {e}")
+    return utterance_metadata_file
+
+  @functools.cached_property
+  def progress_bar(self):
+    total_number_of_steps = _NUMBER_OF_STEPS if self.clean_up else _NUMBER_OF_STEPS - 1
+    return tqdm(total=total_number_of_steps)
+
+  @functools.cached_property
+  def preprocesing_output(self):
+    return self.preprocessing()
+
+  @functools.cached_property
+  def speech_to_text_output(self):
+    return self.speech_to_text()
+
+  @functools.cached_property
+  def translation_output(self):
+    return self.speech_to_text()
+
+  @functools.cached_property
+  def text_to_speech_output(self):
+    return self.speech_to_text()
+
+  @functools.cached_property
+  def postprocessing_output(self):
+    return self.postprocessing()
+
+  def dub_ad(self) -> str:
+    """Orchestrates the entire ad dubbing process."""
+    logging.info("Dubbing process starting...")
+    start_time = time.time()
+    self.run_preprocessing()
+    self.run_speech_to_text()
+    self.run_translation()
+    self.run_text_to_speech()
+    self.run_save_utterance_metadata()
+    self.run_postprocessing()
+    if self.clean_up:
+      self.run_clean_directory()
+    logging.info("Dubbing process finished.")
+    end_time = time.time()
+    logging.info("Total execution time: %.2f seconds.", end_time - start_time)
+    logging.info("Output file saved under: %s.", self.postprocessing_output)
+    return self.postprocessing_output
