@@ -32,7 +32,7 @@ class TestIsVideo(parameterized.TestCase):
 class TestSaveUtteranceMetadata(absltest.TestCase):
 
   def test_successful_save(self):
-    metadata = {
+    utterance_metadata = [{
         "start": 0.0,
         "end": 5.2,
         "chunk_path": "chunk_1.wav",
@@ -40,14 +40,14 @@ class TestSaveUtteranceMetadata(absltest.TestCase):
         "speaker_id": 1,
         "ssml_gender": "male",
         "dubbed_path": "dubbed_1.wav",
-    }
+    }]
 
-    with tempfile.TemporaryDirectory() as temp_output_dir:
-      dubbing.save_utterance_metadata([metadata], temp_output_dir)
-      expected_file_path = os.path.join(
-          temp_output_dir, dubbing._UTTERNACE_METADATA_FILE_NAME
+    with tempfile.TemporaryDirectory() as output_directory:
+      utterance_metadata_file = dubbing.save_utterance_metadata(
+          utterance_metadata=utterance_metadata,
+          output_directory=output_directory,
       )
-      self.assertTrue(os.path.exists(expected_file_path))
+      self.assertTrue(os.path.exists(utterance_metadata_file))
 
 
 class TestCleanDirectory(absltest.TestCase):
@@ -62,7 +62,7 @@ class TestCleanDirectory(absltest.TestCase):
       with open(os.path.join(tempdir, "subdir", "file3.txt"), "w") as f:
         f.write("Test file 3")
       keep_files = ["file1.txt", "subdir"]
-      dubbing.clean_directory(tempdir, keep_files)
+      dubbing.clean_directory(directory=tempdir, keep_files=keep_files)
       actual_output = [
           os.path.exists(os.path.join(tempdir, "file1.txt")),
           os.path.exists(os.path.join(tempdir, "subdir")),
@@ -71,3 +71,34 @@ class TestCleanDirectory(absltest.TestCase):
       ]
       expected_outputs = [True, True, False, True]
       self.assertEqual(actual_output, expected_outputs)
+
+
+class TestReadSystemSettings(absltest.TestCase):
+
+  def test_txt_file_success(self):
+    """Test reading a .txt file."""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as temp_file:
+      temp_file.write("This is a test file.")
+      temp_file.flush()
+
+      result = dubbing.read_system_settings(temp_file.name)
+      self.assertEqual(result, "This is a test file.")
+
+  def test_string_input(self):
+    """Test returning a plain string."""
+    result = dubbing.read_system_settings("Hello, world!")
+    self.assertEqual(result, "Hello, world!")
+
+  def test_unsupported_extension(self):
+    """Test raising ValueError for unsupported extensions."""
+    with self.assertRaises(ValueError):
+      dubbing.read_system_settings("invalid.docx")
+
+  def test_nonexistent_file(self):
+    """Test raising FileNotFoundError for missing files."""
+    with self.assertRaises(FileNotFoundError):
+      dubbing.read_system_settings("nonexistent.txt")
+
+
+if __name__ == "__main__":
+  absltest.main()

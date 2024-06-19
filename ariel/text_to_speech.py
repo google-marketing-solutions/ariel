@@ -62,8 +62,8 @@ def assign_voices(
 
   Args:
       utterance_metadata: A sequence of utterance metadata, each represented as
-        a dictionary with keys: 'start', 'end', 'chunk_path', 'translated_text',
-        'speaker_id' and 'ssml_gender'.
+        a dictionary with keys: "text", "start", "stop", "speaker_id",
+        "ssml_gender", "translated_text" and "path".
       target_language: The target language (ISO 3166-1 alpha-2).
       client: A TextToSpeechClient object.
       preferred_voices: An optional list of preferred voice names.
@@ -130,8 +130,8 @@ def update_utterance_metadata(
 
   Args:
       utterance_metadata: A sequence of utterance metadata, each represented as
-        a dictionary with keys: 'start', 'end', 'chunk_path', 'translated_text',
-        'speaker_id' and 'ssml_gender'.
+        a dictionary with keys: "text", "start", "stop", "speaker_id",
+        "ssml_gender", "translated_text" and "path".
       assigned_voices: Mapping mapping speaker IDs to assigned Google voices.
 
   Returns:
@@ -159,7 +159,7 @@ def convert_text_to_speech(
   """Converts text to speech using Google Cloud Text-to-Speech API.
 
   Args:
-      client: The GCP text to speech client object to use.
+      client: The TextToSpeechClient object to use.
       assigned_google_voice: The name of the Google Cloud voice to use.
       target_language: The target language (ISO 3166-1 alpha-2).
       output_filename: The name of the output MP3 file.
@@ -231,8 +231,8 @@ def dub_utterances(
   Args:
       client: The TextToSpeechClient object to use.
       utterance_metadata: A sequence of utterance metadata, each represented as
-        a dictionary with keys: "start", "end", "chunk_path", "translated_text",
-        "speaker_id" and "ssml_gender".
+        a dictionary with keys: "text", "start", "stop", "speaker_id",
+        "ssml_gender", "translated_text", "assigned_google_voice" and "path".
       output_directory: Path to the directory for output files.
       target_language: The target language (ISO 3166-1 alpha-2).
 

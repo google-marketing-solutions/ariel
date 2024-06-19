@@ -1,4 +1,4 @@
-"""A speech-to-text module of the Google EMEA gPS Data Science Ariel."""
+"""A speech-to-text module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
 import os
 import time
@@ -82,23 +82,23 @@ def transcribe_audio_chunks(
   return updated_utterance_metadata
 
 
-def upload_to_gemini(file_path: str) -> file_types.File:
+def upload_to_gemini(file: str) -> file_types.File:
   """Uploads an MP4 video file to Gemini and logs the URI.
 
   Args:
-      file_path: The path to the MP4 video or MP3 audio file to upload.
+      file: The path to the MP4 video or MP3 audio file to upload.
 
   Returns:
       The uploaded file object.
   """
-  _, extension = os.path.splitext(file_path)
+  _, extension = os.path.splitext(file)
   if extension not in _MIME_TYPE_MAPPING.keys():
     raise ValueError(
         "The extension must be either"
         f" {(', ').join(_MIME_TYPE_MAPPING.keys())}. Received: {extension}"
     )
   mime_type = _MIME_TYPE_MAPPING[extension]
-  file = genai.upload_file(file_path, mime_type=mime_type)
+  file = genai.upload_file(file, mime_type=mime_type)
   logging.info(f"Uploaded file '{file.display_name}' as: {file.uri}")
   return file
 
@@ -158,7 +158,7 @@ def process_speaker_diarization_response(
 
 def diarize_speakers(
     *,
-    file_path: str,
+    file: str,
     utterance_metadata: Sequence[Mapping[str, str | float]],
     number_of_speakers: int,
     model: genai.GenerativeModel,
@@ -167,9 +167,9 @@ def diarize_speakers(
   """Diarizes speakers in a video/audio using a Gemini generative model.
 
   Args:
-      file_path: The path to the MP4 video or MP3 audio file.
+      file: The path to the MP4 video or MP3 audio file.
       utterance_metadata: The transcript of the video, represented as a sequence
-        of mappings with keys "start", "stop", and "text".
+        of mappings with keys "start", "stop" "text", "path".
       number_of_speakers: The number of speakers in the video.
       model: The pre-configured Gemini GenerativeModel instance.
       diarization_instructions: The specific instructions for diarization.
@@ -179,9 +179,11 @@ def diarize_speakers(
       contains the speaker name and the start time of the speaker
       segment.
   """
-  file = upload_to_gemini(file_path=file_path)
-  wait_for_file_active(file=file)
-  chat_session = model.start_chat(history=[{"role": "user", "parts": file}])
+  uploaded_file = upload_to_gemini(file=file)
+  wait_for_file_active(file=uploaded_file)
+  chat_session = model.start_chat(
+      history=[{"role": "user", "parts": uploaded_file}]
+  )
   prompt = _DIARIZATION_PROMPT.format(
       utterance_metadata,
       number_of_speakers,
@@ -201,8 +203,8 @@ def add_speaker_info(
 
   Args:
       utterance_metadata: The sequence of utterance metadata dictionaries. Each
-        dictionary represents a chunk of audio and contains the "text", "start",
-        "stop" keys.
+        dictionary represents a chunk of audio and contains the "start", "stop"
+        "text", "path" keys.
       speaker_info: The sequence of tuples containing (speaker_id, gender)
         information. The order of tuples in this list should correspond to the
         order of utterance_metadata.
@@ -228,6 +230,7 @@ def add_speaker_info(
           "text": chunk["text"],
           "start": chunk["start"],
           "stop": chunk["stop"],
+          "path": chunk["path"],
           "speaker_id": speaker_id,
           "ssml_gender": gender,
       }

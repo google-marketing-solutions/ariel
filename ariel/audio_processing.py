@@ -256,8 +256,8 @@ def insert_audio_at_timestamps(
 
   Args:
     utterance_metadata: A sequence of utterance metadata, each represented as a
-      dictionary with keys: "start", "end", "chunk_path", "translated_text",
-      "speaker_id", "ssml_gender" and "dubbed_path".
+      dictionary with keys: "text", "start", "stop", "speaker_id",
+      "ssml_gender", "translated_text", "assigned_google_voice" and "path".
     background_audio_file: Path to the background audio file.
     output_directory: Path to save the output audio file.
 

@@ -1,4 +1,4 @@
-"""A translation module of Ariel package from the Google EMEA gTech Ads Data Science."""
+"""A translation module of the Google EMEA gTech Ads Data Science Ariel."""
 
 import re
 from typing import Final, Mapping, Sequence
@@ -8,7 +8,7 @@ _TRANSLATION_PROMPT: Final[str] = (
     "You're hired by a company called: {}. The received transcript is: {}."
     " Specific instructions: {}. The target language is: {}."
 )
-_MINIMUM_MERGE_THRESHOLD: Final[float] = 0.001
+_TIMESTAMP_THRESHOLD: Final[float] = 0.001
 
 
 def generate_script(
@@ -70,7 +70,7 @@ def add_translations(
   Args:
       utterance_metadata: The sequence of mappings, where each mapping
         represents utterance metadata with "text", "start", "stop",
-        "speaker_id", "ssml_gender" keys.
+        "speaker_id", "ssml_gender" and "path" keys.
       translated_script: The string containing the translated text segments,
         separated by "<BREAK>".
 
@@ -106,13 +106,14 @@ def add_translations(
 def merge_utterances(
     *,
     utterance_metadata: Sequence[Mapping[str, str | float]],
-    minimum_merge_threshold: float = _MINIMUM_MERGE_THRESHOLD,
+    minimum_merge_threshold: float = _TIMESTAMP_THRESHOLD,
 ) -> Sequence[Mapping[str, str | float]]:
   """Merges utterances that are within the specified timestamp threshold.
 
   Args:
     utterance_metadata: A sequence of utterance metadata, each represented as a
-      dictionary with keys: 'start', 'end', 'chunk_path', and 'translated_text'.
+      dictionary with keys: "text", "start", "stop", "speaker_id",
+      "ssml_gender", "translated_text" and "path".
     minimum_merge_threshold: The maximum time difference between the end of one
       utterance and the start of the next for them to be considered mergeable.
 
