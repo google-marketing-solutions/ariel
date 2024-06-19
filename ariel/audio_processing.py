@@ -33,7 +33,7 @@ def build_demucs_command(
     int24: bool = False,
     float32: bool = False,
     flac: bool = False,
-    mp3: bool = False,
+    mp3: bool = True,
 ) -> str:
   """Builds the Demucs audio separation command.
 
@@ -63,7 +63,6 @@ def build_demucs_command(
 
   if int24 and float32:
     raise ValueError("Cannot set both int24 and float32 to True.")
-
   command_parts = [
       "python3",
       "-m",
@@ -86,10 +85,9 @@ def build_demucs_command(
     command_parts.append("--no-split")
   elif segment is not None:
     command_parts.extend(["--segment", str(segment)])
-
   if flac:
     command_parts.append("--flac")
-  elif mp3:
+  if mp3:
     command_parts.extend([
         "--mp3",
         "--mp3-bitrate",
@@ -97,11 +95,10 @@ def build_demucs_command(
         "--mp3-preset",
         str(mp3_preset),
     ])
-  elif int24:
+  if int24:
     command_parts.append("--int24")
-  elif float32:
+  if float32:
     command_parts.append("--float32")
-
   command_parts.append(audio_file)
   return " ".join(command_parts)
 

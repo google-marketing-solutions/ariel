@@ -21,12 +21,13 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           {},
           (
               "python3 -m demucs.separate -o test --device cpu --shifts 10"
-              " --overlap 0.25 --clip_mode rescale -j 0 --two-stems audio.mp3"
+              " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --mp3"
+              " --mp3-bitrate 320 --mp3-preset 2 audio.mp3"
           ),
       ),
       (
           "flac",
-          {"flac": True},
+          {"flac": True, "mp3": False},
           (
               "python3 -m demucs.separate -o test --device cpu --shifts 10"
               " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --flac"
@@ -34,17 +35,8 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           ),
       ),
       (
-          "mp3",
-          {"mp3": True},
-          (
-              "python3 -m demucs.separate -o test --device cpu --shifts 10"
-              " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --mp3"
-              " --mp3-bitrate 320 --mp3-preset 2 audio.mp3"
-          ),
-      ),
-      (
           "int24",
-          {"int24": True},
+          {"int24": True, "mp3": False},
           (
               "python3 -m demucs.separate -o test --device cpu --shifts 10"
               " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --int24"
@@ -53,7 +45,7 @@ class BuildDemucsCommandTest(parameterized.TestCase):
       ),
       (
           "float32",
-          {"float32": True},
+          {"float32": True, "mp3": False},
           (
               "python3 -m demucs.separate -o test --device cpu --shifts 10"
               " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --float32"
@@ -66,7 +58,7 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           (
               "python3 -m demucs.separate -o test --device cpu --shifts 10"
               " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --segment"
-              " 60 audio.mp3"
+              " 60 --mp3 --mp3-bitrate 320 --mp3-preset 2 audio.mp3"
           ),
       ),
       (
@@ -75,7 +67,7 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           (
               "python3 -m demucs.separate -o test --device cpu --shifts 10"
               " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --no-split"
-              " audio.mp3"
+              " --mp3 --mp3-bitrate 320 --mp3-preset 2 audio.mp3"
           ),
       ),
   )
