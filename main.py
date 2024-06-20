@@ -1,4 +1,4 @@
-"""A main file executing an end-to-end dubbing prcoesses of the Google EMEA gTech Ads Data Science Ariel."""
+"""A main file executing an end-to-end dubbing prcoesses of Ariel package from the Google EMEA gTech Ads Data Science."""
 
 import os
 from absl import flags

@@ -1,4 +1,4 @@
-"""A translation module of the Google EMEA gTech Ads Data Science Ariel."""
+"""A translation module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
 import re
 from typing import Final, Mapping, Sequence

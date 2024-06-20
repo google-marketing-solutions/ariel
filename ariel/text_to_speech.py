@@ -4,6 +4,7 @@ import os
 from typing import Final, Mapping, Sequence
 from google.cloud import texttospeech
 from pydub import AudioSegment
+import tensorflow as tf
 
 _SSML_MALE: Final[str] = "Male"
 _SSML_FEMALE: Final[str] = "Female"
@@ -190,7 +191,7 @@ def convert_text_to_speech(
       audio_config=audio_config,
   )
 
-  with open(output_filename, "wb") as out:
+  with tf.io.gfile.GFile(output_filename, "wb") as out:
     out.write(response.audio_content)
 
   return output_filename

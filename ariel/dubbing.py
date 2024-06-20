@@ -21,17 +21,16 @@ from google.generativeai.types import HarmBlockThreshold, HarmCategory
 from pyannote.audio import Pipeline
 import torch
 from tqdm import tqdm
+import tensorflow as tf
 
 
 _ACCEPTED_VIDEO_FORMATS: Final[tuple[str, ...]] = (".mp4",)
 _ACCEPTED_AUDIO_FORMATS: Final[tuple[str, ...]] = (".wav", ".mp3", ".flac")
 _UTTERNACE_METADATA_FILE_NAME: Final[str] = "utterance_metadata.json"
+_EXPECTED_HUGGING_FACE_ENVIRONMENTAL_VARIABLE_NAME: Final[str] = "HUGGING_FACE_TOKEN"
+_EXPECTED_GEMINI_ENVIRONMENTAL_VARIABLE_NAME: Final[str] = "GEMINI_TOKEN"
 _DEFAULT_PYANNOTE_MODEL: Final[str] = "pyannote/speaker-diarization-3.1"
 _DEFAULT_TRANSCRIPTION_MODEL: Final[str] = "large-v3"
-_DEVICE: Final[str] = "gpu" if torch.cuda.is_available() else "cpu"
-_TRANSCRIPTION_COMPUTE_TYPE: Final[str] = (
-    "float16" if _DEVICE == "gpu" else "int8"
-)
 _DEFAULT_GEMINI_MODEL: Final[str] = "gemini-1.5-flash"
 _DEFAULT_GEMINI_TEMPERATURE: Final[float] = 1.0
 _DEFAULT_GEMINI_TOP_P: Final[float] = 0.95
@@ -112,7 +111,7 @@ def read_system_settings(system_instructions: str) -> str:
 
   if extension == ".txt":
     try:
-      with open(system_instructions, "r") as file:
+      with tf.io.gfile.GFile(system_instructions, "r") as file:
         return file.read()
     except FileNotFoundError:
       raise FileNotFoundError(f"File not found: {system_instructions}")
@@ -128,10 +127,10 @@ class PreprocessingArtifacts:
 
   Attributes:
       video_file: A path to a video ad with no audio.
-      audio_file: A path to an audio track form the ad.
+      audio_file: A path to an audio track from the ad.
       audio_background_file: A path to and audio track from the ad with removed
         vocals.
-      utterance_metadata: The sequence of utterance metadata dictionaries. Each
+      utterance_metadata: The sequence of utterance metadata mappings. Each
         dictionary represents a chunk of audio and contains the "path", "start",
         "stop" keys.
   """
@@ -234,17 +233,21 @@ class Dubber:
     self.response_mime_type = response_mime_type
 
   @functools.cached_property
+  def device(self):
+    return "gpu" if torch.cuda.is_available() else "cpu"
+
+  @functools.cached_property
   def is_video(self) -> bool:
     """Checks if the input file is a video."""
     return is_video(input_file=self.input_file)
 
-  def get_api_token(self, provided_token: str | None, env_variable: str) -> str:
+  def get_api_token(self, *, env_variable: str, provided_token: str | None = None) -> str:
     """Helper to get API token, prioritizing provided argument over environment variable.
 
     Args:
-        provided_token: The API token provided directly as an argument.
         env_variable: The name of the environment variable storing the API
           token.
+        provided_token: The API token provided directly as an argument.
 
     Returns:
         The API token (either the provided one or from the environment).
@@ -265,7 +268,7 @@ class Dubber:
   def pyannote_pipeline(self) -> Pipeline:
     """Loads the PyAnnote diarization pipeline."""
     hugging_face_token = self.get_api_token(
-        self.hugging_face_token, "HUGGING_FACE_TOKEN"
+        _EXPECTED_HUGGING_FACE_ENVIRONMENTAL_VARIABLE_NAME, self.hugging_face_token
     )
     return Pipeline.from_pretrained(
         self.pyannote_model, use_auth_token=hugging_face_token
@@ -276,8 +279,8 @@ class Dubber:
     """Initializes the Whisper speech-to-text model."""
     return WhisperModel(
         model_size_or_path=_DEFAULT_TRANSCRIPTION_MODEL,
-        device=_DEVICE,
-        compute_type=_TRANSCRIPTION_COMPUTE_TYPE,
+        device=self.device,
+        compute_type="float16" if self.device == "gpu" else "int8",
     )
 
   def configure_gemini_model(
@@ -299,7 +302,7 @@ class Dubber:
         The configured Gemini model instance.
     """
 
-    gemini_token = self.get_api_token(self.gemini_token, "GEMINI_TOKEN")
+    gemini_token = self.get_api_token(_EXPECTED_GEMINI_ENVIRONMENTAL_VARIABLE_NAME, self.gemini_token)
     genai.configure(api_key=gemini_token)
     gemini_configuration = dict(
         temperature=self.temperature,
@@ -324,14 +327,14 @@ class Dubber:
   def diarization_system_instructions(self) -> str:
     """Reads and caches diarization system instructions."""
     return read_system_settings(
-        input_string=self.diarization_system_instructions
+        system_instructions=self.diarization_system_instructions
     )
 
   @functools.cached_property
   def translation_system_instructions(self) -> str:
     """Reads and caches translation system instructions."""
     return read_system_settings(
-        input_string=self.translation_system_instructions
+        system_instructions=self.translation_system_instructions
     )
 
   def run_preprocessing(self) -> PreprocessingArtifacts:
@@ -505,13 +508,13 @@ class Dubber:
       keep_files: A sequence with files to keep.  
     """
     keep_files = [self.postprocessing_output, ]
-    for filename in os.listdir(self.output_directory):
+    for filename in tf.io.gfile.listdir(self.output_directory):
       file_path = os.path.join(self.output_directory, filename)
       if filename in keep_files:
         continue
-      if os.path.isfile(file_path):
-        os.remove(file_path)
-      elif os.path.isdir(file_path):
+      if tf.io.gfile.exists(file_path):
+        tf.io.gfile.remove(file_path)
+      elif tf.io.gfile.isdir(file_path):
         shutil.rmtree(file_path)
     logging.info("Temporary artifacts are now removed.")
     self.progress_bar.update(1)
@@ -526,7 +529,7 @@ class Dubber:
         self.output_directory, _UTTERNACE_METADATA_FILE_NAME
     )
     try:
-      with open(utterance_metadata_file, "w") as json_file:
+      with tf.io.gfile.GFile(utterance_metadata_file, "w") as json_file:
         json.dump(self.text_to_speech_output, json_file)
       logging.info(
           f"Utterance metadata saved successfully to '{utterance_metadata_file}'"

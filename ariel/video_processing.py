@@ -1,3 +1,5 @@
+"""An video processing module of Ariel package from the Google EMEA gTech Ads Data Science."""
+
 import os
 from typing import Final
 from moviepy.editor import AudioFileClip, VideoFileClip, concatenate_videoclips
