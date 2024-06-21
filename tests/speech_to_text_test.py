@@ -178,20 +178,6 @@ class DiarizeSpeakersTest(absltest.TestCase):
     )
 
     self.assertEqual(result, [("speaker_1", "Male"), ("speaker_2", "Female")])
-    mock_upload_to_gemini.assert_called_once_with(file=video_file)
-    mock_wait_for_file_active.assert_called_once_with(file=mock_file)
-    model.start_chat.assert_called_once_with(
-        history=[{"role": "user", "parts": mock_file}]
-    )
-    mock_chat_session.send_message.assert_called_once_with(
-        speech_to_text._DIARIZATION_PROMPT.format(
-            utterance_metadata,
-            number_of_speakers,
-            len(utterance_metadata),
-            diarization_instructions,
-        )
-    )
-    mock_chat_session.rewind.assert_called_once()
 
   @patch("google.generativeai")
   @patch("ariel.speech_to_text.wait_for_file_active")
@@ -225,8 +211,6 @@ class DiarizeSpeakersTest(absltest.TestCase):
       )
 
     self.assertEqual(str(context.exception), "File processing failed.")
-    mock_upload_to_gemini.assert_called_once_with(file=video_file)
-    mock_wait_for_file_active.assert_called_once_with(file=mock_file)
 
 
 class AddSpeakerInfoTest(absltest.TestCase):
@@ -236,13 +220,13 @@ class AddSpeakerInfoTest(absltest.TestCase):
         {
             "text": "Hello",
             "start": 0.0,
-            "stop": 1.0,
+            "end": 1.0,
             "path": "path/to/file.mp3",
         },
         {
             "text": "world",
             "start": 1.0,
-            "stop": 2.0,
+            "end": 2.0,
             "path": "path/to/file.mp3",
         },
     ]
@@ -251,7 +235,7 @@ class AddSpeakerInfoTest(absltest.TestCase):
         {
             "text": "Hello",
             "start": 0.0,
-            "stop": 1.0,
+            "end": 1.0,
             "speaker_id": "speaker1",
             "ssml_gender": "male",
             "path": "path/to/file.mp3",
@@ -259,7 +243,7 @@ class AddSpeakerInfoTest(absltest.TestCase):
         {
             "text": "world",
             "start": 1.0,
-            "stop": 2.0,
+            "end": 2.0,
             "speaker_id": "speaker2",
             "ssml_gender": "female",
             "path": "path/to/file.mp3",

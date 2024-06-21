@@ -9,3 +9,4 @@ faster-whisper == 1.0.2
 google-generativeai == 0.6.0
 google-cloud-texttospeech == 2.16.3
 tensorflow == 2.16.1
+pytorch-lightning == 2.3.0

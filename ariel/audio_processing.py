@@ -1,30 +1,31 @@
 """An audio processing module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
+import os
+import re
 import subprocess
-from typing import Final, Mapping, Sequence
-from absl import logging
 from typing import Final
+from typing import Final, Mapping, Sequence
 from typing import Mapping, Sequence
+from absl import logging
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
 import torch
-import os
-import re
 
 _BACKGROUND_VOLUME_ADJUSTMENT: Final[float] = 5.0
 _VOCALS_VOLUME_ADJUSTMENT: Final[float] = 0.0
 _DEFAULT_DUBBED_VOCALS_AUDIO_FILE: Final[str] = "dubbed_vocals.mp3"
-_DEFAULT_DUBBED_AUDIO_FILE: Final[str] = "dubbed_audio.mp3"
-
+_DEFAULT_DUBBED_AUDIO_FILE: Final[str] = "dubbed_audio"
+_DEFAULT_OUTPUT_FORMAT: Final[str] = ".mp3"
+_SUPPORTED_DEVICES: Final[tuple[str, str]] = ("cpu", "gpu")
 
 
 def build_demucs_command(
+    *,
     audio_file: str,
     output_directory: str,
     device: str = "cpu",
     shifts: int = 10,
     overlap: float = 0.25,
-    clip_mode: str = "rescale",
     mp3_bitrate: int = 320,
     mp3_preset: int = 2,
     jobs: int = 0,
@@ -43,7 +44,6 @@ def build_demucs_command(
       device: The device to use ("cuda" or "cpu").
       shifts: The number of random shifts for equivariant stabilization.
       overlap: The overlap between splits.
-      clip_mode: The clipping strategy ("rescale", "clamp", or "none").
       mp3_bitrate: The bitrate of converted MP3 files.
       mp3_preset: The encoder preset for MP3 conversion.
       jobs: The number of jobs to run in parallel.
@@ -64,7 +64,7 @@ def build_demucs_command(
   if int24 and float32:
     raise ValueError("Cannot set both int24 and float32 to True.")
   command_parts = [
-      "python3",
+      "python",
       "-m",
       "demucs.separate",
       "-o",
@@ -75,11 +75,9 @@ def build_demucs_command(
       str(shifts),
       "--overlap",
       str(overlap),
-      "--clip_mode",
-      clip_mode,
       "-j",
       str(jobs),
-      "--two-stems",
+      "--two-stems vocals",
   ]
   if not split:
     command_parts.append("--no-split")
@@ -103,6 +101,10 @@ def build_demucs_command(
   return " ".join(command_parts)
 
 
+class DemcusCommandError(Exception):
+  pass
+
+
 def execute_demcus_command(command: str) -> None:
   """Executes a Demucs command using subprocess.
 
@@ -118,11 +120,11 @@ def execute_demcus_command(command: str) -> None:
     )
     logging.info(result.stdout)
   except subprocess.CalledProcessError as e:
-    logging.error(f"Error separating audio: {e}\n{e.stderr}")
+    raise DemcusCommandError(f"Error separating audio: {e}\n{e.stderr}")
 
 
 def extract_command_info(command: str) -> tuple[str, str, str]:
-  """Extracts folder name, output file extension, and input file name from a Demucs command.
+  """Extracts folder name, output file extension, and input file name (without path) from a Demucs command.
 
   Args:
       command: The Demucs command string.
@@ -131,21 +133,21 @@ def extract_command_info(command: str) -> tuple[str, str, str]:
       tuple: A tuple containing (folder_name, output_file_extension,
       input_file_name).
   """
-
   folder_pattern = r"-o\s+(\S+)"
   flac_pattern = r"--flac"
   mp3_pattern = r"--mp3"
   int24_or_float32_pattern = r"--(int24|float32)"
-  input_file_pattern = r"(\S+)$"
+  input_file_pattern = r"(\w+\.\w+)$"
   folder_match = re.search(folder_pattern, command)
   flac_match = re.search(flac_pattern, command)
   mp3_match = re.search(mp3_pattern, command)
   int24_or_float32_match = re.search(int24_or_float32_pattern, command)
   input_file_match = re.search(input_file_pattern, command)
 
-  outout_directory = folder_match.group(1)
+  output_directory = folder_match.group(1)
   input_file_name_with_ext = input_file_match.group(1)
   input_file_name_no_ext = os.path.splitext(input_file_name_with_ext)[0]
+
   if flac_match:
     output_file_extension = ".flac"
   elif mp3_match:
@@ -154,7 +156,8 @@ def extract_command_info(command: str) -> tuple[str, str, str]:
     output_file_extension = ".wav"
   else:
     output_file_extension = ".wav"
-  return outout_directory, output_file_extension, input_file_name_no_ext
+
+  return output_directory, output_file_extension, input_file_name_no_ext
 
 
 def assemble_split_audio_file_paths(command: str) -> tuple[str, str]:
@@ -167,11 +170,11 @@ def assemble_split_audio_file_paths(command: str) -> tuple[str, str]:
       A tuple with a path to the file with the audio with vocals only
       and the other with the background sound only.
   """
-  outout_directory, output_file_extension, input_file_name = (
+  output_directory, output_file_extension, input_file_name = (
       extract_command_info(command)
   )
-  audio_vocals_file = f"{outout_directory}/htdemucs/{input_file_name}_audio/vocals{output_file_extension}"
-  audio_background_file = f"{outout_directory}/htdemucs/{input_file_name}_audio/no_vocals{output_file_extension}"
+  audio_vocals_file = f"{output_directory}/htdemucs/{input_file_name}/vocals{output_file_extension}"
+  audio_background_file = f"{output_directory}/htdemucs/{input_file_name}/no_vocals{output_file_extension}"
   return audio_vocals_file, audio_background_file
 
 
@@ -180,6 +183,7 @@ def create_pyannote_timestamps(
     audio_file: str,
     number_of_speakers: int,
     pipeline: Pipeline,
+    device: str = "cpu",
 ) -> Sequence[Mapping[str, float]]:
   """Creates timestamps from a vocals file using Pyannote speaker diarization.
 
@@ -187,12 +191,18 @@ def create_pyannote_timestamps(
       audio_file: The path to the audio file with vocals.
       number_of_speakers: The number of speakers in the vocal audio file.
       pipeline: Pre-loaded Pyannote Pipeline object.
+      device: The device to use during the process.
 
   Returns:
       A list of dictionaries containing start and end timestamps for each
       speaker segment.
   """
-  if torch.cuda.is_available():
+  if device not in _SUPPORTED_DEVICES:
+    raise ValueError(
+        "The device must be either (' or ').join(_SUPPORTED_DEVICES). Got:"
+        f" {device}"
+    )
+  if device == "gpu":
     pipeline.to(torch.device("cuda"))
   diarization = pipeline(audio_file, num_speakers=number_of_speakers)
   utterance_metadata = [
@@ -283,6 +293,7 @@ def merge_background_and_vocals(
     background_audio_file: str,
     dubbed_vocals_audio_file: str,
     output_directory: str,
+    target_language: str,
 ) -> str:
   """Mixes background music and vocals tracks, normalizes the volume, and exports the result.
 
@@ -290,6 +301,8 @@ def merge_background_and_vocals(
       background_audio_file: Path to the background music MP3 file.
       dubbed_vocals_audio_file: Path to the vocals MP3 file.
       output_directory: Path to save the mixed MP3 file.
+      target_language: The language to dub the ad into. It must be ISO 3166-1
+        alpha-2 country code.
 
   Returns:
     The path to the output audio file with merged dubbed vocals and original
@@ -306,6 +319,12 @@ def merge_background_and_vocals(
   background = background[:shortest_length]
   vocals = vocals[:shortest_length]
   mixed_audio = background.overlay(vocals)
-  dubbed_audio_file = os.path.join(output_directory, _DEFAULT_DUBBED_AUDIO_FILE)
+  target_language_suffix = "_" + target_language.replace("-", "_").lower()
+  dubbed_audio_file = os.path.join(
+      output_directory,
+      _DEFAULT_DUBBED_AUDIO_FILE
+      + target_language_suffix
+      + _DEFAULT_OUTPUT_FORMAT,
+  )
   mixed_audio.export(dubbed_audio_file, format="mp3")
   return dubbed_audio_file

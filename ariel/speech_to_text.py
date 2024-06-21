@@ -107,7 +107,7 @@ class FileProcessingError(Exception):
   pass
 
 
-def wait_for_file_active(*, file: file_types.File) -> None:
+def wait_for_file_active(*, file: Sequence[file_types.File]) -> None:
   """Waits for a single file to reach an 'ACTIVE' state.
 
   Args:
@@ -117,6 +117,7 @@ def wait_for_file_active(*, file: file_types.File) -> None:
       Exception: If the file fails to reach the 'ACTIVE' state.
   """
   logging.info("Processing the video file for Gemini.")
+  file = file[0]
   while file.state.name == _PROCESSING:
     time.sleep(_SLEEP_TIME)
     file = genai.get_file(file.name)
@@ -169,7 +170,7 @@ def diarize_speakers(
   Args:
       file: The path to the MP4 video or MP3 audio file.
       utterance_metadata: The transcript of the video, represented as a sequence
-        of mappings with keys "start", "stop" "text", "path".
+        of mappings with keys "start", "end" "text", "path".
       number_of_speakers: The number of speakers in the video.
       model: The pre-configured Gemini GenerativeModel instance.
       diarization_instructions: The specific instructions for diarization.
@@ -179,7 +180,7 @@ def diarize_speakers(
       contains the speaker name and the start time of the speaker
       segment.
   """
-  uploaded_file = upload_to_gemini(file=file)
+  uploaded_file = [upload_to_gemini(file=file)]
   wait_for_file_active(file=uploaded_file)
   chat_session = model.start_chat(
       history=[{"role": "user", "parts": uploaded_file}]
@@ -203,8 +204,8 @@ def add_speaker_info(
 
   Args:
       utterance_metadata: The sequence of utterance metadata dictionaries. Each
-        dictionary represents a chunk of audio and contains the "start", "stop"
-        "text", "path" keys.
+        dictionary represents utterance metadata of audio and contains the
+        "start", "end" "text", "path" keys.
       speaker_info: The sequence of tuples containing (speaker_id, gender)
         information. The order of tuples in this list should correspond to the
         order of utterance_metadata.
@@ -227,12 +228,14 @@ def add_speaker_info(
 
   return [
       {
-          "text": chunk["text"],
-          "start": chunk["start"],
-          "stop": chunk["stop"],
-          "path": chunk["path"],
+          "text": utterance["text"],
+          "start": utterance["start"],
+          "end": utterance["end"],
+          "path": utterance["path"],
           "speaker_id": speaker_id,
           "ssml_gender": gender,
       }
-      for chunk, (speaker_id, gender) in zip(utterance_metadata, speaker_info)
+      for utterance, (speaker_id, gender) in zip(
+          utterance_metadata, speaker_info
+      )
   ]

@@ -3,6 +3,7 @@
 import os
 import subprocess
 import tempfile
+import unittest.mock as mock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 from absl.testing import absltest
@@ -20,8 +21,8 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           "basic",
           {},
           (
-              "python3 -m demucs.separate -o test --device cpu --shifts 10"
-              " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --mp3"
+              "python -m demucs.separate -o test --device cpu --shifts 10"
+              " --overlap 0.25 -j 0 --two-stems vocals --mp3"
               " --mp3-bitrate 320 --mp3-preset 2 audio.mp3"
           ),
       ),
@@ -29,8 +30,8 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           "flac",
           {"flac": True, "mp3": False},
           (
-              "python3 -m demucs.separate -o test --device cpu --shifts 10"
-              " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --flac"
+              "python -m demucs.separate -o test --device cpu --shifts 10"
+              " --overlap 0.25 -j 0 --two-stems vocals --flac"
               " audio.mp3"
           ),
       ),
@@ -38,8 +39,8 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           "int24",
           {"int24": True, "mp3": False},
           (
-              "python3 -m demucs.separate -o test --device cpu --shifts 10"
-              " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --int24"
+              "python -m demucs.separate -o test --device cpu --shifts 10"
+              " --overlap 0.25 -j 0 --two-stems vocals --int24"
               " audio.mp3"
           ),
       ),
@@ -47,8 +48,8 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           "float32",
           {"float32": True, "mp3": False},
           (
-              "python3 -m demucs.separate -o test --device cpu --shifts 10"
-              " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --float32"
+              "python -m demucs.separate -o test --device cpu --shifts 10"
+              " --overlap 0.25 -j 0 --two-stems vocals --float32"
               " audio.mp3"
           ),
       ),
@@ -56,8 +57,8 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           "segment",
           {"segment": 60},
           (
-              "python3 -m demucs.separate -o test --device cpu --shifts 10"
-              " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --segment"
+              "python -m demucs.separate -o test --device cpu --shifts 10"
+              " --overlap 0.25 -j 0 --two-stems vocals --segment"
               " 60 --mp3 --mp3-bitrate 320 --mp3-preset 2 audio.mp3"
           ),
       ),
@@ -65,8 +66,8 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           "no_split",
           {"split": False},
           (
-              "python3 -m demucs.separate -o test --device cpu --shifts 10"
-              " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --no-split"
+              "python -m demucs.separate -o test --device cpu --shifts 10"
+              " --overlap 0.25 -j 0 --two-stems vocals --no-split"
               " --mp3 --mp3-bitrate 320 --mp3-preset 2 audio.mp3"
           ),
       ),
@@ -151,26 +152,26 @@ class TestAssembleSplitAudioFilePaths(parameterized.TestCase):
               " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --segment"
               " 60 audio.mp3"
           ),
-          "test/htdemucs/audio_audio/vocals.wav",
-          "test/htdemucs/audio_audio/no_vocals.wav",
+          "test/htdemucs/audio/vocals.wav",
+          "test/htdemucs/audio/no_vocals.wav",
       ),
       (
           "FLAC Output",
           "python3 -m demucs.separate -o out_flac --flac audio.mp3",
-          "out_flac/htdemucs/audio_audio/vocals.flac",
-          "out_flac/htdemucs/audio_audio/no_vocals.flac",
+          "out_flac/htdemucs/audio/vocals.flac",
+          "out_flac/htdemucs/audio/no_vocals.flac",
       ),
       (
           "WAV Output (int24)",
           "python3 -m demucs.separate -o out_wav --int24 audio.mp3",
-          "out_wav/htdemucs/audio_audio/vocals.wav",
-          "out_wav/htdemucs/audio_audio/no_vocals.wav",
+          "out_wav/htdemucs/audio/vocals.wav",
+          "out_wav/htdemucs/audio/no_vocals.wav",
       ),
       (
           "WAV Output (float32)",
           "python3 -m demucs.separate -o out_float32 --float32 audio.mp3",
-          "out_float32/htdemucs/audio_audio/vocals.wav",
-          "out_float32/htdemucs/audio_audio/no_vocals.wav",
+          "out_float32/htdemucs/audio/vocals.wav",
+          "out_float32/htdemucs/audio/no_vocals.wav",
       ),
   )
   def test_assemble_paths(
@@ -204,19 +205,20 @@ class TestExecuteDemcusCommand(absltest.TestCase):
         check=True,
     )
 
-  @patch("subprocess.run")
-  def test_execute_command_failure(self, mock_run):
+  @mock.patch("subprocess.run")
+  def test_execute_command_error(self, mock_run):
+    """Test if DemcusCommandError is raised when command fails."""
     mock_run.side_effect = subprocess.CalledProcessError(
-        1, "command", "Error message"
+        1, "demucs.separate", stderr="Some Demucs error message"
     )
-    audio_processing.execute_demcus_command(command="invalid_command")
-    mock_run.assert_called_once_with(
-        "invalid_command",
-        shell=True,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+
+    with self.assertRaisesRegex(
+        audio_processing.DemcusCommandError,
+        r"Error separating audio:.*\nSome Demucs error message",
+    ):
+      audio_processing.execute_demcus_command(
+          "python3 -m demucs.separate -o out_folder --mp3 --two-stems audio.mp3"
+      )
 
 
 class CreatePyannoteTimestampsTest(absltest.TestCase):
@@ -323,6 +325,7 @@ class MixMusicAndVocalsTest(absltest.TestCase):
           background_audio_file=background_audio_path,
           dubbed_vocals_audio_file=vocals_audio_path,
           output_directory=temporary_directory,
+          target_language="en-US",
       )
       self.assertTrue(os.path.exists(output_audio_path))
 

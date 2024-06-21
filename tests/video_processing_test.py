@@ -85,6 +85,7 @@ class CombineAudioVideoTest(absltest.TestCase):
           video_file=video_path,
           dubbed_audio_file=audio_path,
           output_directory=temporary_directory,
+          target_language="en-US",
       )
       self.assertTrue(os.path.exists(output_path))
 

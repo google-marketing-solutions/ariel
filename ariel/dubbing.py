@@ -19,15 +19,16 @@ from google.cloud import texttospeech
 import google.generativeai as genai
 from google.generativeai.types import HarmBlockThreshold, HarmCategory
 from pyannote.audio import Pipeline
+import tensorflow as tf
 import torch
 from tqdm import tqdm
-import tensorflow as tf
-
 
 _ACCEPTED_VIDEO_FORMATS: Final[tuple[str, ...]] = (".mp4",)
 _ACCEPTED_AUDIO_FORMATS: Final[tuple[str, ...]] = (".wav", ".mp3", ".flac")
-_UTTERNACE_METADATA_FILE_NAME: Final[str] = "utterance_metadata.json"
-_EXPECTED_HUGGING_FACE_ENVIRONMENTAL_VARIABLE_NAME: Final[str] = "HUGGING_FACE_TOKEN"
+_UTTERNACE_METADATA_FILE_NAME: Final[str] = "utterance_metadata"
+_EXPECTED_HUGGING_FACE_ENVIRONMENTAL_VARIABLE_NAME: Final[str] = (
+    "HUGGING_FACE_TOKEN"
+)
 _EXPECTED_GEMINI_ENVIRONMENTAL_VARIABLE_NAME: Final[str] = "GEMINI_TOKEN"
 _DEFAULT_PYANNOTE_MODEL: Final[str] = "pyannote/speaker-diarization-3.1"
 _DEFAULT_TRANSCRIPTION_MODEL: Final[str] = "large-v3"
@@ -60,7 +61,7 @@ _DEFAULT_DIARIZATION_SYSTEM_SETTINGS: Final[str] = os.path.join(
 _DEFAULT_TRANSLATION_SYSTEM_SETTINGS: Final[str] = os.path.join(
     module_path.parent, "assets", "system_settings_translation.txt"
 )
-_NUMBER_OF_STEPS: Final [int] = 6
+_NUMBER_OF_STEPS: Final[int] = 6
 
 
 def is_video(*, input_file: str) -> bool:
@@ -106,15 +107,12 @@ def read_system_settings(system_instructions: str) -> str:
   """
   if not isinstance(system_instructions, str):
     raise TypeError("Input must be a string")
-
   _, extension = os.path.splitext(system_instructions)
-
   if extension == ".txt":
-    try:
-      with tf.io.gfile.GFile(system_instructions, "r") as file:
-        return file.read()
-    except FileNotFoundError:
-      raise FileNotFoundError(f"File not found: {system_instructions}")
+    if not tf.io.gfile.exists(system_instructions):
+      raise ValueError("The file doesn't exist.")
+    with tf.io.gfile.GFile(system_instructions, "r") as file:
+      return file.read()
   elif extension:
     raise ValueError(f"Unsupported file type: {extension}")
   else:
@@ -131,8 +129,8 @@ class PreprocessingArtifacts:
       audio_background_file: A path to and audio track from the ad with removed
         vocals.
       utterance_metadata: The sequence of utterance metadata mappings. Each
-        dictionary represents a chunk of audio and contains the "path", "start",
-        "stop" keys.
+        dictionary represents an utterance of audio and contains the "path",
+        "start", "end" keys.
   """
 
   video_file: str
@@ -241,12 +239,14 @@ class Dubber:
     """Checks if the input file is a video."""
     return is_video(input_file=self.input_file)
 
-  def get_api_token(self, *, env_variable: str, provided_token: str | None = None) -> str:
+  def get_api_token(
+      self, *, environmental_variable: str, provided_token: str | None = None
+  ) -> str:
     """Helper to get API token, prioritizing provided argument over environment variable.
 
     Args:
-        env_variable: The name of the environment variable storing the API
-          token.
+        environmental_variable: The name of the environment variable storing the
+          API token.
         provided_token: The API token provided directly as an argument.
 
     Returns:
@@ -256,11 +256,11 @@ class Dubber:
         ValueError: If neither the provided token nor the environment variable
         is set.
     """
-    token = provided_token or os.getenv(env_variable)
+    token = provided_token or os.getenv(environmental_variable)
     if not token:
       raise ValueError(
-          f"You must either provide the '{env_variable}' argument or set the"
-          f" '{env_variable.upper()}' environment variable."
+          f"You must either provide the '{environmental_variable}' argument or"
+          f" set the '{environmental_variable.upper()}' environment variable."
       )
     return token
 
@@ -268,7 +268,8 @@ class Dubber:
   def pyannote_pipeline(self) -> Pipeline:
     """Loads the PyAnnote diarization pipeline."""
     hugging_face_token = self.get_api_token(
-        _EXPECTED_HUGGING_FACE_ENVIRONMENTAL_VARIABLE_NAME, self.hugging_face_token
+        environmental_variable=_EXPECTED_HUGGING_FACE_ENVIRONMENTAL_VARIABLE_NAME,
+        provided_token=self.hugging_face_token,
     )
     return Pipeline.from_pretrained(
         self.pyannote_model, use_auth_token=hugging_face_token
@@ -284,25 +285,22 @@ class Dubber:
     )
 
   def configure_gemini_model(
-      self, *, system_instruction: str
+      self, *, system_instructions: str
   ) -> genai.GenerativeModel:
     """Configures the Gemini generative model.
 
     Args:
-        system_instruction: The system instruction to guide the model's
+        system_instructions: The system instruction to guide the model's
           behavior.
-        model_name: The name of the Gemini model to use.
-        temperature: Controls randomness in generation.
-        top_p: Nucleus sampling threshold.
-        top_k: Top-k sampling parameter.
-        max_output_tokens: Maximum number of tokens in the generated response.
-        response_mime_type: MIME type of the generated response.
 
     Returns:
         The configured Gemini model instance.
     """
 
-    gemini_token = self.get_api_token(_EXPECTED_GEMINI_ENVIRONMENTAL_VARIABLE_NAME, self.gemini_token)
+    gemini_token = self.get_api_token(
+        environmental_variable=_EXPECTED_GEMINI_ENVIRONMENTAL_VARIABLE_NAME,
+        provided_token=self.gemini_token,
+    )
     genai.configure(api_key=gemini_token)
     gemini_configuration = dict(
         temperature=self.temperature,
@@ -314,7 +312,7 @@ class Dubber:
     return genai.GenerativeModel(
         model_name=self.model_name,
         generation_config=gemini_configuration,
-        system_instruction=system_instruction,
+        system_instruction=system_instructions,
         safety_settings=_DEFAULT_GEMINI_SAFETY_SETTINGS,
     )
 
@@ -324,14 +322,14 @@ class Dubber:
     return texttospeech.TextToSpeechClient()
 
   @functools.cached_property
-  def diarization_system_instructions(self) -> str:
+  def processed_diarization_system_instructions(self) -> str:
     """Reads and caches diarization system instructions."""
     return read_system_settings(
         system_instructions=self.diarization_system_instructions
     )
 
   @functools.cached_property
-  def translation_system_instructions(self) -> str:
+  def processed_translation_system_instructions(self) -> str:
     """Reads and caches translation system instructions."""
     return read_system_settings(
         system_instructions=self.translation_system_instructions
@@ -354,6 +352,7 @@ class Dubber:
     demucs_command = audio_processing.build_demucs_command(
         audio_file=audio_file,
         output_directory=self.output_directory,
+        device=self.device,
     )
     audio_processing.execute_demcus_command(command=demucs_command)
     _, audio_background_file = audio_processing.assemble_split_audio_file_paths(
@@ -364,6 +363,7 @@ class Dubber:
         audio_file=audio_file,
         number_of_speakers=self.number_of_speakers,
         pipeline=self.pyannote_pipeline,
+        device=self.device,
     )
     utterance_metadata = audio_processing.cut_and_save_audio(
         utterance_metadata=utterance_metadata,
@@ -372,7 +372,7 @@ class Dubber:
     )
     logging.info("Completed preprocessing.")
     self.progress_bar.update(1)
-    return PreprocessingArtifacts(
+    self.preprocesing_output = PreprocessingArtifacts(
         video_file=video_file,
         audio_file=audio_file,
         audio_background_file=audio_background_file,
@@ -396,13 +396,13 @@ class Dubber:
         original_language=self.original_language,
         model=self.speech_to_text_model,
     )
-
     speaker_diarization_model = self.configure_gemini_model(
-        system_instructions=self.diarization_system_instructions
+        system_instructions=self.processed_diarization_system_instructions
     )
     speaker_info = speech_to_text.diarize_speakers(
         file=media_file,
         utterance_metadata=utterance_metadata,
+        number_of_speakers=self.number_of_speakers,
         model=speaker_diarization_model,
         diarization_instructions=self.diarization_instructions,
     )
@@ -411,7 +411,7 @@ class Dubber:
     )
     logging.info("Completed transcription.")
     self.progress_bar.update(1)
-    return utterance_metadata
+    self.speech_to_text_output = utterance_metadata
 
   def run_translation(self) -> Sequence[Mapping[str, str | float]]:
     """Translates transcribed text and potentially merges utterances with Gemini.
@@ -419,9 +419,11 @@ class Dubber:
     Returns:
         Updated utterance metadata with translated text.
     """
-    script = translation.generate_script(utterance_metadata=self.speech_to_text_output)
+    script = translation.generate_script(
+        utterance_metadata=self.speech_to_text_output
+    )
     translation_model = self.configure_gemini_model(
-        system_instructions=self.translation_system_instructions
+        system_instructions=self.processed_translation_system_instructions
     )
     translated_script = translation.translate_script(
         script=script,
@@ -431,7 +433,7 @@ class Dubber:
         model=translation_model,
     )
     utterance_metadata = translation.add_translations(
-        utterance_metadata=utterance_metadata,
+        utterance_metadata=self.speech_to_text_output,
         translated_script=translated_script,
     )
     if self.merge_utterances:
@@ -441,7 +443,7 @@ class Dubber:
       )
     logging.info("Completed translation.")
     self.progress_bar.update(1)
-    return utterance_metadata
+    self.translation_output = utterance_metadata
 
   def run_text_to_speech(self) -> Sequence[Mapping[str, str | float]]:
     """Converts translated text to speech and dubs utterances with Google's Text-To-Speech.
@@ -453,10 +455,12 @@ class Dubber:
     assigned_voices = text_to_speech.assign_voices(
         utterance_metadata=self.translation_output,
         target_language=self.target_language,
+        client=self.text_to_speech_client,
         preferred_voices=self.preferred_voices,
     )
     utterance_metadata = text_to_speech.update_utterance_metadata(
-        utterance_metadata=utterance_metadata, assigned_voices=assigned_voices
+        utterance_metadata=self.translation_output,
+        assigned_voices=assigned_voices,
     )
     utterance_metadata = text_to_speech.dub_utterances(
         client=self.text_to_speech_client,
@@ -466,7 +470,7 @@ class Dubber:
     )
     logging.info("Completed converting text to speech.")
     self.progress_bar.update(1)
-    return utterance_metadata
+    self.text_to_speech_output = utterance_metadata
 
   def run_postprocessing(self) -> str:
     """Merges dubbed audio with the original background audio and video (if applicable).
@@ -484,6 +488,7 @@ class Dubber:
         background_audio_file=self.preprocesing_output.audio_background_file,
         dubbed_vocals_audio_file=dubbed_audio_vocals_file,
         output_directory=self.output_directory,
+        target_language=self.target_language,
     )
     if self.is_video:
       if not self.preprocesing_output.video_file:
@@ -494,20 +499,20 @@ class Dubber:
           video_file=self.preprocesing_output.video_file,
           dubbed_audio_file=dubbed_audio_file,
           output_directory=self.output_directory,
+          target_language=self.target_language,
       )
     else:
       output_file = dubbed_audio_file
     logging.info("Completed postprocessing.")
     self.progress_bar.update(1)
-    return output_file
+    self.postprocessing_output = output_file
 
-  def run_clean_directory(self, keep_files: Sequence[str]) -> None:
-    """Removes all files and directories from a directory, except for those listed in keep_files.
-
-    Args:
-      keep_files: A sequence with files to keep.  
-    """
-    keep_files = [self.postprocessing_output, ]
+  def run_clean_directory(self) -> None:
+    """Removes all files and directories from a directory, except for those listed in keep_files."""
+    keep_files = [
+        self.postprocessing_output,
+        self.save_utterance_metadata_output,
+    ]
     for filename in tf.io.gfile.listdir(self.output_directory):
       file_path = os.path.join(self.output_directory, filename)
       if filename in keep_files:
@@ -519,49 +524,39 @@ class Dubber:
     logging.info("Temporary artifacts are now removed.")
     self.progress_bar.update(1)
 
-  def run_save_utterance_metadata(self) -> str:
+  def run_save_utterance_metadata(self):
     """Saves a Python dictionary to a JSON file.
 
     Returns:
       A path to the saved uttterance metadata.
     """
+    target_language_suffix = (
+        "_" + self.target_language.replace("-", "_").lower()
+    )
     utterance_metadata_file = os.path.join(
-        self.output_directory, _UTTERNACE_METADATA_FILE_NAME
+        self.output_directory,
+        _UTTERNACE_METADATA_FILE_NAME + target_language_suffix + ".json",
     )
     try:
+      json_data = json.dumps(
+          self.text_to_speech_output, ensure_ascii=False, indent=4
+      )
       with tf.io.gfile.GFile(utterance_metadata_file, "w") as json_file:
-        json.dump(self.text_to_speech_output, json_file)
+        json.dump(json_data, json_file)
       logging.info(
-          f"Utterance metadata saved successfully to '{utterance_metadata_file}'"
+          "Utterance metadata saved successfully to"
+          f" '{utterance_metadata_file}'"
       )
     except Exception as e:
       logging.warning(f"Error saving utterance metadata: {e}")
-    return utterance_metadata_file
+    self.save_utterance_metadata_output = utterance_metadata_file
 
   @functools.cached_property
   def progress_bar(self):
-    total_number_of_steps = _NUMBER_OF_STEPS if self.clean_up else _NUMBER_OF_STEPS - 1
+    total_number_of_steps = (
+        _NUMBER_OF_STEPS if self.clean_up else _NUMBER_OF_STEPS - 1
+    )
     return tqdm(total=total_number_of_steps)
-
-  @functools.cached_property
-  def preprocesing_output(self):
-    return self.preprocessing()
-
-  @functools.cached_property
-  def speech_to_text_output(self):
-    return self.speech_to_text()
-
-  @functools.cached_property
-  def translation_output(self):
-    return self.speech_to_text()
-
-  @functools.cached_property
-  def text_to_speech_output(self):
-    return self.speech_to_text()
-
-  @functools.cached_property
-  def postprocessing_output(self):
-    return self.postprocessing()
 
   def dub_ad(self) -> str:
     """Orchestrates the entire ad dubbing process."""

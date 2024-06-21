@@ -63,7 +63,7 @@ def assign_voices(
 
   Args:
       utterance_metadata: A sequence of utterance metadata, each represented as
-        a dictionary with keys: "text", "start", "stop", "speaker_id",
+        a dictionary with keys: "text", "start", "end", "speaker_id",
         "ssml_gender", "translated_text" and "path".
       target_language: The target language (ISO 3166-1 alpha-2).
       client: A TextToSpeechClient object.
@@ -131,20 +131,20 @@ def update_utterance_metadata(
 
   Args:
       utterance_metadata: A sequence of utterance metadata, each represented as
-        a dictionary with keys: "text", "start", "stop", "speaker_id",
+        a dictionary with keys: "text", "start", "end", "speaker_id",
         "ssml_gender", "translated_text" and "path".
       assigned_voices: Mapping mapping speaker IDs to assigned Google voices.
 
   Returns:
       Sequence of updated utterance metadata dictionaries.
   """
-  updated_chunks = []
+  updated_utterance_metadata = []
   for metadata_item in utterance_metadata:
     new_utterance = metadata_item.copy()
     speaker_id = new_utterance.get("speaker_id")
     new_utterance["assigned_google_voice"] = assigned_voices.get(speaker_id)
-    updated_chunks.append(new_utterance)
-  return updated_chunks
+    updated_utterance_metadata.append(new_utterance)
+  return updated_utterance_metadata
 
 
 def convert_text_to_speech(
@@ -227,27 +227,27 @@ def dub_utterances(
     output_directory: str,
     target_language: str,
 ) -> Sequence[Mapping[str, str | float]]:
-  """Processes a list of chunks, generating dubbed audio files.
+  """Processes a list of utterance metadata, generating dubbed audio files.
 
   Args:
       client: The TextToSpeechClient object to use.
       utterance_metadata: A sequence of utterance metadata, each represented as
-        a dictionary with keys: "text", "start", "stop", "speaker_id",
+        a dictionary with keys: "text", "start", "end", "speaker_id",
         "ssml_gender", "translated_text", "assigned_google_voice" and "path".
       output_directory: Path to the directory for output files.
       target_language: The target language (ISO 3166-1 alpha-2).
 
   Returns:
-      List of processed chunks with updated "dubbed_path".
+      List of processed utterance metadata with updated "dubbed_path".
   """
 
-  processed_chunks = []
-  for chunk in utterance_metadata:
-    chunk_path = chunk["chunk_path"]
-    text = chunk["translated_text"]
-    assigned_google_voice = chunk["speaker_id"]
-    duration = chunk["end"] - chunk["start"]
-    base_filename = os.path.splitext(os.path.basename(chunk_path))[0]
+  updated_utterance_metadata = []
+  for utterance in utterance_metadata:
+    path = utterance["path"]
+    text = utterance["translated_text"]
+    assigned_google_voice = utterance["assigned_google_voice"]
+    duration = utterance["end"] - utterance["start"]
+    base_filename = os.path.splitext(os.path.basename(path))[0]
     output_filename = os.path.join(
         output_directory, f"dubbed_{base_filename}.mp3"
     )
@@ -259,6 +259,7 @@ def dub_utterances(
         text=text,
     )
     adjust_audio_speed(input_mp3_path=dubbed_path, target_duration=duration)
-    chunk["dubbed_path"] = dubbed_path
-    processed_chunks.append(chunk)
-  return processed_chunks
+    utterance_copy = utterance.copy()
+    utterance_copy["dubbed_path"] = dubbed_path
+    updated_utterance_metadata.append(utterance_copy)
+  return updated_utterance_metadata

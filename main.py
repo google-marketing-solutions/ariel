@@ -1,8 +1,10 @@
 """A main file executing an end-to-end dubbing prcoesses of Ariel package from the Google EMEA gTech Ads Data Science."""
 
-import os
+from typing import Sequence
+from absl import app
 from absl import flags
 from ariel.dubbing import Dubber
+import tensorflow as tf
 
 FLAGS = flags.FLAGS
 
@@ -64,7 +66,7 @@ _MINIMUM_MERGE_THRESHOLD = flags.DEFINE_float(
 )
 _PREFERRED_VOICES = flags.DEFINE_list(
     "preferred_voices",
-    None,
+    ["Journey", "Studio", "Wavenet", "Polyglot", "News", "Neural2", "Standard"],
     "Preferred voice names for text-to-speech (e.g., 'Wavenet').",
 )
 _CLEAN_UP = flags.DEFINE_bool(
@@ -76,16 +78,6 @@ _PYANNOTE_MODEL = flags.DEFINE_string(
     "pyannote_model",
     "pyannote/speaker-diarization-3.1",
     "Name of the PyAnnote diarization model.",
-)
-_DIARIZATION_SYSTEM_INSTRUCTIONS = flags.DEFINE_string(
-    "diarization_system_instructions",
-    None,
-    "System instructions for diarization.",
-)
-_TRANSLATION_SYSTEM_INSTRUCTIONS = flags.DEFINE_string(
-    "translation_system_instructions",
-    None,
-    "System instructions for translation.",
 )
 _HUGGING_FACE_TOKEN = flags.DEFINE_string(
     "hugging_face_token",
@@ -122,23 +114,14 @@ _MAX_OUTPUT_TOKENS = flags.DEFINE_integer(
     8192,
     "Maximum number of tokens in the generated response.",
 )
-_RESPONSE_MIME_TYPE = flags.DEFINE_string(
-    "response_mime_type",
-    "text/plain",
-    "MIME type of the generated response.",
-)
 
 
-def main():
+def main(argv: Sequence[str]) -> None:
   """Parses command-line arguments and runs the dubbing process."""
-  flags.mark_flag_as_required("input_file")
-  flags.mark_flag_as_required("output_directory")
-  flags.mark_flag_as_required("advertiser_name")
-  flags.mark_flag_as_required("original_language")
-  flags.mark_flag_as_required("target_language")
-  flags.parse_flags()
-  if not os.path.exists(_OUTPUT_DIRECTORY.value):
-    os.makedirs(_OUTPUT_DIRECTORY.value)
+  if len(argv) > 1:
+    raise app.UsageError("Too many command-line arguments.")
+  if not tf.io.gfile.exists(_OUTPUT_DIRECTORY.value):
+    tf.io.gfile.makedirs(_OUTPUT_DIRECTORY.value)
   dubber = Dubber(
       input_file=_INPUT_FILE.value,
       output_directory=_OUTPUT_DIRECTORY.value,
@@ -153,8 +136,6 @@ def main():
       preferred_voices=_PREFERRED_VOICES.value,
       clean_up=_CLEAN_UP.value,
       pyannote_model=_PYANNOTE_MODEL.value,
-      diarization_system_instructions=_DIARIZATION_SYSTEM_INSTRUCTIONS.value,
-      translation_system_instructions=_TRANSLATION_SYSTEM_INSTRUCTIONS.value,
       hugging_face_token=_HUGGING_FACE_TOKEN.value,
       gemini_token=_GEMINI_TOKEN.value,
       model_name=_MODEL_NAME.value,
@@ -162,10 +143,14 @@ def main():
       top_p=_TOP_P.value,
       top_k=_TOP_K.value,
       max_output_tokens=_MAX_OUTPUT_TOKENS.value,
-      response_mime_type=_RESPONSE_MIME_TYPE.value,
   )
   dubber.dub_ad()
 
 
 if __name__ == "__main__":
-  main()
+  flags.mark_flag_as_required("input_file")
+  flags.mark_flag_as_required("output_directory")
+  flags.mark_flag_as_required("advertiser_name")
+  flags.mark_flag_as_required("original_language")
+  flags.mark_flag_as_required("target_language")
+  app.run(main)

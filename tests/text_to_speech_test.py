@@ -228,16 +228,16 @@ class TestDubUtterances(absltest.TestCase):
           {
               "start": 0.0,
               "end": 5.5,
-              "chunk_path": "chunk_1.wav",
+              "path": "chunk_1.wav",
               "translated_text": "This is dubbed text 1.",
-              "speaker_id": "en-US-Wavenet-A",
+              "assigned_google_voice": "en-US-Wavenet-A",
           },
           {
               "start": 5.5,
               "end": 12.0,
-              "chunk_path": "chunk_2.wav",
+              "path": "chunk_2.wav",
               "translated_text": "This is dubbed text 2.",
-              "speaker_id": "en-US-Wavenet-B",
+              "assigned_google_voice": "en-US-Wavenet-B",
           },
       ]
 
@@ -258,17 +258,17 @@ class TestDubUtterances(absltest.TestCase):
           {
               "start": 0.0,
               "end": 5.5,
-              "chunk_path": "chunk_1.wav",
+              "path": "chunk_1.wav",
               "translated_text": "This is dubbed text 1.",
-              "speaker_id": "en-US-Wavenet-A",
+              "assigned_google_voice": "en-US-Wavenet-A",
               "dubbed_path": f"{temp_dir}/dubbed_chunk_1.mp3",
           },
           {
               "start": 5.5,
               "end": 12.0,
-              "chunk_path": "chunk_2.wav",
+              "path": "chunk_2.wav",
               "translated_text": "This is dubbed text 2.",
-              "speaker_id": "en-US-Wavenet-B",
+              "assigned_google_voice": "en-US-Wavenet-B",
               "dubbed_path": f"{temp_dir}/dubbed_chunk_2.mp3",
           },
       ]

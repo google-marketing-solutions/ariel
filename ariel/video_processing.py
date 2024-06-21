@@ -5,7 +5,8 @@ from typing import Final
 from moviepy.editor import AudioFileClip, VideoFileClip, concatenate_videoclips
 
 _DEFAULT_FPS: Final[int] = 30
-_DEFAULT_DUBBED_VIDEO_FILE: Final[str] = "dubbed_video.mp4"
+_DEFAULT_DUBBED_VIDEO_FILE: Final[str] = "dubbed_video"
+_DEFAULT_OUTPUT_FORMAT: Final[str] = ".mp4"
 
 
 def split_audio_video(
@@ -22,17 +23,16 @@ def split_audio_video(
     its audio file.
   """
 
+  base_filename = os.path.basename(video_file)
+  filename, _ = os.path.splitext(base_filename)
   with VideoFileClip(video_file) as video_clip:
     audio_clip = video_clip.audio
-    audio_output_file = os.path.join(
-        output_directory, os.path.splitext(video_file)[0] + "_audio.mp3"
-    )
+    audio_output_file = os.path.join(output_directory, filename + "_audio.mp3")
     audio_clip.write_audiofile(audio_output_file, verbose=False, logger=None)
     video_clip_without_audio = video_clip.set_audio(None)
     fps = video_clip.fps or _DEFAULT_FPS
-    video_output_file = os.path.join(
-        output_directory, os.path.splitext(video_file)[0] + "_video.mp4"
-    )
+
+    video_output_file = os.path.join(output_directory, filename + "_video.mp4")
     video_clip_without_audio.write_videofile(
         video_output_file, codec="libx264", fps=fps, verbose=False, logger=None
     )
@@ -40,7 +40,11 @@ def split_audio_video(
 
 
 def combine_audio_video(
-    *, video_file: str, dubbed_audio_file: str, output_directory: str
+    *,
+    video_file: str,
+    dubbed_audio_file: str,
+    output_directory: str,
+    target_language: str,
 ) -> str:
   """Combines an audio file with a video file, ensuring they have the same duration.
 
@@ -48,6 +52,8 @@ def combine_audio_video(
     video_file: Path to the video file.
     dubbed_audio_file: Path to the audio file.
     output_directory: Path to save the combined video file.
+    target_language: The language to dub the ad into. It must be ISO 3166-1
+      alpha-2 country code.
 
   Returns:
     The path to the output video file with dubbed audio.
@@ -64,7 +70,13 @@ def combine_audio_video(
   elif duration_difference < 0:
     audio = audio.subclip(0, video.duration)
   final_clip = video.set_audio(audio)
-  dubbed_video_file = os.path.join(output_directory, _DEFAULT_DUBBED_VIDEO_FILE)
+  target_language_suffix = "_" + target_language.replace("-", "_").lower()
+  dubbed_video_file = os.path.join(
+      output_directory,
+      _DEFAULT_DUBBED_VIDEO_FILE
+      + target_language_suffix
+      + _DEFAULT_OUTPUT_FORMAT,
+  )
   final_clip.write_videofile(
       dubbed_video_file,
       codec="libx264",

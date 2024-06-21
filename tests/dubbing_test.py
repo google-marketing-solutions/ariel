@@ -1,10 +1,10 @@
 """Tests for utility functions in dubbing.py."""
 
-import os
 import tempfile
 from absl.testing import absltest
 from absl.testing import parameterized
 from ariel import dubbing
+import tensorflow as tf
 
 
 class TestIsVideo(parameterized.TestCase):
@@ -47,12 +47,12 @@ class TestReadSystemSettings(absltest.TestCase):
 
   def test_unsupported_extension(self):
     """Test raising ValueError for unsupported extensions."""
-    with self.assertRaises(ValueError):
+    with self.assertRaisesRegex(ValueError, "Unsupported file type"):
       dubbing.read_system_settings("invalid.docx")
 
   def test_nonexistent_file(self):
     """Test raising FileNotFoundError for missing files."""
-    with self.assertRaises(FileNotFoundError):
+    with self.assertRaisesRegex(ValueError, "The file doesn't exist"):
       dubbing.read_system_settings("nonexistent.txt")
 
 
