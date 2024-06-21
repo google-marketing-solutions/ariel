@@ -8,6 +8,8 @@
 [Features](#features) •
 [Benefits](#benefits) •
 [Building Blocks](#building-blocks) •
+[Requirements](#requirements) •
+[Language Compatibility](#language-compatibility) •
 [Getting Started](#getting-started) •
 [References](#references)
 
@@ -45,33 +47,58 @@ Ariel leverages a powerful combination of state-of-the-art AI and audio processi
 5.  **Text-to-Speech (TTS):**
     *   **GCP's Text-To-Speech:** Generates natural-sounding speech in the target language.
 
+## Requirements
+
+*   **System Requirements:**
+    *   **FFmpeg:** For video and audio processing. If not installed, you can use the following commands:
+        ```bash
+        sudo apt update
+        sudo apt install ffmpeg
+        ```
+    *   **GPU (Recommended):** For optimal performance, especially with larger videos.
+*   **Accounts and Tokens:**
+    *   **Google Cloud Platform (GCP) Project:** Set up a GCP project. See [here](https://cloud.google.com/resource-manager/docs/creating-managing-projects) for instructions.
+    *   **Enabled Text-To-Speech API:** Enable the Text-To-Speech API in your GCP project. See [here](https://cloud.google.com/text-to-speech/docs/before-you-begin) for instructions.
+    *   **Hugging Face Token:** To access the PyAnnote speaker diarization model. See [here](https://huggingface.co/docs/hub/en/security-tokens) on how to get the token.
+    *   **Google AI Studio Token:** To access the Gemini language model. See [here](https://developers.generativeai.google/products/gemini) on how to get the token.
+*   **User Agreements:**
+    *   **Hugging Face Model License:** You must accept the user conditions for the PyAnnote speaker diarization model. See [here](https://huggingface.co/pyannote/speaker-diarization-3.1).
+
+## Language Compatibility
+
+### Speech-to-Text (Whisper)
+
+Ariel leverages the open-source Whisper model, which supports a wide array of languages for speech-to-text conversion. The supported languages can be found [here](https://github.com/openai/whisper).
+
+
+### Translation (Gemini)
+
+Gemini, the language model used for translation, is proficient in multiple languages. For the most current list of supported languages, refer to [here](https://cloud.google.com/gemini/docs/codeassist/supported-languages).
+
+### Text-to-Speech (GCP Text-to-Speech)
+
+GCP Text-to-Speech offers an extensive selection of voices in various languages. For a comprehensive list of supported languages and available voices, refer to [here](https://cloud.google.com/text-to-speech/docs/voices).
+
+
 ## Getting Started
 
-1.  **System Requirements:**
-    *   Ariel is designed to run on systems with FFmpeg installed. If you don't have it, run the following commands in your terminal:
-
-    ```bash
-    sudo apt update
-    sudo apt install ffmpeg
-    ```
-
-2.  **Installation:**
+1.  **Installation:**
 
     ```bash
     pip install ariel
     ```
 
-3.  **Usage:**
+2.  **Usage:**
 
     ```bash
     python main.py --input_file=<path_to_video> --output_directory=<output_dir> --advertiser_name=<name> --original_language=<lang_code> --target_language=<lang_code> [--number_of_speakers=<num>] [--diarization_instructions=<instructions>] [--translation_instructions=<instructions>] [--merge_utterances=<True/False>] [--minimum_merge_threshold=<seconds>] [--preferred_voices=<voice1>,<voice2>] [--clean_up=<True/False>] [--pyannote_model=<model_name>] [--diarization_system_instructions=<instructions>] [--translation_system_instructions=<instructions>] [--hugging_face_token=<token>] [--gemini_token=<token>] [--model_name=<model_name>] [--temperature=<value>] [--top_p=<value>] [--top_k=<value>] [--max_output_tokens=<value>] [--response_mime_type=<value>]
     ```
 
-4.  **Configuration:** (Optional)
+3.  **Configuration:** (Optional)
     *   Customize settings for speaker diarization, translation, voice selection, and more using the command-line flags.
 
 ## References
 
-*   **DEMUCS:** https://github.com/facebookresearch/demucs
-*   **pyannote:** https://github.com/pyannote/pyannote-audio
-*   **faster-whisper:** https://github.com/SYSTRAN/faster-whisper
+*   **DEMUCS:** [https://github.com/facebookresearch/demucs](https://github.com/facebookresearch/demucs)
+*   **pyannote:** [https://github.com/pyannote/pyannote-audio](https://github.com/pyannote/pyannote-audio)
+*   **faster-whisper:** [https://github.com/SYSTRAN/faster-whisper](https://github.com/SYSTRAN/faster-whisper)
