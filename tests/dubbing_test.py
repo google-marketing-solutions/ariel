@@ -51,8 +51,11 @@ class TestReadSystemSettings(absltest.TestCase):
       dubbing.read_system_settings("invalid.docx")
 
   def test_nonexistent_file(self):
-    """Test raising FileNotFoundError for missing files."""
-    with self.assertRaisesRegex(ValueError, "The file doesn't exist"):
+    """Test raising ValueError for missing files."""
+    with self.assertRaisesRegex(
+        ValueError,
+        "You specified a .txt file that's not part of the Ariel package.",
+    ):
       dubbing.read_system_settings("nonexistent.txt")
 
 

@@ -2,9 +2,9 @@
 
 import dataclasses
 import functools
+import importlib.resources
 import json
 import os
-import pathlib
 import shutil
 import time
 from typing import Final, Mapping, Sequence
@@ -54,14 +54,9 @@ _DEFAULT_GEMINI_SAFETY_SETTINGS: Final[
         HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
     ),
 }
-module_path = pathlib.Path(__file__).parent.resolve()
-_DEFAULT_DIARIZATION_SYSTEM_SETTINGS: Final[str] = os.path.join(
-    module_path.parent, "assets", "system_settings_diarization.txt"
-)
-_DEFAULT_TRANSLATION_SYSTEM_SETTINGS: Final[str] = os.path.join(
-    module_path.parent, "assets", "system_settings_translation.txt"
-)
-_NUMBER_OF_STEPS: Final[int] = 6
+_DEFAULT_DIARIZATION_SYSTEM_SETTINGS: Final[str] = "diarization.txt"
+_DEFAULT_TRANSLATION_SYSTEM_SETTINGS: Final[str] = "translation.txt"
+_NUMBER_OF_STEPS: Final[int] = 7
 
 
 def is_video(*, input_file: str) -> bool:
@@ -89,10 +84,12 @@ def is_video(*, input_file: str) -> bool:
 
 
 def read_system_settings(system_instructions: str) -> str:
-  """Reads a .txt file with system instructions or returns them directly.
+  """Reads a .txt file with system instructions from the package.
 
-  - If it's a .txt file, reads and returns the content. - If it has another
-  extension, raises a ValueError. - If it's just a string, returns it as is.
+  - If it's just a string, returns it as is.
+  - If it's a .txt file, it assumes you use the defaut package system settings,
+  reads them and returns the content.
+  - If it has another extension, raises a ValueError.
 
   Args:
       system_instructions: The string to process.
@@ -109,10 +106,17 @@ def read_system_settings(system_instructions: str) -> str:
     raise TypeError("Input must be a string")
   _, extension = os.path.splitext(system_instructions)
   if extension == ".txt":
-    if not tf.io.gfile.exists(system_instructions):
-      raise ValueError("The file doesn't exist.")
-    with tf.io.gfile.GFile(system_instructions, "r") as file:
-      return file.read()
+    try:
+      with importlib.resources.path(
+          "ariel", "system_settings"
+      ) as assets_directory:
+        file_path = os.path.join(assets_directory, system_instructions)
+        with tf.io.gfile.GFile(file_path, "r") as file:
+          return file.read()
+    except Exception:
+      raise ValueError(
+          "You specified a .txt file that's not part of the Ariel package."
+      )
   elif extension:
     raise ValueError(f"Unsupported file type: {extension}")
   else:
@@ -232,7 +236,7 @@ class Dubber:
 
   @functools.cached_property
   def device(self):
-    return "gpu" if torch.cuda.is_available() else "cpu"
+    return "cuda" if torch.cuda.is_available() else "cpu"
 
   @functools.cached_property
   def is_video(self) -> bool:
@@ -281,7 +285,7 @@ class Dubber:
     return WhisperModel(
         model_size_or_path=_DEFAULT_TRANSCRIPTION_MODEL,
         device=self.device,
-        compute_type="float16" if self.device == "gpu" else "int8",
+        compute_type="float16" if self.device == "cuda" else "int8",
     )
 
   def configure_gemini_model(
@@ -371,7 +375,7 @@ class Dubber:
         output_directory=self.output_directory,
     )
     logging.info("Completed preprocessing.")
-    self.progress_bar.update(1)
+    self.progress_bar.update()
     self.preprocesing_output = PreprocessingArtifacts(
         video_file=video_file,
         audio_file=audio_file,
@@ -410,7 +414,7 @@ class Dubber:
         utterance_metadata=utterance_metadata, speaker_info=speaker_info
     )
     logging.info("Completed transcription.")
-    self.progress_bar.update(1)
+    self.progress_bar.update()
     self.speech_to_text_output = utterance_metadata
 
   def run_translation(self) -> Sequence[Mapping[str, str | float]]:
@@ -442,7 +446,7 @@ class Dubber:
           minimum_merge_threshold=self.minimum_merge_threshold,
       )
     logging.info("Completed translation.")
-    self.progress_bar.update(1)
+    self.progress_bar.update()
     self.translation_output = utterance_metadata
 
   def run_text_to_speech(self) -> Sequence[Mapping[str, str | float]]:
@@ -469,7 +473,7 @@ class Dubber:
         target_language=self.target_language,
     )
     logging.info("Completed converting text to speech.")
-    self.progress_bar.update(1)
+    self.progress_bar.update()
     self.text_to_speech_output = utterance_metadata
 
   def run_postprocessing(self) -> str:
@@ -504,25 +508,28 @@ class Dubber:
     else:
       output_file = dubbed_audio_file
     logging.info("Completed postprocessing.")
-    self.progress_bar.update(1)
+    self.progress_bar.update()
     self.postprocessing_output = output_file
 
   def run_clean_directory(self) -> None:
     """Removes all files and directories from a directory, except for those listed in keep_files."""
     keep_files = [
-        self.postprocessing_output,
-        self.save_utterance_metadata_output,
+        os.path.basename(self.postprocessing_output),
+        os.path.basename(self.save_utterance_metadata_output),
     ]
-    for filename in tf.io.gfile.listdir(self.output_directory):
-      file_path = os.path.join(self.output_directory, filename)
-      if filename in keep_files:
+    for item in tf.io.gfile.listdir(self.output_directory):
+      item_path = os.path.join(self.output_directory, item)
+      if item in keep_files:
         continue
-      if tf.io.gfile.exists(file_path):
-        tf.io.gfile.remove(file_path)
-      elif tf.io.gfile.isdir(file_path):
-        shutil.rmtree(file_path)
+      try:
+        if tf.io.gfile.isdir(item_path):
+          shutil.rmtree(item_path)
+        else:
+          tf.io.gfile.remove(item_path)
+      except OSError as e:
+        logging.error(f"Error deleting {item_path}: {e}")
     logging.info("Temporary artifacts are now removed.")
-    self.progress_bar.update(1)
+    self.progress_bar.update()
 
   def run_save_utterance_metadata(self):
     """Saves a Python dictionary to a JSON file.
@@ -556,7 +563,7 @@ class Dubber:
     total_number_of_steps = (
         _NUMBER_OF_STEPS if self.clean_up else _NUMBER_OF_STEPS - 1
     )
-    return tqdm(total=total_number_of_steps)
+    return tqdm(total=total_number_of_steps, initial=1)
 
   def dub_ad(self) -> str:
     """Orchestrates the entire ad dubbing process."""
@@ -570,6 +577,7 @@ class Dubber:
     self.run_postprocessing()
     if self.clean_up:
       self.run_clean_directory()
+    self.progress_bar.close()
     logging.info("Dubbing process finished.")
     end_time = time.time()
     logging.info("Total execution time: %.2f seconds.", end_time - start_time)

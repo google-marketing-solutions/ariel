@@ -56,6 +56,8 @@ setuptools.setup(
     author="Google EMEA gTech Ads Data Science Team",
     license="Apache Software License 2.0",
     packages=setuptools.find_packages(),
+    include_package_data=True,
+    package_data={"": ["system_settings/*.txt"]},
     install_requires=_INSTALL_REQUIREMENTS,
     url="https://github.com/google-marketing-solutions/ariel",
     keywords=(

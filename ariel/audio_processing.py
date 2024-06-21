@@ -16,7 +16,7 @@ _VOCALS_VOLUME_ADJUSTMENT: Final[float] = 0.0
 _DEFAULT_DUBBED_VOCALS_AUDIO_FILE: Final[str] = "dubbed_vocals.mp3"
 _DEFAULT_DUBBED_AUDIO_FILE: Final[str] = "dubbed_audio"
 _DEFAULT_OUTPUT_FORMAT: Final[str] = ".mp3"
-_SUPPORTED_DEVICES: Final[tuple[str, str]] = ("cpu", "gpu")
+_SUPPORTED_DEVICES: Final[tuple[str, str]] = ("cpu", "cuda")
 
 
 def build_demucs_command(
@@ -202,7 +202,7 @@ def create_pyannote_timestamps(
         "The device must be either (' or ').join(_SUPPORTED_DEVICES). Got:"
         f" {device}"
     )
-  if device == "gpu":
+  if device == "cuda":
     pipeline.to(torch.device("cuda"))
   diarization = pipeline(audio_file, num_speakers=number_of_speakers)
   utterance_metadata = [
