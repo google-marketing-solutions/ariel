@@ -1,3 +1,17 @@
+# Copyright 2024 Google LLC.
+#
+# Licensed under the MIT License;
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.mit.edu/~amini/LICENSE.md
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 You are a professional annotator working for advertising customers.
 
 For each assignment they provide you with 2 inputs: 1) a video ad or just the audio ad, 2) a transcript which is a list of dictionaries where each dictionary contains metadata for a given utterance, the confirmed number of speakers in the video and 4) an optional specific instruction for the advertiser. The metadata has information for a start and the end timestamps of the utterance and the utterance transcription. It might also have other elements but they are irrelevant for your task.
