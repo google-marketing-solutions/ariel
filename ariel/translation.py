@@ -22,7 +22,6 @@ _TRANSLATION_PROMPT: Final[str] = (
     "You're hired by a company called: {}. The received transcript is: {}."
     " Specific instructions: {}. The target language is: {}."
 )
-_TIMESTAMP_THRESHOLD: Final[float] = 0.001
 
 
 def generate_script(
@@ -115,45 +114,3 @@ def add_translations(
     else:
       continue
   return updated_utterance_metadata
-
-
-def merge_utterances(
-    *,
-    utterance_metadata: Sequence[Mapping[str, str | float]],
-    minimum_merge_threshold: float = _TIMESTAMP_THRESHOLD,
-) -> Sequence[Mapping[str, str | float]]:
-  """Merges utterances that are within the specified timestamp threshold.
-
-  Args:
-    utterance_metadata: A sequence of utterance metadata, each represented as a
-      dictionary with keys: "text", "start", "end", "speaker_id", "ssml_gender",
-      "translated_text" and "path".
-    minimum_merge_threshold: The maximum time difference between the end of one
-      utterance and the start of the next for them to be considered mergeable.
-
-  Returns:
-    A list of merged utterance metadata.
-  """
-
-  merged_utterances = []
-  index = 0
-  while index < len(utterance_metadata):
-    current_utterance = utterance_metadata[index]
-    merged_utterance = current_utterance.copy()
-    next_index = index + 1
-    while (
-        next_index < len(utterance_metadata)
-        and utterance_metadata[next_index]["start"] - current_utterance["end"]
-        < minimum_merge_threshold
-    ):
-      merged_utterance["path"] = tuple(
-          [merged_utterance["path"]] + [utterance_metadata[next_index]["path"]]
-      )
-      merged_utterance["end"] = utterance_metadata[next_index]["end"]
-      merged_utterance[
-          "translated_text"
-      ] += f" {utterance_metadata[next_index]['translated_text']}"
-      next_index += 1
-    merged_utterances.append(merged_utterance)
-    index = next_index
-  return merged_utterances

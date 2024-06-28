@@ -128,8 +128,8 @@ def read_system_settings(system_instructions: str) -> str:
         with tf.io.gfile.GFile(file_path, "r") as file:
           result = []
           for line in file:
-              if not line.lstrip().startswith("#"):
-                  result.append(line)
+            if not line.lstrip().startswith("#"):
+              result.append(line)
           return "".join(result)
     except Exception:
       raise ValueError(
@@ -161,6 +161,22 @@ class PreprocessingArtifacts:
   utterance_metadata: Sequence[Mapping[str, str | float]]
 
 
+@dataclasses.dataclass
+class PostprocessingArtifacts:
+  """Instance with postprocessing outputs.
+
+  Attributes:
+      audio_file: A path to a dubbed audio file.
+      video_file: A path to a dubbed video file. The video is optional.
+  """
+
+  audio_file: str
+  video_file: str | None
+
+
+# BEGIN GOOGLE-INTERNAL
+# TODO(krasowiak): Add unit tests for the Dubber class.
+# END GOOGLE-INTERNAL
 class Dubber:
   """A class to manage the entire ad dubbing process."""
 
@@ -190,7 +206,9 @@ class Dubber:
       top_k: int = _DEFAULT_GEMINI_TOP_K,
       max_output_tokens: int = _DEFAULT_GEMINI_MAX_OUTPUT_TOKENS,
       response_mime_type: str = _DEFAULT_GEMINI_RESPONSE_MIME_TYPE,
-      safety_settings: Mapping[HarmCategory, HarmBlockThreshold] = _DEFAULT_GEMINI_SAFETY_SETTINGS
+      safety_settings: Mapping[
+          HarmCategory, HarmBlockThreshold
+      ] = _DEFAULT_GEMINI_SAFETY_SETTINGS,
   ) -> None:
     """Initializes the Dubber class with various parameters for dubbing configuration.
 
@@ -391,6 +409,11 @@ class Dubber:
         pipeline=self.pyannote_pipeline,
         device=self.device,
     )
+    if self.merge_utterances:
+      utterance_metadata = audio_processing.merge_utterances(
+          utterance_metadata=utterance_metadata,
+          minimum_merge_threshold=self.minimum_merge_threshold,
+      )
     utterance_metadata = audio_processing.cut_and_save_audio(
         utterance_metadata=utterance_metadata,
         audio_file=audio_file,
@@ -462,11 +485,6 @@ class Dubber:
         utterance_metadata=self.speech_to_text_output,
         translated_script=translated_script,
     )
-    if self.merge_utterances:
-      utterance_metadata = translation.merge_utterances(
-          utterance_metadata=utterance_metadata,
-          minimum_merge_threshold=self.minimum_merge_threshold,
-      )
     logging.info("Completed translation.")
     self.progress_bar.update()
     self.translation_output = utterance_metadata
@@ -521,24 +539,27 @@ class Dubber:
         raise ValueError(
             "A video file must be provided if the input file is a video."
         )
-      output_file = video_processing.combine_audio_video(
+      dubbed_video_file = video_processing.combine_audio_video(
           video_file=self.preprocesing_output.video_file,
           dubbed_audio_file=dubbed_audio_file,
           output_directory=self.output_directory,
           target_language=self.target_language,
       )
-    else:
-      output_file = dubbed_audio_file
     logging.info("Completed postprocessing.")
     self.progress_bar.update()
-    self.postprocessing_output = output_file
+    self.postprocessing_output = PostprocessingArtifacts(
+        audio_file=dubbed_audio_file,
+        video_file=dubbed_video_file if self.is_video else None,
+    )
 
   def run_clean_directory(self) -> None:
     """Removes all files and directories from a directory, except for those listed in keep_files."""
     keep_files = [
-        os.path.basename(self.postprocessing_output),
+        os.path.basename(self.postprocessing_output.audio_file),
         os.path.basename(self.save_utterance_metadata_output),
     ]
+    if self.postprocessing_output.video_file:
+      keep_files += [os.path.basename(self.postprocessing_output.video_file)]
     for item in tf.io.gfile.listdir(self.output_directory):
       item_path = os.path.join(self.output_directory, item)
       if item in keep_files:
@@ -603,5 +624,5 @@ class Dubber:
     logging.info("Dubbing process finished.")
     end_time = time.time()
     logging.info("Total execution time: %.2f seconds.", end_time - start_time)
-    logging.info("Output file saved under: %s.", self.postprocessing_output)
+    logging.info("Output files saved in: %s.", self.output_directory)
     return self.postprocessing_output

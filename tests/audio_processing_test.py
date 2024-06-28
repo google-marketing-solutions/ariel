@@ -125,7 +125,10 @@ class TestExtractCommandInfo(parameterized.TestCase):
       ),
       (
           "FLAC Output",
-          "python3 -m demucs.separate -o 'results' --flac --shifts 5 'audio.flac'",
+          (
+              "python3 -m demucs.separate -o 'results' --flac --shifts 5"
+              " 'audio.flac'"
+          ),
           "results",
           ".flac",
           "audio",
@@ -255,6 +258,83 @@ class CreatePyannoteTimestampsTest(absltest.TestCase):
           pipeline=mock_pipeline,
       )
       self.assertEqual(timestamps, [{"start": 0.0, "end": 10}])
+
+
+class MergeUtterancesTest(parameterized.TestCase):
+
+  @parameterized.named_parameters(
+      (
+          "merge_within_threshold",
+          [
+              {
+                  "start": 0.0,
+                  "end": 1.0,
+              },
+              {
+                  "start": 1.1,
+                  "end": 2.0,
+              },
+              {
+                  "start": 2.1,
+                  "end": 3.0,
+              },
+          ],
+          0.2,
+          [
+              {
+                  "start": 0.0,
+                  "end": 2.0,
+              },
+              {
+                  "start": 2.1,
+                  "end": 3.0,
+              },
+          ],
+      ),
+      (
+          "no_merge_above_threshold",
+          [
+              {
+                  "start": 0.0,
+                  "end": 1.0,
+              },
+              {
+                  "start": 1.5,
+                  "end": 2.0,
+              },
+              {
+                  "start": 2.1,
+                  "end": 3.0,
+              },
+          ],
+          0.1,
+          [
+              {
+                  "start": 0.0,
+                  "end": 1.0,
+              },
+              {
+                  "start": 1.5,
+                  "end": 2.0,
+              },
+              {
+                  "start": 2.1,
+                  "end": 3.0,
+              },
+          ],
+      ),
+  )
+  def test_merge_utterances(
+      self,
+      utterance_metadata,
+      minimum_merge_threshold,
+      expected_merged_utterances,
+  ):
+    merged = audio_processing.merge_utterances(
+        utterance_metadata=utterance_metadata,
+        minimum_merge_threshold=minimum_merge_threshold,
+    )
+    self.assertSequenceEqual(merged, expected_merged_utterances)
 
 
 class TestCutAndSaveAudio(absltest.TestCase):
