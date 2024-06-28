@@ -19,7 +19,9 @@ import functools
 import importlib.resources
 import json
 import os
+import readline
 import shutil
+import tempfile
 import time
 from typing import Final, Mapping, Sequence
 from absl import logging
@@ -150,15 +152,11 @@ class PreprocessingArtifacts:
       audio_file: A path to an audio track from the ad.
       audio_background_file: A path to and audio track from the ad with removed
         vocals.
-      utterance_metadata: The sequence of utterance metadata mappings. Each
-        dictionary represents an utterance of audio and contains the "path",
-        "start", "end" keys.
   """
 
   video_file: str
   audio_file: str
   audio_background_file: str
-  utterance_metadata: Sequence[Mapping[str, str | float]]
 
 
 @dataclasses.dataclass
@@ -209,6 +207,7 @@ class Dubber:
       safety_settings: Mapping[
           HarmCategory, HarmBlockThreshold
       ] = _DEFAULT_GEMINI_SAFETY_SETTINGS,
+      number_of_steps: int = _NUMBER_OF_STEPS,
   ) -> None:
     """Initializes the Dubber class with various parameters for dubbing configuration.
 
@@ -247,7 +246,10 @@ class Dubber:
         top_k: Top-k sampling parameter.
         max_output_tokens: Maximum number of tokens in the generated response.
         response_mime_type: Gemini output mime type.
-        safety_settings: Gemini safety settings
+        safety_settings: Gemini safety settings.
+        utterance_metadata: A sequence with dictionaries containing metadata for
+          each detected utterance.
+        number_of_steps: The total number of steps in the dubbing process.
     """
     self.input_file = input_file
     self.output_directory = output_directory
@@ -273,6 +275,9 @@ class Dubber:
     self.max_output_tokens = max_output_tokens
     self.response_mime_type = response_mime_type
     self.safety_settings = safety_settings
+    self.utterance_metadata = None
+    self._number_of_steps = number_of_steps
+    self._rerun = False
 
   @functools.cached_property
   def device(self):
@@ -379,7 +384,14 @@ class Dubber:
         system_instructions=self.translation_system_instructions
     )
 
-  def run_preprocessing(self) -> PreprocessingArtifacts:
+  @functools.cached_property
+  def progress_bar(self) -> tqdm:
+    total_number_of_steps = (
+        self._number_of_steps if self.clean_up else self._number_of_steps - 1
+    )
+    return tqdm(total=total_number_of_steps, initial=1)
+
+  def run_preprocessing(self) -> None:
     """Splits audio/video, applies DEMUCS, and segments audio into utterances with PyAnnote.
 
     Returns:
@@ -414,21 +426,20 @@ class Dubber:
           utterance_metadata=utterance_metadata,
           minimum_merge_threshold=self.minimum_merge_threshold,
       )
-    utterance_metadata = audio_processing.cut_and_save_audio(
+    self.utterance_metadata = audio_processing.cut_and_save_audio(
         utterance_metadata=utterance_metadata,
         audio_file=audio_file,
         output_directory=self.output_directory,
     )
-    logging.info("Completed preprocessing.")
-    self.progress_bar.update()
     self.preprocesing_output = PreprocessingArtifacts(
         video_file=video_file,
         audio_file=audio_file,
         audio_background_file=audio_background_file,
-        utterance_metadata=utterance_metadata,
     )
+    logging.info("Completed preprocessing.")
+    self.progress_bar.update()
 
-  def run_speech_to_text(self) -> Sequence[Mapping[str, str | float]]:
+  def run_speech_to_text(self) -> None:
     """Transcribes audio, applies speaker diarization, and updates metadata with Gemini.
 
     Returns:
@@ -440,7 +451,7 @@ class Dubber:
         else self.preprocesing_output.audio_file
     )
     utterance_metadata = speech_to_text.transcribe_audio_chunks(
-        utterance_metadata=self.preprocesing_output.utterance_metadata,
+        utterance_metadata=self.utterance_metadata,
         advertiser_name=self.advertiser_name,
         original_language=self.original_language,
         model=self.speech_to_text_model,
@@ -455,21 +466,20 @@ class Dubber:
         model=speaker_diarization_model,
         diarization_instructions=self.diarization_instructions,
     )
-    utterance_metadata = speech_to_text.add_speaker_info(
+    self.utterance_metadata = speech_to_text.add_speaker_info(
         utterance_metadata=utterance_metadata, speaker_info=speaker_info
     )
     logging.info("Completed transcription.")
     self.progress_bar.update()
-    self.speech_to_text_output = utterance_metadata
 
-  def run_translation(self) -> Sequence[Mapping[str, str | float]]:
+  def run_translation(self) -> None:
     """Translates transcribed text and potentially merges utterances with Gemini.
 
     Returns:
         Updated utterance metadata with translated text.
     """
     script = translation.generate_script(
-        utterance_metadata=self.speech_to_text_output
+        utterance_metadata=self.utterance_metadata
     )
     translation_model = self.configure_gemini_model(
         system_instructions=self.processed_translation_system_instructions
@@ -481,42 +491,137 @@ class Dubber:
         target_language=self.target_language,
         model=translation_model,
     )
-    utterance_metadata = translation.add_translations(
-        utterance_metadata=self.speech_to_text_output,
+    self.utterance_metadata = translation.add_translations(
+        utterance_metadata=self.utterance_metadata,
         translated_script=translated_script,
     )
     logging.info("Completed translation.")
-    self.progress_bar.update()
-    self.translation_output = utterance_metadata
+    if not self._rerun:
+      self.progress_bar.update()
 
-  def run_text_to_speech(self) -> Sequence[Mapping[str, str | float]]:
+  def run_assign_voices(self) -> None:
+    """Assign Google's Text-To-Speech voices to each utterance.
+
+    Returns:
+        Updated utterance metadata with assigned voices.
+    """
+    assigned_voices = text_to_speech.assign_voices(
+        utterance_metadata=self.utterance_metadata,
+        target_language=self.target_language,
+        client=self.text_to_speech_client,
+        preferred_voices=self.preferred_voices,
+    )
+    self.utterance_metadata = text_to_speech.update_utterance_metadata(
+        utterance_metadata=self.utterance_metadata,
+        assigned_voices=assigned_voices,
+    )
+
+  def _run_verify_utterance_metadata(self) -> None:
+    """Displays, allows editing, confirms utterance metadata, and offers translation."""
+    utterance_metadata = self.utterance_metadata
+    self._rerun = False
+    self._display_utterance_metadata(utterance_metadata)
+    while True:
+      if self._edit_utterance_metadata(utterance_metadata):
+        self._rerun = True
+      if (
+          self._confirm_utterance_metadata(utterance_metadata)
+          or not self._rerun
+      ):
+        translate_choice = self._prompt_for_translation()
+        if translate_choice == "yes":
+          self.run_translation()
+        assign_voices_choice = self._prompt_for_assign_voices()
+        if assign_voices_choice == "yes":
+          self.run_assign_voices()
+        self._rerun = False
+        return
+
+  def _display_utterance_metadata(self, utterance_metadata):
+    """Displays the current utterance metadata."""
+    print("Current utterance metadata:")
+    for i, item in enumerate(utterance_metadata):
+      print(f"{i+1}. {json.dumps(item, ensure_ascii=False, indent=2)}")
+
+  def _edit_utterance_metadata(self, utterance_metadata) -> bool:
+    """Allows editing of the utterance metadata and returns True if edited."""
+    edit_choice = input("\nDo you want to edit? (yes/no): ").lower()
+    if edit_choice != "yes":
+      return False
+    while True:
+      try:
+        index = int(input("Enter item number to edit: ")) - 1
+        if 0 <= index < len(utterance_metadata):
+          readline.set_startup_hook(
+              lambda: readline.insert_text(
+                  json.dumps(utterance_metadata[index], ensure_ascii=False)
+              )
+          )
+          modified_input = input(f"Modify: ")
+          utterance_metadata[index] = json.loads(modified_input)
+          readline.set_startup_hook()
+          return True
+        else:
+          print("Invalid item number.")
+      except (json.JSONDecodeError, ValueError):
+        print("Invalid JSON or input. Please try again.")
+
+  def _confirm_utterance_metadata(self, utterance_metadata) -> bool:
+    """Confirms the final utterance metadata and returns True if confirmed."""
+    while True:
+      print("The final utterance metadata is:")
+      for i, item in enumerate(utterance_metadata):
+        print(f"{i+1}. {json.dumps(item, ensure_ascii=False, indent=2)}")
+      confirm_choice = input("\nAre you okay with this? (yes/no): ").lower()
+      if confirm_choice == "yes":
+        self.utterance_metadata = utterance_metadata
+        return True
+      elif confirm_choice == "no":
+        return False
+      else:
+        print("Invalid choice.")
+
+  def _prompt_for_translation(self) -> str:
+    """Prompts the user if they want to run translation."""
+    while True:
+      translate_choice = input(
+          "\nDo you want to run translation (useful after modifying the source"
+          " utterance text)? (yes/no): "
+      ).lower()
+      if translate_choice in ("yes", "no"):
+        return translate_choice
+      else:
+        print("Invalid choice.")
+
+
+  def _prompt_for_assign_voices(self) -> str:
+    """Prompts the user if they want to re-assign voices."""
+    while True:
+      assign_voices_choice = input(
+          "\nDo you want to re-assign voices (useful after modifying speaker"
+          " IDs)? (yes/no): "
+      ).lower()
+      if assign_voices_choice in ("yes", "no"):
+        return assign_voices_choice
+      else:
+        print("Invalid choice.")
+
+  def run_text_to_speech(self) -> None:
     """Converts translated text to speech and dubs utterances with Google's Text-To-Speech.
 
     Returns:
         Updated utterance metadata with generated speech file paths.
     """
-
-    assigned_voices = text_to_speech.assign_voices(
-        utterance_metadata=self.translation_output,
-        target_language=self.target_language,
+    self.utterance_metadata = text_to_speech.dub_utterances(
         client=self.text_to_speech_client,
-        preferred_voices=self.preferred_voices,
-    )
-    utterance_metadata = text_to_speech.update_utterance_metadata(
-        utterance_metadata=self.translation_output,
-        assigned_voices=assigned_voices,
-    )
-    utterance_metadata = text_to_speech.dub_utterances(
-        client=self.text_to_speech_client,
-        utterance_metadata=utterance_metadata,
+        utterance_metadata=self.utterance_metadata,
         output_directory=self.output_directory,
         target_language=self.target_language,
     )
     logging.info("Completed converting text to speech.")
     self.progress_bar.update()
-    self.text_to_speech_output = utterance_metadata
 
-  def run_postprocessing(self) -> str:
+  def run_postprocessing(self) -> None:
     """Merges dubbed audio with the original background audio and video (if applicable).
 
     Returns:
@@ -524,7 +629,7 @@ class Dubber:
     """
 
     dubbed_audio_vocals_file = audio_processing.insert_audio_at_timestamps(
-        utterance_metadata=self.text_to_speech_output,
+        utterance_metadata=self.utterance_metadata,
         background_audio_file=self.preprocesing_output.audio_background_file,
         output_directory=self.output_directory,
     )
@@ -545,12 +650,47 @@ class Dubber:
           output_directory=self.output_directory,
           target_language=self.target_language,
       )
-    logging.info("Completed postprocessing.")
-    self.progress_bar.update()
     self.postprocessing_output = PostprocessingArtifacts(
         audio_file=dubbed_audio_file,
         video_file=dubbed_video_file if self.is_video else None,
     )
+    logging.info("Completed postprocessing.")
+    self.progress_bar.update()
+
+  def run_save_utterance_metadata(self) -> None:
+    """Saves a Python dictionary to a JSON file.
+
+    Returns:
+      A path to the saved uttterance metadata.
+    """
+    target_language_suffix = (
+        "_" + self.target_language.replace("-", "_").lower()
+    )
+    utterance_metadata_file = os.path.join(
+        self.output_directory,
+        _UTTERNACE_METADATA_FILE_NAME + target_language_suffix + ".json",
+    )
+    try:
+      json_data = json.dumps(
+          self.utterance_metadata, ensure_ascii=False, indent=4
+      )
+      with tempfile.NamedTemporaryFile(
+          mode="w", delete=False, encoding="utf-8"
+      ) as temporary_file:
+        json.dump(json_data, temporary_file, ensure_ascii=False)
+        temporary_file.flush()
+        os.fsync(temporary_file.fileno())
+      tf.io.gfile.copy(
+          temporary_file.name, utterance_metadata_file, overwrite=True
+      )
+      os.remove(temporary_file.name)
+      logging.info(
+          "Utterance metadata saved successfully to"
+          f" '{utterance_metadata_file}'"
+      )
+    except Exception as e:
+      logging.warning(f"Error saving utterance metadata: {e}")
+    self.save_utterance_metadata_output = utterance_metadata_file
 
   def run_clean_directory(self) -> None:
     """Removes all files and directories from a directory, except for those listed in keep_files."""
@@ -574,47 +714,15 @@ class Dubber:
     logging.info("Temporary artifacts are now removed.")
     self.progress_bar.update()
 
-  def run_save_utterance_metadata(self):
-    """Saves a Python dictionary to a JSON file.
-
-    Returns:
-      A path to the saved uttterance metadata.
-    """
-    target_language_suffix = (
-        "_" + self.target_language.replace("-", "_").lower()
-    )
-    utterance_metadata_file = os.path.join(
-        self.output_directory,
-        _UTTERNACE_METADATA_FILE_NAME + target_language_suffix + ".json",
-    )
-    try:
-      json_data = json.dumps(
-          self.text_to_speech_output, ensure_ascii=False, indent=4
-      )
-      with tf.io.gfile.GFile(utterance_metadata_file, "w") as json_file:
-        json.dump(json_data, json_file)
-      logging.info(
-          "Utterance metadata saved successfully to"
-          f" '{utterance_metadata_file}'"
-      )
-    except Exception as e:
-      logging.warning(f"Error saving utterance metadata: {e}")
-    self.save_utterance_metadata_output = utterance_metadata_file
-
-  @functools.cached_property
-  def progress_bar(self):
-    total_number_of_steps = (
-        _NUMBER_OF_STEPS if self.clean_up else _NUMBER_OF_STEPS - 1
-    )
-    return tqdm(total=total_number_of_steps, initial=1)
-
-  def dub_ad(self) -> str:
+  def dub_ad(self) -> PostprocessingArtifacts:
     """Orchestrates the entire ad dubbing process."""
     logging.info("Dubbing process starting...")
     start_time = time.time()
     self.run_preprocessing()
     self.run_speech_to_text()
     self.run_translation()
+    self.run_assign_voices()
+    self._run_verify_utterance_metadata()
     self.run_text_to_speech()
     self.run_save_utterance_metadata()
     self.run_postprocessing()
