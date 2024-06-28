@@ -82,7 +82,7 @@ def build_demucs_command(
       "-m",
       "demucs.separate",
       "-o",
-      output_directory,
+      f"'{output_directory}'",
       "--device",
       device,
       "--shifts",
@@ -111,7 +111,7 @@ def build_demucs_command(
     command_parts.append("--int24")
   if float32:
     command_parts.append("--float32")
-  command_parts.append(audio_file)
+  command_parts.append(f"'{audio_file}'")
   return " ".join(command_parts)
 
 
@@ -138,40 +138,36 @@ def execute_demcus_command(command: str) -> None:
 
 
 def extract_command_info(command: str) -> tuple[str, str, str]:
-  """Extracts folder name, output file extension, and input file name (without path) from a Demucs command.
+    """Extracts folder name, output file extension, and input file name (without path) from a Demucs command.
 
-  Args:
-      command: The Demucs command string.
+    Args:
+        command: The Demucs command string.
 
-  Returns:
-      tuple: A tuple containing (folder_name, output_file_extension,
-      input_file_name).
-  """
-  folder_pattern = r"-o\s+(\S+)"
-  flac_pattern = r"--flac"
-  mp3_pattern = r"--mp3"
-  int24_or_float32_pattern = r"--(int24|float32)"
-  input_file_pattern = r"(\w+\.\w+)$"
-  folder_match = re.search(folder_pattern, command)
-  flac_match = re.search(flac_pattern, command)
-  mp3_match = re.search(mp3_pattern, command)
-  int24_or_float32_match = re.search(int24_or_float32_pattern, command)
-  input_file_match = re.search(input_file_pattern, command)
-
-  output_directory = folder_match.group(1)
-  input_file_name_with_ext = input_file_match.group(1)
-  input_file_name_no_ext = os.path.splitext(input_file_name_with_ext)[0]
-
-  if flac_match:
-    output_file_extension = ".flac"
-  elif mp3_match:
-    output_file_extension = ".mp3"
-  elif int24_or_float32_match:
-    output_file_extension = ".wav"
-  else:
-    output_file_extension = ".wav"
-
-  return output_directory, output_file_extension, input_file_name_no_ext
+    Returns:
+        tuple: A tuple containing (folder_name, output_file_extension, input_file_name).
+    """
+    folder_pattern = r"-o\s+(['\"]?)(.+?)\1"
+    flac_pattern = r"--flac"
+    mp3_pattern = r"--mp3"
+    int24_or_float32_pattern = r"--(int24|float32)"
+    input_file_pattern = r"['\"]?(\w+\.\w+)['\"]?$|\s(\w+\.\w+)$"  
+    folder_match = re.search(folder_pattern, command)
+    flac_match = re.search(flac_pattern, command)
+    mp3_match = re.search(mp3_pattern, command)
+    int24_or_float32_match = re.search(int24_or_float32_pattern, command)
+    input_file_match = re.search(input_file_pattern, command)
+    output_directory = folder_match.group(2) if folder_match else ""
+    input_file_name_with_ext = (input_file_match.group(1) or input_file_match.group(2)) if input_file_match else ""
+    input_file_name_no_ext = os.path.splitext(input_file_name_with_ext)[0] if input_file_match else ""
+    if flac_match:
+        output_file_extension = ".flac"
+    elif mp3_match:
+        output_file_extension = ".mp3"
+    elif int24_or_float32_match:
+        output_file_extension = ".wav"
+    else:
+        output_file_extension = ".wav"
+    return output_directory, output_file_extension, input_file_name_no_ext
 
 
 def assemble_split_audio_file_paths(command: str) -> tuple[str, str]:

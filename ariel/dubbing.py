@@ -190,6 +190,7 @@ class Dubber:
       top_k: int = _DEFAULT_GEMINI_TOP_K,
       max_output_tokens: int = _DEFAULT_GEMINI_MAX_OUTPUT_TOKENS,
       response_mime_type: str = _DEFAULT_GEMINI_RESPONSE_MIME_TYPE,
+      safety_settings: Mapping[HarmCategory, HarmBlockThreshold] = _DEFAULT_GEMINI_SAFETY_SETTINGS
   ) -> None:
     """Initializes the Dubber class with various parameters for dubbing configuration.
 
@@ -227,6 +228,8 @@ class Dubber:
         top_p: Nucleus sampling threshold.
         top_k: Top-k sampling parameter.
         max_output_tokens: Maximum number of tokens in the generated response.
+        response_mime_type: Gemini output mime type.
+        safety_settings: Gemini safety settings
     """
     self.input_file = input_file
     self.output_directory = output_directory
@@ -251,6 +254,7 @@ class Dubber:
     self.top_k = top_k
     self.max_output_tokens = max_output_tokens
     self.response_mime_type = response_mime_type
+    self.safety_settings = safety_settings
 
   @functools.cached_property
   def device(self):
@@ -335,7 +339,7 @@ class Dubber:
         model_name=self.model_name,
         generation_config=gemini_configuration,
         system_instruction=system_instructions,
-        safety_settings=_DEFAULT_GEMINI_SAFETY_SETTINGS,
+        safety_settings=self.safety_settings,
     )
 
   @property
