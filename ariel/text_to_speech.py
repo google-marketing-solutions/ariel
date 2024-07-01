@@ -78,7 +78,7 @@ def assign_voices(
   Args:
       utterance_metadata: A sequence of utterance metadata, each represented as
         a dictionary with keys: "text", "start", "end", "speaker_id",
-        "ssml_gender", "translated_text" and "path".
+        "ssml_gender", "translated_text", "for_dubbing" and "path".
       target_language: The target language (ISO 3166-1 alpha-2).
       client: A TextToSpeechClient object.
       preferred_voices: An optional list of preferred voice names.
@@ -146,7 +146,7 @@ def update_utterance_metadata(
   Args:
       utterance_metadata: A sequence of utterance metadata, each represented as
         a dictionary with keys: "text", "start", "end", "speaker_id",
-        "ssml_gender", "translated_text" and "path".
+        "ssml_gender", "translated_text", "for_dubbing" and "path".
       assigned_voices: Mapping mapping speaker IDs to assigned Google voices.
 
   Returns:
@@ -248,11 +248,12 @@ def dub_utterances(
       client: The TextToSpeechClient object to use.
       utterance_metadata: A sequence of utterance metadata, each represented as
         a dictionary with keys: "text", "start", "end", "speaker_id",
-        "ssml_gender", "translated_text", "assigned_google_voice" and "path".
+        "ssml_gender", "translated_text", "assigned_google_voice", "for_dubbing"
+        and "path".
       output_directory: Path to the directory for output files.
       target_language: The target language (ISO 3166-1 alpha-2).
-      adjust_speed: Whether to either speed up or slow down utterances
-        to match the duration of the utterances in the source language.
+      adjust_speed: Whether to either speed up or slow down utterances to match
+        the duration of the utterances in the source language.
 
   Returns:
       List of processed utterance metadata with updated "dubbed_path".
@@ -260,21 +261,24 @@ def dub_utterances(
 
   updated_utterance_metadata = []
   for utterance in utterance_metadata:
-    path = utterance["path"]
-    text = utterance["translated_text"]
-    assigned_google_voice = utterance["assigned_google_voice"]
-    duration = utterance["end"] - utterance["start"]
-    base_filename = os.path.splitext(os.path.basename(path))[0]
-    output_filename = os.path.join(
-        output_directory, f"dubbed_{base_filename}.mp3"
-    )
-    dubbed_path = convert_text_to_speech(
-        client=client,
-        assigned_google_voice=assigned_google_voice,
-        target_language=target_language,
-        output_filename=output_filename,
-        text=text,
-    )
+    if not utterance["for_dubbing"]:
+      dubbed_path = utterance["path"]
+    else:
+      path = utterance["path"]
+      text = utterance["translated_text"]
+      assigned_google_voice = utterance["assigned_google_voice"]
+      duration = utterance["end"] - utterance["start"]
+      base_filename = os.path.splitext(os.path.basename(path))[0]
+      output_filename = os.path.join(
+          output_directory, f"dubbed_{base_filename}.mp3"
+      )
+      dubbed_path = convert_text_to_speech(
+          client=client,
+          assigned_google_voice=assigned_google_voice,
+          target_language=target_language,
+          output_filename=output_filename,
+          text=text,
+      )
     if adjust_speed:
       adjust_audio_speed(input_mp3_path=dubbed_path, target_duration=duration)
     utterance_copy = utterance.copy()

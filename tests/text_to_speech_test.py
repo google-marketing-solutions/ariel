@@ -245,6 +245,7 @@ class TestDubUtterances(absltest.TestCase):
               "path": "chunk_1.wav",
               "translated_text": "This is dubbed text 1.",
               "assigned_google_voice": "en-US-Wavenet-A",
+              "for_dubbing": True,
           },
           {
               "start": 5.5,
@@ -252,6 +253,7 @@ class TestDubUtterances(absltest.TestCase):
               "path": "chunk_2.wav",
               "translated_text": "This is dubbed text 2.",
               "assigned_google_voice": "en-US-Wavenet-B",
+              "for_dubbing": False,
           },
       ]
 
@@ -276,6 +278,7 @@ class TestDubUtterances(absltest.TestCase):
               "translated_text": "This is dubbed text 1.",
               "assigned_google_voice": "en-US-Wavenet-A",
               "dubbed_path": f"{temp_dir}/dubbed_chunk_1.mp3",
+              "for_dubbing": True,
           },
           {
               "start": 5.5,
@@ -283,7 +286,8 @@ class TestDubUtterances(absltest.TestCase):
               "path": "chunk_2.wav",
               "translated_text": "This is dubbed text 2.",
               "assigned_google_voice": "en-US-Wavenet-B",
-              "dubbed_path": f"{temp_dir}/dubbed_chunk_2.mp3",
+              "dubbed_path": "chunk_2.wav",
+              "for_dubbing": False,
           },
       ]
       self.assertEqual(result, expected_output)

@@ -28,7 +28,7 @@ from moviepy.audio.AudioClip import AudioArrayClip
 import numpy as np
 
 
-class TranscribeTests(absltest.TestCase):
+class TranscribeTests(parameterized.TestCase):
 
   def test_transcribe(self):
     with tempfile.NamedTemporaryFile(suffix=".mp3") as temporary_file:
@@ -52,7 +52,33 @@ class TranscribeTests(absltest.TestCase):
           "Test.",
       )
 
-  def test_transcribe_chunks(self):
+  @parameterized.named_parameters(
+      ("exact_match", "Hello, how are you today?", ["how are you"], False),
+      ("punctuation_difference", "That's great news!", ["great news"], False),
+      ("case_insensitive", "This is a TEST sentence.", ["test"], False),
+      (
+          "multiple_phrases",
+          "Hi there! How's it going?",
+          ["hi there", "how's it going"],
+          False,
+      ),
+      ("no_match", "This is a different sentence.", ["not found"], True),
+      ("no_dubbing_phrases_empty", "Hello, how are you?", [], True),
+  )
+  def test_is_substring_present(
+      self, utterance, no_dubbing_phrases, expected_result
+  ):
+    result = speech_to_text.is_substring_present(
+        utterance=utterance, no_dubbing_phrases=no_dubbing_phrases
+    )
+    self.assertEqual(result, expected_result)
+
+  @parameterized.named_parameters(
+      ("with_dubbing_phrase", ["hello world"], False),
+      ("without_dubbing_phrase", ["goodbye"], True),
+      ("empty_no_dubbing_phrases", [], True),
+  )
+  def test_transcribe_chunks(self, no_dubbing_phrases, expected_for_dubbing):
     with tempfile.NamedTemporaryFile(suffix=".mp3") as temporary_file:
       silence_duration = 5
       silence = AudioArrayClip(
@@ -62,19 +88,29 @@ class TranscribeTests(absltest.TestCase):
       silence.write_audiofile(temporary_file.name)
       mock_model = MagicMock(spec=WhisperModel)
       Segment = namedtuple("Segment", ["text"])
-      mock_model.transcribe.return_value = [Segment(text="Test.")], None
+      mock_model.transcribe.return_value = [
+          Segment(text="hello world this is a test")
+      ], None
+      utterance_metadata = [dict(path=temporary_file.name, start=0.0, end=5.0)]
+      advertiser_name = "Advertiser Name"
+      original_language = "en"
       transcribed_audio_chunks = speech_to_text.transcribe_audio_chunks(
-          utterance_metadata=[
-              dict(path=temporary_file.name, start=0.0, end=5.0)
-          ],
-          advertiser_name="Advertiser Name",
-          original_language="en",
+          utterance_metadata=utterance_metadata,
+          advertiser_name=advertiser_name,
+          original_language=original_language,
           model=mock_model,
+          no_dubbing_phrases=no_dubbing_phrases,
       )
-      self.assertEqual(
-          transcribed_audio_chunks,
-          [dict(path=temporary_file.name, start=0.0, end=5.0, text="Test.")],
-      )
+      expected_result = [
+          dict(
+              path=temporary_file.name,
+              start=0.0,
+              end=5.0,
+              text="hello world this is a test",
+              for_dubbing=expected_for_dubbing,
+          )
+      ]
+      self.assertEqual(transcribed_audio_chunks, expected_result)
 
 
 class UploadToGeminiTest(parameterized.TestCase):

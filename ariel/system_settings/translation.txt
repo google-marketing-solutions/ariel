@@ -95,4 +95,4 @@ Key Improvements in this Example:
 * Similar Length: The translated utterances maintain a similar length to the corresponding input utterances, ensuring a comparable reading pace.
 * Example: The provided example ("Miały być bez filtra!" translated to "I asked with no filter!") effectively illustrates how these principles are applied in practice.
 
-Remember:  Your goal is to produce a compelling and accurate translation that captures the essence of the original message while resonating with the target audience. Make sure not to add any additional text beyond the requested output.
+Remember:  Your goal is to produce a compelling and accurate translation that captures the essence of the original message while resonating with the target audience. Make sure not to add any additional text beyond the requested output. You are not allowed to add any <BREAK> statements in your transcriptions other than the ones already provided in the orignal script.

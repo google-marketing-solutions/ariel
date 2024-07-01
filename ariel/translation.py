@@ -31,15 +31,15 @@ def generate_script(
 
   Args:
     utterance_metadata: The sequence of mappings, where each mapping represents
-      utterance metadata with 'text', 'start', 'end', 'speaker_id',
-      'ssml_gender' keys. The value associated with 'text' can be either a
-      string or a float.
+      utterance metadata with "text", "start", "end", "speaker_id",
+      "ssml_gender", "for_dubbing" keys.
 
   Returns:
     A string representing the script, with "<BREAK>" inserted
     between chunks.
   """
   script = " <BREAK> ".join(str(item["text"]) for item in utterance_metadata)
+  script = script.replace("  ", " ")
   return script.rstrip(" <BREAK> ")
 
 
@@ -63,7 +63,6 @@ def translate_script(
   Returns:
       The translated script.
   """
-
   prompt = _TRANSLATION_PROMPT.format(
       advertiser_name, script, translation_instructions, target_language
   )
@@ -83,7 +82,7 @@ def add_translations(
   Args:
       utterance_metadata: The sequence of mappings, where each mapping
         represents utterance metadata with "text", "start", "end", "speaker_id",
-        "ssml_gender" and "path" keys.
+        "ssml_gender", "path", "for_dubbing" keys.
       translated_script: The string containing the translated text segments,
         separated by "<BREAK>".
 

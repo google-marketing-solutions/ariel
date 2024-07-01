@@ -187,6 +187,7 @@ class Dubber:
       original_language: str,
       target_language: str,
       number_of_speakers: int = 1,
+      no_dubbing_phrases: Sequence[str] | None = None,
       diarization_instructions: str | None = None,
       translation_instructions: str | None = None,
       merge_utterances: bool = True,
@@ -224,13 +225,17 @@ class Dubber:
           alpha-2 country code.
         number_of_speakers: The exact number of speakers in the ad (including a
           lector if applicable).
+        no_dubbing_phrases: A sequence of strings representing the phrases that
+          should not be dubbed. It is critical to provide these phrases in a
+          format as close as possible to how they might appear in the utterance
+          (e.g., include punctuation, capitalization if relevant).
         diarization_instructions: Specific instructions for speaker diarization.
         translation_instructions: Specific instructions for translation.
         merge_utterances: Whether to merge utterances when the the timestamps
           delta between them is below 'minimum_merge_threshold'.
         minimum_merge_threshold: Threshold for merging utterances in seconds.
-        adjust_speed: Whether to either speed up or slow down utterances
-          to match the duration of the utterances in the source language.
+        adjust_speed: Whether to either speed up or slow down utterances to
+          match the duration of the utterances in the source language.
         preferred_voices: Preferred voice names for text-to-speech. Use
           high-level names, e.g. 'Wavenet', 'Standard' etc. Do not use the full
           voice names, e.g. 'pl-PL-Wavenet-A' etc.
@@ -260,6 +265,7 @@ class Dubber:
     self.original_language = original_language
     self.target_language = target_language
     self.number_of_speakers = number_of_speakers
+    self.no_dubbing_phrases = no_dubbing_phrases
     self.diarization_instructions = diarization_instructions
     self.translation_instructions = translation_instructions
     self.merge_utterances = merge_utterances
@@ -459,6 +465,7 @@ class Dubber:
         advertiser_name=self.advertiser_name,
         original_language=self.original_language,
         model=self.speech_to_text_model,
+        no_dubbing_phrases=self.no_dubbing_phrases,
     )
     speaker_diarization_model = self.configure_gemini_model(
         system_instructions=self.processed_diarization_system_instructions
@@ -596,7 +603,6 @@ class Dubber:
         return translate_choice
       else:
         print("Invalid choice.")
-
 
   def _prompt_for_assign_voices(self) -> str:
     """Prompts the user if they want to re-assign voices."""

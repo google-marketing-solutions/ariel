@@ -58,6 +58,11 @@ _NUMBER_OF_SPEAKERS = flags.DEFINE_integer(
     1,
     "Number of speakers in the ad.",
 )
+_NO_DUBBING_PHRASES = flags.DEFINE_list(
+    "no_dubbing_phrases",
+    [],
+    "Phrases to exclude in the dubbing process, they orignal utterance will be used instead.",
+)
 _DIARIZATION_INSTRUCTIONS = flags.DEFINE_string(
     "diarization_instructions",
     None,
@@ -143,6 +148,7 @@ def main(argv: Sequence[str]) -> None:
       original_language=_ORIGINAL_LANGUAGE.value,
       target_language=_TARGET_LANGUAGE.value,
       number_of_speakers=_NUMBER_OF_SPEAKERS.value,
+      no_dubbing_phrases=_NO_DUBBING_PHRASES.value,
       diarization_instructions=_DIARIZATION_INSTRUCTIONS.value,
       translation_instructions=_TRANSLATION_INSTRUCTIONS.value,
       merge_utterances=_MERGE_UTTERANCES.value,
