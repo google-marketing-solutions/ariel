@@ -240,6 +240,7 @@ def dub_utterances(
     utterance_metadata: Sequence[Mapping[str, str | float]],
     output_directory: str,
     target_language: str,
+    adjust_speed: bool = True,
 ) -> Sequence[Mapping[str, str | float]]:
   """Processes a list of utterance metadata, generating dubbed audio files.
 
@@ -250,6 +251,8 @@ def dub_utterances(
         "ssml_gender", "translated_text", "assigned_google_voice" and "path".
       output_directory: Path to the directory for output files.
       target_language: The target language (ISO 3166-1 alpha-2).
+      adjust_speed: Whether to either speed up or slow down utterances
+        to match the duration of the utterances in the source language.
 
   Returns:
       List of processed utterance metadata with updated "dubbed_path".
@@ -272,7 +275,8 @@ def dub_utterances(
         output_filename=output_filename,
         text=text,
     )
-    adjust_audio_speed(input_mp3_path=dubbed_path, target_duration=duration)
+    if adjust_speed:
+      adjust_audio_speed(input_mp3_path=dubbed_path, target_duration=duration)
     utterance_copy = utterance.copy()
     utterance_copy["dubbed_path"] = dubbed_path
     updated_utterance_metadata.append(utterance_copy)

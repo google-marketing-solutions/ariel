@@ -191,6 +191,7 @@ class Dubber:
       translation_instructions: str | None = None,
       merge_utterances: bool = True,
       minimum_merge_threshold: float = 0.001,
+      adjust_speed: bool = True,
       preferred_voices: Sequence[str] | None = None,
       clean_up: bool = True,
       pyannote_model: str = _DEFAULT_PYANNOTE_MODEL,
@@ -228,6 +229,8 @@ class Dubber:
         merge_utterances: Whether to merge utterances when the the timestamps
           delta between them is below 'minimum_merge_threshold'.
         minimum_merge_threshold: Threshold for merging utterances in seconds.
+        adjust_speed: Whether to either speed up or slow down utterances
+          to match the duration of the utterances in the source language.
         preferred_voices: Preferred voice names for text-to-speech. Use
           high-level names, e.g. 'Wavenet', 'Standard' etc. Do not use the full
           voice names, e.g. 'pl-PL-Wavenet-A' etc.
@@ -261,6 +264,7 @@ class Dubber:
     self.translation_instructions = translation_instructions
     self.merge_utterances = merge_utterances
     self.minimum_merge_threshold = minimum_merge_threshold
+    self.adjust_speed = adjust_speed
     self.preferred_voices = preferred_voices
     self.clean_up = clean_up
     self.pyannote_model = pyannote_model
@@ -617,6 +621,7 @@ class Dubber:
         utterance_metadata=self.utterance_metadata,
         output_directory=self.output_directory,
         target_language=self.target_language,
+        adjust_speed=self.adjust_speed,
     )
     logging.info("Completed converting text to speech.")
     self.progress_bar.update()

@@ -28,6 +28,11 @@ Key Steps:
     * Meaning and Style: Translate the corrected and enhanced English text into flawless [TARGET_LANGUAGE], preserving the original meaning, style, and emotional impact.
     * Resonance: Ensure the translation sounds natural and engaging to consumers in the target language.
 
+4. Aim for the output to have a similar length as the input:
+
+    * Utterance Length: Strive to make the translation of each utterance have a similar length to the corresponding input utterance. This ensures that the person reading the translated utterance can do so in roughly the same amount of time as the person who read the original utterance. While the lengths don't need to be identical, they should be comparable.
+    * No Compromises: While maintaining similar utterance length, never compromise on other essential requirements, such as accuracy, meaning, nuance, or any other specified criteria.
+
 Important Notes:
 
 * `<BREAK>` Tags: These tags mark new utterances or line breaks in the dialogue. Ignore them during editing, but preserve them in the final translation to maintain the rhythm of the speech.
@@ -72,5 +77,22 @@ Key Improvements in this Example:
 * Converted the "2.5 million" to "Dwa i pół miliona".
 * Converted the "4,2 τσακό" to "cztery przecinek dwa procent".
 * Your output contains exactly the same number of utterances as the input.
+
+Example 3:
+
+Input (Polish):
+
+ You're hired by a company called: AC Master. The received transcript is: 'Z filtrem?! <BREAK> Miały być bez filtra! <BREAK> W całym mieście nie ma bez filtra... Specific instructions: None. The target language is: en-US.
+
+Output (English):
+
+ With filter?! <BREAK> I asked with no filter! <BREAK> You can't find them in this city. <BREAK>
+
+Key Improvements in this Example:
+
+* Adaptation: The translation isn't a literal word-for-word match (1:1) but has been adapted for naturalness and flow in the target language.
+* Meaning Preservation: Despite the adaptation, the exact meaning of the original message has been carefully preserved.
+* Similar Length: The translated utterances maintain a similar length to the corresponding input utterances, ensuring a comparable reading pace.
+* Example: The provided example ("Miały być bez filtra!" translated to "I asked with no filter!") effectively illustrates how these principles are applied in practice.
 
 Remember:  Your goal is to produce a compelling and accurate translation that captures the essence of the original message while resonating with the target audience. Make sure not to add any additional text beyond the requested output.
