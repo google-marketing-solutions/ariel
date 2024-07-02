@@ -19,6 +19,7 @@ from typing import Final, Mapping, Sequence
 from google.cloud import texttospeech
 from pydub import AudioSegment
 import tensorflow as tf
+from absl import logging
 
 _SSML_MALE: Final[str] = "Male"
 _SSML_FEMALE: Final[str] = "Female"
@@ -32,9 +33,10 @@ _PREFERRED_VOICES: Final[Sequence[str]] = (
     "Neural2",
     "Standard",
 )
-DEFAULT_PITCH: Final[float] = -4.5
-DEFAULT_VOLUME_GAIN_DB: Final[float] = 16.0
-DEFAULT_SPEAKING_RATE: Final[float] = 1.0
+_DEFAULT_PITCH: Final[float] = -4.5
+_DEFAULT_VOLUME_GAIN_DB: Final[float] = 16.0
+_DEFAULT_SPEAKING_RATE: Final[float] = 1.0
+_MINIMUM_DURATION: Final[float] = 1.0
 
 
 def list_available_voices(
@@ -167,9 +169,9 @@ def convert_text_to_speech(
     target_language: str,
     output_filename: str,
     text: str,
-    pitch: float = DEFAULT_PITCH,
-    volume_gain_db: float = DEFAULT_VOLUME_GAIN_DB,
-    speaking_rate: float = DEFAULT_SPEAKING_RATE,
+    pitch: float = _DEFAULT_PITCH,
+    volume_gain_db: float = _DEFAULT_VOLUME_GAIN_DB,
+    speaking_rate: float = _DEFAULT_SPEAKING_RATE,
 ) -> str:
   """Converts text to speech using Google Cloud Text-to-Speech API.
 
@@ -211,13 +213,24 @@ def convert_text_to_speech(
   return output_filename
 
 
-def adjust_audio_speed(*, input_mp3_path: str, target_duration: float) -> None:
+def adjust_audio_speed(
+    *,
+    input_mp3_path: str,
+    target_duration: float,
+    mininimum_duration: float = _MINIMUM_DURATION,
+) -> None:
   """Adjusts the speed of an MP3 file to match the target duration.
+
+  The input files where the target length is less than 1s, won't be modified.
 
   Args:
       input_mp3_path: The path to the input MP3 file.
       target_duration: The desired duration in seconds.
+      mininimum_duration: The minimum target duration of either the input MP3 of
+        the target duration for the adjustment process to take place. Otherwise,
+        the input MP3 duration won't be modified.
   """
+
   if target_duration <= 0.0:
     raise ValueError(
         "The target duration must be more than 0.0 seconds. Got"
@@ -229,6 +242,11 @@ def adjust_audio_speed(*, input_mp3_path: str, target_duration: float) -> None:
         "The input audio duration must be more than 0.0 seconds. It's"
         f" {audio.duration_seconds}."
     )
+  if (
+      target_duration <= mininimum_duration
+      or audio.duration_seconds <= mininimum_duration
+  ):
+    return
   speed_factor = audio.duration_seconds / target_duration
   new_audio = audio.speedup(speed_factor)
   new_audio.export(input_mp3_path, format="mp3")

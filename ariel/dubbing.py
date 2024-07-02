@@ -192,7 +192,7 @@ class Dubber:
       translation_instructions: str | None = None,
       merge_utterances: bool = True,
       minimum_merge_threshold: float = 0.001,
-      adjust_speed: bool = True,
+      adjust_speed: bool = False,
       preferred_voices: Sequence[str] | None = None,
       clean_up: bool = True,
       pyannote_model: str = _DEFAULT_PYANNOTE_MODEL,

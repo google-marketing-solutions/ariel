@@ -61,7 +61,8 @@ _NUMBER_OF_SPEAKERS = flags.DEFINE_integer(
 _NO_DUBBING_PHRASES = flags.DEFINE_list(
     "no_dubbing_phrases",
     [],
-    "Phrases to exclude in the dubbing process, they orignal utterance will be used instead.",
+    "Phrases to exclude in the dubbing process, they orignal utterance will be"
+    " used instead.",
 )
 _DIARIZATION_INSTRUCTIONS = flags.DEFINE_string(
     "diarization_instructions",
@@ -82,6 +83,12 @@ _MINIMUM_MERGE_THRESHOLD = flags.DEFINE_float(
     "minimum_merge_threshold",
     0.001,
     "Threshold for merging utterances in seconds.",
+)
+_ADJUST_SPEED = flags.DEFINE_bool(
+    "adjust_speed",
+    False,
+    "Whether to adjust the duration of the dubbed audio files to match the"
+    " duration of the source audio files.",
 )
 _PREFERRED_VOICES = flags.DEFINE_list(
     "preferred_voices",
@@ -153,6 +160,7 @@ def main(argv: Sequence[str]) -> None:
       translation_instructions=_TRANSLATION_INSTRUCTIONS.value,
       merge_utterances=_MERGE_UTTERANCES.value,
       minimum_merge_threshold=_MINIMUM_MERGE_THRESHOLD.value,
+      adjust_speed=_ADJUST_SPEED.value,
       preferred_voices=_PREFERRED_VOICES.value,
       clean_up=_CLEAN_UP.value,
       pyannote_model=_PYANNOTE_MODEL.value,
