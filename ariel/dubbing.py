@@ -531,14 +531,11 @@ class Dubber:
     """Displays, allows editing, confirms utterance metadata, and offers translation."""
     utterance_metadata = self.utterance_metadata
     self._rerun = False
-    self._display_utterance_metadata(utterance_metadata)
     while True:
+      self._display_utterance_metadata(utterance_metadata)
       if self._edit_utterance_metadata(utterance_metadata):
-        self._rerun = True
-      if (
-          self._confirm_utterance_metadata(utterance_metadata)
-          or not self._rerun
-      ):
+        continue
+      if self._confirm_utterance_metadata(utterance_metadata):
         translate_choice = self._prompt_for_translation()
         if translate_choice == "yes":
           self.run_translation()
