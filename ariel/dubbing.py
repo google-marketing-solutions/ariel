@@ -596,7 +596,7 @@ class Dubber:
     """Prompts the user if they want to run translation."""
     while True:
       translate_choice = input(
-          "\nDo you want to run translation (useful after modifying the source"
+          "\nDo you want to run translation (recommended after modifying the source"
           " utterance text)? (yes/no): "
       ).lower()
       if translate_choice in ("yes", "no"):
@@ -608,7 +608,7 @@ class Dubber:
     """Prompts the user if they want to re-assign voices."""
     while True:
       assign_voices_choice = input(
-          "\nDo you want to re-assign voices (useful after modifying speaker"
+          "\nDo you want to re-assign voices (recommended after modifying speaker"
           " IDs)? (yes/no): "
       ).lower()
       if assign_voices_choice in ("yes", "no"):

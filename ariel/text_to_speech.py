@@ -16,10 +16,10 @@
 
 import os
 from typing import Final, Mapping, Sequence
+from absl import logging
 from google.cloud import texttospeech
 from pydub import AudioSegment
 import tensorflow as tf
-from absl import logging
 
 _SSML_MALE: Final[str] = "Male"
 _SSML_FEMALE: Final[str] = "Female"
@@ -33,9 +33,10 @@ _PREFERRED_VOICES: Final[Sequence[str]] = (
     "Neural2",
     "Standard",
 )
-_DEFAULT_PITCH: Final[float] = -4.5
+_DEFAULT_SSML_FEMALE_PITCH: Final[float] = -5.0
+_DEFAULT_SSML_MALE_PITCH: Final[float] = -12.0
+_DEFAULT_SPEED: Final[float] = 1.0
 _DEFAULT_VOLUME_GAIN_DB: Final[float] = 16.0
-_DEFAULT_SPEAKING_RATE: Final[float] = 1.0
 _MINIMUM_DURATION: Final[float] = 1.0
 
 
@@ -159,19 +160,29 @@ def update_utterance_metadata(
     new_utterance = metadata_item.copy()
     speaker_id = new_utterance.get("speaker_id")
     new_utterance["assigned_google_voice"] = assigned_voices.get(speaker_id)
+    ssml_gender = new_utterance.get("ssml_gender")
+    pitch = (
+        _DEFAULT_SSML_FEMALE_PITCH
+        if ssml_gender == "Female"
+        else _DEFAULT_SSML_MALE_PITCH
+    )
+    new_utterance["google_voice_pitch"] = pitch
+    new_utterance["google_voice_speed"] = _DEFAULT_SPEED
+    new_utterance["google_voice_volume_gain_db"] = _DEFAULT_VOLUME_GAIN_DB
     updated_utterance_metadata.append(new_utterance)
   return updated_utterance_metadata
 
 
 def convert_text_to_speech(
+    *,
     client: texttospeech.TextToSpeechClient,
     assigned_google_voice: str,
     target_language: str,
     output_filename: str,
     text: str,
-    pitch: float = _DEFAULT_PITCH,
-    volume_gain_db: float = _DEFAULT_VOLUME_GAIN_DB,
-    speaking_rate: float = _DEFAULT_SPEAKING_RATE,
+    pitch: float,
+    speed: float,
+    volume_gain_db: float,
 ) -> str:
   """Converts text to speech using Google Cloud Text-to-Speech API.
 
@@ -182,8 +193,8 @@ def convert_text_to_speech(
       output_filename: The name of the output MP3 file.
       text: The text to be converted to speech.
       pitch: The pitch of the synthesized speech.
+      speed: The speaking rate of the synthesized speech.
       volume_gain_db: The volume gain of the synthesized speech.
-      speaking_rate: The speaking rate of the synthesized speech.
 
   Returns:
       The name of the output file.
@@ -198,18 +209,15 @@ def convert_text_to_speech(
       audio_encoding=texttospeech.AudioEncoding.MP3,
       pitch=pitch,
       volume_gain_db=volume_gain_db,
-      speaking_rate=speaking_rate,
+      speaking_rate=speed,
   )
-
   response = client.synthesize_speech(
       input=input_text,
       voice=voice_selection,
       audio_config=audio_config,
   )
-
   with tf.io.gfile.GFile(output_filename, "wb") as out:
     out.write(response.audio_content)
-
   return output_filename
 
 
@@ -221,7 +229,7 @@ def adjust_audio_speed(
 ) -> None:
   """Adjusts the speed of an MP3 file to match the target duration.
 
-  The input files where the target length is less than 1s, won't be modified.
+  The input files where the target length is less than the minimum duration, won't be modified.
 
   Args:
       input_mp3_path: The path to the input MP3 file.
@@ -266,8 +274,9 @@ def dub_utterances(
       client: The TextToSpeechClient object to use.
       utterance_metadata: A sequence of utterance metadata, each represented as
         a dictionary with keys: "text", "start", "end", "speaker_id",
-        "ssml_gender", "translated_text", "assigned_google_voice", "for_dubbing"
-        and "path".
+        "ssml_gender", "translated_text", "assigned_google_voice",
+        "for_dubbing", "path", "google_voice_pitch", "google_voice_speed" and
+        "google_voice_volume_gain_db".
       output_directory: Path to the directory for output files.
       target_language: The target language (ISO 3166-1 alpha-2).
       adjust_speed: Whether to either speed up or slow down utterances to match
@@ -296,6 +305,9 @@ def dub_utterances(
           target_language=target_language,
           output_filename=output_filename,
           text=text,
+          pitch=utterance["google_voice_pitch"],
+          speed=utterance["google_voice_speed"],
+          volume_gain_db=utterance["google_voice_volume_gain_db"],
       )
     if adjust_speed:
       adjust_audio_speed(input_mp3_path=dubbed_path, target_duration=duration)

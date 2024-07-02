@@ -155,6 +155,9 @@ class UpdateUtteranceMetadataTest(absltest.TestCase):
             "speaker_id": "speaker1",
             "ssml_gender": "male",
             "assigned_google_voice": "en-US-Wavenet-C",
+            "google_voice_pitch": -12.0,
+            "google_voice_speed": 1.0,
+            "google_voice_volume_gain_db": 16.0,
         },
         {
             "start": 1.0,
@@ -164,6 +167,9 @@ class UpdateUtteranceMetadataTest(absltest.TestCase):
             "speaker_id": "speaker2",
             "ssml_gender": "female",
             "assigned_google_voice": "en-US-Wavenet-F",
+            "google_voice_pitch": -12.0,
+            "google_voice_speed": 1.0,
+            "google_voice_volume_gain_db": 16.0,
         },
     ]
     actual_output = text_to_speech.update_utterance_metadata(
@@ -183,11 +189,14 @@ class TestConvertTextToSpeech(absltest.TestCase):
     with tempfile.NamedTemporaryFile(suffix=".mp3") as temporary_file:
       output_file = temporary_file.name
       result = text_to_speech.convert_text_to_speech(
-          mock_client,
-          "en-US-Wavenet-A",
-          "en-US",
-          output_file,
-          "This is a test.",
+          client=mock_client,
+          assigned_google_voice="en-US-Wavenet-A",
+          target_language="en-US",
+          output_filename=output_file,
+          text="This is a test.",
+          pitch=0.0,
+          speed=1.0,
+          volume_gain_db=0.0,
       )
       self.assertEqual(result, output_file)
       mock_client.synthesize_speech.assert_called_once()
@@ -267,6 +276,9 @@ class TestDubUtterances(absltest.TestCase):
               "translated_text": "This is dubbed text 1.",
               "assigned_google_voice": "en-US-Wavenet-A",
               "for_dubbing": True,
+              "google_voice_pitch": 0.0,
+              "google_voice_speed": 1.0,
+              "google_voice_volume_gain_db": 0.0,
           },
           {
               "start": 5.5,
@@ -275,13 +287,31 @@ class TestDubUtterances(absltest.TestCase):
               "translated_text": "This is dubbed text 2.",
               "assigned_google_voice": "en-US-Wavenet-B",
               "for_dubbing": False,
+              "google_voice_pitch": 0.0,
+              "google_voice_speed": 1.0,
+              "google_voice_volume_gain_db": 0.0,
           },
       ]
 
       def mock_convert_text_to_speech(
-          client, assigned_google_voice, target_language, output_filename, text
+          client,
+          assigned_google_voice,
+          target_language,
+          output_filename,
+          text,
+          pitch,
+          speed,
+          volume_gain_db,
       ):
-        del client, assigned_google_voice, target_language, text
+        del (
+            client,
+            assigned_google_voice,
+            target_language,
+            text,
+            pitch,
+            speed,
+            volume_gain_db,
+        )
         return output_filename
 
       text_to_speech.convert_text_to_speech = mock_convert_text_to_speech
@@ -298,6 +328,9 @@ class TestDubUtterances(absltest.TestCase):
               "path": "chunk_1.wav",
               "translated_text": "This is dubbed text 1.",
               "assigned_google_voice": "en-US-Wavenet-A",
+              "google_voice_pitch": 0.0,
+              "google_voice_speed": 1.0,
+              "google_voice_volume_gain_db": 0.0,
               "dubbed_path": f"{temp_dir}/dubbed_chunk_1.mp3",
               "for_dubbing": True,
           },
@@ -307,6 +340,9 @@ class TestDubUtterances(absltest.TestCase):
               "path": "chunk_2.wav",
               "translated_text": "This is dubbed text 2.",
               "assigned_google_voice": "en-US-Wavenet-B",
+              "google_voice_pitch": 0.0,
+              "google_voice_speed": 1.0,
+              "google_voice_volume_gain_db": 0.0,
               "dubbed_path": "chunk_2.wav",
               "for_dubbing": False,
           },
