@@ -593,8 +593,8 @@ class Dubber:
     """Prompts the user if they want to run translation."""
     while True:
       translate_choice = input(
-          "\nDo you want to run translation (recommended after modifying the source"
-          " utterance text)? (yes/no): "
+          "\nDo you want to run translation (recommended after modifying the"
+          " source utterance text)? (yes/no): "
       ).lower()
       if translate_choice in ("yes", "no"):
         return translate_choice
@@ -605,8 +605,8 @@ class Dubber:
     """Prompts the user if they want to re-assign voices."""
     while True:
       assign_voices_choice = input(
-          "\nDo you want to re-assign voices (recommended after modifying speaker"
-          " IDs)? (yes/no): "
+          "\nDo you want to re-assign voices (recommended after modifying"
+          " speaker IDs)? (yes/no): "
       ).lower()
       if assign_voices_choice in ("yes", "no"):
         return assign_voices_choice
@@ -627,7 +627,8 @@ class Dubber:
         adjust_speed=self.adjust_speed,
     )
     logging.info("Completed converting text to speech.")
-    self.progress_bar.update()
+    if not self._rerun:
+      self.progress_bar.update()
 
   def run_postprocessing(self) -> None:
     """Merges dubbed audio with the original background audio and video (if applicable).
@@ -663,7 +664,8 @@ class Dubber:
         video_file=dubbed_video_file if self.is_video else None,
     )
     logging.info("Completed postprocessing.")
-    self.progress_bar.update()
+    if not self._rerun:
+      self.progress_bar.update()
 
   def run_save_utterance_metadata(self) -> None:
     """Saves a Python dictionary to a JSON file.
@@ -720,7 +722,8 @@ class Dubber:
       except OSError as e:
         logging.error(f"Error deleting {item_path}: {e}")
     logging.info("Temporary artifacts are now removed.")
-    self.progress_bar.update()
+    if not self._rerun:
+      self.progress_bar.update()
 
   def dub_ad(self) -> PostprocessingArtifacts:
     """Orchestrates the entire ad dubbing process."""
@@ -740,5 +743,56 @@ class Dubber:
     logging.info("Dubbing process finished.")
     end_time = time.time()
     logging.info("Total execution time: %.2f seconds.", end_time - start_time)
+    logging.info("Output files saved in: %s.", self.output_directory)
+    return self.postprocessing_output
+
+  def dub_ad_with_utterance_metadata(
+      self,
+      utterance_metadata: Sequence[Mapping[str, str | float]] | None = None,
+  ) -> PostprocessingArtifacts:
+    """Orchestrates the complete ad dubbing process using utterance metadata.
+
+    Takes utterance metadata as input, performs the required dubbing steps, and
+    returns the post-processed results.
+
+    Args:
+        utterance_metadata: A sequence of mappings detailing each utterance's
+          metadata. If not provided, uses `self.utterance_metadata`. Each mapping
+          should contain: * 'path': Audio file path (str). * 'start', 'end':
+          Utterance start/end times in seconds (float). * 'text',
+          'translated_text': Original and translated text (str). * 'for_dubbing':
+          Whether to dub this utterance (bool). * 'speaker_id': Speaker identifier
+          (str). * 'ssml_gender': Text-to-speech voice gender (str). *
+          'assigned_voice': Google/Eleven Labs voice name (str). * Google
+          TTS-specific: 'pitch', 'speed', 'volume_gain_db' (float). * Eleven Labs
+          TTS-specific: 'stability', 'similarity_boost', 'style' (float),
+          'use_speaker_boost' (bool).
+
+    Returns:
+        PostprocessingArtifacts: Object containing the post-processed results.
+
+    Raises:
+        ValueError: If `utterance_metadata` is invalid or missing required keys.
+        # (List other potential exceptions here, e.g., file errors, TTS failures)
+    """
+
+    logging.info("Re-run dubbing process starting...")
+    if self.clean_up:
+      logging.warning(
+          "You are trying to run the dubbing process using utterance metadata."
+          " But it looks like you have cleaned up all the process artifacts"
+          " during the last run. They might not be available now and the"
+          " process might not complete successfully."
+      )
+    if utterance_metadata:
+      self.utterance_metadata = utterance_metadata
+    logging.warning(
+        "The class utterance metadata was overwritten with the provided input."
+    )
+    self._rerun = True
+    self._run_verify_utterance_metadata()
+    self.run_text_to_speech()
+    self.run_postprocessing()
+    logging.info("Dubbing process finished.")
     logging.info("Output files saved in: %s.", self.output_directory)
     return self.postprocessing_output
