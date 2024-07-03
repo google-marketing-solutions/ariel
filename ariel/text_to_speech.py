@@ -15,8 +15,10 @@
 """A text-to-speech module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
 import os
+import random
 from typing import Final, Mapping, Sequence
-from absl import logging
+from elevenlabs import Voice, VoiceSettings, save
+from elevenlabs.client import ElevenLabs
 from google.cloud import texttospeech
 from pydub import AudioSegment
 import tensorflow as tf
@@ -24,7 +26,7 @@ import tensorflow as tf
 _SSML_MALE: Final[str] = "Male"
 _SSML_FEMALE: Final[str] = "Female"
 _SSML_NEUTRAL: Final[str] = "Neutral"
-_PREFERRED_VOICES: Final[Sequence[str]] = (
+_DEFAULT_PREFERRED_GOOGLE_VOICES: Final[Sequence[str]] = (
     "Journey",
     "Studio",
     "Wavenet",
@@ -34,10 +36,15 @@ _PREFERRED_VOICES: Final[Sequence[str]] = (
     "Standard",
 )
 _DEFAULT_SSML_FEMALE_PITCH: Final[float] = -5.0
-_DEFAULT_SSML_MALE_PITCH: Final[float] = -12.0
+_DEFAULT_SSML_MALE_PITCH: Final[float] = -10.0
 _DEFAULT_SPEED: Final[float] = 1.0
 _DEFAULT_VOLUME_GAIN_DB: Final[float] = 16.0
 _MINIMUM_DURATION: Final[float] = 1.0
+_DEFAULT_STABILITY: Final[float] = 0.5
+_DEFAULT_SIMILARITY_BOOST: Final[float] = 0.75
+_DEFAULT_STYLE: Final[float] = 0.0
+_DEFAULT_USE_SPEAKER_BOOST: Final[bool] = True
+_DEFAULT_ELEVENLABS_MODEL: Final[str] = "eleven_multilingual_v2"
 
 
 def list_available_voices(
@@ -73,7 +80,7 @@ def assign_voices(
     utterance_metadata: Sequence[Mapping[str, str | float]],
     target_language: str,
     client: texttospeech.TextToSpeechClient,
-    preferred_voices: Sequence[str] = _PREFERRED_VOICES,
+    preferred_voices: Sequence[str] = _DEFAULT_PREFERRED_GOOGLE_VOICES,
     fallback_no_preferred_category_match: bool = False,
 ) -> Mapping[str, str | None]:
   """Assigns voices to speakers based on preferred voices and available voices.
@@ -139,10 +146,81 @@ def assign_voices(
   return voice_assignment
 
 
+def elevenlabs_assign_voices(
+    *,
+    utterance_metadata: Sequence[Mapping[str, str | float]],
+    client: ElevenLabs,
+    preferred_voices: Sequence[str] = None,
+    fallback_no_preferred_category_match: bool = False,
+) -> Mapping[str, str | None]:
+    """Assigns voices to speakers based on preferred voices and available voices.
+
+    Args:
+        utterance_metadata: A sequence of utterance metadata, each represented as
+          a dictionary with keys: "start", "end", "chunk_path", "translated_text",
+          "speaker_id", "ssml_gender".
+        client: An ElevenLabs object.
+        preferred_voices: Optional; A list of preferred voice names (e.g.,
+          "Rachel").
+        fallback_no_preferred_category_match: If True, assigns None if no voice
+          matches preferred category.
+
+    Returns:
+        A mapping of unique speaker IDs to assigned voice names, or None if no
+        suitable voice was available or fallback_no_preferred_category_match is
+        True.
+    """
+    unique_speaker_mapping = {
+        item["speaker_id"]: item["ssml_gender"] for item in utterance_metadata
+    }
+    if preferred_voices is None:
+        preferred_voices = []
+    available_voices = client.voices.get_all().voices
+    voice_assignment = {}
+    already_assigned_voices = {"Male": set(), "Female": set()}
+    for speaker_id, ssml_gender in unique_speaker_mapping.items():
+        preferred_category_matched = False
+        for preferred_voice in preferred_voices:
+            voice_info = next(
+                (
+                    voice
+                    for voice in available_voices
+                    if voice.name == preferred_voice
+                ),
+                None,
+            )
+            if (
+                voice_info
+                and voice_info.labels["gender"] == ssml_gender.lower()
+                and preferred_voice not in already_assigned_voices[ssml_gender]
+            ):
+                voice_assignment[speaker_id] = preferred_voice
+                already_assigned_voices[ssml_gender].add(preferred_voice)
+                preferred_category_matched = True
+                break
+        if not preferred_category_matched:
+            for voice_info in available_voices:
+                if (
+                    voice_info.labels["gender"] == ssml_gender.lower()
+                    and voice_info.name not in already_assigned_voices[ssml_gender]
+                ):
+                    voice_assignment[speaker_id] = voice_info.name
+                    already_assigned_voices[ssml_gender].add(voice_info.name)
+                    preferred_category_matched = True
+                    break
+        if not preferred_category_matched and fallback_no_preferred_category_match:
+            voice_assignment[speaker_id] = None
+    for speaker_id in unique_speaker_mapping:
+        if speaker_id not in voice_assignment:
+            voice_assignment[speaker_id] = None
+    return voice_assignment
+
+
 def update_utterance_metadata(
     *,
     utterance_metadata: Sequence[Mapping[str, str | float]],
     assigned_voices: Mapping[str, str],
+    use_elevenlabs: bool = False,
 ) -> Sequence[Mapping[str, str | float]]:
   """Updates utterance metadata with assigned Google voices.
 
@@ -151,6 +229,8 @@ def update_utterance_metadata(
         a dictionary with keys: "text", "start", "end", "speaker_id",
         "ssml_gender", "translated_text", "for_dubbing" and "path".
       assigned_voices: Mapping mapping speaker IDs to assigned Google voices.
+      use_elevenlabs: An indicator whether Eleven Labs API will be used
+        in the Text-To-Speech proecess.
 
   Returns:
       Sequence of updated utterance metadata dictionaries.
@@ -159,16 +239,22 @@ def update_utterance_metadata(
   for metadata_item in utterance_metadata:
     new_utterance = metadata_item.copy()
     speaker_id = new_utterance.get("speaker_id")
-    new_utterance["assigned_google_voice"] = assigned_voices.get(speaker_id)
-    ssml_gender = new_utterance.get("ssml_gender")
-    pitch = (
-        _DEFAULT_SSML_FEMALE_PITCH
-        if ssml_gender == "Female"
-        else _DEFAULT_SSML_MALE_PITCH
-    )
-    new_utterance["google_voice_pitch"] = pitch
-    new_utterance["google_voice_speed"] = _DEFAULT_SPEED
-    new_utterance["google_voice_volume_gain_db"] = _DEFAULT_VOLUME_GAIN_DB
+    new_utterance["assigned_voice"] = assigned_voices.get(speaker_id)
+    if use_elevenlabs:
+      new_utterance["stability"] = _DEFAULT_STABILITY
+      new_utterance["similarity_boost"] = _DEFAULT_SIMILARITY_BOOST
+      new_utterance["style"] = _DEFAULT_STYLE
+      new_utterance["use_speaker_boost"] = _DEFAULT_USE_SPEAKER_BOOST
+    else:
+      ssml_gender = new_utterance.get("ssml_gender")
+      pitch = (
+          _DEFAULT_SSML_FEMALE_PITCH
+          if ssml_gender == "Female"
+          else _DEFAULT_SSML_MALE_PITCH
+      )
+      new_utterance["pitch"] = pitch
+      new_utterance["speed"] = _DEFAULT_SPEED
+      new_utterance["volume_gain_db"] = _DEFAULT_VOLUME_GAIN_DB
     updated_utterance_metadata.append(new_utterance)
   return updated_utterance_metadata
 
@@ -221,6 +307,60 @@ def convert_text_to_speech(
   return output_filename
 
 
+def elevenlabs_convert_text_to_speech(
+    *,
+    client: ElevenLabs,
+    model: str,
+    assigned_elevenlabs_voice: str,
+    output_filename: str,
+    text: str,
+    stability: float = _DEFAULT_STABILITY,
+    similarity_boost: float = _DEFAULT_SIMILARITY_BOOST,
+    style: float = _DEFAULT_STYLE,
+    use_speaker_boost: bool = _DEFAULT_USE_SPEAKER_BOOST,
+) -> str:
+  """Converts text to speech using the ElevenLabs API and saves the audio to a file.
+
+  This function leverages the ElevenLabs client to generate speech from the
+  provided text, using the specified voice and optional customization settings.
+  The resulting audio is then saved to the given output filename.
+
+  Args:
+      client: An authenticated ElevenLabs client object for API interaction.
+      model: The name of the ElevenLabs speech model to use (e.g.,
+        "eleven_multilingual_v2").
+      assigned_elevenlabs_voice: The name of the ElevenLabs voice to use for
+        generation.
+      output_filename: The path and filename where the generated audio will be
+        saved.
+      text: The text content to convert to speech.
+      stability: Controls the stability of the generated voice (0.0 to 1.0).
+        Default is _DEFAULT_STABILITY.
+      similarity_boost:  Enhances the voice's similarity to the original (0.0 to
+        1.0). Default is _DEFAULT_SIMILARITY_BOOST.
+      style: Adjusts the speaking style (0.0 to 1.0). Default is _DEFAULT_STYLE.
+      use_speaker_boost:  Whether to use speaker boost to enhance clarity.
+        Default is _DEFAULT_USE_SPEAKER_BOOST.
+
+  Returns:
+      The path and filename of the saved audio file (same as `output_filename`).
+  """
+
+  audio = client.generate(
+      model=model,
+      voice=assigned_elevenlabs_voice,
+      text=text,
+      voice_settings=VoiceSettings(
+          stability=stability,
+          similarity_boost=similarity_boost,
+          style=style,
+          use_speaker_boost=use_speaker_boost,
+      ),
+  )
+  save(audio, output_filename)
+  return output_filename
+
+
 def adjust_audio_speed(
     *,
     input_mp3_path: str,
@@ -229,7 +369,8 @@ def adjust_audio_speed(
 ) -> None:
   """Adjusts the speed of an MP3 file to match the target duration.
 
-  The input files where the target length is less than the minimum duration, won't be modified.
+  The input files where the target length is less than the minimum duration,
+  won't be modified.
 
   Args:
       input_mp3_path: The path to the input MP3 file.
@@ -262,16 +403,17 @@ def adjust_audio_speed(
 
 def dub_utterances(
     *,
-    client: texttospeech.TextToSpeechClient,
+    client: texttospeech.TextToSpeechClient | ElevenLabs,
     utterance_metadata: Sequence[Mapping[str, str | float]],
     output_directory: str,
     target_language: str,
     adjust_speed: bool = True,
+    elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
 ) -> Sequence[Mapping[str, str | float]]:
   """Processes a list of utterance metadata, generating dubbed audio files.
 
   Args:
-      client: The TextToSpeechClient object to use.
+      client: The TextToSpeechClient or ElevenLabs object to use.
       utterance_metadata: A sequence of utterance metadata, each represented as
         a dictionary with keys: "text", "start", "end", "speaker_id",
         "ssml_gender", "translated_text", "assigned_google_voice",
@@ -293,24 +435,37 @@ def dub_utterances(
     else:
       path = utterance["path"]
       text = utterance["translated_text"]
-      assigned_google_voice = utterance["assigned_google_voice"]
+      assigned_voice = utterance["assigned_voice"]
       duration = utterance["end"] - utterance["start"]
       base_filename = os.path.splitext(os.path.basename(path))[0]
       output_filename = os.path.join(
           output_directory, f"dubbed_{base_filename}.mp3"
       )
-      dubbed_path = convert_text_to_speech(
-          client=client,
-          assigned_google_voice=assigned_google_voice,
-          target_language=target_language,
-          output_filename=output_filename,
-          text=text,
-          pitch=utterance["google_voice_pitch"],
-          speed=utterance["google_voice_speed"],
-          volume_gain_db=utterance["google_voice_volume_gain_db"],
-      )
-    if adjust_speed:
-      adjust_audio_speed(input_mp3_path=dubbed_path, target_duration=duration)
+      if isinstance(client, texttospeech.TextToSpeechClient):
+        dubbed_path = convert_text_to_speech(
+            client=client,
+            assigned_google_voice=assigned_voice,
+            target_language=target_language,
+            output_filename=output_filename,
+            text=text,
+            pitch=utterance["pitch"],
+            speed=utterance["speed"],
+            volume_gain_db=utterance["volume_gain_db"],
+        )
+      else:
+        dubbed_path = elevenlabs_convert_text_to_speech(
+            client=client,
+            model=elevenlabs_model,
+            assigned_elevenlabs_voice=assigned_voice,
+            output_filename=output_filename,
+            text=text,
+            stability=utterance["stability"],
+            similarity_boost=utterance["similarity_boost"],
+            style=utterance["style"],
+            use_speaker_boost=utterance["use_speaker_boost"],
+        )
+      if adjust_speed:
+        adjust_audio_speed(input_mp3_path=dubbed_path, target_duration=duration)
     utterance_copy = utterance.copy()
     utterance_copy["dubbed_path"] = dubbed_path
     updated_utterance_metadata.append(utterance_copy)

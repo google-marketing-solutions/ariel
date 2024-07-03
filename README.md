@@ -46,6 +46,7 @@ Ariel leverages a powerful combination of state-of-the-art AI and audio processi
     *   **Gemini 1.5 Flash:** Leverages its language understanding for accurate and contextually relevant translation.
 5.  **Text-to-Speech (TTS):**
     *   **GCP's Text-To-Speech:** Generates natural-sounding speech in the target language.
+    *   **[OPTIONAL] Eleven Labs:** An alternative API to generate speech. It's recommened for the best results. **WARNING:** Eleven Labs is a paid solution and will generate extra costs. See the pricing [here](https://elevenlabs.io/pricing).
 
 ## Requirements
 
@@ -61,6 +62,7 @@ Ariel leverages a powerful combination of state-of-the-art AI and audio processi
     *   **Enabled Text-To-Speech API:** Enable the Text-To-Speech API in your GCP project. See [here](https://cloud.google.com/text-to-speech/docs/before-you-begin) for instructions.
     *   **Hugging Face Token:** To access the PyAnnote speaker diarization model. See [here](https://huggingface.co/docs/hub/en/security-tokens) on how to get the token.
     *   **Google AI Studio Token:** To access the Gemini language model. See [here](https://developers.generativeai.google/products/gemini) on how to get the token.
+    *   **[OPTIONAL] Eleven Labs API:** To access the Eleven Labs API. See [here](https://help.elevenlabs.io/hc/en-us/articles/14599447207697-How-to-authorize-yourself-using-your-xi-api-key).
 *   **User Agreements:**
     *   **Hugging Face Model License:** You must accept the user conditions for the PyAnnote speaker diarization model. See [here](https://huggingface.co/pyannote/speaker-diarization-3.1).
 
@@ -75,9 +77,10 @@ Ariel leverages the open-source Whisper model, which supports a wide array of la
 
 Gemini, the language model used for translation, is proficient in multiple languages. For the most current list of supported languages, refer to [here](https://cloud.google.com/gemini/docs/codeassist/supported-languages).
 
-### Text-to-Speech (GCP Text-to-Speech)
+### Text-to-Speech (GCP Text-to-Speech or Eleven Labs)
 
 GCP Text-to-Speech offers an extensive selection of voices in various languages. For a comprehensive list of supported languages and available voices, refer to [here](https://cloud.google.com/text-to-speech/docs/voices).
+Eleven Labs API is an alterantive to GCP Text-to-Speech. See a list of supported languages [here](https://elevenlabs.io/docs/api-reference/text-to-speech#supported-languages).
 
 
 ## Getting Started
@@ -91,7 +94,7 @@ GCP Text-to-Speech offers an extensive selection of voices in various languages.
 2.  **Usage:**
 
     ```bash
-    python main.py --input_file=<path_to_video> --output_directory=<output_dir> --advertiser_name=<name> --original_language=<lang_code> --target_language=<lang_code> [--number_of_speakers=<num>] [--diarization_instructions=<instructions>] [--translation_instructions=<instructions>] [--merge_utterances=<True/False>] [--minimum_merge_threshold=<seconds>] [--preferred_voices=<voice1>,<voice2>] [--clean_up=<True/False>] [--pyannote_model=<model_name>] [--diarization_system_instructions=<instructions>] [--translation_system_instructions=<instructions>] [--hugging_face_token=<token>] [--gemini_token=<token>] [--model_name=<model_name>] [--temperature=<value>] [--top_p=<value>] [--top_k=<value>] [--max_output_tokens=<value>] [--response_mime_type=<value>]
+    python main.py --input_file=<path_to_video> --output_directory=<output_dir> --advertiser_name=<name> --original_language=<lang_code> --target_language=<lang_code> [--number_of_speakers=<num>] [--diarization_instructions=<instructions>] [--translation_instructions=<instructions>] [--merge_utterances=<True/False>] [--minimum_merge_threshold=<seconds>] [--preferred_voices=<voice1>,<voice2>] [--clean_up=<True/False>] [--pyannote_model=<model_name>] [--diarization_system_instructions=<instructions>] [--translation_system_instructions=<instructions>] [--hugging_face_token=<token>] [--gemini_token=<token>] [--model_name=<model_name>] [--temperature=<value>] [--top_p=<value>] [--top_k=<value>] [--max_output_tokens=<value>] [--elevenlabs_token=<token>] [--use_elevenlabs=<value>]
     ```
 
 3.  **Configuration:** (Optional)
@@ -102,3 +105,4 @@ GCP Text-to-Speech offers an extensive selection of voices in various languages.
 *   **DEMUCS:** [https://github.com/facebookresearch/demucs](https://github.com/facebookresearch/demucs)
 *   **pyannote:** [https://github.com/pyannote/pyannote-audio](https://github.com/pyannote/pyannote-audio)
 *   **faster-whisper:** [https://github.com/SYSTRAN/faster-whisper](https://github.com/SYSTRAN/faster-whisper)
+*   **Eleven Labs:** [https://elevenlabs.io/docs/introduction](https://elevenlabs.io/docs/introduction)

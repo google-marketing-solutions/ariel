@@ -93,7 +93,14 @@ _ADJUST_SPEED = flags.DEFINE_bool(
 _PREFERRED_VOICES = flags.DEFINE_list(
     "preferred_voices",
     ["Journey", "Studio", "Wavenet", "Polyglot", "News", "Neural2", "Standard"],
-    "Preferred voice names for text-to-speech (e.g., 'Wavenet').",
+    "Preferred voice names for text-to-speech (e.g., 'Wavenet' for Google's TTS"
+    " or 'Calllum' for ElevenLabs).",
+)
+_USE_ELEVENLABS = flags.DEFINE_bool(
+    "use_elevenlabs",
+    False,
+    "Whether to use ElevenLabs API for Text-To-Speech. If not Google's"
+    " Text-To-Speech will be used.",
 )
 _CLEAN_UP = flags.DEFINE_bool(
     "clean_up",
@@ -115,8 +122,13 @@ _GEMINI_TOKEN = flags.DEFINE_string(
     None,
     "Gemini API token.",
 )
-_MODEL_NAME = flags.DEFINE_string(
-    "model_name",
+_ELEVENLABS_TOKEN = flags.DEFINE_string(
+    "elevenlabs_token",
+    None,
+    "ElevenLabs API token.",
+)
+_GEMINI_MODEL_NAME = flags.DEFINE_string(
+    "gemini_model_name",
     "gemini-1.5-flash",
     "Name of the Gemini model to use.",
 )
@@ -166,7 +178,9 @@ def main(argv: Sequence[str]) -> None:
       pyannote_model=_PYANNOTE_MODEL.value,
       hugging_face_token=_HUGGING_FACE_TOKEN.value,
       gemini_token=_GEMINI_TOKEN.value,
-      model_name=_MODEL_NAME.value,
+      elevenlabs_token=_ELEVENLABS_TOKEN.value,
+      use_elevenlabs=_USE_ELEVENLABS.value,
+      gemini_model_name=_GEMINI_MODEL_NAME.value,
       temperature=_TEMPERATURE.value,
       top_p=_TOP_P.value,
       top_k=_TOP_K.value,

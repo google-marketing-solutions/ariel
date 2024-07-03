@@ -30,6 +30,7 @@ from ariel import speech_to_text
 from ariel import text_to_speech
 from ariel import translation
 from ariel import video_processing
+from elevenlabs.client import ElevenLabs
 from faster_whisper import WhisperModel
 from google.cloud import texttospeech
 import google.generativeai as genai
@@ -46,7 +47,11 @@ _EXPECTED_HUGGING_FACE_ENVIRONMENTAL_VARIABLE_NAME: Final[str] = (
     "HUGGING_FACE_TOKEN"
 )
 _EXPECTED_GEMINI_ENVIRONMENTAL_VARIABLE_NAME: Final[str] = "GEMINI_TOKEN"
+_EXPECTED_ELEVENLABS_ENVIRONMENTAL_VARIABLE_NAME: Final[str] = (
+    "ELEVENLABS_TOKEN"
+)
 _DEFAULT_PYANNOTE_MODEL: Final[str] = "pyannote/speaker-diarization-3.1"
+_DEFAULT_ELEVENLABS_MODEL: Final[str] = "eleven_multilingual_v2"
 _DEFAULT_TRANSCRIPTION_MODEL: Final[str] = "large-v3"
 _DEFAULT_GEMINI_MODEL: Final[str] = "gemini-1.5-flash"
 _DEFAULT_GEMINI_TEMPERATURE: Final[float] = 1.0
@@ -200,7 +205,10 @@ class Dubber:
       translation_system_instructions: str = _DEFAULT_TRANSLATION_SYSTEM_SETTINGS,
       hugging_face_token: str | None = None,
       gemini_token: str | None = None,
-      model_name: str = _DEFAULT_GEMINI_MODEL,
+      elevenlabs_token: str | None = None,
+      use_elevenlabs: bool = False,
+      elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
+      gemini_model_name: str = _DEFAULT_GEMINI_MODEL,
       temperature: float = _DEFAULT_GEMINI_TEMPERATURE,
       top_p: float = _DEFAULT_GEMINI_TOP_P,
       top_k: int = _DEFAULT_GEMINI_TOP_K,
@@ -248,7 +256,13 @@ class Dubber:
           'HUGGING_FACE_TOKEN' environment variable).
         gemini_token: Gemini API token (can be set via 'GEMINI_TOKEN'
           environment variable).
-        model_name: The name of the Gemini model to use.
+        elevenlabs_token: ElevenLabs API token (can be set via
+          'ELEVENLABS_TOKEN' environment variable).
+        use_elevenlabs: Whether to use ElevenLabs API for Text-To-Speech. If not
+          Google's Text-To-Speech will be used.
+        elevenlabs_model: The ElevenLabs model to use in the Text-To-Speech
+          process.
+        gemini_model_name: The name of the Gemini model to use.
         temperature: Controls randomness in generation.
         top_p: Nucleus sampling threshold.
         top_k: Top-k sampling parameter.
@@ -276,9 +290,12 @@ class Dubber:
     self.pyannote_model = pyannote_model
     self.hugging_face_token = hugging_face_token
     self.gemini_token = gemini_token
+    self.elevenlabs_token = elevenlabs_token
+    self.elevenlabs_model = elevenlabs_model
+    self.use_elevenlabs = use_elevenlabs
     self.diarization_system_instructions = diarization_system_instructions
     self.translation_system_instructions = translation_system_instructions
-    self.model_name = model_name
+    self.gemini_model_name = gemini_model_name
     self.temperature = temperature
     self.top_p = top_p
     self.top_k = top_k
@@ -369,16 +386,30 @@ class Dubber:
         response_mime_type=self.response_mime_type,
     )
     return genai.GenerativeModel(
-        model_name=self.model_name,
+        model_name=self.gemini_model_name,
         generation_config=gemini_configuration,
         system_instruction=system_instructions,
         safety_settings=self.safety_settings,
     )
 
   @property
-  def text_to_speech_client(self) -> texttospeech.TextToSpeechClient:
+  def text_to_speech_client(
+      self,
+  ) -> texttospeech.TextToSpeechClient | ElevenLabs:
     """Creates a Text-to-Speech client."""
-    return texttospeech.TextToSpeechClient()
+    if not self.use_elevenlabs:
+      return texttospeech.TextToSpeechClient()
+    logging.warning(
+        "You decided to use Eleven Labs API. It will generate extra cost. Check"
+        " their pricing on the follwing website: https://elevenlabs.io/pricing."
+        " Use Google's Text-To-Speech to contain all the costs within your Google"
+        " Cloud Platform (GCP) project."
+    )
+    elevenlabs_token = self.get_api_token(
+        environmental_variable=_EXPECTED_ELEVENLABS_ENVIRONMENTAL_VARIABLE_NAME,
+        provided_token=self.elevenlabs_token,
+    )
+    return ElevenLabs(api_key=elevenlabs_token)
 
   @functools.cached_property
   def processed_diarization_system_instructions(self) -> str:
@@ -516,15 +547,23 @@ class Dubber:
     Returns:
         Updated utterance metadata with assigned voices.
     """
-    assigned_voices = text_to_speech.assign_voices(
-        utterance_metadata=self.utterance_metadata,
-        target_language=self.target_language,
-        client=self.text_to_speech_client,
-        preferred_voices=self.preferred_voices,
-    )
+    if not self.use_elevenlabs:
+      assigned_voices = text_to_speech.assign_voices(
+          utterance_metadata=self.utterance_metadata,
+          target_language=self.target_language,
+          client=self.text_to_speech_client,
+          preferred_voices=self.preferred_voices,
+      )
+    else:
+      assigned_voices = text_to_speech.elevenlabs_assign_voices(
+          utterance_metadata=self.utterance_metadata,
+          client=self.text_to_speech_client,
+          preferred_voices=self.preferred_voices,
+      )
     self.utterance_metadata = text_to_speech.update_utterance_metadata(
         utterance_metadata=self.utterance_metadata,
         assigned_voices=assigned_voices,
+        use_elevenlabs=self.use_elevenlabs,
     )
 
   def _run_verify_utterance_metadata(self) -> None:
@@ -593,7 +632,7 @@ class Dubber:
     """Prompts the user if they want to run translation."""
     while True:
       translate_choice = input(
-          "\nDo you want to run translation (recommended after modifying the"
+          "\nDo you want to run translation (recommended only after modifying the"
           " source utterance text)? (yes/no): "
       ).lower()
       if translate_choice in ("yes", "no"):
@@ -605,7 +644,7 @@ class Dubber:
     """Prompts the user if they want to re-assign voices."""
     while True:
       assign_voices_choice = input(
-          "\nDo you want to re-assign voices (recommended after modifying"
+          "\nDo you want to re-assign voices (recommended only after modifying"
           " speaker IDs)? (yes/no): "
       ).lower()
       if assign_voices_choice in ("yes", "no"):
@@ -625,6 +664,7 @@ class Dubber:
         output_directory=self.output_directory,
         target_language=self.target_language,
         adjust_speed=self.adjust_speed,
+        elevenlabs_model=self.elevenlabs_model,
     )
     logging.info("Completed converting text to speech.")
     if not self._rerun:
