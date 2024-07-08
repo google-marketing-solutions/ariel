@@ -31,7 +31,9 @@ from ariel import text_to_speech
 from ariel import translation
 from ariel import video_processing
 from elevenlabs.client import ElevenLabs
+from elevenlabs.core import ApiError
 from faster_whisper import WhisperModel
+from google.api_core.exceptions import ServiceUnavailable, BadRequest
 from google.cloud import texttospeech
 import google.generativeai as genai
 from google.generativeai.types import HarmBlockThreshold, HarmCategory
@@ -175,6 +177,30 @@ class PostprocessingArtifacts:
 
   audio_file: str
   video_file: str | None
+
+
+class PyAnnoteAccessError(Exception):
+  """Error when establishing access to PyAnnore from Hugging Face."""
+
+  pass
+
+
+class GeminiAccessError(Exception):
+  """Error when establishing access to Gemini."""
+
+  pass
+
+
+class GoogleTextToSpeechAccessError(Exception):
+  """Error when establishing access to Google's Text-To-Speech API."""
+
+  pass
+
+
+class ElevenLabsAccessError(Exception):
+  """Error when establishing access to ElevenLabs API."""
+
+  pass
 
 
 # BEGIN GOOGLE-INTERNAL
@@ -400,16 +426,71 @@ class Dubber:
     if not self.use_elevenlabs:
       return texttospeech.TextToSpeechClient()
     logging.warning(
-        "You decided to use Eleven Labs API. It will generate extra cost. Check"
+        "You decided to use ElevenLabs API. It will generate extra cost. Check"
         " their pricing on the follwing website: https://elevenlabs.io/pricing."
-        " Use Google's Text-To-Speech to contain all the costs within your Google"
-        " Cloud Platform (GCP) project."
+        " Use Google's Text-To-Speech to contain all the costs within your"
+        " Google Cloud Platform (GCP) project."
     )
     elevenlabs_token = self.get_api_token(
         environmental_variable=_EXPECTED_ELEVENLABS_ENVIRONMENTAL_VARIABLE_NAME,
         provided_token=self.elevenlabs_token,
     )
     return ElevenLabs(api_key=elevenlabs_token)
+
+  def _verify_api_access(self) -> None:
+    """Verifies access to all the required APIs."""
+    logging.info("Verifying access to PyAnnote from HuggingFace.")
+    if not self.pyannote_pipeline:
+      raise PyAnnoteAccessError(
+          "No access to HuggingFace. Make sure you passed the correct API token"
+          " either as 'hugging_face_token' or through the"
+          " '{_EXPECTED_HUGGING_FACE_ENVIRONMENTAL_VARIABLE_NAME}'"
+          " environmental variable. Also, please make sure you accepted the"
+          " user agreement for the segmentation model"
+          " (https://huggingface.co/pyannote/segmentation-3.0) and the speaker"
+          " diarization model"
+          " (https://huggingface.co/pyannote/speaker-diarization-3.1)."
+      )
+    logging.info("Access to PyAnnote from HuggingFace verified.")
+    logging.info("Verifying access to Gemini.")
+    try:
+      gemini_token = self.get_api_token(
+          environmental_variable=_EXPECTED_GEMINI_ENVIRONMENTAL_VARIABLE_NAME,
+          provided_token=self.gemini_token,
+      )
+      genai.configure(api_key=gemini_token)
+      genai.get_model(f"models/{_DEFAULT_GEMINI_MODEL}")
+    except BadRequest:
+      raise GeminiAccessError(
+          "No access to Gemini. Make sure you passed the correct API token"
+          " either as 'gemini_token' or through the"
+          f" '{_EXPECTED_GEMINI_ENVIRONMENTAL_VARIABLE_NAME}' environmental"
+          " variable."
+      )
+    logging.info("Access to Gemini verified.")
+    if not self.use_elevenlabs:
+      logging.info("Verifying access to Google's Text-To-Speech.")
+      try:
+        self.text_to_speech_client.list_voices()
+      except ServiceUnavailable:
+        raise GoogleTextToSpeechAccessError(
+            f"No access to Google's Text-To-Speech. Make sure to autorize"
+            f" your access with 'gcloud auth application-default login' and"
+            f" then 'gcloud auth login'."
+        )
+      logging.info("Access to Google's Text-To-Speech verified.")
+    logging.info("Verifying access to ElevenLabs.")
+    try:
+      self.text_to_speech_client.user.get()
+    except ApiError:
+      raise ElevenLabsAccessError(
+          "You spcified to use ElevenLabs API for Text-To-Speech. No access to"
+          " ElevenLabs. Make sure you passed the correct API token either as"
+          " 'elevenlabs_token' or through the"
+          f" '{_EXPECTED_ELEVENLABS_ENVIRONMENTAL_VARIABLE_NAME}' environmental"
+          " variable."
+      )
+    logging.info("Access to ElevenLabs verified.")
 
   @functools.cached_property
   def processed_diarization_system_instructions(self) -> str:
@@ -632,8 +713,8 @@ class Dubber:
     """Prompts the user if they want to run translation."""
     while True:
       translate_choice = input(
-          "\nDo you want to run translation (recommended only after modifying the"
-          " source utterance text)? (yes/no): "
+          "\nDo you want to run translation (recommended only after modifying"
+          " the source utterance text)? (yes/no): "
       ).lower()
       if translate_choice in ("yes", "no"):
         return translate_choice
@@ -767,6 +848,7 @@ class Dubber:
 
   def dub_ad(self) -> PostprocessingArtifacts:
     """Orchestrates the entire ad dubbing process."""
+    self._verify_api_access()
     logging.info("Dubbing process starting...")
     start_time = time.time()
     self.run_preprocessing()
@@ -797,23 +879,24 @@ class Dubber:
 
     Args:
         utterance_metadata: A sequence of mappings detailing each utterance's
-          metadata. If not provided, uses `self.utterance_metadata`. Each mapping
-          should contain: * 'path': Audio file path (str). * 'start', 'end':
-          Utterance start/end times in seconds (float). * 'text',
-          'translated_text': Original and translated text (str). * 'for_dubbing':
-          Whether to dub this utterance (bool). * 'speaker_id': Speaker identifier
-          (str). * 'ssml_gender': Text-to-speech voice gender (str). *
-          'assigned_voice': Google/Eleven Labs voice name (str). * Google
-          TTS-specific: 'pitch', 'speed', 'volume_gain_db' (float). * Eleven Labs
-          TTS-specific: 'stability', 'similarity_boost', 'style' (float),
-          'use_speaker_boost' (bool).
+          metadata. If not provided, uses `self.utterance_metadata`. Each
+          mapping should contain: * 'path': Audio file path (str). * 'start',
+          'end': Utterance start/end times in seconds (float). * 'text',
+          'translated_text': Original and translated text (str). *
+          'for_dubbing': Whether to dub this utterance (bool). * 'speaker_id':
+          Speaker identifier (str). * 'ssml_gender': Text-to-speech voice gender
+          (str). * 'assigned_voice': Google/ElevenLabs voice name (str). *
+          Google TTS-specific: 'pitch', 'speed', 'volume_gain_db' (float). *
+          ElevenLabs TTS-specific: 'stability', 'similarity_boost', 'style'
+          (float), 'use_speaker_boost' (bool).
 
     Returns:
         PostprocessingArtifacts: Object containing the post-processed results.
 
     Raises:
         ValueError: If `utterance_metadata` is invalid or missing required keys.
-        # (List other potential exceptions here, e.g., file errors, TTS failures)
+        # (List other potential exceptions here, e.g., file errors, TTS
+        failures)
     """
 
     logging.info("Re-run dubbing process starting...")

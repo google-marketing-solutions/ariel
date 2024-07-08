@@ -171,6 +171,7 @@ def upload_to_gemini(file: str) -> file_types.File:
 
 
 class FileProcessingError(Exception):
+  """Error when processing a file for the Gemini model."""
   pass
 
 

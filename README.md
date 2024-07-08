@@ -61,10 +61,10 @@ Ariel leverages a powerful combination of state-of-the-art AI and audio processi
     *   **Google Cloud Platform (GCP) Project:** Set up a GCP project. See [here](https://cloud.google.com/resource-manager/docs/creating-managing-projects) for instructions.
     *   **Enabled Text-To-Speech API:** Enable the Text-To-Speech API in your GCP project. See [here](https://cloud.google.com/text-to-speech/docs/before-you-begin) for instructions.
     *   **Hugging Face Token:** To access the PyAnnote speaker diarization model. See [here](https://huggingface.co/docs/hub/en/security-tokens) on how to get the token.
-    *   **Google AI Studio Token:** To access the Gemini language model. See [here](https://developers.generativeai.google/products/gemini) on how to get the token.
+    *   **Google AI Studio Token:** To access the Gemini language model. See [here](https://ai.google.dev/gemini-api/docs) on how to get the token.
     *   **[OPTIONAL] Eleven Labs API:** To access the Eleven Labs API. See [here](https://help.elevenlabs.io/hc/en-us/articles/14599447207697-How-to-authorize-yourself-using-your-xi-api-key).
 *   **User Agreements:**
-    *   **Hugging Face Model License:** You must accept the user conditions for the PyAnnote speaker diarization model. See [here](https://huggingface.co/pyannote/speaker-diarization-3.1).
+    *   **Hugging Face Model License:** You must accept the user conditions for the PyAnnote speaker diarization [here](https://huggingface.co/pyannote/speaker-diarization-3.1) and segmentation models [here](https://huggingface.co/pyannote/segmentation-3.0).
 
 ## Language Compatibility
 
