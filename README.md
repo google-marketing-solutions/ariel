@@ -46,7 +46,7 @@ Ariel leverages a powerful combination of state-of-the-art AI and audio processi
     *   **Gemini 1.5 Flash:** Leverages its language understanding for accurate and contextually relevant translation.
 5.  **Text-to-Speech (TTS):**
     *   **GCP's Text-To-Speech:** Generates natural-sounding speech in the target language.
-    *   **[OPTIONAL] Eleven Labs:** An alternative API to generate speech. It's recommened for the best results. **WARNING:** Eleven Labs is a paid solution and will generate extra costs. See the pricing [here](https://elevenlabs.io/pricing).
+    *   **[OPTIONAL] ElevenLabs:** An alternative API to generate speech. It's recommened for the best results. **WARNING:** ElevenLabs is a paid solution and will generate extra costs. See the pricing [here](https://elevenlabs.io/pricing).
 
 ## Requirements
 
@@ -62,11 +62,58 @@ Ariel leverages a powerful combination of state-of-the-art AI and audio processi
     *   **Enabled Text-To-Speech API:** Enable the Text-To-Speech API in your GCP project. See [here](https://cloud.google.com/text-to-speech/docs/before-you-begin) for instructions.
     *   **Hugging Face Token:** To access the PyAnnote speaker diarization model. See [here](https://huggingface.co/docs/hub/en/security-tokens) on how to get the token.
     *   **Google AI Studio Token:** To access the Gemini language model. See [here](https://ai.google.dev/gemini-api/docs) on how to get the token.
-    *   **[OPTIONAL] Eleven Labs API:** To access the Eleven Labs API. See [here](https://help.elevenlabs.io/hc/en-us/articles/14599447207697-How-to-authorize-yourself-using-your-xi-api-key).
+    *   **[OPTIONAL] ElevenLabs API:** To access the ElevenLabs API. See [here](https://help.elevenlabs.io/hc/en-us/articles/14599447207697-How-to-authorize-yourself-using-your-xi-api-key).
 *   **User Agreements:**
     *   **Hugging Face Model License:** You must accept the user conditions for the PyAnnote speaker diarization [here](https://huggingface.co/pyannote/speaker-diarization-3.1) and segmentation models [here](https://huggingface.co/pyannote/segmentation-3.0).
 
 ## Language Compatibility
+
+You can dub video ads from and to the following languages:
+
+*   Bengali
+*   Bulgarian
+*   Chinese (Simplified/Traditional)
+*   Croatian
+*   Czech
+*   Danish
+*   Dutch
+*   English
+*   Estonian
+*   Finnish
+*   French
+*   German
+*   Greek
+*   Gujarati
+*   Hindi
+*   Hungarian
+*   Indonesian
+*   Italian
+*   Japanese
+*   Kannada
+*   Korean
+*   Latvian
+*   Lithuanian
+*   Malayalam
+*   Marathi
+*   Norwegian
+*   Polish
+*   Portuguese
+*   Romanian
+*   Russian
+*   Serbian
+*   Slovak
+*   Slovenian
+*   Spanish
+*   Swahili
+*   Swedish
+*   Tamil
+*   Telugu
+*   Thai
+*   Turkish
+*   Ukrainian
+*   Vietnamese
+
+The language coverage depends on the underlying services. Check the below for any changes:
 
 ### Speech-to-Text (Whisper)
 
@@ -77,10 +124,10 @@ Ariel leverages the open-source Whisper model, which supports a wide array of la
 
 Gemini, the language model used for translation, is proficient in multiple languages. For the most current list of supported languages, refer to [here](https://cloud.google.com/gemini/docs/codeassist/supported-languages).
 
-### Text-to-Speech (GCP Text-to-Speech or Eleven Labs)
+### Text-to-Speech (GCP Text-to-Speech or ElevenLabs)
 
 GCP Text-to-Speech offers an extensive selection of voices in various languages. For a comprehensive list of supported languages and available voices, refer to [here](https://cloud.google.com/text-to-speech/docs/voices).
-Eleven Labs API is an alterantive to GCP Text-to-Speech. See a list of supported languages [here](https://elevenlabs.io/docs/api-reference/text-to-speech#supported-languages).
+ElevenLabs API is an alterantive to GCP Text-to-Speech. See a list of supported languages [here](https://elevenlabs.io/docs/api-reference/text-to-speech#supported-languages).
 
 
 ## Getting Started
@@ -88,7 +135,7 @@ Eleven Labs API is an alterantive to GCP Text-to-Speech. See a list of supported
 1.  **Installation:**
 
     ```bash
-    pip install ariel
+    pip install gtech-ariel
     ```
 
 2.  **Usage:**
@@ -105,4 +152,4 @@ Eleven Labs API is an alterantive to GCP Text-to-Speech. See a list of supported
 *   **DEMUCS:** [https://github.com/facebookresearch/demucs](https://github.com/facebookresearch/demucs)
 *   **pyannote:** [https://github.com/pyannote/pyannote-audio](https://github.com/pyannote/pyannote-audio)
 *   **faster-whisper:** [https://github.com/SYSTRAN/faster-whisper](https://github.com/SYSTRAN/faster-whisper)
-*   **Eleven Labs:** [https://elevenlabs.io/docs/introduction](https://elevenlabs.io/docs/introduction)
+*   **ElevenLabs:** [https://elevenlabs.io/docs/introduction](https://elevenlabs.io/docs/introduction)

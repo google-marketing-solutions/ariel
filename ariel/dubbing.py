@@ -65,16 +65,16 @@ _DEFAULT_GEMINI_SAFETY_SETTINGS: Final[
     Mapping[HarmCategory, HarmBlockThreshold]
 ] = {
     HarmCategory.HARM_CATEGORY_HATE_SPEECH: (
-        HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+        HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
     ),
     HarmCategory.HARM_CATEGORY_HARASSMENT: (
-        HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+        HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
     ),
     HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: (
-        HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+        HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
     ),
     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: (
-        HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+        HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
     ),
 }
 _DEFAULT_DIARIZATION_SYSTEM_SETTINGS: Final[str] = "diarization.txt"
