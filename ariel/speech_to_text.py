@@ -132,6 +132,7 @@ def transcribe_audio_chunks(
       with an added 'text' key containing the transcription and 'for_dubbing'
       key indicating if the phrase should be dubbed or not.
   """
+
   updated_utterance_metadata = []
   for item in utterance_metadata:
     new_item = item.copy()
@@ -172,6 +173,7 @@ def upload_to_gemini(file: str) -> file_types.File:
 
 class FileProcessingError(Exception):
   """Error when processing a file for the Gemini model."""
+
   pass
 
 
@@ -238,7 +240,8 @@ def diarize_speakers(
   Args:
       file: The path to the MP4 video or MP3 audio file.
       utterance_metadata: The transcript of the video, represented as a sequence
-        of mappings with keys "start", "end" "text", "path", "for_dubbing".
+        of mappings with keys "start", "end" "text", "path", "for_dubbing" and
+        optionally "vocals_path".
       number_of_speakers: The number of speakers in the video.
       model: The pre-configured Gemini GenerativeModel instance.
       diarization_instructions: The specific instructions for diarization.
@@ -273,7 +276,8 @@ def add_speaker_info(
   Args:
       utterance_metadata: The sequence of utterance metadata dictionaries. Each
         dictionary represents utterance metadata of audio and contains the
-        "start", "end" "text", "path", "for_dubbing" keys.
+        "start", "end" "text", "path", "for_dubbing" and optionally
+        "vocals_path" keys.
       speaker_info: The sequence of tuples containing (speaker_id, gender)
         information. The order of tuples in this list should correspond to the
         order of utterance_metadata.

@@ -270,6 +270,7 @@ def cut_and_save_audio(
     utterance_metadata: Sequence[Mapping[str, float]],
     audio_file: str,
     output_directory: str,
+    clone_voices: bool = False,
 ) -> Sequence[Mapping[str, float]]:
   """Cuts an audio file into chunks based on provided time ranges and saves each chunk to a file.
 
@@ -279,6 +280,8 @@ def cut_and_save_audio(
       audio_file: The path to the audio file to be cut.
       output_directory: The path to the folder where the audio chunks will be
         saved.
+      clone_voices: Whether to clone source voices. It requires using ElevenLabs
+        API.
 
   Returns:
       A list of dictionaries, each containing the path to the saved chunk, and
@@ -286,23 +289,19 @@ def cut_and_save_audio(
   """
 
   audio = AudioSegment.from_file(audio_file)
+  key = "vocals_path" if clone_voices else "path"
+  prefix = "vocals_chunk" if clone_voices else "chunk"
   updated_utterance_metadata = []
-
-  for item in utterance_metadata:
-    start_time_ms = int(item["start"] * 1000)
-    end_time_ms = int(item["end"] * 1000)
+  for utterance in utterance_metadata:
+    start_time_ms = int(utterance["start"] * 1000)
+    end_time_ms = int(utterance["end"] * 1000)
     chunk = audio[start_time_ms:end_time_ms]
-
-    chunk_filename = f"chunk_{item['start']}_{item['end']}.mp3"
+    chunk_filename = f"{prefix}_{utterance['start']}_{utterance['end']}.mp3"
     chunk_path = f"{output_directory}/{chunk_filename}"
-
     chunk.export(chunk_path, format="mp3")
-    updated_utterance_metadata.append({
-        "path": chunk_path,
-        "start": item["start"],
-        "end": item["end"],
-    })
-
+    utterance_copy = utterance.copy()
+    utterance_copy[key] = chunk_path
+    updated_utterance_metadata.append(utterance_copy)
   return updated_utterance_metadata
 
 
@@ -317,8 +316,8 @@ def insert_audio_at_timestamps(
   Args:
     utterance_metadata: A sequence of utterance metadata, each represented as a
       dictionary with keys: "text", "start", "stop", "speaker_id",
-      "ssml_gender", "translated_text", "assigned_google_voice", "for_dubbing"
-      and "path".
+      "ssml_gender", "translated_text", "assigned_google_voice", "for_dubbing",
+      "path" and optionally "vocals_path".
     background_audio_file: Path to the background audio file.
     output_directory: Path to save the output audio file.
 

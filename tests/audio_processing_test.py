@@ -339,7 +339,7 @@ class MergeUtterancesTest(parameterized.TestCase):
 
 class TestCutAndSaveAudio(absltest.TestCase):
 
-  def test_cut_and_save_audio(self):
+  def test_cut_and_save_audio_no_clone(self):
     with tempfile.NamedTemporaryFile(suffix=".mp3") as temporary_file:
       silence_duration = 10
       silence = AudioArrayClip(
@@ -357,6 +357,33 @@ class TestCutAndSaveAudio(absltest.TestCase):
         expected_file = os.path.join(output_directory, "chunk_0.0_5.0.mp3")
         expected_result = {
             "path": os.path.join(output_directory, "chunk_0.0_5.0.mp3"),
+            "start": 0.0,
+            "end": 5.0,
+        }
+        self.assertTrue(
+            os.path.exists(expected_file) and results == [expected_result],
+            f"File not found or dictionary not as expected: {expected_file}",
+        )
+
+  def test_cut_and_save_audio_clone(self):
+    with tempfile.NamedTemporaryFile(suffix=".mp3") as temporary_file:
+      silence_duration = 10
+      silence = AudioArrayClip(
+          np.zeros((int(44100 * silence_duration), 2), dtype=np.int16),
+          fps=44100,
+      )
+      silence.write_audiofile(temporary_file.name)
+      utterance_metadata = [{"start": 0.0, "end": 5.0}]
+      with tempfile.TemporaryDirectory() as output_directory:
+        results = audio_processing.cut_and_save_audio(
+            utterance_metadata=utterance_metadata,
+            audio_file=temporary_file.name,
+            output_directory=output_directory,
+            clone_voices=True,
+        )
+        expected_file = os.path.join(output_directory, "vocals_chunk_0.0_5.0.mp3")
+        expected_result = {
+            "vocals_path": os.path.join(output_directory, "vocals_chunk_0.0_5.0.mp3"),
             "start": 0.0,
             "end": 5.0,
         }

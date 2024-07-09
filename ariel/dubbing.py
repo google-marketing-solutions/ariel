@@ -33,7 +33,7 @@ from ariel import video_processing
 from elevenlabs.client import ElevenLabs
 from elevenlabs.core import ApiError
 from faster_whisper import WhisperModel
-from google.api_core.exceptions import ServiceUnavailable, BadRequest
+from google.api_core.exceptions import BadRequest, ServiceUnavailable
 from google.cloud import texttospeech
 import google.generativeai as genai
 from google.generativeai.types import HarmBlockThreshold, HarmCategory
@@ -233,6 +233,7 @@ class Dubber:
       gemini_token: str | None = None,
       elevenlabs_token: str | None = None,
       use_elevenlabs: bool = False,
+      clone_voices: bool = False,
       elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
       gemini_model_name: str = _DEFAULT_GEMINI_MODEL,
       temperature: float = _DEFAULT_GEMINI_TEMPERATURE,
@@ -286,6 +287,8 @@ class Dubber:
           'ELEVENLABS_TOKEN' environment variable).
         use_elevenlabs: Whether to use ElevenLabs API for Text-To-Speech. If not
           Google's Text-To-Speech will be used.
+        clone_voices: Whether to clone source voices. It requires using
+          ElevenLabs API.
         elevenlabs_model: The ElevenLabs model to use in the Text-To-Speech
           process.
         gemini_model_name: The name of the Gemini model to use.
@@ -317,8 +320,9 @@ class Dubber:
     self.hugging_face_token = hugging_face_token
     self.gemini_token = gemini_token
     self.elevenlabs_token = elevenlabs_token
-    self.elevenlabs_model = elevenlabs_model
     self.use_elevenlabs = use_elevenlabs
+    self._clone_voices = clone_voices
+    self.elevenlabs_model = elevenlabs_model
     self.diarization_system_instructions = diarization_system_instructions
     self.translation_system_instructions = translation_system_instructions
     self.gemini_model_name = gemini_model_name
@@ -366,7 +370,7 @@ class Dubber:
       )
     return token
 
-  @property
+  @functools.cached_property
   def pyannote_pipeline(self) -> Pipeline:
     """Loads the PyAnnote diarization pipeline."""
     hugging_face_token = self.get_api_token(
@@ -377,7 +381,7 @@ class Dubber:
         self.pyannote_model, use_auth_token=hugging_face_token
     )
 
-  @property
+  @functools.cached_property
   def speech_to_text_model(self) -> WhisperModel:
     """Initializes the Whisper speech-to-text model."""
     return WhisperModel(
@@ -418,7 +422,7 @@ class Dubber:
         safety_settings=self.safety_settings,
     )
 
-  @property
+  @functools.cached_property
   def text_to_speech_client(
       self,
   ) -> texttospeech.TextToSpeechClient | ElevenLabs:
@@ -427,9 +431,9 @@ class Dubber:
       return texttospeech.TextToSpeechClient()
     logging.warning(
         "You decided to use ElevenLabs API. It will generate extra cost. Check"
-        " their pricing on the follwing website: https://elevenlabs.io/pricing."
-        " Use Google's Text-To-Speech to contain all the costs within your"
-        " Google Cloud Platform (GCP) project."
+        " their pricing on the following website:"
+        " https://elevenlabs.io/pricing. Use Google's Text-To-Speech to contain"
+        " all the costs within your Google Cloud Platform (GCP) project."
     )
     elevenlabs_token = self.get_api_token(
         environmental_variable=_EXPECTED_ELEVENLABS_ENVIRONMENTAL_VARIABLE_NAME,
@@ -508,10 +512,30 @@ class Dubber:
 
   @functools.cached_property
   def progress_bar(self) -> tqdm:
+    """An instance of the progress bar for the dubbing process."""
     total_number_of_steps = (
         self._number_of_steps if self.clean_up else self._number_of_steps - 1
     )
     return tqdm(total=total_number_of_steps, initial=1)
+
+  @functools.cached_property
+  def clone_voices(self) -> bool:
+    """An indicator whether to use voice cloning during the dubbing process.
+
+    Raises:
+        ValueError: When 'clone_voices' is True and 'use_elevenlabs' is False.
+    """
+    if self._clone_voices and not self.use_elevenlabs:
+      raise ValueError("Voice cloning requires using ElevenLabs API.")
+    if self._clone_voices:
+      logging.warning(
+          "You decided to clone voices with ElevenLabs API. It might require a"
+          " more expensive pricing tier. Check their pricing on the following"
+          " website: https://elevenlabs.io/pricing. Use Google's Text-To-Speech"
+          " to contain all the costs within your Google Cloud Platform (GCP)"
+          " project."
+      )
+    return self._clone_voices
 
   def run_preprocessing(self) -> None:
     """Splits audio/video, applies DEMUCS, and segments audio into utterances with PyAnnote.
@@ -533,8 +557,8 @@ class Dubber:
         device=self.device,
     )
     audio_processing.execute_demcus_command(command=demucs_command)
-    _, audio_background_file = audio_processing.assemble_split_audio_file_paths(
-        command=demucs_command
+    audio_vocals_file, audio_background_file = (
+        audio_processing.assemble_split_audio_file_paths(command=demucs_command)
     )
 
     utterance_metadata = audio_processing.create_pyannote_timestamps(
@@ -548,11 +572,19 @@ class Dubber:
           utterance_metadata=utterance_metadata,
           minimum_merge_threshold=self.minimum_merge_threshold,
       )
-    self.utterance_metadata = audio_processing.cut_and_save_audio(
+    utterance_metadata = audio_processing.cut_and_save_audio(
         utterance_metadata=utterance_metadata,
         audio_file=audio_file,
         output_directory=self.output_directory,
     )
+    if self.clone_voices:
+      utterance_metadata = audio_processing.cut_and_save_audio(
+          utterance_metadata=utterance_metadata,
+          audio_file=audio_vocals_file,
+          output_directory=self.output_directory,
+          clone_voices=self.clone_voices,
+      )
+    self.utterance_metadata = utterance_metadata
     self.preprocesing_output = PreprocessingArtifacts(
         video_file=video_file,
         audio_file=audio_file,
@@ -622,29 +654,34 @@ class Dubber:
     if not self._rerun:
       self.progress_bar.update()
 
-  def run_assign_voices(self) -> None:
-    """Assign Google's Text-To-Speech voices to each utterance.
+  def run_configure_text_to_speech(self) -> None:
+    """Configures the Text-To-Speech process.
 
     Returns:
-        Updated utterance metadata with assigned voices.
+        Updated utterance metadata with assigned voices
+        and Text-To-Speech settings.
     """
-    if not self.use_elevenlabs:
-      assigned_voices = text_to_speech.assign_voices(
-          utterance_metadata=self.utterance_metadata,
-          target_language=self.target_language,
-          client=self.text_to_speech_client,
-          preferred_voices=self.preferred_voices,
-      )
+    if not self.clone_voices:
+      if not self.use_elevenlabs:
+        assigned_voices = text_to_speech.assign_voices(
+            utterance_metadata=self.utterance_metadata,
+            target_language=self.target_language,
+            client=self.text_to_speech_client,
+            preferred_voices=self.preferred_voices,
+        )
+      else:
+        assigned_voices = text_to_speech.elevenlabs_assign_voices(
+            utterance_metadata=self.utterance_metadata,
+            client=self.text_to_speech_client,
+            preferred_voices=self.preferred_voices,
+        )
     else:
-      assigned_voices = text_to_speech.elevenlabs_assign_voices(
-          utterance_metadata=self.utterance_metadata,
-          client=self.text_to_speech_client,
-          preferred_voices=self.preferred_voices,
-      )
+      assigned_voices = None
     self.utterance_metadata = text_to_speech.update_utterance_metadata(
         utterance_metadata=self.utterance_metadata,
         assigned_voices=assigned_voices,
         use_elevenlabs=self.use_elevenlabs,
+        clone_voices=self.clone_voices,
     )
 
   def _run_verify_utterance_metadata(self) -> None:
@@ -659,9 +696,10 @@ class Dubber:
         translate_choice = self._prompt_for_translation()
         if translate_choice == "yes":
           self.run_translation()
-        assign_voices_choice = self._prompt_for_assign_voices()
-        if assign_voices_choice == "yes":
-          self.run_assign_voices()
+        if not self.clone_voices:
+          assign_voices_choice = self._prompt_for_assign_voices()
+          if assign_voices_choice == "yes":
+            self.run_configure_text_to_speech()
         self._rerun = False
         return
 
@@ -746,6 +784,8 @@ class Dubber:
         target_language=self.target_language,
         adjust_speed=self.adjust_speed,
         elevenlabs_model=self.elevenlabs_model,
+        use_elevenlabs=self.use_elevenlabs,
+        clone_voices=self.clone_voices,
     )
     logging.info("Completed converting text to speech.")
     if not self._rerun:
@@ -854,7 +894,7 @@ class Dubber:
     self.run_preprocessing()
     self.run_speech_to_text()
     self.run_translation()
-    self.run_assign_voices()
+    self.run_configure_text_to_speech()
     self._run_verify_utterance_metadata()
     self.run_text_to_speech()
     self.run_save_utterance_metadata()

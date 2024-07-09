@@ -82,7 +82,7 @@ def add_translations(
   Args:
       utterance_metadata: The sequence of mappings, where each mapping
         represents utterance metadata with "text", "start", "end", "speaker_id",
-        "ssml_gender", "path", "for_dubbing" keys.
+        "ssml_gender", "path", "for_dubbing" and optionally "vocals_path" keys.
       translated_script: The string containing the translated text segments,
         separated by "<BREAK>".
 

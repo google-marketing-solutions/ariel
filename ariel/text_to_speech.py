@@ -15,10 +15,10 @@
 """A text-to-speech module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
 import os
-import random
 from typing import Final, Mapping, Sequence
-from elevenlabs import Voice, VoiceSettings, save
+from elevenlabs import VoiceSettings, save
 from elevenlabs.client import ElevenLabs
+from elevenlabs.types.voice import Voice
 from google.cloud import texttospeech
 from pydub import AudioSegment
 import tensorflow as tf
@@ -88,7 +88,8 @@ def assign_voices(
   Args:
       utterance_metadata: A sequence of utterance metadata, each represented as
         a dictionary with keys: "text", "start", "end", "speaker_id",
-        "ssml_gender", "translated_text", "for_dubbing" and "path".
+        "ssml_gender", "translated_text", "for_dubbing", "path" and optionally
+        "vocals_path"
       target_language: The target language (ISO 3166-1 alpha-2).
       client: A TextToSpeechClient object.
       preferred_voices: An optional list of preferred voice names.
@@ -153,93 +154,104 @@ def elevenlabs_assign_voices(
     preferred_voices: Sequence[str] = None,
     fallback_no_preferred_category_match: bool = False,
 ) -> Mapping[str, str | None]:
-    """Assigns voices to speakers based on preferred voices and available voices.
+  """Assigns voices to speakers based on preferred voices and available voices.
 
-    Args:
-        utterance_metadata: A sequence of utterance metadata, each represented as
-          a dictionary with keys: "start", "end", "chunk_path", "translated_text",
-          "speaker_id", "ssml_gender".
-        client: An ElevenLabs object.
-        preferred_voices: Optional; A list of preferred voice names (e.g.,
-          "Rachel").
-        fallback_no_preferred_category_match: If True, assigns None if no voice
-          matches preferred category.
+  Args:
+      utterance_metadata: A sequence of utterance metadata, each represented as
+        a dictionary with keys: "start", "end", "chunk_path", "translated_text",
+        "speaker_id", "ssml_gender".
+      client: An ElevenLabs object.
+      preferred_voices: Optional; A list of preferred voice names (e.g.,
+        "Rachel").
+      fallback_no_preferred_category_match: If True, assigns None if no voice
+        matches preferred category.
 
-    Returns:
-        A mapping of unique speaker IDs to assigned voice names, or None if no
-        suitable voice was available or fallback_no_preferred_category_match is
-        True.
-    """
-    unique_speaker_mapping = {
-        item["speaker_id"]: item["ssml_gender"] for item in utterance_metadata
-    }
-    if preferred_voices is None:
-        preferred_voices = []
-    available_voices = client.voices.get_all().voices
-    voice_assignment = {}
-    already_assigned_voices = {"Male": set(), "Female": set()}
-    for speaker_id, ssml_gender in unique_speaker_mapping.items():
-        preferred_category_matched = False
-        for preferred_voice in preferred_voices:
-            voice_info = next(
-                (
-                    voice
-                    for voice in available_voices
-                    if voice.name == preferred_voice
-                ),
-                None,
-            )
-            if (
-                voice_info
-                and voice_info.labels["gender"] == ssml_gender.lower()
-                and preferred_voice not in already_assigned_voices[ssml_gender]
-            ):
-                voice_assignment[speaker_id] = preferred_voice
-                already_assigned_voices[ssml_gender].add(preferred_voice)
-                preferred_category_matched = True
-                break
-        if not preferred_category_matched:
-            for voice_info in available_voices:
-                if (
-                    voice_info.labels["gender"] == ssml_gender.lower()
-                    and voice_info.name not in already_assigned_voices[ssml_gender]
-                ):
-                    voice_assignment[speaker_id] = voice_info.name
-                    already_assigned_voices[ssml_gender].add(voice_info.name)
-                    preferred_category_matched = True
-                    break
-        if not preferred_category_matched and fallback_no_preferred_category_match:
-            voice_assignment[speaker_id] = None
-    for speaker_id in unique_speaker_mapping:
-        if speaker_id not in voice_assignment:
-            voice_assignment[speaker_id] = None
-    return voice_assignment
+  Returns:
+      A mapping of unique speaker IDs to assigned voice names, or None if no
+      suitable voice was available or fallback_no_preferred_category_match is
+      True.
+  """
+  unique_speaker_mapping = {
+      item["speaker_id"]: item["ssml_gender"] for item in utterance_metadata
+  }
+  if preferred_voices is None:
+    preferred_voices = []
+  available_voices = client.voices.get_all().voices
+  voice_assignment = {}
+  already_assigned_voices = {"Male": set(), "Female": set()}
+  for speaker_id, ssml_gender in unique_speaker_mapping.items():
+    preferred_category_matched = False
+    for preferred_voice in preferred_voices:
+      voice_info = next(
+          (
+              voice
+              for voice in available_voices
+              if voice.name == preferred_voice
+          ),
+          None,
+      )
+      if (
+          voice_info
+          and voice_info.labels["gender"] == ssml_gender.lower()
+          and preferred_voice not in already_assigned_voices[ssml_gender]
+      ):
+        voice_assignment[speaker_id] = preferred_voice
+        already_assigned_voices[ssml_gender].add(preferred_voice)
+        preferred_category_matched = True
+        break
+    if not preferred_category_matched:
+      for voice_info in available_voices:
+        if (
+            voice_info.labels["gender"] == ssml_gender.lower()
+            and voice_info.name not in already_assigned_voices[ssml_gender]
+        ):
+          voice_assignment[speaker_id] = voice_info.name
+          already_assigned_voices[ssml_gender].add(voice_info.name)
+          preferred_category_matched = True
+          break
+    if not preferred_category_matched and fallback_no_preferred_category_match:
+      voice_assignment[speaker_id] = None
+  for speaker_id in unique_speaker_mapping:
+    if speaker_id not in voice_assignment:
+      voice_assignment[speaker_id] = None
+  return voice_assignment
 
 
 def update_utterance_metadata(
     *,
     utterance_metadata: Sequence[Mapping[str, str | float]],
-    assigned_voices: Mapping[str, str],
+    assigned_voices: Mapping[str, str] | None,
     use_elevenlabs: bool = False,
+    clone_voices: bool = False,
 ) -> Sequence[Mapping[str, str | float]]:
   """Updates utterance metadata with assigned Google voices.
 
   Args:
       utterance_metadata: A sequence of utterance metadata, each represented as
         a dictionary with keys: "text", "start", "end", "speaker_id",
-        "ssml_gender", "translated_text", "for_dubbing" and "path".
+        "ssml_gender", "translated_text", "for_dubbing", "path" and optionally
+        "vocals_path".
       assigned_voices: Mapping mapping speaker IDs to assigned Google voices.
-      use_elevenlabs: An indicator whether Eleven Labs API will be used
-        in the Text-To-Speech proecess.
+      use_elevenlabs: An indicator whether Eleven Labs API will be used in the
+        Text-To-Speech proecess.
+      clone_voices: Whether to clone source voices. It requires using ElevenLabs
+        API.
 
   Returns:
       Sequence of updated utterance metadata dictionaries.
+
+  Raises:
+      ValueError: When 'clone_voices' is True and 'use_elevenlabs' is False.
   """
+  if clone_voices:
+    if not use_elevenlabs:
+      raise ValueError("Voice cloning requires using ElevenLabs API.")
   updated_utterance_metadata = []
   for metadata_item in utterance_metadata:
     new_utterance = metadata_item.copy()
-    speaker_id = new_utterance.get("speaker_id")
-    new_utterance["assigned_voice"] = assigned_voices.get(speaker_id)
+    if not clone_voices:
+      speaker_id = new_utterance.get("speaker_id")
+      new_utterance["assigned_voice"] = assigned_voices.get(speaker_id)
     if use_elevenlabs:
       new_utterance["stability"] = _DEFAULT_STABILITY
       new_utterance["similarity_boost"] = _DEFAULT_SIMILARITY_BOOST
@@ -345,7 +357,6 @@ def elevenlabs_convert_text_to_speech(
   Returns:
       The path and filename of the saved audio file (same as `output_filename`).
   """
-
   audio = client.generate(
       model=model,
       voice=assigned_elevenlabs_voice,
@@ -359,6 +370,52 @@ def elevenlabs_convert_text_to_speech(
   )
   save(audio, output_filename)
   return output_filename
+
+
+def create_speaker_to_paths_mapping(
+    utterance_metadata: Sequence[Mapping[str, float | str]],
+) -> Mapping[str, Sequence[str]]:
+  """Organizes a list of utterance metadata dictionaries into a speaker-to-paths mapping.
+
+  Args:
+      utterance_metadata: A list of dictionaries with 'speaker_id' and
+        'voice_path' keys.
+
+  Returns:
+      A mapping between speaker IDs to lists of file paths.
+  """
+
+  speaker_to_paths_mapping = {}
+  for utterance in utterance_metadata:
+    speaker_id = utterance["speaker_id"]
+    if speaker_id not in speaker_to_paths_mapping:
+      speaker_to_paths_mapping[speaker_id] = []
+    speaker_to_paths_mapping[speaker_id].append(utterance["vocals_path"])
+  return speaker_to_paths_mapping
+
+
+def elevenlabs_clone_voices(
+    *, client: ElevenLabs, speaker_to_paths_mapping: Mapping[str, Sequence[str]]
+) -> Mapping[str, Voice]:
+  """Clones voices for speakers using ElevenLabs based on utterance metadata and file paths.
+
+  Args:
+      client: An authenticated ElevenLabs client object for API interaction.
+      speaker_to_paths_mapping: A mapping between speaker IDs to the sequnces
+        with file paths of the source utterances.
+
+  Returns:
+      A mapping between speaker IDs to their cloned voices.
+  """
+  speaker_to_voices_mapping = {}
+  for speaker_id, paths in speaker_to_paths_mapping.items():
+    voice = client.clone(
+        name=f"{speaker_id}",
+        description=f"Voice for {speaker_id}",
+        files=paths,
+    )
+    speaker_to_voices_mapping[speaker_id] = voice
+  return speaker_to_voices_mapping
 
 
 def adjust_audio_speed(
@@ -409,6 +466,8 @@ def dub_utterances(
     target_language: str,
     adjust_speed: bool = True,
     elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
+    use_elevenlabs: bool = False,
+    clone_voices: bool = False,
 ) -> Sequence[Mapping[str, str | float]]:
   """Processes a list of utterance metadata, generating dubbed audio files.
 
@@ -417,42 +476,48 @@ def dub_utterances(
       utterance_metadata: A sequence of utterance metadata, each represented as
         a dictionary with keys: "text", "start", "end", "speaker_id",
         "ssml_gender", "translated_text", "assigned_google_voice",
-        "for_dubbing", "path", "google_voice_pitch", "google_voice_speed" and
-        "google_voice_volume_gain_db".
+        "for_dubbing", "path", "google_voice_pitch", "google_voice_speed",
+        "google_voice_volume_gain_db" and optionally "vocals_path".
       output_directory: Path to the directory for output files.
       target_language: The target language (ISO 3166-1 alpha-2).
       adjust_speed: Whether to either speed up or slow down utterances to match
         the duration of the utterances in the source language.
+      clone_voices: Whether to clone source voices. It requires using ElevenLabs
+        API.
 
   Returns:
       List of processed utterance metadata with updated "dubbed_path".
+
+  Raises:
+      ValueError: When 'clone_voices' is True and 'use_elevenlabs' is False.
   """
 
+  if clone_voices:
+    if not use_elevenlabs:
+      raise ValueError("Voice cloning requires using ElevenLabs API.")
+    speaker_to_paths_mapping = create_speaker_to_paths_mapping(
+        utterance_metadata
+    )
+    speaker_to_voices_mapping = elevenlabs_clone_voices(
+        client=client, speaker_to_paths_mapping=speaker_to_paths_mapping
+    )
   updated_utterance_metadata = []
   for utterance in utterance_metadata:
     if not utterance["for_dubbing"]:
       dubbed_path = utterance["path"]
     else:
+      if clone_voices:
+        assigned_voice = speaker_to_voices_mapping[utterance["speaker_id"]]
+      else:
+        assigned_voice = utterance["assigned_voice"]
       path = utterance["path"]
       text = utterance["translated_text"]
-      assigned_voice = utterance["assigned_voice"]
       duration = utterance["end"] - utterance["start"]
       base_filename = os.path.splitext(os.path.basename(path))[0]
       output_filename = os.path.join(
           output_directory, f"dubbed_{base_filename}.mp3"
       )
-      if isinstance(client, texttospeech.TextToSpeechClient):
-        dubbed_path = convert_text_to_speech(
-            client=client,
-            assigned_google_voice=assigned_voice,
-            target_language=target_language,
-            output_filename=output_filename,
-            text=text,
-            pitch=utterance["pitch"],
-            speed=utterance["speed"],
-            volume_gain_db=utterance["volume_gain_db"],
-        )
-      else:
+      if use_elevenlabs:
         dubbed_path = elevenlabs_convert_text_to_speech(
             client=client,
             model=elevenlabs_model,
@@ -463,6 +528,17 @@ def dub_utterances(
             similarity_boost=utterance["similarity_boost"],
             style=utterance["style"],
             use_speaker_boost=utterance["use_speaker_boost"],
+        )
+      else:
+        dubbed_path = convert_text_to_speech(
+            client=client,
+            assigned_google_voice=assigned_voice,
+            target_language=target_language,
+            output_filename=output_filename,
+            text=text,
+            pitch=utterance["pitch"],
+            speed=utterance["speed"],
+            volume_gain_db=utterance["volume_gain_db"],
         )
       if adjust_speed:
         adjust_audio_speed(input_mp3_path=dubbed_path, target_duration=duration)

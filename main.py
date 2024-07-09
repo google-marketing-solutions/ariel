@@ -102,6 +102,11 @@ _USE_ELEVENLABS = flags.DEFINE_bool(
     "Whether to use ElevenLabs API for Text-To-Speech. If not Google's"
     " Text-To-Speech will be used.",
 )
+_CLONE_VOICES = flags.DEFINE_bool(
+    "clone_voices",
+    False,
+    "Whether to clone source voices. It requires using ElevenLabs API.",
+)
 _CLEAN_UP = flags.DEFINE_bool(
     "clean_up",
     False,
@@ -180,6 +185,7 @@ def main(argv: Sequence[str]) -> None:
       gemini_token=_GEMINI_TOKEN.value,
       elevenlabs_token=_ELEVENLABS_TOKEN.value,
       use_elevenlabs=_USE_ELEVENLABS.value,
+      clone_voices=_CLONE_VOICES.value,
       gemini_model_name=_GEMINI_MODEL_NAME.value,
       temperature=_TEMPERATURE.value,
       top_p=_TOP_P.value,
