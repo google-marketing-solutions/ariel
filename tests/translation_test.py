@@ -54,7 +54,27 @@ class GenerateScriptTest(parameterized.TestCase):
                   "ssml_gender": "female",
               },
           ],
-          "This is <BREAK> a test.",
+          "This is<BREAK>a test.",
+      ),
+      (
+          "empty_string",
+          [
+              {
+                  "text": "This is",
+                  "start": 0.0,
+                  "stop": 1.0,
+                  "speaker_id": "speaker1",
+                  "ssml_gender": "male",
+              },
+              {
+                  "text": "",
+                  "start": 1.0,
+                  "stop": 2.0,
+                  "speaker_id": "speaker2",
+                  "ssml_gender": "female",
+              },
+          ],
+          "This is<BREAK>",
       ),
   )
   def test_generate_script(self, utterance_metadata, expected_script):

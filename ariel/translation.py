@@ -38,9 +38,11 @@ def generate_script(
     A string representing the script, with "<BREAK>" inserted
     between chunks.
   """
-  script = " <BREAK> ".join(str(item["text"]) for item in utterance_metadata)
-  script = script.replace("  ", " ")
-  return script.rstrip(" <BREAK> ")
+  trimmed_lines = [
+      item["text"].strip() if item["text"] else ""
+      for item in utterance_metadata
+  ]
+  return "<BREAK>".join(trimmed_lines)
 
 
 def translate_script(
