@@ -70,6 +70,7 @@ Ariel leverages a powerful combination of state-of-the-art AI and audio processi
 
 You can dub video ads from and to the following languages:
 
+*   Arabic
 *   Bengali
 *   Bulgarian
 *   Chinese (Simplified/Traditional)
@@ -84,6 +85,7 @@ You can dub video ads from and to the following languages:
 *   German
 *   Greek
 *   Gujarati
+*   Hebrew (not with ElevenLabs API)
 *   Hindi
 *   Hungarian
 *   Indonesian
