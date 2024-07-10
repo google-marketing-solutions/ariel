@@ -23,6 +23,7 @@ from elevenlabs.types.voice import Voice
 from google.cloud import texttospeech
 from pydub import AudioSegment
 import tensorflow as tf
+from pydub.effects import speedup
 
 _SSML_MALE: Final[str] = "Male"
 _SSML_FEMALE: Final[str] = "Female"
@@ -45,6 +46,7 @@ _DEFAULT_SIMILARITY_BOOST: Final[float] = 0.75
 _DEFAULT_STYLE: Final[float] = 0.0
 _DEFAULT_USE_SPEAKER_BOOST: Final[bool] = True
 _DEFAULT_ELEVENLABS_MODEL: Final[str] = "eleven_multilingual_v2"
+_DEFAULT_CHUNK_SIZE: Final[int] = 50
 
 
 def list_available_voices(
@@ -419,7 +421,8 @@ def elevenlabs_clone_voices(
 
 
 def adjust_audio_speed(
-    reference_file: str, dubbed_file: str, speed: float | None = None
+    *,
+    reference_file: str, dubbed_file: str, speed: float | None = None, chunk_size: int = _DEFAULT_CHUNK_SIZE,
 ) -> None:
   """Adjusts the speed of an MP3 file to match the reference file duration.
 
@@ -428,6 +431,7 @@ def adjust_audio_speed(
       dubbed_file: The path to the dubbed MP3 file.
       speed: The desired speed in seconds. If None it will be determined based
         on the duration of the reference_file and dubbed_file.
+      chunk_size: Duration of audio chunks (in ms) to preserve in the adjustement process.
   """
 
   reference_audio = AudioSegment.from_file(reference_file)
@@ -436,12 +440,9 @@ def adjust_audio_speed(
     reference_duration = reference_audio.duration_seconds
     dubbed_duration = dubbed_audio.duration_seconds
     speed = dubbed_duration / reference_duration
-  adjusted_audio = dubbed_audio._spawn(
-      dubbed_audio.raw_data,
-      overrides={"frame_rate": int(dubbed_audio.frame_rate * speed)},
-  )
-  adjusted_audio = adjusted_audio.set_frame_rate(dubbed_audio.frame_rate)
-  adjusted_audio.export(dubbed_file, format="mp3")
+  crossfade = max(1, chunk_size // 2)
+  output_audio = speedup(dubbed_audio, speed, chunk_size=chunk_size, crossfade=crossfade)
+  output_audio.export(dubbed_file, format="mp3")
 
 
 def dub_utterances(

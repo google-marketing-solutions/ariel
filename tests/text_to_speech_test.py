@@ -511,11 +511,9 @@ from elevenlabs.types.voice import Voice
 class TestElevenlabsCloneVoices(absltest.TestCase):
 
   def test_clone_voices_success(self):
-    # Create mock objects specifically for this test
     mock_client = MagicMock(spec=ElevenLabs)
     mock_voice = MagicMock(spec=Voice)
     mock_client.clone.return_value = mock_voice
-
     speaker_to_paths_mapping = {
         "speaker1": ["path/to/audio1.wav", "path/to/audio2.wav"],
         "speaker2": ["path/to/audio3.wav"],
@@ -523,28 +521,36 @@ class TestElevenlabsCloneVoices(absltest.TestCase):
     result = text_to_speech.elevenlabs_clone_voices(
         client=mock_client, speaker_to_paths_mapping=speaker_to_paths_mapping
     )
-
-    # Assert the correct behavior (using the mock objects from this test)
     self.assertEqual(result, {"speaker1": mock_voice, "speaker2": mock_voice})
-    mock_client.clone.assert_called()  # Verify clone method was called
+    mock_client.clone.assert_called()
 
 
-class TestAdjustAudioSpeed(parameterized.TestCase):
+class TestAdjustAudioSpeed(absltest.TestCase):
 
-  def test_adjust_audio_speed(self):
-    """Tests adjustment when target duration is valid."""
-    with tempfile.TemporaryDirectory() as temporary_directory:
-      reference_filepath = os.path.join(temporary_directory, "reference.mp3")
-      reference_audio = AudioSegment.silent(duration=4.0 * 1000)
-      reference_audio.export(reference_filepath, format="mp3")
-      dubbed_filepath = os.path.join(temporary_directory, "dubbed.mp3")
-      dubbed_audio = AudioSegment.silent(duration=2.0 * 1000)
-      dubbed_audio.export(dubbed_filepath, format="mp3")
+  @patch("pydub.AudioSegment.from_file")
+  @patch("pydub.AudioSegment.export")
+  def test_adjust_speed_with_calculated_speed(
+      self, mock_export, mock_from_file
+  ):
+    reference_audio_mock = AudioSegment.silent(duration=60000)
+    dubbed_audio_mock = AudioSegment.silent(duration=90000)
+    mock_from_file.side_effect = [reference_audio_mock, dubbed_audio_mock]
+    speedup_result_mock = AudioSegment.silent(duration=60000)
+
+    def mock_speedup(audio_segment, speed, chunk_size, crossfade):
+      del audio_segment
+      self.assertEqual(speed, 1.5)
+      self.assertEqual(chunk_size, 50)
+      self.assertEqual(crossfade, 500)
+      return speedup_result_mock
+
+    with patch("pydub.effects.speedup", new=mock_speedup):
       text_to_speech.adjust_audio_speed(
-          reference_file=reference_filepath, dubbed_file=dubbed_filepath
+          reference_file="ref.mp3", dubbed_file="dub.mp3"
       )
-      adjusted_audio = AudioSegment.from_mp3(dubbed_filepath)
-      self.assertAlmostEqual(adjusted_audio.duration_seconds, 4.0, delta=0.1)
+    mock_from_file.assert_any_call("ref.mp3")
+    mock_from_file.assert_any_call("dub.mp3")
+    mock_export.assert_called_once_with("dub.mp3", format="mp3")
 
 
 class TestDubUtterances(parameterized.TestCase):
