@@ -932,11 +932,6 @@ class Dubber:
 
     Returns:
         PostprocessingArtifacts: Object containing the post-processed results.
-
-    Raises:
-        ValueError: If `utterance_metadata` is invalid or missing required keys.
-        # (List other potential exceptions here, e.g., file errors, TTS
-        failures)
     """
 
     logging.info("Re-run dubbing process starting...")
@@ -956,6 +951,43 @@ class Dubber:
     self._run_verify_utterance_metadata()
     self.run_text_to_speech()
     self.run_postprocessing()
+    logging.info("Dubbing process finished.")
+    logging.info("Output files saved in: %s.", self.output_directory)
+    return self.postprocessing_output
+
+
+  def dub_ad_with_different_language(self, target_language: str) -> PostprocessingArtifacts:
+    """Orchestrates the complete ad dubbing process using a new target language.
+
+    Args:
+        target_language: The new language to dub the ad into. It must be ISO 3166-1
+          alpha-2 country code.
+
+    Returns:
+        PostprocessingArtifacts: Object containing the post-processed results.
+    """
+    logging.info("Re-run dubbing process starting...")
+    self.target_language = target_language
+    if self.clean_up:
+      logging.warning(
+          "You are trying to run the dubbing process using utterance metadata."
+          " But it looks like you have cleaned up all the process artifacts"
+          " during the last run. They might not be available now and the"
+          " process might not complete successfully."
+      )
+    self.target_language = target_language
+    logging.warning(
+        "The class target language was overwritten with the provided input."
+    )
+    self._rerun = True
+    self.run_translation()
+    self.run_configure_text_to_speech()
+    self._run_verify_utterance_metadata()
+    self.run_text_to_speech()
+    self.run_save_utterance_metadata()
+    self.run_postprocessing()
+    if self.clean_up:
+      self.run_clean_directory()
     logging.info("Dubbing process finished.")
     logging.info("Output files saved in: %s.", self.output_directory)
     return self.postprocessing_output
