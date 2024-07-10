@@ -14,6 +14,7 @@
 
 """Tests for utility functions in text_to_speech.py."""
 
+import os
 import tempfile
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -530,53 +531,20 @@ class TestElevenlabsCloneVoices(absltest.TestCase):
 
 class TestAdjustAudioSpeed(parameterized.TestCase):
 
-  def test_adjust_audio_speed_positive_duration(self):
+  def test_adjust_audio_speed(self):
     """Tests adjustment when target duration is valid."""
-    with tempfile.NamedTemporaryFile(suffix=".mp3") as temp_file:
-      sample_audio = AudioSegment.silent(duration=5.0 * 1000)
-      sample_audio.export(temp_file.name, format="mp3")
-      target_duration = 3.0
+    with tempfile.TemporaryDirectory() as temporary_directory:
+      reference_filepath = os.path.join(temporary_directory, "reference.mp3")
+      reference_audio = AudioSegment.silent(duration=4.0 * 1000)
+      reference_audio.export(reference_filepath, format="mp3")
+      dubbed_filepath = os.path.join(temporary_directory, "dubbed.mp3")
+      dubbed_audio = AudioSegment.silent(duration=2.0 * 1000)
+      dubbed_audio.export(dubbed_filepath, format="mp3")
       text_to_speech.adjust_audio_speed(
-          input_mp3_path=temp_file.name, target_duration=target_duration
+          reference_file=reference_filepath, dubbed_file=dubbed_filepath
       )
-      adjusted_audio = AudioSegment.from_mp3(temp_file.name)
-      self.assertAlmostEqual(
-          adjusted_audio.duration_seconds, target_duration, delta=0.2
-      )
-
-  def test_adjust_audio_speed_zero_duration(self):
-    """Tests error handling when target duration is zero."""
-    with tempfile.NamedTemporaryFile(suffix=".mp3") as temp_file:
-      sample_audio = AudioSegment.silent(duration=5.0 * 1000)
-      sample_audio.export(temp_file.name, format="mp3")
-      target_duration = 0.0
-      with self.assertRaisesRegex(
-          ValueError,
-          "The target duration must be more than 0.0 seconds. Got"
-          f" {target_duration}.",
-      ):
-        text_to_speech.adjust_audio_speed(
-            input_mp3_path=temp_file.name, target_duration=target_duration
-        )
-
-  @parameterized.named_parameters(
-      ("TargetBelowMinimum", 0.8, 0.5),
-      ("InputBelowMinimum", 2.0, 0.5),
-  )
-  def test_adjust_audio_speed_below_minimum(
-      self, target_duration, expected_duration
-  ):
-    """Tests when target or input duration is below the minimum."""
-    with tempfile.NamedTemporaryFile(suffix=".mp3") as temp_file:
-      sample_audio = AudioSegment.silent(duration=0.5 * 1000)
-      sample_audio.export(temp_file.name, format="mp3")
-      text_to_speech.adjust_audio_speed(
-          input_mp3_path=temp_file.name, target_duration=target_duration
-      )
-      adjusted_audio = AudioSegment.from_mp3(temp_file.name)
-      self.assertAlmostEqual(
-          adjusted_audio.duration_seconds, expected_duration, delta=0.1
-      )
+      adjusted_audio = AudioSegment.from_mp3(dubbed_filepath)
+      self.assertAlmostEqual(adjusted_audio.duration_seconds, 4.0, delta=0.1)
 
 
 class TestDubUtterances(parameterized.TestCase):

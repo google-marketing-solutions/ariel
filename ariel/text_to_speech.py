@@ -16,6 +16,7 @@
 
 import os
 from typing import Final, Mapping, Sequence
+from absl import logging
 from elevenlabs import VoiceSettings, save
 from elevenlabs.client import ElevenLabs
 from elevenlabs.types.voice import Voice
@@ -39,7 +40,6 @@ _DEFAULT_SSML_FEMALE_PITCH: Final[float] = -5.0
 _DEFAULT_SSML_MALE_PITCH: Final[float] = -10.0
 _DEFAULT_SPEED: Final[float] = 1.0
 _DEFAULT_VOLUME_GAIN_DB: Final[float] = 16.0
-_MINIMUM_DURATION: Final[float] = 1.0
 _DEFAULT_STABILITY: Final[float] = 0.5
 _DEFAULT_SIMILARITY_BOOST: Final[float] = 0.75
 _DEFAULT_STYLE: Final[float] = 0.0
@@ -419,43 +419,29 @@ def elevenlabs_clone_voices(
 
 
 def adjust_audio_speed(
-    *,
-    input_mp3_path: str,
-    target_duration: float,
-    mininimum_duration: float = _MINIMUM_DURATION,
+    reference_file: str, dubbed_file: str, speed: float | None = None
 ) -> None:
-  """Adjusts the speed of an MP3 file to match the target duration.
-
-  The input files where the target length is less than the minimum duration,
-  won't be modified.
+  """Adjusts the speed of an MP3 file to match the reference file duration.
 
   Args:
-      input_mp3_path: The path to the input MP3 file.
-      target_duration: The desired duration in seconds.
-      mininimum_duration: The minimum target duration of either the input MP3 of
-        the target duration for the adjustment process to take place. Otherwise,
-        the input MP3 duration won't be modified.
+      reference_file: The path to the reference MP3 file.
+      dubbed_file: The path to the dubbed MP3 file.
+      speed: The desired speed in seconds. If None it will be determined based
+        on the duration of the reference_file and dubbed_file.
   """
 
-  if target_duration <= 0.0:
-    raise ValueError(
-        "The target duration must be more than 0.0 seconds. Got"
-        f" {target_duration}."
-    )
-  audio = AudioSegment.from_mp3(input_mp3_path)
-  if audio.duration_seconds <= 0.0:
-    raise ValueError(
-        "The input audio duration must be more than 0.0 seconds. It's"
-        f" {audio.duration_seconds}."
-    )
-  if (
-      target_duration <= mininimum_duration
-      or audio.duration_seconds <= mininimum_duration
-  ):
-    return
-  speed_factor = audio.duration_seconds / target_duration
-  new_audio = audio.speedup(speed_factor)
-  new_audio.export(input_mp3_path, format="mp3")
+  reference_audio = AudioSegment.from_file(reference_file)
+  dubbed_audio = AudioSegment.from_file(dubbed_file)
+  if not speed:
+    reference_duration = reference_audio.duration_seconds
+    dubbed_duration = dubbed_audio.duration_seconds
+    speed = dubbed_duration / reference_duration
+  adjusted_audio = dubbed_audio._spawn(
+      dubbed_audio.raw_data,
+      overrides={"frame_rate": int(dubbed_audio.frame_rate * speed)},
+  )
+  adjusted_audio = adjusted_audio.set_frame_rate(dubbed_audio.frame_rate)
+  adjusted_audio.export(dubbed_file, format="mp3")
 
 
 def dub_utterances(
@@ -512,7 +498,6 @@ def dub_utterances(
         assigned_voice = utterance["assigned_voice"]
       path = utterance["path"]
       text = utterance["translated_text"]
-      duration = utterance["end"] - utterance["start"]
       base_filename = os.path.splitext(os.path.basename(path))[0]
       output_filename = os.path.join(
           output_directory, f"dubbed_{base_filename}.mp3"
@@ -541,7 +526,13 @@ def dub_utterances(
             volume_gain_db=utterance["volume_gain_db"],
         )
       if adjust_speed:
-        adjust_audio_speed(input_mp3_path=dubbed_path, target_duration=duration)
+        logging.warning(
+            "Adjusting volume will prevent overlaps of utterances. However, it"
+            " might change the voice sligthly."
+        )
+        adjust_audio_speed(
+            reference_file=utterance["path"], dubbed_file=dubbed_path
+        )
     utterance_copy = utterance.copy()
     utterance_copy["dubbed_path"] = dubbed_path
     updated_utterance_metadata.append(utterance_copy)

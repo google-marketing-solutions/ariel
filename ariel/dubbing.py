@@ -535,6 +535,11 @@ class Dubber:
           " to contain all the costs within your Google Cloud Platform (GCP)"
           " project."
       )
+      logging.warning(
+          "Each cloned voices is stored at ElevenLabs and there might be a limit"
+          " to how many you can keep there. You might need to remove voices from"
+          " ElevenLabs periodically to avoid errors."
+      )
     return self._clone_voices
 
   def run_preprocessing(self) -> None:
