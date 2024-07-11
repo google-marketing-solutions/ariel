@@ -80,6 +80,7 @@ _DEFAULT_GEMINI_SAFETY_SETTINGS: Final[
 _DEFAULT_DIARIZATION_SYSTEM_SETTINGS: Final[str] = "diarization.txt"
 _DEFAULT_TRANSLATION_SYSTEM_SETTINGS: Final[str] = "translation.txt"
 _NUMBER_OF_STEPS: Final[int] = 7
+_MAX_GEMINI_RETRIES: Final[int] = 5
 
 
 def is_video(*, input_file: str) -> bool:
@@ -125,8 +126,6 @@ def read_system_settings(system_instructions: str) -> str:
       TypeError: If the input file doesn't exist.
       FileNotFoundError: If the .txt file doesn't exist.
   """
-  if not isinstance(system_instructions, str):
-    raise TypeError("Input must be a string")
   _, extension = os.path.splitext(system_instructions)
   if extension == ".txt":
     try:
@@ -619,16 +618,26 @@ class Dubber:
     speaker_diarization_model = self.configure_gemini_model(
         system_instructions=self.processed_diarization_system_instructions
     )
-    speaker_info = speech_to_text.diarize_speakers(
-        file=media_file,
-        utterance_metadata=utterance_metadata,
-        number_of_speakers=self.number_of_speakers,
-        model=speaker_diarization_model,
-        diarization_instructions=self.diarization_instructions,
-    )
-    self.utterance_metadata = speech_to_text.add_speaker_info(
-        utterance_metadata=utterance_metadata, speaker_info=speaker_info
-    )
+    attempt = 0
+    success = False
+    while attempt < _MAX_GEMINI_RETRIES and not success:
+        try:
+          speaker_info = speech_to_text.diarize_speakers(
+              file=media_file,
+              utterance_metadata=utterance_metadata,
+              number_of_speakers=self.number_of_speakers,
+              model=speaker_diarization_model,
+              diarization_instructions=self.diarization_instructions,
+          )
+          self.utterance_metadata = speech_to_text.add_speaker_info(
+              utterance_metadata=utterance_metadata, speaker_info=speaker_info
+          )
+          success = True
+        except speech_to_text.GeminiDiarizationError:
+          attempt += 1
+          logging.warning(f"Diarization attempt {attempt} failed. Will try again.")
+          if attempt == _MAX_GEMINI_RETRIES:
+              raise RuntimeError("Can't diarize speakers. Try again.")
     logging.info("Completed transcription.")
     self.progress_bar.update()
 
@@ -644,17 +653,27 @@ class Dubber:
     translation_model = self.configure_gemini_model(
         system_instructions=self.processed_translation_system_instructions
     )
-    translated_script = translation.translate_script(
-        script=script,
-        advertiser_name=self.advertiser_name,
-        translation_instructions=self.translation_instructions,
-        target_language=self.target_language,
-        model=translation_model,
-    )
-    self.utterance_metadata = translation.add_translations(
-        utterance_metadata=self.utterance_metadata,
-        translated_script=translated_script,
-    )
+    attempt = 0
+    success = False
+    while attempt < _MAX_GEMINI_RETRIES and not success:
+        try:
+          translated_script = translation.translate_script(
+              script=script,
+              advertiser_name=self.advertiser_name,
+              translation_instructions=self.translation_instructions,
+              target_language=self.target_language,
+              model=translation_model,
+          )
+          self.utterance_metadata = translation.add_translations(
+              utterance_metadata=self.utterance_metadata,
+              translated_script=translated_script,
+          )
+          success = True
+        except translation.GeminiTranslationError:
+          attempt += 1
+          logging.warning(f"Translation attempt {attempt} failed. Will try again.")
+          if attempt == _MAX_GEMINI_RETRIES:
+              raise RuntimeError("Can't translate script. Try again.")
     logging.info("Completed translation.")
     if not self._rerun:
       self.progress_bar.update()

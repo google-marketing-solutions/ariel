@@ -74,6 +74,12 @@ def translate_script(
   return response.text
 
 
+class GeminiTranslationError(Exception):
+  """Error when Gemini can't translate script correctly."""
+
+  pass
+
+
 def add_translations(
     *,
     utterance_metadata: Sequence[Mapping[str, str | float]],
@@ -101,7 +107,7 @@ def add_translations(
       segment for segment in text_string.split("<BREAK>") if segment
   ]
   if len(utterance_metadata) != len(text_segments):
-    raise ValueError(
+    raise GeminiTranslationError(
         "The utterance metadata must be of the same length as the text"
         f" segments. Currently they are: {len(utterance_metadata)} and"
         f" {len(text_segments)}."

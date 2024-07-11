@@ -267,6 +267,12 @@ def diarize_speakers(
   return process_speaker_diarization_response(response=response.text)
 
 
+class GeminiDiarizationError(Exception):
+  """Error when Gemini can't diarize speakers correctly."""
+
+  pass
+
+
 def add_speaker_info(
     utterance_metadata: Sequence[Mapping[str, str | float]],
     speaker_info: Sequence[tuple[str, str]],
@@ -292,7 +298,7 @@ def add_speaker_info(
       not match.
   """
   if len(utterance_metadata) != len(speaker_info):
-    raise ValueError(
+    raise GeminiDiarizationError(
         "The length of 'utterance_metadata' and 'speaker_info' must be the"
         " same."
     )

@@ -194,7 +194,7 @@ class AddTranslationsTest(parameterized.TestCase):
     ]
     translated_script = "Bonjour<BREAK>Le Monde<BREAK>Another Segment"
     with self.assertRaisesRegex(
-        ValueError, "The utterance metadata must be of the same length"
+        translation.GeminiTranslationError, "The utterance metadata must be of the same length"
     ):
       translation.add_translations(
           utterance_metadata=utterance_metadata,

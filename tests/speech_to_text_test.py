@@ -309,7 +309,7 @@ class AddSpeakerInfoTest(absltest.TestCase):
     ]
     speaker_info = [("speaker1", "male")]
     with self.assertRaisesRegex(
-        ValueError,
+        speech_to_text.GeminiDiarizationError,
         "The length of 'utterance_metadata' and 'speaker_info' must be the"
         " same.",
     ):
