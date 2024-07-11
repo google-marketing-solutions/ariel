@@ -22,8 +22,9 @@ from elevenlabs.client import ElevenLabs
 from elevenlabs.types.voice import Voice
 from google.cloud import texttospeech
 from pydub import AudioSegment
-import tensorflow as tf
 from pydub.effects import speedup
+import tensorflow as tf
+
 
 _SSML_MALE: Final[str] = "Male"
 _SSML_FEMALE: Final[str] = "Female"
@@ -46,7 +47,7 @@ _DEFAULT_SIMILARITY_BOOST: Final[float] = 0.75
 _DEFAULT_STYLE: Final[float] = 0.0
 _DEFAULT_USE_SPEAKER_BOOST: Final[bool] = True
 _DEFAULT_ELEVENLABS_MODEL: Final[str] = "eleven_multilingual_v2"
-_DEFAULT_CHUNK_SIZE: Final[int] = 50
+_DEFAULT_CHUNK_SIZE: Final[int] = 150
 
 
 def list_available_voices(
@@ -224,7 +225,7 @@ def update_utterance_metadata(
     utterance_metadata: Sequence[Mapping[str, str | float]],
     assigned_voices: Mapping[str, str] | None,
     use_elevenlabs: bool = False,
-    clone_voices: bool = False,
+    elevenlabs_clone_voices: bool = False,
 ) -> Sequence[Mapping[str, str | float]]:
   """Updates utterance metadata with assigned Google voices.
 
@@ -243,15 +244,16 @@ def update_utterance_metadata(
       Sequence of updated utterance metadata dictionaries.
 
   Raises:
-      ValueError: When 'clone_voices' is True and 'use_elevenlabs' is False.
+      ValueError: When 'elevenlabs_clone_voices' is True and 'use_elevenlabs' is
+      False.
   """
-  if clone_voices:
+  if elevenlabs_clone_voices:
     if not use_elevenlabs:
       raise ValueError("Voice cloning requires using ElevenLabs API.")
   updated_utterance_metadata = []
   for metadata_item in utterance_metadata:
     new_utterance = metadata_item.copy()
-    if not clone_voices:
+    if not elevenlabs_clone_voices:
       speaker_id = new_utterance.get("speaker_id")
       new_utterance["assigned_voice"] = assigned_voices.get(speaker_id)
     if use_elevenlabs:
@@ -319,6 +321,25 @@ def convert_text_to_speech(
   with tf.io.gfile.GFile(output_filename, "wb") as out:
     out.write(response.audio_content)
   return output_filename
+
+
+def calculate_target_utterance_speed(
+    *,
+    reference_file: str,
+    dubbed_file: str,
+) -> float:
+  """Returns the ratio between the reference and target duration.
+
+  Args:
+      reference_file: The path to the reference MP3 file.
+      dubbed_file: The path to the dubbed MP3 file.
+  """
+
+  reference_audio = AudioSegment.from_file(reference_file)
+  dubbed_audio = AudioSegment.from_file(dubbed_file)
+  reference_duration = reference_audio.duration_seconds
+  dubbed_duration = dubbed_audio.duration_seconds
+  return dubbed_duration / reference_duration
 
 
 def elevenlabs_convert_text_to_speech(
@@ -396,7 +417,7 @@ def create_speaker_to_paths_mapping(
   return speaker_to_paths_mapping
 
 
-def elevenlabs_clone_voices(
+def elevenlabs_run_clone_voices(
     *, client: ElevenLabs, speaker_to_paths_mapping: Mapping[str, Sequence[str]]
 ) -> Mapping[str, Voice]:
   """Clones voices for speakers using ElevenLabs based on utterance metadata and file paths.
@@ -420,28 +441,42 @@ def elevenlabs_clone_voices(
   return speaker_to_voices_mapping
 
 
-def adjust_audio_speed(
+def elevenlabs_adjust_audio_speed(
     *,
-    reference_file: str, dubbed_file: str, speed: float | None = None, chunk_size: int = _DEFAULT_CHUNK_SIZE,
+    reference_file: str,
+    dubbed_file: str,
+    speed: float | None = None,
+    chunk_size: int = _DEFAULT_CHUNK_SIZE,
 ) -> None:
   """Adjusts the speed of an MP3 file to match the reference file duration.
+
+  The speed will not be adjusted if the dubbed file has a duration that 
+  is the same or shorter than the duration of the reference file.
 
   Args:
       reference_file: The path to the reference MP3 file.
       dubbed_file: The path to the dubbed MP3 file.
       speed: The desired speed in seconds. If None it will be determined based
         on the duration of the reference_file and dubbed_file.
-      chunk_size: Duration of audio chunks (in ms) to preserve in the adjustement process.
+      chunk_size: Duration of audio chunks (in ms) to preserve in the
+        adjustement process.
   """
 
-  reference_audio = AudioSegment.from_file(reference_file)
   dubbed_audio = AudioSegment.from_file(dubbed_file)
   if not speed:
-    reference_duration = reference_audio.duration_seconds
-    dubbed_duration = dubbed_audio.duration_seconds
-    speed = dubbed_duration / reference_duration
+    speed = calculate_target_utterance_speed(
+        reference_file=reference_file, dubbed_file=dubbed_file
+    )
+  if speed <= 1.0:
+    return
+  logging.warning(
+      "Adjusting volume will prevent overlaps of utterances. However,"
+      " it might change the voice sligthly."
+  )
   crossfade = max(1, chunk_size // 2)
-  output_audio = speedup(dubbed_audio, speed, chunk_size=chunk_size, crossfade=crossfade)
+  output_audio = speedup(
+      dubbed_audio, speed, chunk_size=chunk_size, crossfade=crossfade
+  )
   output_audio.export(dubbed_file, format="mp3")
 
 
@@ -451,10 +486,10 @@ def dub_utterances(
     utterance_metadata: Sequence[Mapping[str, str | float]],
     output_directory: str,
     target_language: str,
-    adjust_speed: bool = True,
-    elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
     use_elevenlabs: bool = False,
-    clone_voices: bool = False,
+    elevenlabs_adjust_speed: bool = True,
+    elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
+    elevenlabs_clone_voices: bool = False,
 ) -> Sequence[Mapping[str, str | float]]:
   """Processes a list of utterance metadata, generating dubbed audio files.
 
@@ -467,33 +502,40 @@ def dub_utterances(
         "google_voice_volume_gain_db" and optionally "vocals_path".
       output_directory: Path to the directory for output files.
       target_language: The target language (ISO 3166-1 alpha-2).
-      adjust_speed: Whether to either speed up or slow down utterances to match
-        the duration of the utterances in the source language.
-      clone_voices: Whether to clone source voices. It requires using ElevenLabs
-        API.
+      use_elevenlabs: Whether to use ElevenLabs API for Text-To-Speech. If not
+        Google's Text-To-Speech will be used.
+      elevenlabs_adjust_speed: Whether to either speed up or slow down
+        utterances to match the duration of the utterances in the source
+        language when using Elevenlabs.
+      elevenlabs_model: The ElevenLabs model to use in the Text-To-Speech
+        process.
+      elevenlabs_clone_voices: Whether to clone source voices. It requires using
+        ElevenLabs API.
 
   Returns:
       List of processed utterance metadata with updated "dubbed_path".
 
   Raises:
-      ValueError: When 'clone_voices' is True and 'use_elevenlabs' is False.
+      ValueError: When 'elevenlabs_clone_voices' is True and 'use_elevenlabs' is
+      False.
   """
 
-  if clone_voices:
+  if elevenlabs_clone_voices:
     if not use_elevenlabs:
       raise ValueError("Voice cloning requires using ElevenLabs API.")
     speaker_to_paths_mapping = create_speaker_to_paths_mapping(
         utterance_metadata
     )
-    speaker_to_voices_mapping = elevenlabs_clone_voices(
+    speaker_to_voices_mapping = elevenlabs_run_clone_voices(
         client=client, speaker_to_paths_mapping=speaker_to_paths_mapping
     )
   updated_utterance_metadata = []
   for utterance in utterance_metadata:
+    utterance_copy = utterance.copy()
     if not utterance["for_dubbing"]:
       dubbed_path = utterance["path"]
     else:
-      if clone_voices:
+      if elevenlabs_clone_voices:
         assigned_voice = speaker_to_voices_mapping[utterance["speaker_id"]]
       else:
         assigned_voice = utterance["assigned_voice"]
@@ -515,6 +557,12 @@ def dub_utterances(
             style=utterance["style"],
             use_speaker_boost=utterance["use_speaker_boost"],
         )
+        if elevenlabs_adjust_speed:
+          chunk_size = utterance_copy.get("chunk_size", _DEFAULT_CHUNK_SIZE)
+          elevenlabs_adjust_audio_speed(
+              reference_file=utterance["path"], dubbed_file=dubbed_path, chunk_size=chunk_size
+          )
+          utterance_copy["chunk_size"] = chunk_size
       else:
         dubbed_path = convert_text_to_speech(
             client=client,
@@ -526,15 +574,20 @@ def dub_utterances(
             speed=utterance["speed"],
             volume_gain_db=utterance["volume_gain_db"],
         )
-      if adjust_speed:
-        logging.warning(
-            "Adjusting volume will prevent overlaps of utterances. However, it"
-            " might change the voice sligthly."
-        )
-        adjust_audio_speed(
+        speed = calculate_target_utterance_speed(
             reference_file=utterance["path"], dubbed_file=dubbed_path
         )
-    utterance_copy = utterance.copy()
+        utterance_copy["speed"] = speed
+        dubbed_path = convert_text_to_speech(
+            client=client,
+            assigned_google_voice=assigned_voice,
+            target_language=target_language,
+            output_filename=output_filename,
+            text=text,
+            pitch=utterance["pitch"],
+            speed=speed,
+            volume_gain_db=utterance["volume_gain_db"],
+        )
     utterance_copy["dubbed_path"] = dubbed_path
     updated_utterance_metadata.append(utterance_copy)
   return updated_utterance_metadata

@@ -218,23 +218,16 @@ class Dubber:
       original_language: str,
       target_language: str,
       number_of_speakers: int = 1,
+      gemini_token: str | None = None,
+      hugging_face_token: str | None = None,
       no_dubbing_phrases: Sequence[str] | None = None,
       diarization_instructions: str | None = None,
       translation_instructions: str | None = None,
       merge_utterances: bool = True,
       minimum_merge_threshold: float = 0.001,
-      adjust_speed: bool = False,
       preferred_voices: Sequence[str] | None = None,
       clean_up: bool = True,
       pyannote_model: str = _DEFAULT_PYANNOTE_MODEL,
-      diarization_system_instructions: str = _DEFAULT_DIARIZATION_SYSTEM_SETTINGS,
-      translation_system_instructions: str = _DEFAULT_TRANSLATION_SYSTEM_SETTINGS,
-      hugging_face_token: str | None = None,
-      gemini_token: str | None = None,
-      elevenlabs_token: str | None = None,
-      use_elevenlabs: bool = False,
-      clone_voices: bool = False,
-      elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
       gemini_model_name: str = _DEFAULT_GEMINI_MODEL,
       temperature: float = _DEFAULT_GEMINI_TEMPERATURE,
       top_p: float = _DEFAULT_GEMINI_TOP_P,
@@ -244,6 +237,13 @@ class Dubber:
       safety_settings: Mapping[
           HarmCategory, HarmBlockThreshold
       ] = _DEFAULT_GEMINI_SAFETY_SETTINGS,
+      diarization_system_instructions: str = _DEFAULT_DIARIZATION_SYSTEM_SETTINGS,
+      translation_system_instructions: str = _DEFAULT_TRANSLATION_SYSTEM_SETTINGS,
+      use_elevenlabs: bool = False,
+      elevenlabs_token: str | None = None,
+      elevenlabs_adjust_speed: bool = False,
+      elevenlabs_clone_voices: bool = False,
+      elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
       number_of_steps: int = _NUMBER_OF_STEPS,
   ) -> None:
     """Initializes the Dubber class with various parameters for dubbing configuration.
@@ -255,11 +255,15 @@ class Dubber:
         advertiser_name: The name of the advertiser for context in
           transcription/translation.
         original_language: The language of the original audio. It must be ISO
-          3166-1 alpha-2 country code.
+          3166-1 alpha-2 country code, e.g. 'en-US'.
         target_language: The language to dub the ad into. It must be ISO 3166-1
           alpha-2 country code.
         number_of_speakers: The exact number of speakers in the ad (including a
           lector if applicable).
+        gemini_token: Gemini API token (can be set via 'GEMINI_TOKEN'
+          environment variable).
+        hugging_face_token: Hugging Face API token (can be set via
+          'HUGGING_FACE_TOKEN' environment variable).
         no_dubbing_phrases: A sequence of strings representing the phrases that
           should not be dubbed. It is critical to provide these phrases in a
           format as close as possible to how they might appear in the utterance
@@ -269,28 +273,12 @@ class Dubber:
         merge_utterances: Whether to merge utterances when the the timestamps
           delta between them is below 'minimum_merge_threshold'.
         minimum_merge_threshold: Threshold for merging utterances in seconds.
-        adjust_speed: Whether to either speed up or slow down utterances to
-          match the duration of the utterances in the source language.
         preferred_voices: Preferred voice names for text-to-speech. Use
           high-level names, e.g. 'Wavenet', 'Standard' etc. Do not use the full
           voice names, e.g. 'pl-PL-Wavenet-A' etc.
         clean_up: Whether to delete intermediate files after dubbing. Only the
           final ouput and the utterance metadata will be kept.
         pyannote_model: Name of the PyAnnote diarization model.
-        diarization_system_instructions: System instructions for diarization.
-        translation_system_instructions: System instructions for translation.
-        hugging_face_token: Hugging Face API token (can be set via
-          'HUGGING_FACE_TOKEN' environment variable).
-        gemini_token: Gemini API token (can be set via 'GEMINI_TOKEN'
-          environment variable).
-        elevenlabs_token: ElevenLabs API token (can be set via
-          'ELEVENLABS_TOKEN' environment variable).
-        use_elevenlabs: Whether to use ElevenLabs API for Text-To-Speech. If not
-          Google's Text-To-Speech will be used.
-        clone_voices: Whether to clone source voices. It requires using
-          ElevenLabs API.
-        elevenlabs_model: The ElevenLabs model to use in the Text-To-Speech
-          process.
         gemini_model_name: The name of the Gemini model to use.
         temperature: Controls randomness in generation.
         top_p: Nucleus sampling threshold.
@@ -298,8 +286,19 @@ class Dubber:
         max_output_tokens: Maximum number of tokens in the generated response.
         response_mime_type: Gemini output mime type.
         safety_settings: Gemini safety settings.
-        utterance_metadata: A sequence with dictionaries containing metadata for
-          each detected utterance.
+        diarization_system_instructions: System instructions for diarization.
+        translation_system_instructions: System instructions for translation.
+        use_elevenlabs: Whether to use ElevenLabs API for Text-To-Speech. If not
+          Google's Text-To-Speech will be used.
+        elevenlabs_token: ElevenLabs API token (can be set via
+          'ELEVENLABS_TOKEN' environment variable).
+        elevenlabs_adjust_speed: Whether to either speed up or slow down
+          utterances to match the duration of the utterances in the source
+          language when using Elevenlabs.
+        elevenlabs_clone_voices: Whether to clone source voices. It requires
+          using ElevenLabs API.
+        elevenlabs_model: The ElevenLabs model to use in the Text-To-Speech
+          process.
         number_of_steps: The total number of steps in the dubbing process.
     """
     self.input_file = input_file
@@ -313,15 +312,15 @@ class Dubber:
     self.translation_instructions = translation_instructions
     self.merge_utterances = merge_utterances
     self.minimum_merge_threshold = minimum_merge_threshold
-    self.adjust_speed = adjust_speed
     self.preferred_voices = preferred_voices
     self.clean_up = clean_up
     self.pyannote_model = pyannote_model
     self.hugging_face_token = hugging_face_token
     self.gemini_token = gemini_token
-    self.elevenlabs_token = elevenlabs_token
     self.use_elevenlabs = use_elevenlabs
-    self._clone_voices = clone_voices
+    self.elevenlabs_token = elevenlabs_token
+    self.elevenlabs_adjust_speed = elevenlabs_adjust_speed
+    self._elevenlabs_clone_voices = elevenlabs_clone_voices
     self.elevenlabs_model = elevenlabs_model
     self.diarization_system_instructions = diarization_system_instructions
     self.translation_system_instructions = translation_system_instructions
@@ -483,18 +482,19 @@ class Dubber:
             f" then 'gcloud auth login'."
         )
       logging.info("Access to Google's Text-To-Speech verified.")
-    logging.info("Verifying access to ElevenLabs.")
-    try:
-      self.text_to_speech_client.user.get()
-    except ApiError:
-      raise ElevenLabsAccessError(
-          "You spcified to use ElevenLabs API for Text-To-Speech. No access to"
-          " ElevenLabs. Make sure you passed the correct API token either as"
-          " 'elevenlabs_token' or through the"
-          f" '{_EXPECTED_ELEVENLABS_ENVIRONMENTAL_VARIABLE_NAME}' environmental"
-          " variable."
-      )
-    logging.info("Access to ElevenLabs verified.")
+    else:
+      logging.info("Verifying access to ElevenLabs.")
+      try:
+        self.text_to_speech_client.user.get()
+      except ApiError:
+        raise ElevenLabsAccessError(
+            "You specified to use ElevenLabs API for Text-To-Speech. No access to"
+            " ElevenLabs. Make sure you passed the correct API token either as"
+            " 'elevenlabs_token' or through the"
+            f" '{_EXPECTED_ELEVENLABS_ENVIRONMENTAL_VARIABLE_NAME}' environmental"
+            " variable."
+        )
+      logging.info("Access to ElevenLabs verified.")
 
   @functools.cached_property
   def processed_diarization_system_instructions(self) -> str:
@@ -519,15 +519,15 @@ class Dubber:
     return tqdm(total=total_number_of_steps, initial=1)
 
   @functools.cached_property
-  def clone_voices(self) -> bool:
+  def elevenlabs_clone_voices(self) -> bool:
     """An indicator whether to use voice cloning during the dubbing process.
 
     Raises:
         ValueError: When 'clone_voices' is True and 'use_elevenlabs' is False.
     """
-    if self._clone_voices and not self.use_elevenlabs:
+    if self._elevenlabs_clone_voices and not self.use_elevenlabs:
       raise ValueError("Voice cloning requires using ElevenLabs API.")
-    if self._clone_voices:
+    if self._elevenlabs_clone_voices:
       logging.warning(
           "You decided to clone voices with ElevenLabs API. It might require a"
           " more expensive pricing tier. Check their pricing on the following"
@@ -536,11 +536,11 @@ class Dubber:
           " project."
       )
       logging.warning(
-          "Each cloned voices is stored at ElevenLabs and there might be a limit"
-          " to how many you can keep there. You might need to remove voices from"
-          " ElevenLabs periodically to avoid errors."
+          "Each cloned voices is stored at ElevenLabs and there might be a"
+          " limit to how many you can keep there. You might need to remove"
+          " voices from ElevenLabs periodically to avoid errors."
       )
-    return self._clone_voices
+    return self._elevenlabs_clone_voices
 
   def run_preprocessing(self) -> None:
     """Splits audio/video, applies DEMUCS, and segments audio into utterances with PyAnnote.
@@ -582,12 +582,12 @@ class Dubber:
         audio_file=audio_file,
         output_directory=self.output_directory,
     )
-    if self.clone_voices:
+    if self.elevenlabs_clone_voices:
       utterance_metadata = audio_processing.cut_and_save_audio(
           utterance_metadata=utterance_metadata,
           audio_file=audio_vocals_file,
           output_directory=self.output_directory,
-          clone_voices=self.clone_voices,
+          elevenlabs_clone_voices=self.elevenlabs_clone_voices,
       )
     self.utterance_metadata = utterance_metadata
     self.preprocesing_output = PreprocessingArtifacts(
@@ -666,7 +666,7 @@ class Dubber:
         Updated utterance metadata with assigned voices
         and Text-To-Speech settings.
     """
-    if not self.clone_voices:
+    if not self.elevenlabs_clone_voices:
       if not self.use_elevenlabs:
         assigned_voices = text_to_speech.assign_voices(
             utterance_metadata=self.utterance_metadata,
@@ -686,7 +686,7 @@ class Dubber:
         utterance_metadata=self.utterance_metadata,
         assigned_voices=assigned_voices,
         use_elevenlabs=self.use_elevenlabs,
-        clone_voices=self.clone_voices,
+        elevenlabs_clone_voices=self.elevenlabs_clone_voices,
     )
 
   def _run_verify_utterance_metadata(self) -> None:
@@ -701,7 +701,7 @@ class Dubber:
         translate_choice = self._prompt_for_translation()
         if translate_choice == "yes":
           self.run_translation()
-        if not self.clone_voices:
+        if not self.elevenlabs_clone_voices:
           assign_voices_choice = self._prompt_for_assign_voices()
           if assign_voices_choice == "yes":
             self.run_configure_text_to_speech()
@@ -787,10 +787,10 @@ class Dubber:
         utterance_metadata=self.utterance_metadata,
         output_directory=self.output_directory,
         target_language=self.target_language,
-        adjust_speed=self.adjust_speed,
-        elevenlabs_model=self.elevenlabs_model,
         use_elevenlabs=self.use_elevenlabs,
-        clone_voices=self.clone_voices,
+        elevenlabs_adjust_speed=self.elevenlabs_adjust_speed,
+        elevenlabs_model=self.elevenlabs_model,
+        elevenlabs_clone_voices=self.elevenlabs_clone_voices,
     )
     logging.info("Completed converting text to speech.")
     if not self._rerun:
@@ -960,13 +960,14 @@ class Dubber:
     logging.info("Output files saved in: %s.", self.output_directory)
     return self.postprocessing_output
 
-
-  def dub_ad_with_different_language(self, target_language: str) -> PostprocessingArtifacts:
+  def dub_ad_with_different_language(
+      self, target_language: str
+  ) -> PostprocessingArtifacts:
     """Orchestrates the complete ad dubbing process using a new target language.
 
     Args:
-        target_language: The new language to dub the ad into. It must be ISO 3166-1
-          alpha-2 country code.
+        target_language: The new language to dub the ad into. It must be ISO
+          3166-1 alpha-2 country code, e.g. 'en-US'.
 
     Returns:
         PostprocessingArtifacts: Object containing the post-processed results.

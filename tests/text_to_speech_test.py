@@ -22,6 +22,7 @@ from absl.testing import absltest
 from absl.testing import parameterized
 from ariel import text_to_speech
 from elevenlabs.client import ElevenLabs
+from elevenlabs.types.voice import Voice
 from google.cloud import texttospeech
 from pydub import AudioSegment
 
@@ -393,7 +394,7 @@ class UpdateUtteranceMetadataTest(parameterized.TestCase):
   def test_update_utterance_metadata(
       self,
       use_elevenlabs,
-      clone_voices,
+      elevenlabs_clone_voices,
       utterance_metadata,
       assigned_voices,
       expected_output,
@@ -402,7 +403,7 @@ class UpdateUtteranceMetadataTest(parameterized.TestCase):
         utterance_metadata=utterance_metadata,
         assigned_voices=assigned_voices,
         use_elevenlabs=use_elevenlabs,
-        clone_voices=clone_voices,
+        elevenlabs_clone_voices=elevenlabs_clone_voices,
     )
     self.assertEqual(actual_output, expected_output)
 
@@ -418,13 +419,13 @@ class UpdateUtteranceMetadataTest(parameterized.TestCase):
     ]
     assigned_voices = {"speaker1": "en-US-Wavenet-C"}
     use_elevenlabs = False
-    clone_voices = True
+    elevenlabs_clone_voices = True
     with self.assertRaises(ValueError):
       text_to_speech.update_utterance_metadata(
           utterance_metadata=utterance_metadata,
           assigned_voices=assigned_voices,
           use_elevenlabs=use_elevenlabs,
-          clone_voices=clone_voices,
+          elevenlabs_clone_voices=elevenlabs_clone_voices,
       )
 
 
@@ -450,6 +451,23 @@ class TestConvertTextToSpeech(absltest.TestCase):
       )
       self.assertEqual(result, output_file)
       mock_client.synthesize_speech.assert_called_once()
+
+
+class TestCalculateTargetUtteranceSpeed(absltest.TestCase):
+
+  def test_calculate_target_utterance_speed(self):
+    with tempfile.TemporaryDirectory() as tempdir:
+      reference_audio_mock = AudioSegment.silent(duration=60000)
+      reference_file_path = os.path.join(tempdir, "reference.mp3")
+      reference_audio_mock.export(reference_file_path, format="mp3")
+      dubbed_audio_mock = AudioSegment.silent(duration=90000)
+      dubbed_file_path = os.path.join(tempdir, "dubbed.mp3")
+      dubbed_audio_mock.export(dubbed_file_path, format="mp3")
+      result = text_to_speech.calculate_target_utterance_speed(
+          reference_file=reference_file_path, dubbed_file=dubbed_file_path
+      )
+      expected_result = 90000 / 60000
+      self.assertEqual(result, expected_result)
 
 
 class TestElevenlabsConvertTextToSpeech(absltest.TestCase):
@@ -505,9 +523,6 @@ class TestCreateSpeakerToPathsMapping(parameterized.TestCase):
     self.assertEqual(result, expected_result)
 
 
-from elevenlabs.types.voice import Voice
-
-
 class TestElevenlabsCloneVoices(absltest.TestCase):
 
   def test_clone_voices_success(self):
@@ -518,203 +533,119 @@ class TestElevenlabsCloneVoices(absltest.TestCase):
         "speaker1": ["path/to/audio1.wav", "path/to/audio2.wav"],
         "speaker2": ["path/to/audio3.wav"],
     }
-    result = text_to_speech.elevenlabs_clone_voices(
+    result = text_to_speech.elevenlabs_run_clone_voices(
         client=mock_client, speaker_to_paths_mapping=speaker_to_paths_mapping
     )
     self.assertEqual(result, {"speaker1": mock_voice, "speaker2": mock_voice})
     mock_client.clone.assert_called()
 
 
-class TestAdjustAudioSpeed(absltest.TestCase):
-
-  @patch("pydub.AudioSegment.from_file")
-  @patch("pydub.AudioSegment.export")
-  def test_adjust_speed_with_calculated_speed(
-      self, mock_export, mock_from_file
-  ):
-    reference_audio_mock = AudioSegment.silent(duration=60000)
-    dubbed_audio_mock = AudioSegment.silent(duration=90000)
-    mock_from_file.side_effect = [reference_audio_mock, dubbed_audio_mock]
-    speedup_result_mock = AudioSegment.silent(duration=60000)
-
-    def mock_speedup(audio_segment, speed, chunk_size, crossfade):
-      del audio_segment
-      self.assertEqual(speed, 1.5)
-      self.assertEqual(chunk_size, 50)
-      self.assertEqual(crossfade, 500)
-      return speedup_result_mock
-
-    with patch("pydub.effects.speedup", new=mock_speedup):
-      text_to_speech.adjust_audio_speed(
-          reference_file="ref.mp3", dubbed_file="dub.mp3"
-      )
-    mock_from_file.assert_any_call("ref.mp3")
-    mock_from_file.assert_any_call("dub.mp3")
-    mock_export.assert_called_once_with("dub.mp3", format="mp3")
-
-
 class TestDubUtterances(parameterized.TestCase):
 
-  def setUp(self):
-    self.mock_adjust_audio_speed = MagicMock()
-    text_to_speech.adjust_audio_speed = self.mock_adjust_audio_speed
-    self.mock_convert_text_to_speech = MagicMock(return_value="dummy_path")
-    self.original_convert_text_to_speech = text_to_speech.convert_text_to_speech
-    self.original_elevenlabs_convert_text_to_speech = (
-        text_to_speech.elevenlabs_convert_text_to_speech
-    )
-    self.mock_client = MagicMock()
-
-  def tearDown(self):
-    text_to_speech.convert_text_to_speech = self.original_convert_text_to_speech
-    text_to_speech.adjust_audio_speed = text_to_speech.adjust_audio_speed
-    text_to_speech.elevenlabs_convert_text_to_speech = (
-        self.original_elevenlabs_convert_text_to_speech
-    )
-
   @parameterized.named_parameters(
-      (
-          "TextToSpeech",
-          texttospeech.TextToSpeechClient,
-          [{
-              "start": 0.0,
-              "end": 5.5,
-              "path": "chunk_1.mp3",
-              "translated_text": "This is dubbed text 1.",
-              "assigned_voice": "en-US-Wavenet-A",
-              "for_dubbing": True,
-              "pitch": 0.0,
-              "speed": 1.0,
-              "volume_gain_db": 0.0,
-          }],
-          [{
-              "start": 0.0,
-              "end": 5.5,
-              "path": "chunk_1.mp3",
-              "translated_text": "This is dubbed text 1.",
-              "assigned_voice": "en-US-Wavenet-A",
-              "for_dubbing": True,
-              "pitch": 0.0,
-              "speed": 1.0,
-              "volume_gain_db": 0.0,
-              "dubbed_path": "dummy_path",
-          }],
-      ),
-      (
-          "ElevenLabs",
-          ElevenLabs,
-          [{
-              "start": 5.5,
-              "end": 12.0,
-              "path": "chunk_2.mp3",
-              "translated_text": "This is dubbed text 2.",
-              "assigned_voice": "Callum",
-              "for_dubbing": False,
-              "stability": 0.5,
-              "similarity_boost": 0.8,
-              "style": "friendly",
-              "use_speaker_boost": True,
-          }],
-          [{
-              "start": 5.5,
-              "end": 12.0,
-              "path": "chunk_2.mp3",
-              "translated_text": "This is dubbed text 2.",
-              "assigned_voice": "Callum",
-              "for_dubbing": False,
-              "stability": 0.5,
-              "similarity_boost": 0.8,
-              "style": "friendly",
-              "use_speaker_boost": True,
-              "dubbed_path": "chunk_2.mp3",
-          }],
-      ),
+      ("not_for_dubbing", False, "original_path"),
+      ("for_dubbing_elevenlabs", True, "elevenlabs_dubbed_path.mp3"),
+      ("for_dubbing_google", True, "google_dubbed_path.mp3"),
   )
-  def test_dub_utterances(self, client_class, input_metadata, expected_output):
-    with tempfile.TemporaryDirectory() as temp_dir:
-      self.mock_client = MagicMock(spec=client_class)
-      utterance_metadata = input_metadata
-      if client_class == texttospeech.TextToSpeechClient:
-        text_to_speech.convert_text_to_speech = self.mock_convert_text_to_speech
-      else:
-        text_to_speech.elevenlabs_convert_text_to_speech = (
-            self.mock_convert_text_to_speech
-        )
-      result = text_to_speech.dub_utterances(
-          client=self.mock_client,
-          utterance_metadata=utterance_metadata,
-          output_directory=temp_dir,
-          target_language="en-US",
-      )
-      self.assertEqual(result, expected_output)
+  @patch("ariel.text_to_speech.convert_text_to_speech")
+  @patch("ariel.text_to_speech.elevenlabs_convert_text_to_speech")
+  @patch("ariel.text_to_speech.elevenlabs_adjust_audio_speed")
+  @patch("ariel.text_to_speech.calculate_target_utterance_speed")
+  def test_dubbing_logic(
+      self,
+      for_dubbing_value,
+      expected_dubbed_path,
+      mock_calculate_target_utterance_speed,
+      mock_elevenlabs_adjust_audio_speed,
+      mock_elevenlabs_convert_text_to_speech,
+      mock_convert_text_to_speech,
+  ):
+    utterance_metadata = [{
+        "for_dubbing": for_dubbing_value,
+        "path": "original_path",
+        "translated_text": "translated text",
+        "stability": 0.5,
+        "similarity_boost": 0.5,
+        "style": "General",
+        "use_speaker_boost": False,
+        "assigned_voice": "test_voice",
+        "pitch": 1.0,
+        "speed": 1.0,
+        "volume_gain_db": 1.0,
+        "stability": 1.0,
+        "similarity_boost": 1.0,
+        "style": 1.0,
+        "use_speaker_boost": True,
+    }]
+    client = MagicMock()
+    mock_convert_text_to_speech.return_value = "google_dubbed_path.mp3"
+    mock_elevenlabs_convert_text_to_speech.return_value = (
+        "elevenlabs_dubbed_path.mp3"
+    )
+    result = text_to_speech.dub_utterances(
+        client=client,
+        utterance_metadata=utterance_metadata,
+        output_directory="test_output",
+        target_language="en-US",
+        use_elevenlabs=(expected_dubbed_path.startswith("elevenlabs")),
+    )
+    self.assertEqual(result[0]["dubbed_path"], expected_dubbed_path)
 
-    @patch("text_to_speech.create_speaker_to_paths_mapping")
-    @patch("text_to_speech.elevenlabs_clone_voices")
-    @patch("text_to_speech.elevenlabs_convert_text_to_speech")
-    def test_dub_utterances_elevenlabs_clone_voices_success(
-        self,
-        mock_convert_text_to_speech,
-        mock_elevenlabs_clone_voices,
-        mock_create_speaker_to_paths_mapping,
-    ):
-      """Tests successful dubbing with ElevenLabs voice cloning."""
-      input_metadata = [{
-          "start": 0.0,
-          "end": 5.5,
-          "path": "chunk_1.mp3",
-          "translated_text": "This is dubbed text 1.",
-          "assigned_voice": "Callum",
-          "for_dubbing": True,
-          "stability": 0.5,
-          "similarity_boost": 0.8,
-          "style": "friendly",
-          "use_speaker_boost": True,
-          "speaker_id": "speaker_1",
-      }]
+  @patch("ariel.text_to_speech.create_speaker_to_paths_mapping")
+  @patch("ariel.text_to_speech.elevenlabs_run_clone_voices")
+  @patch("ariel.text_to_speech.elevenlabs_convert_text_to_speech")
+  @patch("ariel.text_to_speech.elevenlabs_adjust_audio_speed")
+  def test_elevenlabs_voice_cloning(
+      self,
+      mock_elevenlabs_adjust_audio_speed,
+      mock_elevenlabs_convert_text_to_speech,
+      mock_elevenlabs_run_clone_voices,
+      mock_create_speaker_to_paths_mapping,
+  ):
+    utterance_metadata = [{
+        "for_dubbing": True,
+        "speaker_id": "spk_1",
+        "path": "audio_file.mp3",
+        "translated_text": "Test",
+        "stability": 1.0,
+        "similarity_boost": 1.0,
+        "style": 1.0,
+        "use_speaker_boost": True,
+    }]
+    client = MagicMock()
+    mock_speaker_to_paths_mapping = {"spk_1": ["audio_file.mp3"]}
+    mock_create_speaker_to_paths_mapping.return_value = (
+        mock_speaker_to_paths_mapping
+    )
+    mock_elevenlabs_run_clone_voices.return_value = {"spk_1": "cloned_voice"}
+    text_to_speech.dub_utterances(
+        client=client,
+        utterance_metadata=utterance_metadata,
+        output_directory="test_output",
+        target_language="en-US",
+        use_elevenlabs=True,
+        elevenlabs_clone_voices=True,
+    )
+    mock_create_speaker_to_paths_mapping.assert_called_once_with(
+        utterance_metadata
+    )
+    mock_elevenlabs_run_clone_voices.assert_called_once_with(
+        client=client, speaker_to_paths_mapping=mock_speaker_to_paths_mapping
+    )
 
-      expected_output = [{
-          "start": 0.0,
-          "end": 5.5,
-          "path": "chunk_1.mp3",
-          "translated_text": "This is dubbed text 1.",
-          "assigned_voice": "Callum",
-          "for_dubbing": True,
-          "stability": 0.5,
-          "similarity_boost": 0.8,
-          "style": "friendly",
-          "use_speaker_boost": True,
-          "speaker_id": "speaker_1",
-          "dubbed_path": "dummy_path",
-      }]
-      mock_create_speaker_to_paths_mapping.return_value = {
-          "speaker_1": ["chunk_1.mp3"]
-      }
-      mock_elevenlabs_clone_voices.return_value = {"speaker_1": "Callum"}
-      mock_convert_text_to_speech.return_value = "dummy_path"
-
-      with tempfile.TemporaryDirectory() as temp_dir:
-        mock_client = MagicMock(spec=ElevenLabs)
-
-        result = text_to_speech.dub_utterances(
-            client=mock_client,
-            utterance_metadata=input_metadata,
-            output_directory=temp_dir,
-            target_language="en-US",
-            use_elevenlabs=True,
-            clone_voices=True,
-        )
-        self.assertEqual(result, expected_output)
-
-  def test_dub_utterances_clone_voices_error(self):
+  def test_value_error_when_cloning_without_elevenlabs(self):
+    utterance_metadata = [{"for_dubbing": True, "speaker_id": "spk_1"}]
+    client = MagicMock()
     with self.assertRaisesRegex(
         ValueError, "Voice cloning requires using ElevenLabs API."
     ):
       text_to_speech.dub_utterances(
-          client=self.mock_client,
-          utterance_metadata=[],
-          output_directory="dummy_dir",
+          client=client,
+          utterance_metadata=utterance_metadata,
+          output_directory="test_output",
           target_language="en-US",
-          clone_voices=True,
+          use_elevenlabs=False,
+          elevenlabs_clone_voices=True,
       )
 
 

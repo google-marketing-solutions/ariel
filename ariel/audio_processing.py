@@ -270,7 +270,7 @@ def cut_and_save_audio(
     utterance_metadata: Sequence[Mapping[str, float]],
     audio_file: str,
     output_directory: str,
-    clone_voices: bool = False,
+    elevenlabs_clone_voices: bool = False,
 ) -> Sequence[Mapping[str, float]]:
   """Cuts an audio file into chunks based on provided time ranges and saves each chunk to a file.
 
@@ -280,8 +280,8 @@ def cut_and_save_audio(
       audio_file: The path to the audio file to be cut.
       output_directory: The path to the folder where the audio chunks will be
         saved.
-      clone_voices: Whether to clone source voices. It requires using ElevenLabs
-        API.
+      elevenlabs_clone_voices: Whether to clone source voices. It requires using
+        ElevenLabs API.
 
   Returns:
       A list of dictionaries, each containing the path to the saved chunk, and
@@ -289,8 +289,8 @@ def cut_and_save_audio(
   """
 
   audio = AudioSegment.from_file(audio_file)
-  key = "vocals_path" if clone_voices else "path"
-  prefix = "vocals_chunk" if clone_voices else "chunk"
+  key = "vocals_path" if elevenlabs_clone_voices else "path"
+  prefix = "vocals_chunk" if elevenlabs_clone_voices else "chunk"
   updated_utterance_metadata = []
   for utterance in utterance_metadata:
     start_time_ms = int(utterance["start"] * 1000)

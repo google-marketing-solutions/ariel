@@ -58,6 +58,16 @@ _NUMBER_OF_SPEAKERS = flags.DEFINE_integer(
     1,
     "Number of speakers in the ad.",
 )
+_GEMINI_TOKEN = flags.DEFINE_string(
+    "gemini_token",
+    None,
+    "Gemini API token.",
+)
+_HUGGING_FACE_TOKEN = flags.DEFINE_string(
+    "hugging_face_token",
+    None,
+    "Hugging Face API token.",
+)
 _NO_DUBBING_PHRASES = flags.DEFINE_list(
     "no_dubbing_phrases",
     [],
@@ -84,53 +94,16 @@ _MINIMUM_MERGE_THRESHOLD = flags.DEFINE_float(
     0.001,
     "Threshold for merging utterances in seconds.",
 )
-_ADJUST_SPEED = flags.DEFINE_bool(
-    "adjust_speed",
-    False,
-    "Whether to adjust the duration of the dubbed audio files to match the"
-    " duration of the source audio files.",
-)
 _PREFERRED_VOICES = flags.DEFINE_list(
     "preferred_voices",
     ["Journey", "Studio", "Wavenet", "Polyglot", "News", "Neural2", "Standard"],
     "Preferred voice names for text-to-speech (e.g., 'Wavenet' for Google's TTS"
     " or 'Calllum' for ElevenLabs).",
 )
-_USE_ELEVENLABS = flags.DEFINE_bool(
-    "use_elevenlabs",
-    False,
-    "Whether to use ElevenLabs API for Text-To-Speech. If not Google's"
-    " Text-To-Speech will be used.",
-)
-_CLONE_VOICES = flags.DEFINE_bool(
-    "clone_voices",
-    False,
-    "Whether to clone source voices. It requires using ElevenLabs API.",
-)
 _CLEAN_UP = flags.DEFINE_bool(
     "clean_up",
     False,
     "Delete intermediate files after dubbing.",
-)
-_PYANNOTE_MODEL = flags.DEFINE_string(
-    "pyannote_model",
-    "pyannote/speaker-diarization-3.1",
-    "Name of the PyAnnote diarization model.",
-)
-_HUGGING_FACE_TOKEN = flags.DEFINE_string(
-    "hugging_face_token",
-    None,
-    "Hugging Face API token.",
-)
-_GEMINI_TOKEN = flags.DEFINE_string(
-    "gemini_token",
-    None,
-    "Gemini API token.",
-)
-_ELEVENLABS_TOKEN = flags.DEFINE_string(
-    "elevenlabs_token",
-    None,
-    "ElevenLabs API token.",
 )
 _GEMINI_MODEL_NAME = flags.DEFINE_string(
     "gemini_model_name",
@@ -157,6 +130,29 @@ _MAX_OUTPUT_TOKENS = flags.DEFINE_integer(
     8192,
     "Maximum number of tokens in the generated response.",
 )
+_USE_ELEVENLABS = flags.DEFINE_bool(
+    "use_elevenlabs",
+    False,
+    "Whether to use ElevenLabs API for Text-To-Speech. If not Google's"
+    " Text-To-Speech will be used.",
+)
+_ELEVENLABS_TOKEN = flags.DEFINE_string(
+    "elevenlabs_token",
+    None,
+    "ElevenLabs API token.",
+)
+_ELEVENLABS_ADJUST_SPEED = flags.DEFINE_bool(
+    "elevenlabs_adjust_speed",
+    False,
+    "Whether to adjust the duration of the dubbed audio files to match the"
+    " duration of the source audio files.",
+)
+_ELEVENLABS_CLONE_VOICES = flags.DEFINE_bool(
+    "elevenlabs_clone_voices",
+    False,
+    "Whether to clone source voices. It requires using ElevenLabs API.",
+)
+
 
 
 def main(argv: Sequence[str]) -> None:
@@ -172,25 +168,24 @@ def main(argv: Sequence[str]) -> None:
       original_language=_ORIGINAL_LANGUAGE.value,
       target_language=_TARGET_LANGUAGE.value,
       number_of_speakers=_NUMBER_OF_SPEAKERS.value,
+      gemini_token=_GEMINI_TOKEN.value,
+      hugging_face_token=_HUGGING_FACE_TOKEN.value,
       no_dubbing_phrases=_NO_DUBBING_PHRASES.value,
       diarization_instructions=_DIARIZATION_INSTRUCTIONS.value,
       translation_instructions=_TRANSLATION_INSTRUCTIONS.value,
       merge_utterances=_MERGE_UTTERANCES.value,
       minimum_merge_threshold=_MINIMUM_MERGE_THRESHOLD.value,
-      adjust_speed=_ADJUST_SPEED.value,
       preferred_voices=_PREFERRED_VOICES.value,
       clean_up=_CLEAN_UP.value,
-      pyannote_model=_PYANNOTE_MODEL.value,
-      hugging_face_token=_HUGGING_FACE_TOKEN.value,
-      gemini_token=_GEMINI_TOKEN.value,
-      elevenlabs_token=_ELEVENLABS_TOKEN.value,
-      use_elevenlabs=_USE_ELEVENLABS.value,
-      clone_voices=_CLONE_VOICES.value,
       gemini_model_name=_GEMINI_MODEL_NAME.value,
       temperature=_TEMPERATURE.value,
       top_p=_TOP_P.value,
       top_k=_TOP_K.value,
       max_output_tokens=_MAX_OUTPUT_TOKENS.value,
+      use_elevenlabs=_USE_ELEVENLABS.value,
+      elevenlabs_token=_ELEVENLABS_TOKEN.value,
+      elevenlabs_adjust_speed=_ELEVENLABS_ADJUST_SPEED.value,
+      elevenlabs_clone_voices=_ELEVENLABS_CLONE_VOICES.value,
   )
   dubber.dub_ad()
 

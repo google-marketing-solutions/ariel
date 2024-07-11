@@ -50,7 +50,7 @@ def transcribe(
       vocals_filepath: The path to the audio file ot be transcribed.
       advertiser_name: The name of the advertiser to use as a hotword.
       original_language: The original language of the audio. It's either ISO
-        639-1 or ISO 3166-1 alpha-2 country code.
+        639-1 or ISO 3166-1 alpha-2 country code, e.g. 'en-US'.
       model: The pre-initialized transcription model.
 
   Returns:

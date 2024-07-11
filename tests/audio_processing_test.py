@@ -379,11 +379,15 @@ class TestCutAndSaveAudio(absltest.TestCase):
             utterance_metadata=utterance_metadata,
             audio_file=temporary_file.name,
             output_directory=output_directory,
-            clone_voices=True,
+            elevenlabs_clone_voices=True,
         )
-        expected_file = os.path.join(output_directory, "vocals_chunk_0.0_5.0.mp3")
+        expected_file = os.path.join(
+            output_directory, "vocals_chunk_0.0_5.0.mp3"
+        )
         expected_result = {
-            "vocals_path": os.path.join(output_directory, "vocals_chunk_0.0_5.0.mp3"),
+            "vocals_path": os.path.join(
+                output_directory, "vocals_chunk_0.0_5.0.mp3"
+            ),
             "start": 0.0,
             "end": 5.0,
         }
