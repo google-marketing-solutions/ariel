@@ -84,7 +84,6 @@ def assign_voices(
     target_language: str,
     client: texttospeech.TextToSpeechClient,
     preferred_voices: Sequence[str] = _DEFAULT_PREFERRED_GOOGLE_VOICES,
-    fallback_no_preferred_category_match: bool = False,
 ) -> Mapping[str, str | None]:
   """Assigns voices to speakers based on preferred voices and available voices.
 
@@ -95,21 +94,27 @@ def assign_voices(
         "vocals_path"
       target_language: The target language (ISO 3166-1 alpha-2).
       client: A TextToSpeechClient object.
-      preferred_voices: An optional list of preferred voice names.
-      fallback_no_preferred_category_match: If True, assigns None if no voice
-        matches preferred category.
+      preferred_voices: An optional list of preferred voice names. Defaults to
+        _DEFAULT_PREFERRED_GOOGLE_VOICES.
 
   Returns:
-      A mapping of unique speaker IDs to assigned voice names, or None if no
-      preferred voice was available or fallback_no_preferred_category_match is
-      True.
+      A mapping of unique speaker IDs to assigned voice names, or raises an
+      error if no voice
+      could be assigned.
+
+  Raises:
+      A value error when no voice can be allocated to any of the speakers.
   """
 
+  if not preferred_voices:
+    preferred_voices = _DEFAULT_PREFERRED_GOOGLE_VOICES
+    logging.info(
+        "Preferred voices were None, defaulting to:"
+        f" {','.join(preferred_voices)}"
+    )
   unique_speaker_mapping = {
       item["speaker_id"]: item["ssml_gender"] for item in utterance_metadata
   }
-  if preferred_voices is None:
-    return {speaker_id: None for speaker_id in unique_speaker_mapping}
   available_voices = list_available_voices(
       language_code=target_language, client=client
   )
@@ -119,8 +124,8 @@ def assign_voices(
     available_preferred_voices = [
         voice for voice in available_voices_names if preferred_voice in voice
     ]
-    grouped_available_preferred_voices.update(
-        {preferred_voice: available_preferred_voices}
+    grouped_available_preferred_voices[preferred_voice] = (
+        available_preferred_voices
     )
   already_assigned_voices = {"Male": set(), "Female": set()}
   voice_assignment = {}
@@ -142,11 +147,11 @@ def assign_voices(
           break
       if speaker_id in voice_assignment:
         break
-    if not preferred_category_matched and fallback_no_preferred_category_match:
-      voice_assignment[speaker_id] = None
-  for speaker_id in unique_speaker_mapping:
-    if speaker_id not in voice_assignment:
-      voice_assignment[speaker_id] = None
+    if not preferred_category_matched:
+      raise ValueError(
+          f"Could not allocate a voice for speaker_id {speaker_id} with"
+          f" ssml_gender {ssml_gender}"
+      )
   return voice_assignment
 
 
@@ -155,7 +160,6 @@ def elevenlabs_assign_voices(
     utterance_metadata: Sequence[Mapping[str, str | float]],
     client: ElevenLabs,
     preferred_voices: Sequence[str] = None,
-    fallback_no_preferred_category_match: bool = False,
 ) -> Mapping[str, str | None]:
   """Assigns voices to speakers based on preferred voices and available voices.
 
@@ -166,24 +170,29 @@ def elevenlabs_assign_voices(
       client: An ElevenLabs object.
       preferred_voices: Optional; A list of preferred voice names (e.g.,
         "Rachel").
-      fallback_no_preferred_category_match: If True, assigns None if no voice
-        matches preferred category.
 
   Returns:
-      A mapping of unique speaker IDs to assigned voice names, or None if no
-      suitable voice was available or fallback_no_preferred_category_match is
-      True.
+      A mapping of unique speaker IDs to assigned voice names.
+
+  Raises:
+      ValueError: If no suitable voice is available for a speaker.
   """
   unique_speaker_mapping = {
       item["speaker_id"]: item["ssml_gender"] for item in utterance_metadata
   }
-  if preferred_voices is None:
-    preferred_voices = []
+
   available_voices = client.voices.get_all().voices
+
+  if not preferred_voices:
+    preferred_voices = [voice.name for voice in available_voices]
+    logging.info("No preferred voices provided. Using all available voices.")
+
   voice_assignment = {}
   already_assigned_voices = {"Male": set(), "Female": set()}
+
   for speaker_id, ssml_gender in unique_speaker_mapping.items():
     preferred_category_matched = False
+
     for preferred_voice in preferred_voices:
       voice_info = next(
           (
@@ -193,6 +202,7 @@ def elevenlabs_assign_voices(
           ),
           None,
       )
+
       if (
           voice_info
           and voice_info.labels["gender"] == ssml_gender.lower()
@@ -202,6 +212,7 @@ def elevenlabs_assign_voices(
         already_assigned_voices[ssml_gender].add(preferred_voice)
         preferred_category_matched = True
         break
+
     if not preferred_category_matched:
       for voice_info in available_voices:
         if (
@@ -212,11 +223,13 @@ def elevenlabs_assign_voices(
           already_assigned_voices[ssml_gender].add(voice_info.name)
           preferred_category_matched = True
           break
-    if not preferred_category_matched and fallback_no_preferred_category_match:
-      voice_assignment[speaker_id] = None
-  for speaker_id in unique_speaker_mapping:
-    if speaker_id not in voice_assignment:
-      voice_assignment[speaker_id] = None
+
+    if not preferred_category_matched:
+      raise ValueError(
+          f"No suitable voice found for speaker_id {speaker_id} with gender"
+          f" {ssml_gender}"
+      )
+
   return voice_assignment
 
 
@@ -450,7 +463,7 @@ def elevenlabs_adjust_audio_speed(
 ) -> None:
   """Adjusts the speed of an MP3 file to match the reference file duration.
 
-  The speed will not be adjusted if the dubbed file has a duration that 
+  The speed will not be adjusted if the dubbed file has a duration that
   is the same or shorter than the duration of the reference file.
 
   Args:
@@ -560,7 +573,9 @@ def dub_utterances(
         if elevenlabs_adjust_speed:
           chunk_size = utterance_copy.get("chunk_size", _DEFAULT_CHUNK_SIZE)
           elevenlabs_adjust_audio_speed(
-              reference_file=utterance["path"], dubbed_file=dubbed_path, chunk_size=chunk_size
+              reference_file=utterance["path"],
+              dubbed_file=dubbed_path,
+              chunk_size=chunk_size,
           )
           utterance_copy["chunk_size"] = chunk_size
       else:

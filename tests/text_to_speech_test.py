@@ -70,27 +70,15 @@ class TestAssignVoices(parameterized.TestCase):
           ],
           ["News", "Studio"],
           {"speaker1": "en-US-News-B", "speaker2": "en-US-Studio-C"},
-          True,
       ),
       (
-          "no_preferred_voices_match",
-          [
-              {"speaker_id": "speaker1", "ssml_gender": "Male"},
-              {"speaker_id": "speaker2", "ssml_gender": "Female"},
-          ],
-          ["NonExistent1", "NonExistent2"],
-          {"speaker1": None, "speaker2": None},
-          True,
-      ),
-      (
-          "no_preferred_voices_no_fallback",
+          "no_preferred",
           [
               {"speaker_id": "speaker1", "ssml_gender": "Male"},
               {"speaker_id": "speaker2", "ssml_gender": "Female"},
           ],
           None,
-          {"speaker1": None, "speaker2": None},
-          False,
+          {"speaker1": "en-US-News-B", "speaker2": "en-US-Studio-C"},
       ),
   ])
   def test_assign_voices(
@@ -98,7 +86,6 @@ class TestAssignVoices(parameterized.TestCase):
       utterance_metadata,
       preferred_voices,
       expected_assignment,
-      fallback_no_preferred_category_match,
   ):
     mock_client = MagicMock(spec=texttospeech.TextToSpeechClient)
     mock_response = texttospeech.ListVoicesResponse(
@@ -114,15 +101,43 @@ class TestAssignVoices(parameterized.TestCase):
         ]
     )
     mock_client.list_voices.return_value = mock_response
-
     assignment = text_to_speech.assign_voices(
         utterance_metadata=utterance_metadata,
         target_language="en-US",
         client=mock_client,
         preferred_voices=preferred_voices,
-        fallback_no_preferred_category_match=fallback_no_preferred_category_match,
     )
     self.assertEqual(assignment, expected_assignment)
+
+  def test_assign_voices_value_error(self):
+    mock_client = MagicMock(spec=texttospeech.TextToSpeechClient)
+    mock_response = texttospeech.ListVoicesResponse(
+        voices=[
+            texttospeech.Voice(
+                name="en-US-News-B",
+                ssml_gender=texttospeech.SsmlVoiceGender.MALE,
+            ),
+            texttospeech.Voice(
+                name="en-US-Studio-C",
+                ssml_gender=texttospeech.SsmlVoiceGender.FEMALE,
+            ),
+        ]
+    )
+    mock_client.list_voices.return_value = mock_response
+    utterance_metatdata = [
+        {"speaker_id": "speaker1", "ssml_gender": "Male"},
+        {"speaker_id": "speaker2", "ssml_gender": "Female"},
+    ]
+    preferred_voices = ["NonExistent1", "NonExistent2"]
+    with self.assertRaisesRegex(
+        ValueError, "Could not allocate a voice for speaker_id"
+    ):
+      text_to_speech.assign_voices(
+          utterance_metadata=utterance_metatdata,
+          target_language="en-US",
+          client=mock_client,
+          preferred_voices=preferred_voices,
+      )
 
 
 class TestElevenLabsAssignVoices(absltest.TestCase):
@@ -195,7 +210,15 @@ class TestElevenLabsAssignVoices(absltest.TestCase):
     )
     self.assertEqual(result, expected_result)
 
-  def test_assign_voices_with_fallback(self):
+
+class TestElevenLabsAssignVoicesValueError(absltest.TestCase):
+
+  def setUp(self):
+    self.mock_client = MagicMock()
+    self.mock_client.voices.get_all.return_value.voices = []
+
+  def test_assign_voices_value_error(self):
+    self.mock_client.voices.get_all.return_value.voices = []
     utterance_metadata = [
         {
             "start": 0,
@@ -222,38 +245,14 @@ class TestElevenLabsAssignVoices(absltest.TestCase):
             "ssml_gender": "Female",
         },
     ]
-    preferred_voices = ["Rachel"]
-    expected_result = {"1": "Voice1", "2": "Rachel", "3": "Voice2"}
-    result = text_to_speech.elevenlabs_assign_voices(
-        utterance_metadata=utterance_metadata,
-        client=self.mock_client,
-        preferred_voices=preferred_voices,
-        fallback_no_preferred_category_match=True,
-    )
-
-    self.assertEqual(result, expected_result)
-
-  def test_assign_voices_with_no_matching_voices(self):
-    utterance_metadata = [
-        {
-            "start": 0,
-            "end": 1,
-            "chunk_path": "path1",
-            "translated_text": "text1",
-            "speaker_id": "1",
-            "ssml_gender": "Male",
-        },
-    ]
-    voice2 = MagicMock(name="Voice2", labels={"gender": "female"})
-    voice2.name = "Voice2"
-    self.mock_client.voices.get_all.return_value.voices = [voice2]
-    expected_result = {"1": None}
-    result = text_to_speech.elevenlabs_assign_voices(
-        utterance_metadata=utterance_metadata,
-        client=self.mock_client,
-        fallback_no_preferred_category_match=True,
-    )
-    self.assertEqual(result, expected_result)
+    with self.assertRaisesRegex(
+        ValueError, "No suitable voice found for speaker_id"
+    ):
+      text_to_speech.elevenlabs_assign_voices(
+          utterance_metadata=utterance_metadata,
+          client=self.mock_client,
+          preferred_voices=["Unknown"],
+      )
 
 
 class UpdateUtteranceMetadataTest(parameterized.TestCase):
