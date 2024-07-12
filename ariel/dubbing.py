@@ -202,9 +202,6 @@ class ElevenLabsAccessError(Exception):
   pass
 
 
-# BEGIN GOOGLE-INTERNAL
-# TODO(krasowiak): Add unit tests for the Dubber class.
-# END GOOGLE-INTERNAL
 class Dubber:
   """A class to manage the entire ad dubbing process."""
 
