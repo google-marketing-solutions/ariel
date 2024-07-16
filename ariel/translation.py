@@ -103,8 +103,9 @@ def add_translations(
       match.
   """
   text_string = re.sub(r"\s*<BREAK>\s*", "<BREAK>", translated_script).rstrip()
+  text_segments = text_string.split("<BREAK>")
   text_segments = [
-      segment for segment in text_string.split("<BREAK>") if segment
+      segment.strip() if segment.strip() else "" for segment in text_segments
   ]
   if len(utterance_metadata) != len(text_segments):
     raise GeminiTranslationError(
