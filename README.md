@@ -76,50 +76,51 @@ Ariel leverages a powerful combination of state-of-the-art AI and audio processi
 
 You can dub video ads from and to the following languages:
 
-*   Arabic
-*   Bengali
-*   Bulgarian
-*   Chinese (Simplified/Traditional)
-*   Croatian
-*   Czech
-*   Danish
-*   Dutch
-*   English
-*   Estonian
-*   Finnish
-*   French
-*   German
-*   Greek
-*   Gujarati
-*   Hebrew (not with ElevenLabs API)
-*   Hindi
-*   Hungarian
-*   Indonesian
-*   Italian
-*   Japanese
-*   Kannada
-*   Korean
-*   Latvian
-*   Lithuanian
-*   Malayalam
-*   Marathi
-*   Norwegian
-*   Polish
-*   Portuguese
-*   Romanian
-*   Russian
-*   Serbian
-*   Slovak
-*   Slovenian
-*   Spanish
-*   Swahili
-*   Swedish
-*   Tamil
-*   Telugu
-*   Thai
-*   Turkish
-*   Ukrainian
-*   Vietnamese
+*   Arabic (ar-SA), (ar-EG)
+*   Bengali (bn-BD), (bn-IN)
+*   Bulgarian (bg-BG)
+*   Chinese (Simplified) (zh-CN)
+*   Chinese (Traditional) (zh-TW)
+*   Croatian (hr-HR)
+*   Czech (cs-CZ)
+*   Danish (da-DK)
+*   Dutch (nl-NL)
+*   English (en-US), (en-GB), (en-CA), (en-AU)
+*   Estonian (et-EE)
+*   Finnish (fi-FI)
+*   French (fr-FR), (fr-CA)
+*   German (de-DE)
+*   Greek (el-GR)
+*   Gujarati (gu-IN)
+*   Hebrew (he-IL) (Note: Not supported with ElevenLabs API)
+*   Hindi (hi-IN)
+*   Hungarian (hu-HU)
+*   Indonesian (id-ID)
+*   Italian (it-IT)
+*   Japanese (ja-JP)
+*   Kannada (kn-IN)
+*   Korean (ko-KR)
+*   Latvian (lv-LV)
+*   Lithuanian (lt-LT)
+*   Malayalam (ml-IN)
+*   Marathi (mr-IN)
+*   Norwegian (nb-NO), (nn-NO)
+*   Polish (pl-PL)
+*   Portuguese (pt-PT), (pt-BR)
+*   Romanian (ro-RO)
+*   Russian (ru-RU)
+*   Serbian (sr-RS)
+*   Slovak (sk-SK)
+*   Slovenian (sl-SI)
+*   Spanish (es-ES), (es-MX)
+*   Swahili (sw-KE)
+*   Swedish (sv-SE)
+*   Tamil (ta-IN), (ta-LK)
+*   Telugu (te-IN)
+*   Thai (th-TH)
+*   Turkish (tr-TR)
+*   Ukrainian (uk-UA)
+*   Vietnamese (vi-VN)
 
 The language coverage depends on the underlying services. Check the below for any changes:
 
