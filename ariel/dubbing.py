@@ -557,7 +557,7 @@ class Dubber:
         output_directory=self.output_directory,
         device=self.device,
     )
-    audio_processing.execute_demcus_command(command=demucs_command)
+    audio_processing.execute_demucs_command(command=demucs_command)
     audio_vocals_file, audio_background_file = (
         audio_processing.assemble_split_audio_file_paths(command=demucs_command)
     )

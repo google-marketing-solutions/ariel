@@ -116,11 +116,11 @@ def build_demucs_command(
   return " ".join(command_parts)
 
 
-class DemcusCommandError(Exception):
+class DemucsCommandError(Exception):
   pass
 
 
-def execute_demcus_command(command: str) -> None:
+def execute_demucs_command(command: str) -> None:
   """Executes a Demucs command using subprocess.
 
   Demucs is a model using AI/ML to detach dialogues
@@ -134,8 +134,26 @@ def execute_demcus_command(command: str) -> None:
         command, shell=True, capture_output=True, text=True, check=True
     )
     logging.info(result.stdout)
-  except subprocess.CalledProcessError as e:
-    raise DemcusCommandError(f"Error separating audio: {e}\n{e.stderr}")
+  except subprocess.CalledProcessError as error:
+    logging.warning(
+        "Error in the first attempt to separate audio:"
+        f" {error}\n{error.stderr}. Retrying with 'python3' instead of"
+        " 'python'."
+    )
+    python3_command = command.replace("python", "python3", 1)
+    try:
+      result = subprocess.run(
+          python3_command,
+          shell=True,
+          capture_output=True,
+          text=True,
+          check=True,
+      )
+      logging.info(result.stdout)
+    except subprocess.CalledProcessError as error:
+      raise DemucsCommandError(
+          f"Error in final attempt to separate audio: {error}\n{error.stderr}"
+      )
 
 
 def extract_command_info(command: str) -> tuple[str, str, str]:

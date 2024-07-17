@@ -204,14 +204,14 @@ class TestAssembleSplitAudioFilePaths(parameterized.TestCase):
     )
 
 
-class TestExecuteDemcusCommand(absltest.TestCase):
+class TestExecuteDemucsCommand(absltest.TestCase):
 
   @patch("subprocess.run")
   def test_execute_command_success(self, mock_run):
     mock_run.return_value.stdout = "Command executed successfully"
     mock_run.return_value.stderr = ""
     mock_run.return_value.returncode = 0
-    audio_processing.execute_demcus_command(
+    audio_processing.execute_demucs_command(
         command="echo 'Command executed successfully'"
     )
     mock_run.assert_called_once_with(
@@ -224,16 +224,16 @@ class TestExecuteDemcusCommand(absltest.TestCase):
 
   @mock.patch("subprocess.run")
   def test_execute_command_error(self, mock_run):
-    """Test if DemcusCommandError is raised when command fails."""
+    """Test if DemucsCommandError is raised when command fails."""
     mock_run.side_effect = subprocess.CalledProcessError(
         1, "demucs.separate", stderr="Some Demucs error message"
     )
 
     with self.assertRaisesRegex(
-        audio_processing.DemcusCommandError,
-        r"Error separating audio:.*\nSome Demucs error message",
+        audio_processing.DemucsCommandError,
+        r"Error in final attempt to separate audio:.*\nSome Demucs error message",
     ):
-      audio_processing.execute_demcus_command(
+      audio_processing.execute_demucs_command(
           "python3 -m demucs.separate -o out_folder --mp3 --two-stems audio.mp3"
       )
 
