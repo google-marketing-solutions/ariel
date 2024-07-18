@@ -26,6 +26,7 @@ from ariel import audio_processing
 from moviepy.audio.AudioClip import AudioArrayClip
 import numpy as np
 from pyannote.audio import Pipeline
+from pydub import AudioSegment
 
 
 class BuildDemucsCommandTest(parameterized.TestCase):
@@ -231,7 +232,8 @@ class TestExecuteDemucsCommand(absltest.TestCase):
 
     with self.assertRaisesRegex(
         audio_processing.DemucsCommandError,
-        r"Error in final attempt to separate audio:.*\nSome Demucs error message",
+        r"Error in final attempt to separate audio:.*\nSome Demucs error"
+        r" message",
     ):
       audio_processing.execute_demucs_command(
           "python3 -m demucs.separate -o out_folder --mp3 --two-stems audio.mp3"
@@ -347,25 +349,21 @@ class TestCutAndSaveAudio(absltest.TestCase):
           fps=44100,
       )
       silence.write_audiofile(temporary_file.name)
-      utterance_metadata = [{"start": 0.0, "end": 5.0}]
       with tempfile.TemporaryDirectory() as output_directory:
-        results = audio_processing.cut_and_save_audio(
-            utterance_metadata=utterance_metadata,
-            audio_file=temporary_file.name,
+        audio = AudioSegment.from_file(temporary_file.name)
+        audio_processing.cut_and_save_audio(
+            audio=audio,
+            utterance=dict(start=0.1, end=0.2),
+            prefix="chunk",
             output_directory=output_directory,
         )
-        expected_file = os.path.join(output_directory, "chunk_0.0_5.0.mp3")
-        expected_result = {
-            "path": os.path.join(output_directory, "chunk_0.0_5.0.mp3"),
-            "start": 0.0,
-            "end": 5.0,
-        }
-        self.assertTrue(
-            os.path.exists(expected_file) and results == [expected_result],
-            f"File not found or dictionary not as expected: {expected_file}",
-        )
+        expected_file = os.path.join(output_directory, "chunk_0.1_0.2.mp3")
+        self.assertTrue(os.path.exists(expected_file))
 
-  def test_cut_and_save_audio_clone(self):
+
+class TestRunCutAndSaveAudio(absltest.TestCase):
+
+  def test_run_cut_and_save_audio(self):
     with tempfile.NamedTemporaryFile(suffix=".mp3") as temporary_file:
       silence_duration = 10
       silence = AudioArrayClip(
@@ -375,26 +373,105 @@ class TestCutAndSaveAudio(absltest.TestCase):
       silence.write_audiofile(temporary_file.name)
       utterance_metadata = [{"start": 0.0, "end": 5.0}]
       with tempfile.TemporaryDirectory() as output_directory:
-        results = audio_processing.cut_and_save_audio(
+        results = audio_processing.run_cut_and_save_audio(
             utterance_metadata=utterance_metadata,
             audio_file=temporary_file.name,
             output_directory=output_directory,
-            elevenlabs_clone_voices=True,
+            elevenlabs_clone_voices=False,
         )
-        expected_file = os.path.join(
-            output_directory, "vocals_chunk_0.0_5.0.mp3"
-        )
+        expected_file = os.path.join(output_directory, "chunk_0.0_5.0.mp3")
         expected_result = {
-            "vocals_path": os.path.join(
-                output_directory, "vocals_chunk_0.0_5.0.mp3"
-            ),
+            "path": os.path.join(output_directory, "chunk_0.0_5.0.mp3"),
             "start": 0.0,
             "end": 5.0,
         }
-        self.assertTrue(
-            os.path.exists(expected_file) and results == [expected_result],
-            f"File not found or dictionary not as expected: {expected_file}",
-        )
+        self.assertTrue(os.path.exists(expected_file))
+
+
+class VerifyAddedAudioChunkTest(absltest.TestCase):
+
+  @patch("ariel.audio_processing.cut_and_save_audio")
+  def test_verify_added_audio_chunk(self, mock_cut_and_save_audio):
+    with tempfile.TemporaryDirectory() as tmpdir:
+      mock_cut_and_save_audio.side_effect = [
+          os.path.join(tmpdir, "chunk_test.mp3"),
+          os.path.join(tmpdir, "vocals_chunk_test.mp3"),
+      ]
+      audio_file_path = os.path.join(tmpdir, "test_audio.mp3")
+      audio_vocals_file_path = os.path.join(tmpdir, "test_vocals.mp3")
+      AudioSegment.silent(duration=3000).export(audio_file_path, format="mp3")
+      AudioSegment.silent(duration=3000).export(
+          audio_vocals_file_path, format="mp3"
+      )
+      utterance = {"start": 0.5, "end": 2.5}
+      result = audio_processing.verify_added_audio_chunk(
+          audio_file=audio_file_path,
+          audio_vocals_file=audio_vocals_file_path,
+          utterance=utterance,
+          output_directory=tmpdir,
+          elevenlabs_clone_voices=True,
+      )
+      expected_result = {
+          **utterance,
+          "path": os.path.join(tmpdir, "chunk_test.mp3"),
+          "vocals_path": os.path.join(tmpdir, "vocals_chunk_test.mp3"),
+      }
+      self.assertEqual(result, expected_result)
+
+
+class VerifyModifiedAudioChunkTest(absltest.TestCase):
+
+  @patch("tensorflow.io.gfile.remove")
+  @patch("ariel.audio_processing.cut_and_save_audio")
+  def test_verify_modified_audio_chunk(
+      self, mock_cut_and_save_audio, mock_remove
+  ):
+    with tempfile.TemporaryDirectory() as tmpdir:
+      mock_cut_and_save_audio.side_effect = [
+          os.path.join(tmpdir, "chunk_correct.mp3"),
+          os.path.join(tmpdir, "vocals_chunk_correct.mp3"),
+      ]
+      audio_file_path = os.path.join(tmpdir, "test_audio.mp3")
+      audio_vocals_file_path = os.path.join(tmpdir, "test_vocals.mp3")
+      AudioSegment.silent(duration=3000).export(audio_file_path, format="mp3")
+      AudioSegment.silent(duration=3000).export(
+          audio_vocals_file_path, format="mp3"
+      )
+      utterance = {
+          "start": 1.0,
+          "end": 2.0,
+          "path": "wrong_chunk.mp3",
+          "vocals_path": "wrong_vocals_chunk.mp3",
+      }
+      result = audio_processing.verify_modified_audio_chunk(
+          audio_file=audio_file_path,
+          audio_vocals_file=audio_vocals_file_path,
+          utterance=utterance,
+          output_directory=tmpdir,
+          elevenlabs_clone_voices=True,
+      )
+      expected_result = {
+          **utterance,
+          "path": os.path.join(tmpdir, "chunk_correct.mp3"),
+          "vocals_path": os.path.join(tmpdir, "vocals_chunk_correct.mp3"),
+      }
+      self.assertEqual(result, expected_result)
+      mock_remove.assert_has_calls([
+          mock.call("wrong_chunk.mp3"),
+          mock.call("wrong_vocals_chunk.mp3"),
+      ])
+      mock_cut_and_save_audio.assert_any_call(
+          audio=AudioSegment.from_file(audio_file_path),
+          utterance=utterance,
+          prefix="chunk",
+          output_directory=tmpdir,
+      )
+      mock_cut_and_save_audio.assert_any_call(
+          audio=AudioSegment.from_file(audio_vocals_file_path),
+          utterance=utterance,
+          prefix="vocals_chunk",
+          output_directory=tmpdir,
+      )
 
 
 class TestInsertAudioAtTimestamps(absltest.TestCase):

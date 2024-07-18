@@ -22,10 +22,12 @@ _TRANSLATION_PROMPT: Final[str] = (
     "You're hired by a company called: {}. The received transcript is: {}."
     " Specific instructions: {}. The target language is: {}."
 )
+_BREAK_MARKER: Final[str] = "<BREAK>"
+_DONT_TRANSLATE_MARKER: Final[str] = "<DO NOT TRANSLATE>"
 
 
 def generate_script(
-    utterance_metadata: Sequence[Mapping[str, str | float]],
+    utterance_metadata,
 ) -> str:
   """Generates a script string from a list of utterance metadata.
 
@@ -42,7 +44,7 @@ def generate_script(
       item["text"].strip() if item["text"] else ""
       for item in utterance_metadata
   ]
-  return "<BREAK>".join(trimmed_lines)
+  return _BREAK_MARKER + _BREAK_MARKER.join(trimmed_lines) + _BREAK_MARKER
 
 
 def translate_script(
@@ -92,7 +94,7 @@ def add_translations(
         represents utterance metadata with "text", "start", "end", "speaker_id",
         "ssml_gender", "path", "for_dubbing" and optionally "vocals_path" keys.
       translated_script: The string containing the translated text segments,
-        separated by "<BREAK>".
+        separated by _BREAK_MARKER.
 
   Returns:
       A list of updated utterance metadata with the "translated_text" field
@@ -102,11 +104,10 @@ def add_translations(
       ValueError: If the number of utterance metadata and text segments do not
       match.
   """
-  text_string = re.sub(r"\s*<BREAK>\s*", "<BREAK>", translated_script).rstrip()
-  text_segments = text_string.split("<BREAK>")
-  text_segments = [
-      segment.strip() if segment.strip() else "" for segment in text_segments
-  ]
+  stripped_translation = re.sub(
+      rf"^\s*{_BREAK_MARKER}\s*|\s*{_BREAK_MARKER}\s*$", "", translated_script
+  )
+  text_segments = stripped_translation.split(_BREAK_MARKER)
   if len(utterance_metadata) != len(text_segments):
     raise GeminiTranslationError(
         "The utterance metadata must be of the same length as the text"
@@ -115,7 +116,7 @@ def add_translations(
     )
   updated_utterance_metadata = []
   for metadata, translated_text in zip(utterance_metadata, text_segments):
-    if translated_text != "<DO NOT TRANSLATE>":
+    if translated_text != _DONT_TRANSLATE_MARKER:
       updated_utterance_metadata.append(
           {**metadata, "translated_text": translated_text}
       )

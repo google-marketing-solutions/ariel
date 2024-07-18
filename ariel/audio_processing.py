@@ -23,6 +23,7 @@ from typing import Mapping, Sequence
 from absl import logging
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
+import tensorflow as tf
 import torch
 
 _BACKGROUND_VOLUME_ADJUSTMENT: Final[float] = 5.0
@@ -285,6 +286,37 @@ def merge_utterances(
 
 def cut_and_save_audio(
     *,
+    audio: AudioSegment,
+    utterance: Mapping[str, str | float],
+    prefix: str,
+    output_directory: str,
+) -> str:
+  """Cuts a specified segment from an audio file, saves it as an MP3, and returns the path of the saved file.
+
+  Args:
+      audio: The audio file from which to extract the segment.
+      utterance: A dictionary containing the start and end times of the segment
+        to be cut. - 'start': The start time of the segment in seconds. - 'end':
+        The end time of the segment in seconds.
+      prefix: A string to be used as a prefix in the filename of the saved audio
+        segment.
+      output_directory: The directory path where the cut audio segment will be
+        saved.
+
+  Returns:
+      The path of the saved MP3 file.
+  """
+  start_time_ms = int(utterance["start"] * 1000)
+  end_time_ms = int(utterance["end"] * 1000)
+  chunk = audio[start_time_ms:end_time_ms]
+  chunk_filename = f"{prefix}_{utterance['start']}_{utterance['end']}.mp3"
+  chunk_path = f"{output_directory}/{chunk_filename}"
+  chunk.export(chunk_path, format="mp3")
+  return chunk_path
+
+
+def run_cut_and_save_audio(
+    *,
     utterance_metadata: Sequence[Mapping[str, float]],
     audio_file: str,
     output_directory: str,
@@ -311,16 +343,125 @@ def cut_and_save_audio(
   prefix = "vocals_chunk" if elevenlabs_clone_voices else "chunk"
   updated_utterance_metadata = []
   for utterance in utterance_metadata:
-    start_time_ms = int(utterance["start"] * 1000)
-    end_time_ms = int(utterance["end"] * 1000)
-    chunk = audio[start_time_ms:end_time_ms]
-    chunk_filename = f"{prefix}_{utterance['start']}_{utterance['end']}.mp3"
-    chunk_path = f"{output_directory}/{chunk_filename}"
-    chunk.export(chunk_path, format="mp3")
+    chunk_path = cut_and_save_audio(
+        audio=audio,
+        utterance=utterance,
+        prefix=prefix,
+        output_directory=output_directory,
+    )
     utterance_copy = utterance.copy()
     utterance_copy[key] = chunk_path
     updated_utterance_metadata.append(utterance_copy)
   return updated_utterance_metadata
+
+
+def verify_added_audio_chunk(
+    *,
+    audio_file: str,
+    audio_vocals_file: str,
+    utterance: Mapping[str, str | float],
+    output_directory: str,
+    elevenlabs_clone_voices: bool = False,
+) -> Mapping[str, str | float]:
+  """Verifies and processes a newly added audio chunk, potentially including isolated vocals.
+
+  Args:
+      audio_file: The path to the main audio file containing the added chunk.
+      audio_vocals_file: The path to a separate file containing only the vocal
+        track of the audio (optional).
+      utterance: A dictionary describing the start and end times of the added
+        chunk.
+      output_directory: The directory to save the processed chunk(s).
+      elevenlabs_clone_voices: Indicates whether to process vocals separately
+        (default: False).
+
+  Returns:
+      A modified copy of the utterance dictionary with added paths to the saved
+      audio chunk(s).
+        - 'path': The path to the saved audio chunk.
+        - 'vocals_path': The path to the saved vocals chunk (if
+        `elevenlabs_clone_voices` is True).
+  """
+  audio = AudioSegment.from_file(audio_file)
+  if elevenlabs_clone_voices:
+    vocal_only_audio = AudioSegment.from_file(audio_vocals_file)
+  utterance_copy = utterance.copy()
+  chunk_path = cut_and_save_audio(
+      audio=audio,
+      utterance=utterance,
+      prefix="chunk",
+      output_directory=output_directory,
+  )
+  utterance_copy["path"] = chunk_path
+  if elevenlabs_clone_voices:
+    vocals_chunk_path = cut_and_save_audio(
+        audio=vocal_only_audio,
+        utterance=utterance,
+        prefix="vocals_chunk",
+        output_directory=output_directory,
+    )
+    utterance_copy["vocals_path"] = vocals_chunk_path
+  return utterance_copy
+
+
+def verify_modified_audio_chunk(
+    *,
+    audio_file: str,
+    audio_vocals_file: str,
+    utterance: Mapping[str, str | float],
+    output_directory: str,
+    elevenlabs_clone_voices: bool = False,
+) -> Mapping[str, str | float]:
+  """Verifies and reprocesses a potentially modified audio chunk, potentially including isolated vocals.
+
+  Args:
+      audio_file: The path to the main audio file containing the modified chunk.
+      audio_vocals_file: The path to a separate file containing only the vocal
+        track of the audio (optional).
+      utterance: A dictionary describing the start and end times of the modified
+        chunk and its expected paths.
+      output_directory: The directory to save the processed chunk(s).
+      elevenlabs_clone_voices: Indicates whether the ElevenLabs voice cloning is
+        used.
+
+  Returns:
+      A modified copy of the utterance dictionary with potentially updated paths
+      to the saved audio chunk(s).
+        - 'path': The updated path to the saved audio chunk (if it was
+        modified).
+        - 'vocals_path': The updated path to the saved vocals chunk (if
+        `elevenlabs_clone_voices` is True and it was modified).
+  """
+  audio = AudioSegment.from_file(audio_file)
+  if elevenlabs_clone_voices:
+    vocal_only_audio = AudioSegment.from_file(audio_vocals_file)
+  utterance_copy = utterance.copy()
+  expected_chunk_path = f"chunk_{utterance['start']}_{utterance['end']}.mp3"
+  actual_chunk_path = utterance_copy["path"]
+  if expected_chunk_path != actual_chunk_path:
+    tf.io.gfile.remove(actual_chunk_path)
+    chunk_path = cut_and_save_audio(
+        audio=audio,
+        utterance=utterance,
+        prefix="chunk",
+        output_directory=output_directory,
+    )
+    utterance_copy["path"] = chunk_path
+  if elevenlabs_clone_voices:
+    expected_vocals_chunk_path = (
+        f"vocals_chunk_{utterance['start']}_{utterance['end']}.mp3"
+    )
+    actual_vocals_chunk_path = utterance_copy["vocals_path"]
+    if expected_vocals_chunk_path != actual_vocals_chunk_path:
+      tf.io.gfile.remove(actual_vocals_chunk_path)
+      vocals_chunk_path = cut_and_save_audio(
+          audio=vocal_only_audio,
+          utterance=utterance,
+          prefix="vocals_chunk",
+          output_directory=output_directory,
+      )
+      utterance_copy["vocals_path"] = vocals_chunk_path
+  return utterance_copy
 
 
 def insert_audio_at_timestamps(
@@ -333,9 +474,9 @@ def insert_audio_at_timestamps(
 
   Args:
     utterance_metadata: A sequence of utterance metadata, each represented as a
-      dictionary with keys: "text", "start", "stop", "speaker_id",
-      "ssml_gender", "translated_text", "assigned_google_voice", "for_dubbing",
-      "path" and optionally "vocals_path".
+      dictionary with keys: "text", "start", "end", "speaker_id", "ssml_gender",
+      "translated_text", "assigned_google_voice", "for_dubbing", "path" and
+      optionally "vocals_path".
     background_audio_file: Path to the background audio file.
     output_directory: Path to save the output audio file.
 

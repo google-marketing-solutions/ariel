@@ -24,7 +24,7 @@ import google.generativeai as genai
 class GenerateScriptTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
-      ("empty_input", [], ""),
+      ("empty_input", [], "<BREAK><BREAK>"),
       (
           "single_utterance",
           [{
@@ -34,7 +34,7 @@ class GenerateScriptTest(parameterized.TestCase):
               "speaker_id": "speaker1",
               "ssml_gender": "male",
           }],
-          "Hello, world!",
+          "<BREAK>Hello, world!<BREAK>",
       ),
       (
           "multiple_utterances",
@@ -54,7 +54,7 @@ class GenerateScriptTest(parameterized.TestCase):
                   "ssml_gender": "female",
               },
           ],
-          "This is<BREAK>a test.",
+          "<BREAK>This is<BREAK>a test.<BREAK>",
       ),
       (
           "empty_string",
@@ -74,7 +74,7 @@ class GenerateScriptTest(parameterized.TestCase):
                   "ssml_gender": "female",
               },
           ],
-          "This is<BREAK>",
+          "<BREAK>This is<BREAK><BREAK>",
       ),
   )
   def test_generate_script(self, utterance_metadata, expected_script):

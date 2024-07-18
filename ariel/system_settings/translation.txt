@@ -46,11 +46,11 @@ Example 1:
 
 Input (English):
 
- You're hired by a company called: Nespresso. The received transcript is: 'George? <BREAK> Subtitles AUTHORWAVE <BREAK> Jean? <BREAK> coffee? <BREAK> What else? 2.5 million. <BREAK> Ow! <BREAK> Thank you. <BREAK> Don't forget to recycle. <BREAK> Camille. <BREAK> jour <BREAK> Unbelievable. <BREAK> Unforgettable <BREAK> Nespresso. What else?' Specific instructions: Don't translate the 'What else?' phrase. The target language is: pl-PL.
+ You're hired by a company called: Nespresso. The received transcript is: '<BREAK>George?<BREAK>Subtitles AUTHORWAVE<BREAK>Jean?<BREAK>coffee?<BREAK>What else? 2.5 million.<BREAK>Ow!<BREAK>Thank you.<BREAK>Don't forget to recycle.<BREAK>Camille.<BREAK>jour<BREAK>Unbelievable.<BREAK>Unforgettable<BREAK>Nespresso. What else?<BREAK>' Specific instructions: Don't translate the 'What else?' phrase. The target language is: pl-PL.
 
 Output (Polish):
 
- George? <BREAK> <DO NOT TRANSLATE> <BREAK> Jean? <BREAK> Kawka? <BREAK> What else? Dwa i pół miliona. <BREAK> <DO NOT TRANSLATE> <BREAK> Dzięki. <BREAK> Nie zapomnij o recyklingu. <BREAK> Camille. <BREAK> Jean. <BREAK> Niesamowite. <BREAK> Niezapomniane. <BREAK> Nespresso. What else?
+ <BREAK>George?<BREAK><DO NOT TRANSLATE><BREAK>Jean?<BREAK>Kawka?<BREAK>What else? Dwa i pół miliona.<BREAK><DO NOT TRANSLATE><BREAK>Dzięki.<BREAK>Nie zapomnij o recyklingu.<BREAK>Camille.<BREAK>Jean.<BREAK>Niesamowite.<BREAK>Niezapomniane.<BREAK>Nespresso. What else?<BREAK>
 
 Key Improvements in this Example:
 
@@ -65,11 +65,11 @@ Example 2:
 
 Input (Greek):
 
- You're hired by a company called: Trading 212. The received transcript is: 'Χτίστε πλούτο κάθε μέρα με την Trading 212. Επενδύστε με μηδενική προμήθεια και κερδίστε 4,2 τσακό επιτόκιο για τα μη επενδυμένα σας ευρώ. <BREAK>  Υπότιτλοι AUTHORWAVE <BREAK>  πληρώνω <BREAK>  Είστε καθημερινά. Ανάληψη αναπάνθια στιγμή. <BREAK>  Αποκτήστε την εφαρμογή Trading 212 τώρα και γίνετε ένας από τους πάνω από 2,5 εκατομμύρια πελάτες μας. <BREAK>  Υπότιτλοι AUTHORWAV' Specific instructions: Pronounce Trading 212 as Trading two one two. For example, if you translate to Polish you should translate it as Trading dwa jeden dwa. Remember to translate numbers into words. The target language is: pl-PL.
+ You're hired by a company called: Trading 212. The received transcript is: '<BREAK>Χτίστε πλούτο κάθε μέρα με την Trading 212. Επενδύστε με μηδενική προμήθεια και κερδίστε 4,2 τσακό επιτόκιο για τα μη επενδυμένα σας ευρώ.<BREAK>Υπότιτλοι AUTHORWAVE<BREAK>πληρώνω<BREAK>Είστε καθημερινά. Ανάληψη αναπάνθια στιγμή.<BREAK>Αποκτήστε την εφαρμογή Trading 212 τώρα και γίνετε ένας από τους πάνω από 2,5 εκατομμύρια πελάτες μας.<BREAK>Υπότιτλοι AUTHORWAV<BREAK>' Specific instructions: Pronounce Trading 212 as Trading two one two. For example, if you translate to Polish you should translate it as Trading dwa jeden dwa. Remember to translate numbers into words. The target language is: pl-PL.
 
 Output (Polish):
 
- Buduj swój majątek każdego dnia z Trading dwa jeden dwa. Inwestuj bez prowizji i zarabiaj cztery przecinek dwa procent na odsetkach od swoich zainwestowanych euro. <BREAK> <DO NOT TRANSLATE> <BREAK> Wypłacaj <BREAK> codziennie. Wypłata natychmiastowa. <BREAK> Pbierz aplikację Trading dwa jeden dea już teraz i dołącz do ponad dwóch i pół miliona naszych klientów. <BREAK> <DO NOT TRANSLATE> <BREAK>
+ <BREAK>Buduj swój majątek każdego dnia z Trading dwa jeden dwa. Inwestuj bez prowizji i zarabiaj cztery przecinek dwa procent na odsetkach od swoich zainwestowanych euro.<BREAK><DO NOT TRANSLATE><BREAK>Wypłacaj<BREAK>codziennie. Wypłata natychmiastowa.<BREAK>Pobierz aplikację Trading dwa jeden dea już teraz i dołącz do ponad dwóch i pół miliona naszych klientów.<BREAK><DO NOT TRANSLATE><BREAK>
 
 Key Improvements in this Example:
 
@@ -82,11 +82,11 @@ Example 3:
 
 Input (Polish):
 
- You're hired by a company called: AC Master. The received transcript is: 'Z filtrem?! <BREAK> Miały być bez filtra! <BREAK> W całym mieście nie ma bez filtra... Specific instructions: None. The target language is: en-US.
+ You're hired by a company called: AC Master. The received transcript is: '<BREAK>Z filtrem?!<BREAK>Miały być bez filtra!<BREAK>W całym mieście nie ma bez filtra...<BREAK>' Specific instructions: None. The target language is: en-US.
 
 Output (English):
 
- With filter?! <BREAK> I asked with no filter! <BREAK> You can't find them in this city. <BREAK>
+ <BREAK>With filter?!<BREAK>I asked with no filter!<BREAK>You can't find them in this city.<BREAK>
 
 Key Improvements in this Example:
 

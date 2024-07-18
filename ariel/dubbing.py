@@ -156,12 +156,14 @@ class PreprocessingArtifacts:
   Attributes:
       video_file: A path to a video ad with no audio.
       audio_file: A path to an audio track from the ad.
+      audio_vocals_file: A path to an audio track with vocals only.
       audio_background_file: A path to and audio track from the ad with removed
         vocals.
   """
 
   video_file: str
   audio_file: str
+  audio_vocals_file: str
   audio_background_file: str
 
 
@@ -484,11 +486,11 @@ class Dubber:
         self.text_to_speech_client.user.get()
       except ApiError:
         raise ElevenLabsAccessError(
-            "You specified to use ElevenLabs API for Text-To-Speech. No access to"
-            " ElevenLabs. Make sure you passed the correct API token either as"
-            " 'elevenlabs_token' or through the"
-            f" '{_EXPECTED_ELEVENLABS_ENVIRONMENTAL_VARIABLE_NAME}' environmental"
-            " variable."
+            "You specified to use ElevenLabs API for Text-To-Speech. No access"
+            " to ElevenLabs. Make sure you passed the correct API token either"
+            " as 'elevenlabs_token' or through the"
+            f" '{_EXPECTED_ELEVENLABS_ENVIRONMENTAL_VARIABLE_NAME}'"
+            " environmental variable."
         )
       logging.info("Access to ElevenLabs verified.")
 
@@ -573,13 +575,13 @@ class Dubber:
           utterance_metadata=utterance_metadata,
           minimum_merge_threshold=self.minimum_merge_threshold,
       )
-    utterance_metadata = audio_processing.cut_and_save_audio(
+    utterance_metadata = audio_processing.run_cut_and_save_audio(
         utterance_metadata=utterance_metadata,
         audio_file=audio_file,
         output_directory=self.output_directory,
     )
     if self.elevenlabs_clone_voices:
-      utterance_metadata = audio_processing.cut_and_save_audio(
+      utterance_metadata = audio_processing.run_cut_and_save_audio(
           utterance_metadata=utterance_metadata,
           audio_file=audio_vocals_file,
           output_directory=self.output_directory,
@@ -589,6 +591,7 @@ class Dubber:
     self.preprocesing_output = PreprocessingArtifacts(
         video_file=video_file,
         audio_file=audio_file,
+        audio_vocals_file=audio_vocals_file,
         audio_background_file=audio_background_file,
     )
     logging.info("Completed preprocessing.")
@@ -618,23 +621,25 @@ class Dubber:
     attempt = 0
     success = False
     while attempt < _MAX_GEMINI_RETRIES and not success:
-        try:
-          speaker_info = speech_to_text.diarize_speakers(
-              file=media_file,
-              utterance_metadata=utterance_metadata,
-              number_of_speakers=self.number_of_speakers,
-              model=speaker_diarization_model,
-              diarization_instructions=self.diarization_instructions,
-          )
-          self.utterance_metadata = speech_to_text.add_speaker_info(
-              utterance_metadata=utterance_metadata, speaker_info=speaker_info
-          )
-          success = True
-        except speech_to_text.GeminiDiarizationError:
-          attempt += 1
-          logging.warning(f"Diarization attempt {attempt} failed. Will try again.")
-          if attempt == _MAX_GEMINI_RETRIES:
-              raise RuntimeError("Can't diarize speakers. Try again.")
+      try:
+        speaker_info = speech_to_text.diarize_speakers(
+            file=media_file,
+            utterance_metadata=utterance_metadata,
+            number_of_speakers=self.number_of_speakers,
+            model=speaker_diarization_model,
+            diarization_instructions=self.diarization_instructions,
+        )
+        self.utterance_metadata = speech_to_text.add_speaker_info(
+            utterance_metadata=utterance_metadata, speaker_info=speaker_info
+        )
+        success = True
+      except speech_to_text.GeminiDiarizationError:
+        attempt += 1
+        logging.warning(
+            f"Diarization attempt {attempt} failed. Will try again."
+        )
+        if attempt == _MAX_GEMINI_RETRIES:
+          raise RuntimeError("Can't diarize speakers. Try again.")
     logging.info("Completed transcription.")
     self.progress_bar.update()
 
@@ -653,24 +658,26 @@ class Dubber:
     attempt = 0
     success = False
     while attempt < _MAX_GEMINI_RETRIES and not success:
-        try:
-          translated_script = translation.translate_script(
-              script=script,
-              advertiser_name=self.advertiser_name,
-              translation_instructions=self.translation_instructions,
-              target_language=self.target_language,
-              model=translation_model,
-          )
-          self.utterance_metadata = translation.add_translations(
-              utterance_metadata=self.utterance_metadata,
-              translated_script=translated_script,
-          )
-          success = True
-        except translation.GeminiTranslationError:
-          attempt += 1
-          logging.warning(f"Translation attempt {attempt} failed. Will try again.")
-          if attempt == _MAX_GEMINI_RETRIES:
-              raise RuntimeError("Can't translate script. Try again.")
+      try:
+        translated_script = translation.translate_script(
+            script=script,
+            advertiser_name=self.advertiser_name,
+            translation_instructions=self.translation_instructions,
+            target_language=self.target_language,
+            model=translation_model,
+        )
+        self.utterance_metadata = translation.add_translations(
+            utterance_metadata=self.utterance_metadata,
+            translated_script=translated_script,
+        )
+        success = True
+      except translation.GeminiTranslationError:
+        attempt += 1
+        logging.warning(
+            f"Translation attempt {attempt} failed. Will try again."
+        )
+        if attempt == _MAX_GEMINI_RETRIES:
+          raise RuntimeError("Can't translate script. Try again.")
     logging.info("Completed translation.")
     if not self._rerun:
       self.progress_bar.update()
@@ -705,75 +712,207 @@ class Dubber:
         elevenlabs_clone_voices=self.elevenlabs_clone_voices,
     )
 
-  def _run_verify_utterance_metadata(self) -> None:
-    """Displays, allows editing, confirms utterance metadata, and offers translation."""
-    utterance_metadata = self.utterance_metadata
-    self._rerun = False
-    while True:
-      self._display_utterance_metadata(utterance_metadata)
-      if self._edit_utterance_metadata(utterance_metadata):
-        continue
-      if self._confirm_utterance_metadata(utterance_metadata):
-        translate_choice = self._prompt_for_translation()
-        if translate_choice == "yes":
-          self.run_translation()
-        if not self.elevenlabs_clone_voices:
-          assign_voices_choice = self._prompt_for_assign_voices()
-          if assign_voices_choice == "yes":
-            self.run_configure_text_to_speech()
-        self._rerun = False
-        return
+  def _run_speech_to_text_on_single_utterance(
+      self, modified_utterance: Mapping[str, str | float]
+  ) -> Mapping[str, str | float]:
+    """Runs the equivalent 'speech_to_text' on a modified utterance.
 
-  def _display_utterance_metadata(self, utterance_metadata):
+    Args:
+      modified_utterance: A mapping with "start", "end", "path", "for_dubbing"
+        and optionally "vocals_path".
+
+    Returns:
+        Updated utterance metadata with speaker information and transcriptions
+        for a single utterance.
+    """
+    utterance_metadata = [modified_utterance.copy()]
+    return speech_to_text.transcribe_audio_chunks(
+        utterance_metadata=utterance_metadata,
+        advertiser_name=self.advertiser_name,
+        original_language=self.original_language,
+        model=self.speech_to_text_model,
+        no_dubbing_phrases=self.no_dubbing_phrases,
+    )[0]
+
+  def _run_translation_on_single_utterance(
+      self, modified_utterance: Mapping[str, str | float]
+  ) -> Mapping[str, str | float]:
+    """Runs the equivalent 'run_translation' on a modified utterance.
+
+    Returns:
+        Updated utterance metadata with translated text for a single utterance.
+    """
+    utterance_metadata = [modified_utterance.copy()]
+    script = translation.generate_script(utterance_metadata=utterance_metadata)
+    translation_model = self.configure_gemini_model(
+        system_instructions=self.processed_translation_system_instructions
+    )
+    attempt = 0
+    success = False
+    while attempt < _MAX_GEMINI_RETRIES and not success:
+      try:
+        translated_script = translation.translate_script(
+            script=script,
+            advertiser_name=self.advertiser_name,
+            translation_instructions=self.translation_instructions,
+            target_language=self.target_language,
+            model=translation_model,
+        )
+        translated_utterance = translation.add_translations(
+            utterance_metadata=utterance_metadata,
+            translated_script=translated_script,
+        )
+        success = True
+      except translation.GeminiTranslationError:
+        attempt += 1
+        logging.warning(
+            f"Translation attempt {attempt} failed. Will try again."
+        )
+        if attempt == _MAX_GEMINI_RETRIES:
+          raise RuntimeError("Can't translate the added utterance. Try again.")
+    return translated_utterance[0]
+
+  def _repopulate_metadata(
+      self, *, utterance: Mapping[str, str | float], modified: bool = True
+  ) -> Mapping[str, str | float]:
+    if not modified:
+      print(
+          "Populating the metadata fields for the added utterance. It might"
+          " take a minute."
+      )
+      verified_utterance = audio_processing.verify_added_audio_chunk(
+          audio_file=self.preprocesing_output.audio_file,
+          audio_vocals_file=self.preprocesing_output.audio_vocals_file,
+          utterance=utterance,
+          output_directory=self.output_directory,
+          elevenlabs_clone_voices=self.elevenlabs_clone_voices,
+      )
+    else:
+      print(
+          "Updating the metadata fields for the modified utterance. It might"
+          " take a minute."
+      )
+      verified_utterance = audio_processing.verify_modified_audio_chunk(
+          audio_file=self.preprocesing_output.audio_file,
+          audio_vocals_file=self.preprocesing_output.audio_vocals_file,
+          utterance=utterance,
+          output_directory=self.output_directory,
+          elevenlabs_clone_voices=self.elevenlabs_clone_voices,
+      )
+    transcribed_utterance = self._run_speech_to_text_on_single_utterance(
+        verified_utterance
+    )
+    return self._run_translation_on_single_utterance(transcribed_utterance)
+
+  def _update_utterance_metadata(
+      self,
+      *,
+      updated_utterance: Mapping[str, str | float],
+      utterance_metadata: Sequence[Mapping[str, str | float]],
+  ) -> Sequence[Mapping[str, str | float]]:
+    """Runs the update process of the added utterance."""
+    utterance_metadata_copy = utterance_metadata.copy()
+    utterance_metadata_copy.append(updated_utterance)
+    utterance_metadata_copy.sort(key=lambda item: (item["start"], item["end"]))
+    added_index = utterance_metadata_copy.index(updated_utterance) + 1
+    print(f"Item added / modified at position {added_index}.")
+    return utterance_metadata_copy
+
+  def _display_utterance_metadata(
+      self, utterance_metadata: Sequence[Mapping[str, str | float]]
+  ) -> None:
     """Displays the current utterance metadata."""
     print("Current utterance metadata:")
     for i, item in enumerate(utterance_metadata):
       print(f"{i+1}. {json.dumps(item, ensure_ascii=False, indent=2)}")
 
-  def _edit_utterance_metadata(self, utterance_metadata) -> bool:
-    """Allows editing of the utterance metadata and returns True if edited."""
-    edit_choice = input("\nDo you want to edit? (yes/no): ").lower()
-    if edit_choice != "yes":
-      return False
-    while True:
+  def _add_utterance_metadata(self) -> Mapping[str, str | float]:
+    """Allows adding a new utterance metadata entry, prompting for each field."""
+    new_utterance = {}
+    for field in ["start", "end", "speaker_id", "ssml_gender"]:
+      while True:
+        try:
+          value = input(f"Enter value for '{field}': ")
+          if field in ["start", "end"]:
+            value = float(value)
+            if (
+                field == "end"
+                and "start" in new_utterance
+                and value <= new_utterance["start"]
+            ):
+              print("End time cannot be less than or equal to start time.")
+              continue
+          new_utterance[field] = value
+          break
+        except ValueError:
+          print(f"Invalid input for '{field}'. Please enter a valid value.")
+    return new_utterance
+
+  def _select_edit_number(
+      self, utterance_metadata: Sequence[Mapping[str, str | float]]
+  ) -> int:
+    """Runs edit index selection process."""
+    ask_for_index = True
+    while ask_for_index:
+      index = int(input("Enter item number to edit: ")) - 1
+      if not 0 <= index < len(utterance_metadata):
+        print("Invalid item number.")
+      else:
+        ask_for_index = False
+        return index
+
+  def _edit_utterance_metadata(
+      self,
+      utterance_metadata: Sequence[Mapping[str, str | float]],
+      edit_index: int,
+  ) -> Mapping[str, str | float]:
+    """Runs the editing process of utterance metadata."""
+    ask_for_update = True
+    while ask_for_update:
       try:
-        index = int(input("Enter item number to edit: ")) - 1
-        if 0 <= index < len(utterance_metadata):
-          readline.set_startup_hook(
-              lambda: readline.insert_text(
-                  json.dumps(utterance_metadata[index], ensure_ascii=False)
-              )
-          )
-          modified_input = input(f"Modify: ")
-          utterance_metadata[index] = json.loads(modified_input)
-          readline.set_startup_hook()
-          return True
-        else:
-          print("Invalid item number.")
+        readline.set_startup_hook(
+            lambda: readline.insert_text(
+                json.dumps(utterance_metadata[edit_index], ensure_ascii=False)
+            )
+        )
+        modified_input = input(f"Modify: ")
+        readline.set_startup_hook()
+        edited_utterance = json.loads(modified_input)
+        ask_for_update = False
+        return edited_utterance
       except (json.JSONDecodeError, ValueError):
         print("Invalid JSON or input. Please try again.")
 
-  def _confirm_utterance_metadata(self, utterance_metadata) -> bool:
-    """Confirms the final utterance metadata and returns True if confirmed."""
+  def _remove_utterance_metadata(
+      self, utterance_metadata: Sequence[Mapping[str, str | float]]
+  ) -> None:
+    """Allows hiding utterance metadata by marking 'for_dubbing' as False."""
     while True:
-      print("The final utterance metadata is:")
-      for i, item in enumerate(utterance_metadata):
-        print(f"{i+1}. {json.dumps(item, ensure_ascii=False, indent=2)}")
-      confirm_choice = input("\nAre you okay with this? (yes/no): ").lower()
-      if confirm_choice == "yes":
-        self.utterance_metadata = utterance_metadata
-        return True
-      elif confirm_choice == "no":
-        return False
-      else:
-        print("Invalid choice.")
+      try:
+        index = (
+            int(input("Enter item number to remove from the dubbing process: "))
+            - 1
+        )
+        if 0 <= index < len(utterance_metadata):
+          utterance_metadata[index]["for_dubbing"] = False
+          print(
+              "Item hidden. It will not be included in the dubbing process. The"
+              " orginal vocals will be used."
+          )
+          return
+        else:
+          print("Invalid item number.")
+      except (ValueError, KeyError):
+        print("Invalid input or item format. Please try again.")
 
   def _prompt_for_translation(self) -> str:
     """Prompts the user if they want to run translation."""
+    print("You modified 'text' of the utterance.")
     while True:
       translate_choice = input(
-          "\nDo you want to run translation (recommended only after modifying"
-          " the source utterance text)? (yes/no): "
+          "\nYou modified 'text' of the utterance. Do you want to run"
+          " translation (it's recommended after modifying the source utterance"
+          " text)? (yes/no): "
       ).lower()
       if translate_choice in ("yes", "no"):
         return translate_choice
@@ -789,6 +928,81 @@ class Dubber:
       ).lower()
       if assign_voices_choice in ("yes", "no"):
         return assign_voices_choice
+      else:
+        print("Invalid choice.")
+
+  def _verify_metadata_after_change(self):
+    """Asks the user if they want to review the metadata again after changes."""
+    while True:
+      review_choice = input(
+          "\nDo you want to review the metadata again after the changes?"
+          " (yes/no): "
+      ).lower()
+      if review_choice in ("yes", "no"):
+        return review_choice == "no"
+      else:
+        print("Invalid choice.")
+
+  def _run_verify_utterance_metadata(self) -> None:
+    """Displays, allows editing, addig and removing utterance metadata."""
+    utterance_metadata = self.utterance_metadata
+    self._rerun = False
+    while True:
+      self._display_utterance_metadata(utterance_metadata)
+      action_choice = input(
+          "\nChoose action: (edit/add/remove/continue): "
+      ).lower()
+      if action_choice == "edit":
+        edit_index = self._select_edit_number(
+            utterance_metadata=utterance_metadata
+        )
+        unmodified_start_end = (
+            utterance_metadata[edit_index]["start"],
+            utterance_metadata[edit_index]["end"],
+        )
+        unmodified_text = utterance_metadata[edit_index]["text"]
+        editted_utterance = self._edit_utterance_metadata(
+            utterance_metadata=utterance_metadata, edit_index=edit_index
+        )
+        modified_start_end = (
+            editted_utterance["start"],
+            editted_utterance["end"],
+        )
+        modified_text = editted_utterance["text"]
+        if unmodified_start_end != modified_start_end:
+          updated_utterance = self._repopulate_metadata(
+              utterance=editted_utterance
+          )
+        elif unmodified_text != modified_text:
+          translate_choice = self._prompt_for_translation()
+          if translate_choice == "yes":
+            updated_utterance = self._run_translation_on_single_utterance(
+                editted_utterance
+            )
+        utterance_metadata[edit_index] = updated_utterance
+      elif action_choice == "add":
+        added_utterance = self._add_utterance_metadata()
+        updated_utterance = self._repopulate_metadata(
+            utterance=added_utterance, modified=False
+        )
+        utterance_metadata = self._update_utterance_metadata(
+            updated_utterance=updated_utterance,
+            utterance_metadata=utterance_metadata,
+        )
+      elif action_choice == "remove":
+        self._remove_utterance_metadata(utterance_metadata)
+      elif action_choice == "continue":
+        self.utterance_metadata = utterance_metadata
+        if not self.elevenlabs_clone_voices:
+          assign_voices_choice = self._prompt_for_assign_voices()
+          if assign_voices_choice == "yes":
+            self.run_configure_text_to_speech()
+        self._display_utterance_metadata(self.utterance_metadata)
+        if not self._verify_metadata_after_change():
+          utterance_metadata = self.utterance_metadata
+          continue
+        self._rerun = False
+        return
       else:
         print("Invalid choice.")
 
