@@ -961,25 +961,25 @@ class Dubber:
             utterance_metadata[edit_index]["end"],
         )
         unmodified_text = utterance_metadata[edit_index]["text"]
-        editted_utterance = self._edit_utterance_metadata(
+        edited_utterance = self._edit_utterance_metadata(
             utterance_metadata=utterance_metadata, edit_index=edit_index
         )
         modified_start_end = (
-            editted_utterance["start"],
-            editted_utterance["end"],
+            edited_utterance["start"],
+            edited_utterance["end"],
         )
-        modified_text = editted_utterance["text"]
+        modified_text = edited_utterance["text"]
         if unmodified_start_end != modified_start_end:
-          updated_utterance = self._repopulate_metadata(
-              utterance=editted_utterance
+          edited_utterance = self._repopulate_metadata(
+              utterance=edited_utterance
           )
-        elif unmodified_text != modified_text:
+        if unmodified_text != modified_text:
           translate_choice = self._prompt_for_translation()
           if translate_choice == "yes":
-            updated_utterance = self._run_translation_on_single_utterance(
-                editted_utterance
+            edited_utterance = self._run_translation_on_single_utterance(
+                edited_utterance
             )
-        utterance_metadata[edit_index] = updated_utterance
+        utterance_metadata[edit_index] = edited_utterance
       elif action_choice == "add":
         added_utterance = self._add_utterance_metadata()
         updated_utterance = self._repopulate_metadata(
