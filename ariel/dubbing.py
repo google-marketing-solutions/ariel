@@ -854,12 +854,15 @@ class Dubber:
     """Runs edit index selection process."""
     ask_for_index = True
     while ask_for_index:
-      index = int(input("Enter item number to edit: ")) - 1
-      if not 0 <= index < len(utterance_metadata):
-        print("Invalid item number.")
-      else:
-        ask_for_index = False
-        return index
+      try:
+        index = int(input("Enter item number to edit: ")) - 1
+        if not 0 <= index < len(utterance_metadata):
+          print("Invalid item number.")
+        else:
+          ask_for_index = False
+          return index
+      except ValueError:
+        print("Invalid input format. Please try again.")
 
   def _edit_utterance_metadata(
       self,
