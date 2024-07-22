@@ -809,10 +809,14 @@ class Dubber:
       *,
       updated_utterance: Mapping[str, str | float],
       utterance_metadata: Sequence[Mapping[str, str | float]],
+      edit_index: int | None = None
   ) -> Sequence[Mapping[str, str | float]]:
     """Runs the update process of the added utterance."""
     utterance_metadata_copy = utterance_metadata.copy()
-    utterance_metadata_copy.append(updated_utterance)
+    if edit_index:
+       utterance_metadata_copy[edit_index] = updated_utterance
+    else:
+      utterance_metadata_copy.append(updated_utterance)
     utterance_metadata_copy.sort(key=lambda item: (item["start"], item["end"]))
     added_index = utterance_metadata_copy.index(updated_utterance) + 1
     print(f"Item added / modified at position {added_index}.")
@@ -982,14 +986,18 @@ class Dubber:
             edited_utterance = self._run_translation_on_single_utterance(
                 edited_utterance
             )
-        utterance_metadata[edit_index] = edited_utterance
+        utterance_metadata = self._update_utterance_metadata(
+            updated_utterance=edited_utterance,
+            utterance_metadata=utterance_metadata,
+            edit_index=edit_index,
+        )
       elif action_choice == "add":
         added_utterance = self._add_utterance_metadata()
-        updated_utterance = self._repopulate_metadata(
+        added_utterance = self._repopulate_metadata(
             utterance=added_utterance, modified=False
         )
         utterance_metadata = self._update_utterance_metadata(
-            updated_utterance=updated_utterance,
+            updated_utterance=added_utterance,
             utterance_metadata=utterance_metadata,
         )
       elif action_choice == "remove":
