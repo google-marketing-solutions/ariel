@@ -914,7 +914,6 @@ class Dubber:
 
   def _prompt_for_translation(self) -> str:
     """Prompts the user if they want to run translation."""
-    print("You modified 'text' of the utterance.")
     while True:
       translate_choice = input(
           "\nYou modified 'text' of the utterance. Do you want to run"
