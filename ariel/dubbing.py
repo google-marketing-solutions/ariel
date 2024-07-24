@@ -224,6 +224,7 @@ class Dubber:
       merge_utterances: bool = True,
       minimum_merge_threshold: float = 0.001,
       preferred_voices: Sequence[str] | None = None,
+      adjust_speed: bool = True,
       clean_up: bool = True,
       pyannote_model: str = _DEFAULT_PYANNOTE_MODEL,
       gemini_model_name: str = _DEFAULT_GEMINI_MODEL,
@@ -239,7 +240,6 @@ class Dubber:
       translation_system_instructions: str = _DEFAULT_TRANSLATION_SYSTEM_SETTINGS,
       use_elevenlabs: bool = False,
       elevenlabs_token: str | None = None,
-      elevenlabs_adjust_speed: bool = False,
       elevenlabs_clone_voices: bool = False,
       elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
       number_of_steps: int = _NUMBER_OF_STEPS,
@@ -274,6 +274,9 @@ class Dubber:
         preferred_voices: Preferred voice names for text-to-speech. Use
           high-level names, e.g. 'Wavenet', 'Standard' etc. Do not use the full
           voice names, e.g. 'pl-PL-Wavenet-A' etc.
+        adjust_speed: Whether to force speed up of
+          utterances to match the duration of the utterances in the source
+          language. Recommended when using ElevenLabs and Google's 'Journey' voices.
         clean_up: Whether to delete intermediate files after dubbing. Only the
           final ouput and the utterance metadata will be kept.
         pyannote_model: Name of the PyAnnote diarization model.
@@ -290,9 +293,6 @@ class Dubber:
           Google's Text-To-Speech will be used.
         elevenlabs_token: ElevenLabs API token (can be set via
           'ELEVENLABS_TOKEN' environment variable).
-        elevenlabs_adjust_speed: Whether to either speed up or slow down
-          utterances to match the duration of the utterances in the source
-          language when using Elevenlabs.
         elevenlabs_clone_voices: Whether to clone source voices. It requires
           using ElevenLabs API.
         elevenlabs_model: The ElevenLabs model to use in the Text-To-Speech
@@ -311,13 +311,13 @@ class Dubber:
     self.merge_utterances = merge_utterances
     self.minimum_merge_threshold = minimum_merge_threshold
     self.preferred_voices = preferred_voices
+    self.adjust_speed = adjust_speed
     self.clean_up = clean_up
     self.pyannote_model = pyannote_model
     self.hugging_face_token = hugging_face_token
     self.gemini_token = gemini_token
     self.use_elevenlabs = use_elevenlabs
     self.elevenlabs_token = elevenlabs_token
-    self.elevenlabs_adjust_speed = elevenlabs_adjust_speed
     self._elevenlabs_clone_voices = elevenlabs_clone_voices
     self.elevenlabs_model = elevenlabs_model
     self.diarization_system_instructions = diarization_system_instructions
@@ -1027,8 +1027,8 @@ class Dubber:
         utterance_metadata=self.utterance_metadata,
         output_directory=self.output_directory,
         target_language=self.target_language,
+        adjust_speed=self.adjust_speed,
         use_elevenlabs=self.use_elevenlabs,
-        elevenlabs_adjust_speed=self.elevenlabs_adjust_speed,
         elevenlabs_model=self.elevenlabs_model,
         elevenlabs_clone_voices=self.elevenlabs_clone_voices,
     )

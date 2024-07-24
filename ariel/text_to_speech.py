@@ -454,7 +454,7 @@ def elevenlabs_run_clone_voices(
   return speaker_to_voices_mapping
 
 
-def elevenlabs_adjust_audio_speed(
+def adjust_audio_speed(
     *,
     reference_file: str,
     dubbed_file: str,
@@ -499,8 +499,8 @@ def dub_utterances(
     utterance_metadata: Sequence[Mapping[str, str | float]],
     output_directory: str,
     target_language: str,
+    adjust_speed: bool = True,
     use_elevenlabs: bool = False,
-    elevenlabs_adjust_speed: bool = True,
     elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
     elevenlabs_clone_voices: bool = False,
 ) -> Sequence[Mapping[str, str | float]]:
@@ -515,11 +515,11 @@ def dub_utterances(
         "google_voice_volume_gain_db" and optionally "vocals_path".
       output_directory: Path to the directory for output files.
       target_language: The target language (ISO 3166-1 alpha-2).
+      adjust_speed: Whether to force speed up of
+        utterances to match the duration of the utterances in the source
+        language. Recommended when using ElevenLabs and Google's 'Journey' voices.
       use_elevenlabs: Whether to use ElevenLabs API for Text-To-Speech. If not
         Google's Text-To-Speech will be used.
-      elevenlabs_adjust_speed: Whether to either speed up or slow down
-        utterances to match the duration of the utterances in the source
-        language when using Elevenlabs.
       elevenlabs_model: The ElevenLabs model to use in the Text-To-Speech
         process.
       elevenlabs_clone_voices: Whether to clone source voices. It requires using
@@ -570,14 +570,6 @@ def dub_utterances(
             style=utterance["style"],
             use_speaker_boost=utterance["use_speaker_boost"],
         )
-        if elevenlabs_adjust_speed:
-          chunk_size = utterance_copy.get("chunk_size", _DEFAULT_CHUNK_SIZE)
-          elevenlabs_adjust_audio_speed(
-              reference_file=utterance["path"],
-              dubbed_file=dubbed_path,
-              chunk_size=chunk_size,
-          )
-          utterance_copy["chunk_size"] = chunk_size
       else:
         dubbed_path = convert_text_to_speech(
             client=client,
@@ -589,9 +581,22 @@ def dub_utterances(
             speed=utterance["speed"],
             volume_gain_db=utterance["volume_gain_db"],
         )
-        speed = calculate_target_utterance_speed(
-            reference_file=utterance["path"], dubbed_file=dubbed_path
+      condition_one = adjust_speed and use_elevenlabs
+      assigned_voice = utterance.get("assigned_voice", None)
+      assigned_voice = assigned_voice if assigned_voice else ""
+      condition_two = adjust_speed and "Journey" in assigned_voice
+      speed = calculate_target_utterance_speed(
+          reference_file=utterance["path"], dubbed_file=dubbed_path
+      )
+      if condition_one or condition_two:
+        chunk_size = utterance_copy.get("chunk_size", _DEFAULT_CHUNK_SIZE)
+        adjust_audio_speed(
+            reference_file=utterance["path"],
+            dubbed_file=dubbed_path,
+            chunk_size=chunk_size,
         )
+        utterance_copy["chunk_size"] = chunk_size
+      if speed != 1.0 and not use_elevenlabs and not condition_two:
         utterance_copy["speed"] = speed
         dubbed_path = convert_text_to_speech(
             client=client,

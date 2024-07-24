@@ -100,6 +100,12 @@ _PREFERRED_VOICES = flags.DEFINE_list(
     "Preferred voice names for text-to-speech (e.g., 'Wavenet' for Google's TTS"
     " or 'Calllum' for ElevenLabs).",
 )
+_ADJUST_SPEED = flags.DEFINE_bool(
+    "adjust_speed",
+    True,
+    "Whether to adjust the duration of the dubbed audio files to match the"
+    " duration of the source audio files.",
+)
 _CLEAN_UP = flags.DEFINE_bool(
     "clean_up",
     False,
@@ -141,12 +147,6 @@ _ELEVENLABS_TOKEN = flags.DEFINE_string(
     None,
     "ElevenLabs API token.",
 )
-_ELEVENLABS_ADJUST_SPEED = flags.DEFINE_bool(
-    "elevenlabs_adjust_speed",
-    False,
-    "Whether to adjust the duration of the dubbed audio files to match the"
-    " duration of the source audio files.",
-)
 _ELEVENLABS_CLONE_VOICES = flags.DEFINE_bool(
     "elevenlabs_clone_voices",
     False,
@@ -176,6 +176,7 @@ def main(argv: Sequence[str]) -> None:
       merge_utterances=_MERGE_UTTERANCES.value,
       minimum_merge_threshold=_MINIMUM_MERGE_THRESHOLD.value,
       preferred_voices=_PREFERRED_VOICES.value,
+      adjust_speed=_ADJUST_SPEED.value,
       clean_up=_CLEAN_UP.value,
       gemini_model_name=_GEMINI_MODEL_NAME.value,
       temperature=_TEMPERATURE.value,
@@ -184,7 +185,6 @@ def main(argv: Sequence[str]) -> None:
       max_output_tokens=_MAX_OUTPUT_TOKENS.value,
       use_elevenlabs=_USE_ELEVENLABS.value,
       elevenlabs_token=_ELEVENLABS_TOKEN.value,
-      elevenlabs_adjust_speed=_ELEVENLABS_ADJUST_SPEED.value,
       elevenlabs_clone_voices=_ELEVENLABS_CLONE_VOICES.value,
   )
   dubber.dub_ad()
