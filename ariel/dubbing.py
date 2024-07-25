@@ -79,8 +79,14 @@ _DEFAULT_GEMINI_SAFETY_SETTINGS: Final[
 }
 _DEFAULT_DIARIZATION_SYSTEM_SETTINGS: Final[str] = "diarization.txt"
 _DEFAULT_TRANSLATION_SYSTEM_SETTINGS: Final[str] = "translation.txt"
+_DEFAULT_EDIT_TRANSLATION_SYSTEM_SETTINGS: Final[str] = "edit_translation.txt"
 _NUMBER_OF_STEPS: Final[int] = 7
 _MAX_GEMINI_RETRIES: Final[int] = 5
+_EDIT_TRANSLATION_PROMPT: Final[str] = (
+    "You were hired by a company called: '{}'. The received script was: '{}'."
+    " You translated it as: '{}'. The target language was: '{}'. The company"
+    " asks you to modify this translation: '{}'"
+)
 
 
 def is_video(*, input_file: str) -> bool:
@@ -274,9 +280,9 @@ class Dubber:
         preferred_voices: Preferred voice names for text-to-speech. Use
           high-level names, e.g. 'Wavenet', 'Standard' etc. Do not use the full
           voice names, e.g. 'pl-PL-Wavenet-A' etc.
-        adjust_speed: Whether to force speed up of
-          utterances to match the duration of the utterances in the source
-          language. Recommended when using ElevenLabs and Google's 'Journey' voices.
+        adjust_speed: Whether to force speed up of utterances to match the
+          duration of the utterances in the source language. Recommended when
+          using ElevenLabs and Google's 'Journey' voices.
         clean_up: Whether to delete intermediate files after dubbing. Only the
           final ouput and the utterance metadata will be kept.
         pyannote_model: Name of the PyAnnote diarization model.
@@ -506,6 +512,13 @@ class Dubber:
     """Reads and caches translation system instructions."""
     return read_system_settings(
         system_instructions=self.translation_system_instructions
+    )
+
+  @functools.cached_property
+  def processed_edit_translation_system_instructions(self) -> str:
+    """Reads and caches system instructions for the edit translation process."""
+    return read_system_settings(
+        system_instructions=_DEFAULT_EDIT_TRANSLATION_SYSTEM_SETTINGS
     )
 
   @functools.cached_property
@@ -809,12 +822,12 @@ class Dubber:
       *,
       updated_utterance: Mapping[str, str | float],
       utterance_metadata: Sequence[Mapping[str, str | float]],
-      edit_index: int | None = None
+      edit_index: int | None = None,
   ) -> Sequence[Mapping[str, str | float]]:
     """Runs the update process of the added utterance."""
     utterance_metadata_copy = utterance_metadata.copy()
     if edit_index:
-       utterance_metadata_copy[edit_index] = updated_utterance
+      utterance_metadata_copy[edit_index] = updated_utterance
     else:
       utterance_metadata_copy.append(updated_utterance)
     utterance_metadata_copy.sort(key=lambda item: (item["start"], item["end"]))
@@ -949,6 +962,69 @@ class Dubber:
       else:
         print("Invalid choice.")
 
+  def _prompt_for_gemini_translation_chat(self) -> str:
+    """Prompts the user if they want to chat with Gemini about a translation."""
+    while True:
+      gemini_translation_chat_choice = input(
+          "\nWould you like to chat with Gemini about a translation? (yes/no): "
+      ).lower()
+      if gemini_translation_chat_choice in ("yes", "no"):
+        return gemini_translation_chat_choice
+      else:
+        print("Invalid choice.")
+
+  def _translate_utterance_with_gemini(
+      self,
+      *,
+      utterance_metadata: Sequence[Mapping[str, str | float]],
+      edit_index: int,
+  ) -> Mapping[str, str | float]:
+    """Fixes the translation incorporating user feedback received from the chat with Gemini"""
+    script = translation.generate_script(utterance_metadata=utterance_metadata)
+    translated_script = translation.generate_script(
+        utterance_metadata=utterance_metadata, key="translated_text"
+    )
+    edited_utterance = utterance_metadata[edit_index].copy()
+    source_text = edited_utterance["text"]
+    discussed_translation = edited_utterance["translated_text"]
+    edit_translation_model = self.configure_gemini_model(
+        system_instructions=self.processed_edit_translation_system_instructions
+    )
+    background_prompt = _EDIT_TRANSLATION_PROMPT.format(
+        self.advertiser_name,
+        script,
+        translated_script,
+        self.target_language,
+        discussed_translation,
+    )
+    edit_translation_chat_session = edit_translation_model.start_chat()
+    turn = 0
+    continue_chat = True
+    updated_translation = discussed_translation
+    print(f"The source text is: {source_text}")
+    print(f"The initial translation is: {discussed_translation}")
+    while continue_chat:
+      user_message = input(
+          "Type your message to Gemini about the translation. Or type in 'exit'"
+          " to approve the translation and to exit the chat: "
+      ).lower()
+      if user_message != "exit":
+        if turn == 0:
+          prompt = background_prompt + " " + "User feedback: " + user_message
+        else:
+          prompt = user_message
+        response = edit_translation_chat_session.send_message(prompt)
+        updated_translation = response.text.replace("\n", "")
+        print(f"The updated translation is: '{updated_translation}'.")
+      else:
+        continue_chat = False
+    try:
+      edit_translation_chat_session.rewind()
+    except IndexError:
+      pass
+    edited_utterance["translated_text"] = updated_translation
+    return edited_utterance
+
   def _run_verify_utterance_metadata(self) -> None:
     """Displays, allows editing, addig and removing utterance metadata."""
     utterance_metadata = self.utterance_metadata
@@ -967,9 +1043,17 @@ class Dubber:
             utterance_metadata[edit_index]["end"],
         )
         unmodified_text = utterance_metadata[edit_index]["text"]
-        edited_utterance = self._edit_utterance_metadata(
-            utterance_metadata=utterance_metadata, edit_index=edit_index
+        gemini_translation_chat_choice = (
+            self._prompt_for_gemini_translation_chat()
         )
+        if gemini_translation_chat_choice == "yes":
+          edited_utterance = self._translate_utterance_with_gemini(
+              utterance_metadata=utterance_metadata, edit_index=edit_index
+          )
+        else:
+          edited_utterance = self._edit_utterance_metadata(
+              utterance_metadata=utterance_metadata, edit_index=edit_index
+          )
         modified_start_end = (
             edited_utterance["start"],
             edited_utterance["end"],

@@ -27,7 +27,9 @@ _DONT_TRANSLATE_MARKER: Final[str] = "<DO NOT TRANSLATE>"
 
 
 def generate_script(
+    *,
     utterance_metadata,
+    key: str = "text"
 ) -> str:
   """Generates a script string from a list of utterance metadata.
 
@@ -35,13 +37,14 @@ def generate_script(
     utterance_metadata: The sequence of mappings, where each mapping represents
       utterance metadata with "text", "start", "end", "speaker_id",
       "ssml_gender", "for_dubbing" keys.
+    key: The key to use when searching for the strings for the script.
 
   Returns:
     A string representing the script, with "<BREAK>" inserted
     between chunks.
   """
   trimmed_lines = [
-      item["text"].strip() if item["text"] else ""
+      item[key].strip() if item[key] else ""
       for item in utterance_metadata
   ]
   return _BREAK_MARKER + _BREAK_MARKER.join(trimmed_lines) + _BREAK_MARKER
