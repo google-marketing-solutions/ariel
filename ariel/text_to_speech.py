@@ -483,7 +483,7 @@ def adjust_audio_speed(
   if speed <= 1.0:
     return
   logging.warning(
-      "Adjusting volume will prevent overlaps of utterances. However,"
+      "Adjusting audio speed will prevent overlaps of utterances. However,"
       " it might change the voice sligthly."
   )
   crossfade = max(1, chunk_size // 2)

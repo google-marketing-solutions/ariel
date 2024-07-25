@@ -1014,8 +1014,9 @@ class Dubber:
         else:
           prompt = user_message
         response = edit_translation_chat_session.send_message(prompt)
-        updated_translation = response.text.replace("\n", "")
+        updated_translation = response.text.replace("\n", "").strip()
         print(f"The updated translation is: '{updated_translation}'.")
+        turn += 1
       else:
         continue_chat = False
     try:
