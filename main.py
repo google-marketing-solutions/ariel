@@ -152,7 +152,11 @@ _ELEVENLABS_CLONE_VOICES = flags.DEFINE_bool(
     False,
     "Whether to clone source voices. It requires using ElevenLabs API.",
 )
-
+_WITH_VERIFICATION = flags.DEFINE_bool(
+    "with_verification",
+    True,
+    "Verify, and optionally edit, the utterance metadata in the dubbing process.",
+)
 
 
 def main(argv: Sequence[str]) -> None:
@@ -186,6 +190,7 @@ def main(argv: Sequence[str]) -> None:
       use_elevenlabs=_USE_ELEVENLABS.value,
       elevenlabs_token=_ELEVENLABS_TOKEN.value,
       elevenlabs_clone_voices=_ELEVENLABS_CLONE_VOICES.value,
+      with_verification=_WITH_VERIFICATION.value,
   )
   dubber.dub_ad()
 

@@ -87,6 +87,19 @@ _EDIT_TRANSLATION_PROMPT: Final[str] = (
     " You translated it as: '{}'. The target language was: '{}'. The company"
     " asks you to modify this translation: '{}'"
 )
+_REQUIRED_KEYS: Final[set] = {"text", "start", "end"}
+_COMPATIBLE_SSML_GENDERS: Final[set] = {"Male", "Female"}
+_REQUIRED_GOOGLE_TTS_PARAMETERS: Final[set] = {
+    "pitch",
+    "speed",
+    "volume_gain_db",
+}
+_REQUIRED_ELEVENLABS_PARAMETERS: Final[set] = {
+    "stability",
+    "similarity_boost",
+    "style",
+    "use_speaker_boost",
+}
 
 
 def is_video(*, input_file: str) -> bool:
@@ -167,10 +180,10 @@ class PreprocessingArtifacts:
         vocals.
   """
 
-  video_file: str
+  video_file: str | None
   audio_file: str
-  audio_vocals_file: str
-  audio_background_file: str
+  audio_vocals_file: str | None = None
+  audio_background_file: str | None = None
 
 
 @dataclasses.dataclass
@@ -208,6 +221,175 @@ class ElevenLabsAccessError(Exception):
   """Error when establishing access to ElevenLabs API."""
 
   pass
+
+
+def _add_items_to_dictionaries(
+    *,
+    utterance_metadata: Sequence[Mapping[str, str | float]],
+    items: Sequence[str],
+    key: str | None = None,
+):
+  """Adds items from a list to the utterance metadata.
+
+  Args:
+      utterance_metadata: The list of the source mappings.
+      items: The list of items to add.
+      key: The key to use for the new item in each dictionary if items are not
+        dictionaries.
+
+  Returns:
+      An updated sequence with utterance metadata.
+
+  Raises:
+      ValueError: If the lengths of utterance metadata and items are not equal.
+  """
+  utterance_metadata_length = len(utterance_metadata)
+  items_length = len(items)
+  if utterance_metadata_length != items_length:
+    raise ValueError(
+        f"The number of dictionaries for the key '{key}' and items must be"
+        f" equal. Received: {utterance_metadata_length} and"
+        f" {items_length} respectively."
+    )
+  updated_utterance_metadata = []
+  for dictionary, item in zip(utterance_metadata, items):
+    dictionary_copy = dictionary.copy()
+    if isinstance(item, dict):
+      dictionary_copy.update(item)
+    else:
+      dictionary_copy[key] = item
+    updated_utterance_metadata.append(dictionary_copy)
+  return updated_utterance_metadata
+
+
+def _verify_dictionary(
+    *,
+    dictionary_to_verify: Sequence[Mapping[str, str | float]],
+    required_keys: set,
+) -> None:
+  """Verifies the completeness of a dictionary.
+
+  Args:
+      dictionary_to_verify: A sequence of dictionaries to verify.
+      required_keys: A set of strings representing the mandatory keys expected
+        in each parameter dictionary.
+
+  Raises:
+      KeyError: If any dictionary within `dictionary_to_verify` is missing one
+      or more of the `required_keys`.
+  """
+  for dictionary in dictionary_to_verify:
+    missing_keys = required_keys - set(dictionary.keys())
+    if missing_keys:
+      raise KeyError(
+          f"Dictionary is missing keys: {missing_keys}. Problematic dictionary:"
+          f" {dictionary}"
+      )
+
+
+def assemble_utterance_metadata_for_dubbing_from_script(
+    *,
+    script_with_timestamps: Sequence[Mapping[str, str | float]],
+    assigned_voice: str | Sequence[str],
+    use_elevenlabs: bool = False,
+    google_text_to_speech_parameters: (
+        Mapping[str, str | float] | Sequence[Mapping[str, str | float]] | None
+    ) = {"pitch": -5.0, "speed": 1.0, "volume_gain_db": 16.0},
+    elevenlabs_text_to_speech_parameters: (
+        Mapping[str, str | float] | Sequence[Mapping[str, str | float]] | None
+    ) = {
+        "stability": 0.5,
+        "similarity_boost": 0.75,
+        "style": 0.0,
+        "use_speaker_boost": True,
+    },
+):
+  """Assembles utterance metadata for dubbing based on a script with timestamps.
+
+  This function takes a script with timestamps, voice assignments, and other
+  parameters to create a structured metadata representation suitable for dubbing
+  tasks. It validates the input data, adds necessary fields, and handles
+  different text-to-speech (TTS) configurations.
+
+  Args:
+      script_with_timestamps: A sequence of dictionaries, each containing
+        information about an utterance in the script: - "text": The text of the
+        utterance. - "start": The start time of the utterance (in seconds). -
+        "end": The end time of the utterance (in seconds).
+      assigned_voice: The name of the assigned voice (or a list of names if each
+        utterance has a different voice).
+      use_elevenlabs: If True, use ElevenLabs TTS parameters; otherwise, use
+        Google TTS parameters.
+      google_text_to_speech_parameters: A dictionary or list of dictionaries
+        with Google TTS parameters (only used if `use_elevenlabs` is False).
+      elevenlabs_text_to_speech_parameters: A dictionary or list of dictionaries
+        with ElevenLabs TTS parameters (only used if `use_elevenlabs` is True).
+
+  Returns:
+      A sequence of dictionaries, each containing enriched metadata for an
+      utterance:
+          - All keys from the original `script_with_timestamps` dictionaries.
+          - "for_dubbing": Always set to True.
+          - "assigned_voice": The assigned voice name.
+          - Additional TTS parameters based on the `use_elevenlabs` flag and the
+          corresponding parameter dictionaries.
+
+  Raises:
+      KeyError: If a dictionary in `script_with_timestamps` is missing "text",
+      "start", or "end" keys.
+      KeyError: If the specified TTS parameter dictionary is missing required
+      keys.
+
+  Example:
+      ```python
+      script = [
+          {"text": "Hello, world!", "start": 0.0, "end": 1.5},
+          {"text": "This is a test.", "start": 2.0, "end": 3.8},
+      ]
+      metadata = assemble_utterance_metadata_for_dubbing_from_script(
+          script_with_timestamps=script,
+          assigned_voice=["Alice", "Bob"],
+          use_elevenlabs=False,
+          google_text_to_speech_parameters=[{"pitch": -2.0}, {"speed": 0.9}],
+      )
+      print(metadata)
+      ```
+  """
+  _verify_dictionary(
+      dictionary_to_verify=script_with_timestamps, required_keys=_REQUIRED_KEYS
+  )
+  number_of_utterances = len(script_with_timestamps)
+  for_dubbing = [True] * number_of_utterances
+  utterance_metadata_with_for_dubbing = _add_items_to_dictionaries(
+      utterance_metadata=script_with_timestamps,
+      items=for_dubbing,
+      key="for_dubbing",
+  )
+  if not isinstance(assigned_voice, list):
+    assigned_voice = [assigned_voice] * number_of_utterances
+  utterance_metadata_with_assigned_voice = _add_items_to_dictionaries(
+      utterance_metadata=utterance_metadata_with_for_dubbing,
+      items=assigned_voice,
+      key="assigned_voice",
+  )
+  if use_elevenlabs:
+    text_to_speech_parameters = elevenlabs_text_to_speech_parameters
+    required_keys = _REQUIRED_ELEVENLABS_PARAMETERS
+  else:
+    text_to_speech_parameters = google_text_to_speech_parameters
+    required_keys = _REQUIRED_GOOGLE_TTS_PARAMETERS
+  if not isinstance(text_to_speech_parameters, list):
+    text_to_speech_parameters = [
+        text_to_speech_parameters
+    ] * number_of_utterances
+  _verify_dictionary(
+      dictionary_to_verify=text_to_speech_parameters,
+      required_keys=required_keys,
+  )
+  return _add_items_to_dictionaries(
+      utterance_metadata=utterance_metadata_with_assigned_voice,
+      items=text_to_speech_parameters,
+  )
 
 
 class Dubber:
@@ -249,6 +431,7 @@ class Dubber:
       elevenlabs_clone_voices: bool = False,
       elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
       number_of_steps: int = _NUMBER_OF_STEPS,
+      with_verification: bool = True,
   ) -> None:
     """Initializes the Dubber class with various parameters for dubbing configuration.
 
@@ -304,6 +487,8 @@ class Dubber:
         elevenlabs_model: The ElevenLabs model to use in the Text-To-Speech
           process.
         number_of_steps: The total number of steps in the dubbing process.
+        with_verification: Whether a user wishes to verify, and optionally edit,
+          the utterance metadata in the dubbing process.
     """
     self.input_file = input_file
     self.output_directory = output_directory
@@ -337,6 +522,7 @@ class Dubber:
     self.safety_settings = safety_settings
     self.utterance_metadata = None
     self._number_of_steps = number_of_steps
+    self.with_verification = with_verification
     self._rerun = False
 
   @functools.cached_property
@@ -609,6 +795,25 @@ class Dubber:
     )
     logging.info("Completed preprocessing.")
     self.progress_bar.update()
+
+  def run_preprocessing_for_dubbing_from_script(self) -> None:
+    """Splits audio/video.
+
+    Returns:
+        A named tuple containing paths and metadata of the processed files.
+    """
+    if self.is_video:
+      video_file, audio_file = video_processing.split_audio_video(
+          video_file=self.input_file, output_directory=self.output_directory
+      )
+    else:
+      video_file = None
+      audio_file = self.input_file
+
+    self.preprocesing_output = PreprocessingArtifacts(
+        video_file=video_file,
+        audio_file=audio_file,
+    )
 
   def run_speech_to_text(self) -> None:
     """Transcribes audio, applies speaker diarization, and updates metadata with Gemini.
@@ -1130,11 +1335,15 @@ class Dubber:
 
     dubbed_audio_vocals_file = audio_processing.insert_audio_at_timestamps(
         utterance_metadata=self.utterance_metadata,
-        background_audio_file=self.preprocesing_output.audio_background_file,
+        background_audio_file=self.preprocesing_output.audio_background_file
+        if self.preprocesing_output.audio_background_file
+        else self.preprocesing_output.audio_file,
         output_directory=self.output_directory,
     )
     dubbed_audio_file = audio_processing.merge_background_and_vocals(
-        background_audio_file=self.preprocesing_output.audio_background_file,
+        background_audio_file=self.preprocesing_output.audio_background_file
+        if self.preprocesing_output.audio_background_file
+        else self.preprocesing_output.audio_file,
         dubbed_vocals_audio_file=dubbed_audio_vocals_file,
         output_directory=self.output_directory,
         target_language=self.target_language,
@@ -1225,7 +1434,8 @@ class Dubber:
     self.run_speech_to_text()
     self.run_translation()
     self.run_configure_text_to_speech()
-    self._run_verify_utterance_metadata()
+    if self.with_verification:
+      self._run_verify_utterance_metadata()
     self.run_text_to_speech()
     self.run_save_utterance_metadata()
     self.run_postprocessing()
@@ -1278,7 +1488,8 @@ class Dubber:
         "The class utterance metadata was overwritten with the provided input."
     )
     self._rerun = True
-    self._run_verify_utterance_metadata()
+    if self.with_verification:
+      self._run_verify_utterance_metadata()
     self.run_text_to_speech()
     self.run_postprocessing()
     logging.info("Dubbing process finished.")
@@ -1313,9 +1524,89 @@ class Dubber:
     self._rerun = True
     self.run_translation()
     self.run_configure_text_to_speech()
-    self._run_verify_utterance_metadata()
+    if self.with_verification:
+      self._run_verify_utterance_metadata()
     self.run_text_to_speech()
     self.run_save_utterance_metadata()
+    self.run_postprocessing()
+    logging.info("Dubbing process finished.")
+    logging.info("Output files saved in: %s.", self.output_directory)
+    return self.postprocessing_output
+
+  def dub_ad_from_script(
+      self,
+      *,
+      script_with_timestamps: Sequence[Mapping[str, str | float]],
+      assigned_voice: str | Sequence[str],
+      google_text_to_speech_parameters: (
+          Mapping[str, str | float] | Sequence[Mapping[str, str | float]]
+      ) = {"pitch": -5.0, "speed": 1.0, "volume_gain_db": 16.0},
+      elevenlabs_text_to_speech_parameters: (
+          Mapping[str, str | float] | Sequence[Mapping[str, str | float]]
+      ) = {
+          "stability": 0.5,
+          "similarity_boost": 0.75,
+          "style": 0.0,
+          "use_speaker_boost": True,
+      },
+  ) -> PostprocessingArtifacts:
+    """Orchestrates the complete ad dubbing process from a script with timestamps.
+
+    This method takes a script with timestamps, assigns voices, and performs the
+    following steps:
+
+    1. Prepares utterance metadata for dubbing based on the script.
+    2. Runs preprocessing steps on the script.
+    3. Performs translation of the script if necessary.
+    4. Verifies utterance metadata (optional).
+    5. Synthesizes speech using either Google Text-to-Speech or ElevenLabs.
+    6. Executes post-processing tasks on the synthesized speech.
+
+    Args:
+        script_with_timestamps: A sequence of mappings detailing each
+          utterance's metadata. Each mapping should contain: * 'start', 'end':
+          Utterance start/end times in seconds (float). * 'text': The text
+          content of the utterance.
+        assigned_voice: The name of the assigned voice(s) for the utterances
+          (either a single string or a sequence of strings).
+        google_text_to_speech_parameters: Parameters for Google Text-to-Speech
+          synthesis.
+        elevenlabs_text_to_speech_parameters: Parameters for ElevenLabs
+          Text-to-Speech synthesis.
+
+    Returns:
+        PostprocessingArtifacts: An object containing the post-processed dubbing
+        results.
+    """
+
+    logging.info("Dubbing process from script starting...")
+    if self.use_elevenlabs and self.elevenlabs_clone_voices:
+      logging.warning(
+          "Voices won't be cloned when dubbing from script. You can only use"
+          " off-the-shelf voices (e.g. 'Charlie') from ElevenLabs."
+      )
+      self.elevenlabs_clone_voices = False
+    self.utterance_metadata = assemble_utterance_metadata_for_dubbing_from_script(
+        script_with_timestamps=script_with_timestamps,
+        assigned_voice=assigned_voice,
+        use_elevenlabs=self.use_elevenlabs,
+        google_text_to_speech_parameters=google_text_to_speech_parameters,
+        elevenlabs_text_to_speech_parameters=elevenlabs_text_to_speech_parameters,
+    )
+    self._rerun = True
+    self.run_preprocessing_for_dubbing_from_script()
+    if self.original_language != self.target_language:
+      self.run_translation()
+    else:
+      updated_utterance_metadata = []
+      for utterance in self.utterance_metadata:
+          utterance_copy = utterance.copy()
+          utterance_copy["translated_text"] = utterance_copy["text"]
+          updated_utterance_metadata.append(utterance_copy)
+          self.utterance_metadata = updated_utterance_metadata
+    if self.with_verification:
+      self._run_verify_utterance_metadata()
+    self.run_text_to_speech()
     self.run_postprocessing()
     if self.clean_up:
       self.run_clean_directory()

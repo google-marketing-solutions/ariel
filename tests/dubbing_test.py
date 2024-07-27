@@ -73,5 +73,96 @@ class TestReadSystemSettings(absltest.TestCase):
       dubbing.read_system_settings("nonexistent.txt")
 
 
+class TestAssembleUtteranceMetadata(parameterized.TestCase):
+
+  @parameterized.named_parameters(
+      (
+          "Basic Case",
+          [
+              {"text": "Hello there!", "start": 0.0, "end": 2.5},
+              {"text": "How are you?", "start": 3.0, "end": 5.2},
+          ],
+          "John Doe",
+          False,
+          {"pitch": -3.0, "speed": 1.2, "volume_gain_db": 10.0},
+          None,
+          [
+              {
+                  "text": "Hello there!",
+                  "start": 0.0,
+                  "end": 2.5,
+                  "for_dubbing": True,
+                  "assigned_voice": "John Doe",
+                  "pitch": -3.0,
+                  "speed": 1.2,
+                  "volume_gain_db": 10.0,
+              },
+              {
+                  "text": "How are you?",
+                  "start": 3.0,
+                  "end": 5.2,
+                  "for_dubbing": True,
+                  "assigned_voice": "John Doe",
+                  "pitch": -3.0,
+                  "speed": 1.2,
+                  "volume_gain_db": 10.0,
+              },
+          ],
+      ),
+      (
+          "ElevenLabs Case",
+          [
+              {"text": "This is for ElevenLabs", "start": 0.0, "end": 2.0},
+          ],
+          "David",
+          True,
+          None,
+          {
+              "stability": 0.6,
+              "similarity_boost": 0.8,
+              "style": 0.2,
+              "use_speaker_boost": False,
+          },
+          [{
+              "text": "This is for ElevenLabs",
+              "start": 0.0,
+              "end": 2.0,
+              "for_dubbing": True,
+              "assigned_voice": "David",
+              "stability": 0.6,
+              "similarity_boost": 0.8,
+              "style": 0.2,
+              "use_speaker_boost": False,
+          }],
+      ),
+  )
+  def test_assemble_utterance_metadata(
+      self,
+      script_with_timestamps,
+      assigned_voice,
+      use_elevenlabs,
+      google_text_to_speech_parameters,
+      elevenlabs_text_to_speech_parameters,
+      expected_output,
+  ):
+    result = dubbing.assemble_utterance_metadata_for_dubbing_from_script(
+        script_with_timestamps=script_with_timestamps,
+        assigned_voice=assigned_voice,
+        use_elevenlabs=use_elevenlabs,
+        google_text_to_speech_parameters=google_text_to_speech_parameters,
+        elevenlabs_text_to_speech_parameters=elevenlabs_text_to_speech_parameters,
+    )
+    self.assertEqual(result, expected_output)
+
+  def test_missing_key_raises_key_error(self):
+    with self.assertRaises(KeyError):
+      dubbing.assemble_utterance_metadata_for_dubbing_from_script(
+          script_with_timestamps=[
+              {"text": "This is incomplete", "start": 1.0},
+          ],
+          assigned_voice="Jane Smith",
+      )
+
+
 if __name__ == "__main__":
   absltest.main()

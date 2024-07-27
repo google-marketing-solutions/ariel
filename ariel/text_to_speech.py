@@ -338,21 +338,19 @@ def convert_text_to_speech(
 
 def calculate_target_utterance_speed(
     *,
-    reference_file: str,
+    reference_length: float,
     dubbed_file: str,
 ) -> float:
   """Returns the ratio between the reference and target duration.
 
   Args:
-      reference_file: The path to the reference MP3 file.
+      reference_length: The reference length of an audio chunk.
       dubbed_file: The path to the dubbed MP3 file.
   """
 
-  reference_audio = AudioSegment.from_file(reference_file)
   dubbed_audio = AudioSegment.from_file(dubbed_file)
-  reference_duration = reference_audio.duration_seconds
   dubbed_duration = dubbed_audio.duration_seconds
-  return dubbed_duration / reference_duration
+  return dubbed_duration / reference_length
 
 
 def elevenlabs_convert_text_to_speech(
@@ -456,7 +454,7 @@ def elevenlabs_run_clone_voices(
 
 def adjust_audio_speed(
     *,
-    reference_file: str,
+    reference_length: float,
     dubbed_file: str,
     speed: float | None = None,
     chunk_size: int = _DEFAULT_CHUNK_SIZE,
@@ -467,7 +465,7 @@ def adjust_audio_speed(
   is the same or shorter than the duration of the reference file.
 
   Args:
-      reference_file: The path to the reference MP3 file.
+      reference_length: The reference length of an audio chunk.
       dubbed_file: The path to the dubbed MP3 file.
       speed: The desired speed in seconds. If None it will be determined based
         on the duration of the reference_file and dubbed_file.
@@ -478,7 +476,7 @@ def adjust_audio_speed(
   dubbed_audio = AudioSegment.from_file(dubbed_file)
   if not speed:
     speed = calculate_target_utterance_speed(
-        reference_file=reference_file, dubbed_file=dubbed_file
+        reference_length=reference_length, dubbed_file=dubbed_file
     )
   if speed <= 1.0:
     return
@@ -545,19 +543,28 @@ def dub_utterances(
   updated_utterance_metadata = []
   for utterance in utterance_metadata:
     utterance_copy = utterance.copy()
-    if not utterance["for_dubbing"]:
-      dubbed_path = utterance["path"]
+    if not utterance_copy["for_dubbing"]:
+      try:
+        dubbed_path = utterance_copy["path"]
+      except KeyError:
+        dubbed_path = f"chunk_{utterance['start']}_{utterance['end']}.mp3"
     else:
       if elevenlabs_clone_voices:
-        assigned_voice = speaker_to_voices_mapping[utterance["speaker_id"]]
+        assigned_voice = speaker_to_voices_mapping[utterance_copy["speaker_id"]]
       else:
-        assigned_voice = utterance["assigned_voice"]
-      path = utterance["path"]
-      text = utterance["translated_text"]
-      base_filename = os.path.splitext(os.path.basename(path))[0]
-      output_filename = os.path.join(
-          output_directory, f"dubbed_{base_filename}.mp3"
-      )
+        assigned_voice = utterance_copy["assigned_voice"]
+      reference_length = utterance_copy["end"] - utterance_copy["start"]
+      text = utterance_copy["translated_text"]
+      try:
+        path = utterance_copy["path"]
+        base_filename = os.path.splitext(os.path.basename(path))[0]
+        output_filename = os.path.join(
+            output_directory, f"dubbed_{base_filename}.mp3"
+        )
+      except KeyError:
+        output_filename = os.path.join(
+            output_directory, f"dubbed_chunk_{utterance['start']}_{utterance['end']}.mp3"
+        )
       if use_elevenlabs:
         dubbed_path = elevenlabs_convert_text_to_speech(
             client=client,
@@ -565,10 +572,10 @@ def dub_utterances(
             assigned_elevenlabs_voice=assigned_voice,
             output_filename=output_filename,
             text=text,
-            stability=utterance["stability"],
-            similarity_boost=utterance["similarity_boost"],
-            style=utterance["style"],
-            use_speaker_boost=utterance["use_speaker_boost"],
+            stability=utterance_copy["stability"],
+            similarity_boost=utterance_copy["similarity_boost"],
+            style=utterance_copy["style"],
+            use_speaker_boost=utterance_copy["use_speaker_boost"],
         )
       else:
         dubbed_path = convert_text_to_speech(
@@ -577,21 +584,21 @@ def dub_utterances(
             target_language=target_language,
             output_filename=output_filename,
             text=text,
-            pitch=utterance["pitch"],
-            speed=utterance["speed"],
-            volume_gain_db=utterance["volume_gain_db"],
+            pitch=utterance_copy["pitch"],
+            speed=utterance_copy["speed"],
+            volume_gain_db=utterance_copy["volume_gain_db"],
         )
       condition_one = adjust_speed and use_elevenlabs
-      assigned_voice = utterance.get("assigned_voice", None)
+      assigned_voice = utterance_copy.get("assigned_voice", None)
       assigned_voice = assigned_voice if assigned_voice else ""
       condition_two = adjust_speed and "Journey" in assigned_voice
       speed = calculate_target_utterance_speed(
-          reference_file=utterance["path"], dubbed_file=dubbed_path
+          reference_length=reference_length, dubbed_file=dubbed_path
       )
       if condition_one or condition_two:
         chunk_size = utterance_copy.get("chunk_size", _DEFAULT_CHUNK_SIZE)
         adjust_audio_speed(
-            reference_file=utterance["path"],
+            reference_length=reference_length,
             dubbed_file=dubbed_path,
             chunk_size=chunk_size,
         )
@@ -604,9 +611,9 @@ def dub_utterances(
             target_language=target_language,
             output_filename=output_filename,
             text=text,
-            pitch=utterance["pitch"],
+            pitch=utterance_copy["pitch"],
             speed=speed,
-            volume_gain_db=utterance["volume_gain_db"],
+            volume_gain_db=utterance_copy["volume_gain_db"],
         )
     utterance_copy["dubbed_path"] = dubbed_path
     updated_utterance_metadata.append(utterance_copy)
