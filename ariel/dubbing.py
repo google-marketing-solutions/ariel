@@ -809,7 +809,6 @@ class Dubber:
     else:
       video_file = None
       audio_file = self.input_file
-
     self.preprocesing_output = PreprocessingArtifacts(
         video_file=video_file,
         audio_file=audio_file,
@@ -1606,7 +1605,9 @@ class Dubber:
           self.utterance_metadata = updated_utterance_metadata
     if self.with_verification:
       self._run_verify_utterance_metadata()
+      self._rerun = True
     self.run_text_to_speech()
+    self.run_save_utterance_metadata()
     self.run_postprocessing()
     if self.clean_up:
       self.run_clean_directory()
