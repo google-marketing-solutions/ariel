@@ -1058,7 +1058,11 @@ class Dubber:
   def _add_utterance_metadata(self) -> Mapping[str, str | float]:
     """Allows adding a new utterance metadata entry, prompting for each field."""
     new_utterance = {}
-    for field in ["start", "end", "speaker_id", "ssml_gender"]:
+    if self.elevenlabs_clone_voices:
+      required_fields = ["start", "end", "speaker_id", "ssml_gender"]
+    else:
+      required_fields = ["start", "end", "speaker_id", "ssml_gender", "assigned_voice"]
+    for field in required_fields:
       while True:
         try:
           value = input(f"Enter value for '{field}': ")
