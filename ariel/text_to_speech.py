@@ -233,6 +233,48 @@ def elevenlabs_assign_voices(
   return voice_assignment
 
 
+def add_text_to_speech_properties(
+    *,
+    utterance_metadata: Mapping[str, str | float],
+    use_elevenlabs: bool = False,
+) -> Mapping[str, str | float]:
+  """Updates utterance metadata with Text-To-Speech properties.
+
+  Args:
+      utterance_metadata: A sequence of utterance metadata, each represented as
+        a dictionary with keys: "text", "start", "end", "speaker_id",
+        "ssml_gender", "translated_text", "for_dubbing", "path" and optionally
+        "vocals_path".
+      use_elevenlabs: An indicator whether Eleven Labs API will be used in the
+        Text-To-Speech proecess.
+
+  Returns:
+      Sequence of updated utterance metadata dictionaries.
+  """
+  utterance_metadata_copy = utterance_metadata.copy()
+  if not use_elevenlabs:
+    ssml_gender = utterance_metadata_copy.get("ssml_gender")
+    pitch = (
+        _DEFAULT_SSML_FEMALE_PITCH
+        if ssml_gender == "Female"
+        else _DEFAULT_SSML_MALE_PITCH
+    )
+    voice_properties = dict(
+        pitch=pitch,
+        speed=_DEFAULT_SPEED,
+        volume_gain_db=_DEFAULT_VOLUME_GAIN_DB,
+    )
+  else:
+    voice_properties = dict(
+        stability=_DEFAULT_STABILITY,
+        similarity_boost=_DEFAULT_SIMILARITY_BOOST,
+        style=_DEFAULT_STYLE,
+        use_speaker_boost=_DEFAULT_USE_SPEAKER_BOOST,
+    )
+  utterance_metadata_copy.update(voice_properties)
+  return utterance_metadata_copy
+
+
 def update_utterance_metadata(
     *,
     utterance_metadata: Sequence[Mapping[str, str | float]],
@@ -240,7 +282,7 @@ def update_utterance_metadata(
     use_elevenlabs: bool = False,
     elevenlabs_clone_voices: bool = False,
 ) -> Sequence[Mapping[str, str | float]]:
-  """Updates utterance metadata with assigned Google voices.
+  """Updates utterance metadata with assigned voices.
 
   Args:
       utterance_metadata: A sequence of utterance metadata, each represented as
@@ -269,21 +311,9 @@ def update_utterance_metadata(
     if not elevenlabs_clone_voices:
       speaker_id = new_utterance.get("speaker_id")
       new_utterance["assigned_voice"] = assigned_voices.get(speaker_id)
-    if use_elevenlabs:
-      new_utterance["stability"] = _DEFAULT_STABILITY
-      new_utterance["similarity_boost"] = _DEFAULT_SIMILARITY_BOOST
-      new_utterance["style"] = _DEFAULT_STYLE
-      new_utterance["use_speaker_boost"] = _DEFAULT_USE_SPEAKER_BOOST
-    else:
-      ssml_gender = new_utterance.get("ssml_gender")
-      pitch = (
-          _DEFAULT_SSML_FEMALE_PITCH
-          if ssml_gender == "Female"
-          else _DEFAULT_SSML_MALE_PITCH
-      )
-      new_utterance["pitch"] = pitch
-      new_utterance["speed"] = _DEFAULT_SPEED
-      new_utterance["volume_gain_db"] = _DEFAULT_VOLUME_GAIN_DB
+    new_utterance = add_text_to_speech_properties(
+        utterance_metadata=new_utterance, use_elevenlabs=use_elevenlabs
+    )
     updated_utterance_metadata.append(new_utterance)
   return updated_utterance_metadata
 
@@ -513,9 +543,9 @@ def dub_utterances(
         "google_voice_volume_gain_db" and optionally "vocals_path".
       output_directory: Path to the directory for output files.
       target_language: The target language (ISO 3166-1 alpha-2).
-      adjust_speed: Whether to force speed up of
-        utterances to match the duration of the utterances in the source
-        language. Recommended when using ElevenLabs and Google's 'Journey' voices.
+      adjust_speed: Whether to force speed up of utterances to match the
+        duration of the utterances in the source language. Recommended when
+        using ElevenLabs and Google's 'Journey' voices.
       use_elevenlabs: Whether to use ElevenLabs API for Text-To-Speech. If not
         Google's Text-To-Speech will be used.
       elevenlabs_model: The ElevenLabs model to use in the Text-To-Speech
@@ -563,7 +593,8 @@ def dub_utterances(
         )
       except KeyError:
         output_filename = os.path.join(
-            output_directory, f"dubbed_chunk_{utterance['start']}_{utterance['end']}.mp3"
+            output_directory,
+            f"dubbed_chunk_{utterance['start']}_{utterance['end']}.mp3",
         )
       if use_elevenlabs:
         dubbed_path = elevenlabs_convert_text_to_speech(

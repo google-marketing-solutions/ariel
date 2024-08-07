@@ -255,6 +255,72 @@ class TestElevenLabsAssignVoicesValueError(absltest.TestCase):
       )
 
 
+class TestAddTextToSpeechProperties(parameterized.TestCase):
+
+  @parameterized.named_parameters(
+      (
+          "NoElevenLabsFemale",
+          False,
+          "Female",
+          {
+              "text": "Hello there!",
+              "start": 0.0,
+              "end": 1.5,
+              "speaker_id": "speaker1",
+              "ssml_gender": "Female",
+              "pitch": text_to_speech._DEFAULT_SSML_FEMALE_PITCH,
+              "speed": text_to_speech._DEFAULT_SPEED,
+              "volume_gain_db": text_to_speech._DEFAULT_VOLUME_GAIN_DB,
+          },
+      ),
+      (
+          "NoElevenLabsMale",
+          False,
+          "Male",
+          {
+              "text": "Hello there!",
+              "start": 0.0,
+              "end": 1.5,
+              "speaker_id": "speaker1",
+              "ssml_gender": "Male",
+              "pitch": text_to_speech._DEFAULT_SSML_MALE_PITCH,
+              "speed": text_to_speech._DEFAULT_SPEED,
+              "volume_gain_db": text_to_speech._DEFAULT_VOLUME_GAIN_DB,
+          },
+      ),
+      (
+          "ElevenLabs",
+          True,
+          "Female",
+          {
+              "text": "Hello there!",
+              "start": 0.0,
+              "end": 1.5,
+              "speaker_id": "speaker1",
+              "ssml_gender": "Female",
+              "stability": text_to_speech._DEFAULT_STABILITY,
+              "similarity_boost": text_to_speech._DEFAULT_SIMILARITY_BOOST,
+              "style": text_to_speech._DEFAULT_STYLE,
+              "use_speaker_boost": text_to_speech._DEFAULT_USE_SPEAKER_BOOST,
+          },
+      ),
+  )
+  def test_add_text_to_speech_properties(
+      self, use_elevenlabs, ssml_gender, expected_metadata
+  ):
+    utterance_metadata = {
+        "text": "Hello there!",
+        "start": 0.0,
+        "end": 1.5,
+        "speaker_id": "speaker1",
+        "ssml_gender": ssml_gender,
+    }
+    result = text_to_speech.add_text_to_speech_properties(
+        utterance_metadata=utterance_metadata, use_elevenlabs=use_elevenlabs
+    )
+    self.assertEqual(result, expected_metadata)
+
+
 class UpdateUtteranceMetadataTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
@@ -456,14 +522,11 @@ class TestCalculateTargetUtteranceSpeed(absltest.TestCase):
 
   def test_calculate_target_utterance_speed(self):
     with tempfile.TemporaryDirectory() as tempdir:
-      reference_audio_mock = AudioSegment.silent(duration=60000)
-      reference_file_path = os.path.join(tempdir, "reference.mp3")
-      reference_audio_mock.export(reference_file_path, format="mp3")
       dubbed_audio_mock = AudioSegment.silent(duration=90000)
       dubbed_file_path = os.path.join(tempdir, "dubbed.mp3")
       dubbed_audio_mock.export(dubbed_file_path, format="mp3")
       result = text_to_speech.calculate_target_utterance_speed(
-          reference_file=reference_file_path, dubbed_file=dubbed_file_path
+          reference_length=60.0, dubbed_file=dubbed_file_path
       )
       expected_result = 90000 / 60000
       self.assertEqual(result, expected_result)
@@ -561,6 +624,8 @@ class TestDubUtterances(parameterized.TestCase):
       mock_convert_text_to_speech,
   ):
     utterance_metadata = [{
+        "start": 0.0,
+        "end": 1.0,
         "for_dubbing": for_dubbing_value,
         "path": "original_path",
         "translated_text": "translated text",
@@ -579,9 +644,7 @@ class TestDubUtterances(parameterized.TestCase):
     }]
     client = MagicMock()
     mock_convert_text_to_speech.return_value = "dubbed_path.mp3"
-    mock_elevenlabs_convert_text_to_speech.return_value = (
-        "dubbed_path.mp3"
-    )
+    mock_elevenlabs_convert_text_to_speech.return_value = "dubbed_path.mp3"
     result = text_to_speech.dub_utterances(
         client=client,
         utterance_metadata=utterance_metadata,

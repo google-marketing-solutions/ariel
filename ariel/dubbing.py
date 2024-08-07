@@ -1004,6 +1004,14 @@ class Dubber:
           output_directory=self.output_directory,
           elevenlabs_clone_voices=self.elevenlabs_clone_voices,
       )
+      verified_utterance = text_to_speech.add_text_to_speech_properties(
+          utterance_metadata=verified_utterance,
+          use_elevenlabs=self.use_elevenlabs,
+      )
+      logging.warning(
+          "Updated the added utterance with the default Text-To-Speech"
+          " properties."
+      )
     else:
       print(
           "Updating the metadata fields for the modified utterance. It might"
@@ -1599,10 +1607,10 @@ class Dubber:
     else:
       updated_utterance_metadata = []
       for utterance in self.utterance_metadata:
-          utterance_copy = utterance.copy()
-          utterance_copy["translated_text"] = utterance_copy["text"]
-          updated_utterance_metadata.append(utterance_copy)
-          self.utterance_metadata = updated_utterance_metadata
+        utterance_copy = utterance.copy()
+        utterance_copy["translated_text"] = utterance_copy["text"]
+        updated_utterance_metadata.append(utterance_copy)
+        self.utterance_metadata = updated_utterance_metadata
     if self.with_verification:
       self._run_verify_utterance_metadata()
       self._rerun = True
