@@ -14,6 +14,7 @@
 
 """Tests for utility functions in dubbing.py."""
 
+import os
 import tempfile
 from absl.testing import absltest
 from absl.testing import parameterized
@@ -162,6 +163,51 @@ class TestAssembleUtteranceMetadata(parameterized.TestCase):
           ],
           assigned_voice="Jane Smith",
       )
+
+
+class TestRenameInputFile(parameterized.TestCase):
+
+  @parameterized.named_parameters(
+      (
+          "Spaces and Uppercase",
+          "Test File With Spaces and Uppercase.mp4",
+          "testfilewithspacesanduppercase.mp4",
+      ),
+      (
+          "Hyphens and Numbers",
+          "Test-File-2024-with-Hyphens.mov",
+          "testfile2024withhyphens.mov",
+      ),
+      ("Already Normalized", "lowercasefilename.avi", "lowercasefilename.avi"),
+  )
+  def test_rename(self, original_file, expected_result):
+    result = dubbing.rename_input_file(original_file)
+    self.assertEqual(result, expected_result)
+
+
+class TestOverwriteInputFile(parameterized.TestCase):
+
+  @parameterized.named_parameters(
+      (
+          "Spaces and Uppercase",
+          "Test File With Spaces and Uppercase.mp4",
+          "testfilewithspacesanduppercase.mp4",
+      ),
+      (
+          "Hyphens and Numbers",
+          "Test-File-2024-with-Hyphens.mov",
+          "testfile2024withhyphens.mov",
+      ),
+      ("Already Normalized", "lowercasefilename.avi", "lowercasefilename.avi"),
+  )
+  def test_overwrite_input_file(self, original_filename, expected_filename):
+    with tempfile.TemporaryDirectory() as temp_dir:
+      original_full_path = os.path.join(temp_dir, original_filename)
+      expected_full_path = os.path.join(temp_dir, expected_filename)
+      with tf.io.gfile.GFile(original_full_path, "w") as f:
+        f.write("Test content")
+      dubbing.overwrite_input_file(original_full_path, expected_full_path)
+      self.assertTrue(tf.io.gfile.exists(expected_full_path))
 
 
 if __name__ == "__main__":

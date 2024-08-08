@@ -19,6 +19,7 @@ import functools
 import importlib.resources
 import json
 import os
+import re
 import readline
 import shutil
 import tempfile
@@ -392,6 +393,36 @@ def assemble_utterance_metadata_for_dubbing_from_script(
   )
 
 
+def rename_input_file(original_input_file: str) -> str:
+  """Converts a filename to lowercase letters and numbers only, preserving the file extension.
+
+  Args:
+      original_filename: The filename to normalize.
+
+  Returns:
+      The normalized filename.
+  """
+  directory, filename = os.path.split(original_input_file)
+  base_name, extension = os.path.splitext(filename)
+  normalized_name = re.sub(r"[^a-z0-9]", "", base_name.lower())
+  return os.path.join(directory, normalized_name + extension)
+
+
+def overwrite_input_file(input_file: str, updated_input_file: str) -> None:
+  """Renames a file in place to lowercase letters and numbers only, preserving the file extension.
+
+  Args:
+      input_file: The full path to the original input file.
+      updated_input_file: The full path to the updated input file.
+
+  Raises:
+      FileNotFoundError: If the file to be overwritten is not found.
+  """
+  if not tf.io.gfile.exists(input_file):
+    raise FileNotFoundError(f"File '{input_file}' not found.")
+  tf.io.gfile.rename(input_file, updated_input_file, overwrite=True)
+
+
 class Dubber:
   """A class to manage the entire ad dubbing process."""
 
@@ -490,7 +521,7 @@ class Dubber:
         with_verification: Whether a user wishes to verify, and optionally edit,
           the utterance metadata in the dubbing process.
     """
-    self.input_file = input_file
+    self._input_file = input_file
     self.output_directory = output_directory
     self.advertiser_name = advertiser_name
     self.original_language = original_language
@@ -524,6 +555,20 @@ class Dubber:
     self._number_of_steps = number_of_steps
     self.with_verification = with_verification
     self._rerun = False
+
+  @functools.cached_property
+  def input_file(self):
+    renamed_input_file = rename_input_file(self._input_file)
+    if renamed_input_file != self._input_file:
+      logging.warning(
+          "The input file was renamed because the original name contained"
+          " spaces, hyphens, or other incompatible characters. The updated"
+          f" input file is: {renamed_input_file}"
+      )
+      overwrite_input_file(
+          input_file=self._input_file, updated_input_file=renamed_input_file
+      )
+    return renamed_input_file
 
   @functools.cached_property
   def device(self):
@@ -1061,7 +1106,13 @@ class Dubber:
     if self.elevenlabs_clone_voices:
       required_fields = ["start", "end", "speaker_id", "ssml_gender"]
     else:
-      required_fields = ["start", "end", "speaker_id", "ssml_gender", "assigned_voice"]
+      required_fields = [
+          "start",
+          "end",
+          "speaker_id",
+          "ssml_gender",
+          "assigned_voice",
+      ]
     for field in required_fields:
       while True:
         try:
