@@ -1083,7 +1083,7 @@ class Dubber:
   ) -> Sequence[Mapping[str, str | float]]:
     """Runs the update process of the added utterance."""
     utterance_metadata_copy = utterance_metadata.copy()
-    if edit_index:
+    if isinstance(edit_index, int):
       utterance_metadata_copy[edit_index] = updated_utterance
     else:
       utterance_metadata_copy.append(updated_utterance)
