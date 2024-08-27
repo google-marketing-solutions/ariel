@@ -106,6 +106,16 @@ _ADJUST_SPEED = flags.DEFINE_bool(
     "Whether to adjust the duration of the dubbed audio files to match the"
     " duration of the source audio files.",
 )
+_VOCALS_VOLUME_ADJUSTMENT = flags.DEFINE_float(
+    "vocals_volume_adjustment",
+    5.0,
+    "By how much the vocals audio volume should be adjusted",
+)
+_BACKGROUND_VOLUME_ADJUSTMENT = flags.DEFINE_float(
+    "background_volume_adjustment",
+    0.0,
+    "By how much the background audio volume should be adjusted."
+)
 _CLEAN_UP = flags.DEFINE_bool(
     "clean_up",
     False,
@@ -181,6 +191,8 @@ def main(argv: Sequence[str]) -> None:
       minimum_merge_threshold=_MINIMUM_MERGE_THRESHOLD.value,
       preferred_voices=_PREFERRED_VOICES.value,
       adjust_speed=_ADJUST_SPEED.value,
+      vocals_volume_adjustment=_VOCALS_VOLUME_ADJUSTMENT.value,
+      background_volume_adjustment=_BACKGROUND_VOLUME_ADJUSTMENT.value,
       clean_up=_CLEAN_UP.value,
       gemini_model_name=_GEMINI_MODEL_NAME.value,
       temperature=_TEMPERATURE.value,

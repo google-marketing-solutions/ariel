@@ -26,8 +26,6 @@ from pydub import AudioSegment
 import tensorflow as tf
 import torch
 
-_BACKGROUND_VOLUME_ADJUSTMENT: Final[float] = 5.0
-_VOCALS_VOLUME_ADJUSTMENT: Final[float] = 0.0
 _DEFAULT_DUBBED_VOCALS_AUDIO_FILE: Final[str] = "dubbed_vocals.mp3"
 _DEFAULT_DUBBED_AUDIO_FILE: Final[str] = "dubbed_audio"
 _DEFAULT_OUTPUT_FORMAT: Final[str] = ".mp3"
@@ -506,6 +504,8 @@ def merge_background_and_vocals(
     dubbed_vocals_audio_file: str,
     output_directory: str,
     target_language: str,
+    vocals_volume_adjustment: float = 5.0,
+    background_volume_adjustment: float = 0.0,
 ) -> str:
   """Mixes background music and vocals tracks, normalizes the volume, and exports the result.
 
@@ -515,6 +515,8 @@ def merge_background_and_vocals(
       output_directory: Path to save the mixed MP3 file.
       target_language: The language to dub the ad into. It must be ISO 3166-1
         alpha-2 country code.
+      vocals_volume_adjustment: By how much the vocals audio volume should be adjusted.
+      background_volume_adjustment: By how much the background audio volume should be adjusted.
 
   Returns:
     The path to the output audio file with merged dubbed vocals and original
@@ -525,8 +527,8 @@ def merge_background_and_vocals(
   vocals = AudioSegment.from_mp3(dubbed_vocals_audio_file)
   background = background.normalize()
   vocals = vocals.normalize()
-  background = background - _BACKGROUND_VOLUME_ADJUSTMENT
-  vocals = vocals - _VOCALS_VOLUME_ADJUSTMENT
+  background = background + background_volume_adjustment
+  vocals = vocals + vocals_volume_adjustment
   shortest_length = min(len(background), len(vocals))
   background = background[:shortest_length]
   vocals = vocals[:shortest_length]

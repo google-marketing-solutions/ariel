@@ -444,6 +444,8 @@ class Dubber:
       minimum_merge_threshold: float = 0.001,
       preferred_voices: Sequence[str] | None = None,
       adjust_speed: bool = True,
+      vocals_volume_adjustment: float = 5.0,
+      background_volume_adjustment: float = 0.0,
       clean_up: bool = True,
       pyannote_model: str = _DEFAULT_PYANNOTE_MODEL,
       gemini_model_name: str = _DEFAULT_GEMINI_MODEL,
@@ -497,6 +499,10 @@ class Dubber:
         adjust_speed: Whether to force speed up of utterances to match the
           duration of the utterances in the source language. Recommended when
           using ElevenLabs and Google's 'Journey' voices.
+        vocals_volume_adjustment: By how much the vocals audio volume should
+          be adjusted.
+        background_volume_adjustment: By how much the background audio volume should
+          be adjusted.
         clean_up: Whether to delete intermediate files after dubbing. Only the
           final ouput and the utterance metadata will be kept.
         pyannote_model: Name of the PyAnnote diarization model.
@@ -534,6 +540,8 @@ class Dubber:
     self.minimum_merge_threshold = minimum_merge_threshold
     self.preferred_voices = preferred_voices
     self.adjust_speed = adjust_speed
+    self.vocals_volume_adjustment = vocals_volume_adjustment
+    self.background_volume_adjustment = background_volume_adjustment
     self.clean_up = clean_up
     self.pyannote_model = pyannote_model
     self.hugging_face_token = hugging_face_token
@@ -1409,6 +1417,8 @@ class Dubber:
         dubbed_vocals_audio_file=dubbed_audio_vocals_file,
         output_directory=self.output_directory,
         target_language=self.target_language,
+        vocals_volume_adjustment=self.vocals_volume_adjustment,
+        background_volume_adjustment=self.background_volume_adjustment,
     )
     if self.is_video:
       if not self.preprocesing_output.video_file:
