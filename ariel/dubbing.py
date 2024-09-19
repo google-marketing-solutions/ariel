@@ -1520,6 +1520,17 @@ class Dubber:
     logging.info("Output files saved in: %s.", self.output_directory)
     return self.postprocessing_output
 
+  def generate_utterance_metadata(self) -> Sequence[Mapping[str, str | float]]:
+    """Returns utterance metadata for a user to edit in the UI."""
+    self._verify_api_access()
+    logging.info("Generating utterance metadata started.")
+    self.run_preprocessing()
+    self.run_speech_to_text()
+    self.run_translation()
+    self.run_configure_text_to_speech()
+    logging.info("Generating utterance metadata finished.")
+    return self.utterance_metadata
+
   def dub_ad_with_utterance_metadata(
       self,
       utterance_metadata: Sequence[Mapping[str, str | float]] | None = None,
