@@ -634,7 +634,8 @@ def dub_utterances(
             chunk_size=chunk_size,
         )
         utterance_copy["chunk_size"] = chunk_size
-      if speed != 1.0 and not use_elevenlabs and not condition_two:
+      condition_three = adjust_speed and "Journey" not in assigned_voice
+      if speed != 1.0 and not use_elevenlabs and condition_three:
         utterance_copy["speed"] = speed
         dubbed_path = convert_text_to_speech(
             client=client,
