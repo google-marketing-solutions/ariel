@@ -14,6 +14,7 @@
 
 """Tests for utility functions in text_to_speech.py."""
 
+import io
 import os
 import tempfile
 from unittest.mock import MagicMock
@@ -24,7 +25,9 @@ from ariel import text_to_speech
 from elevenlabs.client import ElevenLabs
 from elevenlabs.types.voice import Voice
 from google.cloud import texttospeech
+import numpy as np
 from pydub import AudioSegment
+import scipy
 
 
 class ListAvailableVoicesTest(absltest.TestCase):
@@ -498,8 +501,15 @@ class TestConvertTextToSpeech(absltest.TestCase):
 
   def test_convert_text_to_speech(self):
     mock_client = MagicMock(spec=texttospeech.TextToSpeechClient)
+    sample_rate = 44100
+    t = np.linspace(0.0, 1.0, sample_rate, endpoint=False)
+    amplitude = 4096
+    data = amplitude * np.sin(2 * np.pi * 440 * t)
+    data = data.astype(np.int16)
+    buffer = io.BytesIO()
+    scipy.io.wavfile.write(buffer, sample_rate, data)
     mock_response = texttospeech.SynthesizeSpeechResponse(
-        audio_content=b"mock_audio_data"
+        audio_content=buffer.getvalue()
     )
     mock_client.synthesize_speech.return_value = mock_response
     with tempfile.NamedTemporaryFile(suffix=".mp3") as temporary_file:

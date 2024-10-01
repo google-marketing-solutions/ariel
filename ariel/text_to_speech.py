@@ -14,6 +14,7 @@
 
 """A text-to-speech module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
+import io
 import os
 from typing import Final, Mapping, Sequence
 from absl import logging
@@ -24,7 +25,6 @@ from google.cloud import texttospeech
 from pydub import AudioSegment
 from pydub.effects import speedup
 import tensorflow as tf
-
 
 _SSML_MALE: Final[str] = "Male"
 _SSML_FEMALE: Final[str] = "Female"
@@ -38,6 +38,7 @@ _DEFAULT_PREFERRED_GOOGLE_VOICES: Final[Sequence[str]] = (
     "Neural2",
     "Standard",
 )
+_EXCEPTION_VOICE: Final[str] = "Journey"
 _DEFAULT_SSML_FEMALE_PITCH: Final[float] = -5.0
 _DEFAULT_SSML_MALE_PITCH: Final[float] = -10.0
 _DEFAULT_SPEED: Final[float] = 1.0
@@ -351,18 +352,30 @@ def convert_text_to_speech(
       language_code=target_language,
   )
   audio_config = texttospeech.AudioConfig(
-      audio_encoding=texttospeech.AudioEncoding.MP3,
-      pitch=pitch,
+      audio_encoding=texttospeech.AudioEncoding.LINEAR16,
       volume_gain_db=volume_gain_db,
-      speaking_rate=speed,
   )
+  if not _EXCEPTION_VOICE in assigned_google_voice:
+    audio_config.speaking_rate = speed
+    audio_config.pitch = pitch
+  else:
+    logging.info(
+        "%s voice was selected. Neither `pitch` nor `speaking_rate` can be"
+        " controlled.",
+        _EXCEPTION_VOICE,
+    )
   response = client.synthesize_speech(
       input=input_text,
       voice=voice_selection,
       audio_config=audio_config,
   )
+  converted_audio_content = AudioSegment(
+      data=response.audio_content,
+  )
+  buffer = io.BytesIO()
+  converted_audio_content.export(buffer, format="mp3", bitrate="320k")
   with tf.io.gfile.GFile(output_filename, "wb") as out:
-    out.write(response.audio_content)
+    out.write(buffer.getvalue())
   return output_filename
 
 
@@ -622,7 +635,7 @@ def dub_utterances(
       condition_one = adjust_speed and use_elevenlabs
       assigned_voice = utterance_copy.get("assigned_voice", None)
       assigned_voice = assigned_voice if assigned_voice else ""
-      condition_two = adjust_speed and "Journey" in assigned_voice
+      condition_two = adjust_speed and _EXCEPTION_VOICE in assigned_voice
       speed = calculate_target_utterance_speed(
           reference_length=reference_length, dubbed_file=dubbed_path
       )
@@ -634,7 +647,7 @@ def dub_utterances(
             chunk_size=chunk_size,
         )
         utterance_copy["chunk_size"] = chunk_size
-      condition_three = adjust_speed and "Journey" not in assigned_voice
+      condition_three = adjust_speed and _EXCEPTION_VOICE not in assigned_voice
       if speed != 1.0 and not use_elevenlabs and condition_three:
         utterance_copy["speed"] = speed
         dubbed_path = convert_text_to_speech(

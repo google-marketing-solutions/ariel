@@ -81,7 +81,11 @@ _DEFAULT_GEMINI_SAFETY_SETTINGS: Final[
 _DEFAULT_DIARIZATION_SYSTEM_SETTINGS: Final[str] = "diarization.txt"
 _DEFAULT_TRANSLATION_SYSTEM_SETTINGS: Final[str] = "translation.txt"
 _DEFAULT_EDIT_TRANSLATION_SYSTEM_SETTINGS: Final[str] = "edit_translation.txt"
-_NUMBER_OF_STEPS: Final[int] = 7
+_NUMBER_OF_STEPS: Final[int] = 6
+_NUMBER_OF_STEPS_GENERATE_UTTERANCE_METADATA: Final[int] = 4
+_NUMBER_OF_STEPS_DUB_AD_WITH_UTTERANCE_METADATA: Final[int] = 3
+_NUMBER_OF_STEPS_DUB_AD_WITH_DIFFERENT_LANGUAGE: Final[int] = 4
+_NUMBER_OF_STEPS_DUB_AD_FROM_SCRIPT: Final[int] = 4
 _MAX_GEMINI_RETRIES: Final[int] = 5
 _EDIT_TRANSLATION_PROMPT: Final[str] = (
     "You were hired by a company called: '{}'. The received script was: '{}'."
@@ -89,7 +93,6 @@ _EDIT_TRANSLATION_PROMPT: Final[str] = (
     " asks you to modify this translation: '{}'"
 )
 _REQUIRED_KEYS: Final[set] = {"text", "start", "end"}
-_COMPATIBLE_SSML_GENDERS: Final[set] = {"Male", "Female"}
 _REQUIRED_GOOGLE_TTS_PARAMETERS: Final[set] = {
     "pitch",
     "speed",
@@ -499,10 +502,10 @@ class Dubber:
         adjust_speed: Whether to force speed up of utterances to match the
           duration of the utterances in the source language. Recommended when
           using ElevenLabs and Google's 'Journey' voices.
-        vocals_volume_adjustment: By how much the vocals audio volume should
-          be adjusted.
-        background_volume_adjustment: By how much the background audio volume should
-          be adjusted.
+        vocals_volume_adjustment: By how much the vocals audio volume should be
+          adjusted.
+        background_volume_adjustment: By how much the background audio volume
+          should be adjusted.
         clean_up: Whether to delete intermediate files after dubbing. Only the
           final ouput and the utterance metadata will be kept.
         pyannote_model: Name of the PyAnnote diarization model.
@@ -562,7 +565,6 @@ class Dubber:
     self.utterance_metadata = None
     self._number_of_steps = number_of_steps
     self.with_verification = with_verification
-    self._rerun = False
 
   @functools.cached_property
   def input_file(self):
@@ -761,14 +763,6 @@ class Dubber:
     )
 
   @functools.cached_property
-  def progress_bar(self) -> tqdm:
-    """An instance of the progress bar for the dubbing process."""
-    total_number_of_steps = (
-        self._number_of_steps if self.clean_up else self._number_of_steps - 1
-    )
-    return tqdm(total=total_number_of_steps, initial=1)
-
-  @functools.cached_property
   def elevenlabs_clone_voices(self) -> bool:
     """An indicator whether to use voice cloning during the dubbing process.
 
@@ -840,7 +834,7 @@ class Dubber:
           elevenlabs_clone_voices=self.elevenlabs_clone_voices,
       )
     self.utterance_metadata = utterance_metadata
-    self.preprocesing_output = PreprocessingArtifacts(
+    self.preprocessing_output = PreprocessingArtifacts(
         video_file=video_file,
         audio_file=audio_file,
         audio_vocals_file=audio_vocals_file,
@@ -862,10 +856,12 @@ class Dubber:
     else:
       video_file = None
       audio_file = self.input_file
-    self.preprocesing_output = PreprocessingArtifacts(
+    self.preprocessing_output = PreprocessingArtifacts(
         video_file=video_file,
         audio_file=audio_file,
     )
+    logging.info("Completed preprocessing.")
+    self.progress_bar.update()
 
   def run_speech_to_text(self) -> None:
     """Transcribes audio, applies speaker diarization, and updates metadata with Gemini.
@@ -874,9 +870,9 @@ class Dubber:
         Updated utterance metadata with speaker information and transcriptions.
     """
     media_file = (
-        self.preprocesing_output.video_file
-        if self.preprocesing_output.video_file
-        else self.preprocesing_output.audio_file
+        self.preprocessing_output.video_file
+        if self.preprocessing_output.video_file
+        else self.preprocessing_output.audio_file
     )
     utterance_metadata = speech_to_text.transcribe_audio_chunks(
         utterance_metadata=self.utterance_metadata,
@@ -949,8 +945,7 @@ class Dubber:
         if attempt == _MAX_GEMINI_RETRIES:
           raise RuntimeError("Can't translate script. Try again.")
     logging.info("Completed translation.")
-    if not self._rerun:
-      self.progress_bar.update()
+    self.progress_bar.update()
 
   def run_configure_text_to_speech(self) -> None:
     """Configures the Text-To-Speech process.
@@ -1051,8 +1046,8 @@ class Dubber:
           " take a minute."
       )
       verified_utterance = audio_processing.verify_added_audio_chunk(
-          audio_file=self.preprocesing_output.audio_file,
-          audio_vocals_file=self.preprocesing_output.audio_vocals_file,
+          audio_file=self.preprocessing_output.audio_file,
+          audio_vocals_file=self.preprocessing_output.audio_vocals_file,
           utterance=utterance,
           output_directory=self.output_directory,
           elevenlabs_clone_voices=self.elevenlabs_clone_voices,
@@ -1071,8 +1066,8 @@ class Dubber:
           " take a minute."
       )
       verified_utterance = audio_processing.verify_modified_audio_chunk(
-          audio_file=self.preprocesing_output.audio_file,
-          audio_vocals_file=self.preprocesing_output.audio_vocals_file,
+          audio_file=self.preprocessing_output.audio_file,
+          audio_vocals_file=self.preprocessing_output.audio_vocals_file,
           utterance=utterance,
           output_directory=self.output_directory,
           elevenlabs_clone_voices=self.elevenlabs_clone_voices,
@@ -1304,7 +1299,6 @@ class Dubber:
   def _run_verify_utterance_metadata(self) -> None:
     """Displays, allows editing, addig and removing utterance metadata."""
     utterance_metadata = self.utterance_metadata
-    self._rerun = False
     while True:
       self._display_utterance_metadata(utterance_metadata)
       action_choice = input(
@@ -1371,7 +1365,6 @@ class Dubber:
         if not self._verify_metadata_after_change():
           utterance_metadata = self.utterance_metadata
           continue
-        self._rerun = False
         return
       else:
         print("Invalid choice.")
@@ -1393,8 +1386,7 @@ class Dubber:
         elevenlabs_clone_voices=self.elevenlabs_clone_voices,
     )
     logging.info("Completed converting text to speech.")
-    if not self._rerun:
-      self.progress_bar.update()
+    self.progress_bar.update()
 
   def run_postprocessing(self) -> None:
     """Merges dubbed audio with the original background audio and video (if applicable).
@@ -1405,15 +1397,15 @@ class Dubber:
 
     dubbed_audio_vocals_file = audio_processing.insert_audio_at_timestamps(
         utterance_metadata=self.utterance_metadata,
-        background_audio_file=self.preprocesing_output.audio_background_file
-        if self.preprocesing_output.audio_background_file
-        else self.preprocesing_output.audio_file,
+        background_audio_file=self.preprocessing_output.audio_background_file
+        if self.preprocessing_output.audio_background_file
+        else self.preprocessing_output.audio_file,
         output_directory=self.output_directory,
     )
     dubbed_audio_file = audio_processing.merge_background_and_vocals(
-        background_audio_file=self.preprocesing_output.audio_background_file
-        if self.preprocesing_output.audio_background_file
-        else self.preprocesing_output.audio_file,
+        background_audio_file=self.preprocessing_output.audio_background_file
+        if self.preprocessing_output.audio_background_file
+        else self.preprocessing_output.audio_file,
         dubbed_vocals_audio_file=dubbed_audio_vocals_file,
         output_directory=self.output_directory,
         target_language=self.target_language,
@@ -1421,12 +1413,12 @@ class Dubber:
         background_volume_adjustment=self.background_volume_adjustment,
     )
     if self.is_video:
-      if not self.preprocesing_output.video_file:
+      if not self.preprocessing_output.video_file:
         raise ValueError(
             "A video file must be provided if the input file is a video."
         )
       dubbed_video_file = video_processing.combine_audio_video(
-          video_file=self.preprocesing_output.video_file,
+          video_file=self.preprocessing_output.video_file,
           dubbed_audio_file=dubbed_audio_file,
           output_directory=self.output_directory,
           target_language=self.target_language,
@@ -1436,8 +1428,7 @@ class Dubber:
         video_file=dubbed_video_file if self.is_video else None,
     )
     logging.info("Completed postprocessing.")
-    if not self._rerun:
-      self.progress_bar.update()
+    self.progress_bar.update()
 
   def run_save_utterance_metadata(self) -> None:
     """Saves a Python dictionary to a JSON file.
@@ -1494,13 +1485,12 @@ class Dubber:
       except OSError as e:
         logging.error(f"Error deleting {item_path}: {e}")
     logging.info("Temporary artifacts are now removed.")
-    if not self._rerun:
-      self.progress_bar.update()
 
   def dub_ad(self) -> PostprocessingArtifacts:
     """Orchestrates the entire ad dubbing process."""
     self._verify_api_access()
     logging.info("Dubbing process starting...")
+    self.progress_bar = tqdm(total=_NUMBER_OF_STEPS, initial=1)
     start_time = time.time()
     self.run_preprocessing()
     self.run_speech_to_text()
@@ -1522,18 +1512,26 @@ class Dubber:
 
   def generate_utterance_metadata(self) -> Sequence[Mapping[str, str | float]]:
     """Returns utterance metadata for a user to edit in the UI."""
+    self.progress_bar = tqdm(
+        total=_NUMBER_OF_STEPS_GENERATE_UTTERANCE_METADATA, initial=1
+    )
     self._verify_api_access()
     logging.info("Generating utterance metadata started.")
     self.run_preprocessing()
     self.run_speech_to_text()
     self.run_translation()
     self.run_configure_text_to_speech()
+    self.run_save_utterance_metadata()
+    self.progress_bar.close()
     logging.info("Generating utterance metadata finished.")
     return self.utterance_metadata
 
   def dub_ad_with_utterance_metadata(
       self,
-      utterance_metadata: Sequence[Mapping[str, str | float]] | None = None,
+      *,
+      utterance_metadata: Sequence[Mapping[str, str | float]],
+      preprocessing_artifacts: PreprocessingArtifacts | None = None,
+      overwrite_utterance_metadata: bool = False,
   ) -> PostprocessingArtifacts:
     """Orchestrates the complete ad dubbing process using utterance metadata.
 
@@ -1552,9 +1550,17 @@ class Dubber:
           Google TTS-specific: 'pitch', 'speed', 'volume_gain_db' (float). *
           ElevenLabs TTS-specific: 'stability', 'similarity_boost', 'style'
           (float), 'use_speaker_boost' (bool).
+        preprocessing_artifacts: Required only if dubbing ads from utterance
+          metadata in a new class instance.
+        overwrite_utterance_metadata: If the exisitng utterance metadata file
+          should be reaplced with an updated one.
 
     Returns:
         PostprocessingArtifacts: Object containing the post-processed results.
+
+    Raises:
+      ValueError: When `preprocessing_artifacts` argument is not provided and
+         the method is run using a new instance class.
     """
 
     logging.info("Re-run dubbing process starting...")
@@ -1570,23 +1576,40 @@ class Dubber:
     logging.warning(
         "The class utterance metadata was overwritten with the provided input."
     )
-    self._rerun = True
+    if not hasattr(self, "preprocessing_output") and preprocessing_artifacts:
+      self.preprocessing_output = preprocessing_artifacts
+    elif (
+        not hasattr(self, "preprocessing_output")
+        and not preprocessing_artifacts
+    ):
+      raise ValueError(
+          "You need to provide 'preprocessing_artifacts' argument "
+          "in a new class instance."
+      )
+    self.progress_bar = tqdm(
+        total=_NUMBER_OF_STEPS_DUB_AD_WITH_UTTERANCE_METADATA, initial=1
+    )
     if self.with_verification:
       self._run_verify_utterance_metadata()
     self.run_text_to_speech()
+    if overwrite_utterance_metadata:
+      self.run_save_utterance_metadata()
     self.run_postprocessing()
+    self.progress_bar.close()
     logging.info("Dubbing process finished.")
     logging.info("Output files saved in: %s.", self.output_directory)
     return self.postprocessing_output
 
   def dub_ad_with_different_language(
-      self, target_language: str
+      self, target_language: str, overwrite_utterance_metadata: bool = False
   ) -> PostprocessingArtifacts:
     """Orchestrates the complete ad dubbing process using a new target language.
 
     Args:
         target_language: The new language to dub the ad into. It must be ISO
           3166-1 alpha-2 country code, e.g. 'en-US'.
+        overwrite_utterance_metadata: If the exisitng utterance metadata file
+          should be reaplced with an updated one.
 
     Returns:
         PostprocessingArtifacts: Object containing the post-processed results.
@@ -1604,14 +1627,18 @@ class Dubber:
     logging.warning(
         "The class target language was overwritten with the provided input."
     )
-    self._rerun = True
+    self.progress_bar = tqdm(
+        total=_NUMBER_OF_STEPS_DUB_AD_WITH_DIFFERENT_LANGUAGE, initial=1
+    )
     self.run_translation()
     self.run_configure_text_to_speech()
     if self.with_verification:
       self._run_verify_utterance_metadata()
     self.run_text_to_speech()
-    self.run_save_utterance_metadata()
+    if overwrite_utterance_metadata:
+      self.run_save_utterance_metadata()
     self.run_postprocessing()
+    self.progress_bar.close()
     logging.info("Dubbing process finished.")
     logging.info("Output files saved in: %s.", self.output_directory)
     return self.postprocessing_output
@@ -1663,6 +1690,11 @@ class Dubber:
     """
 
     logging.info("Dubbing process from script starting...")
+    if self.original_language != self.target_language:
+      number_of_steps = _NUMBER_OF_STEPS_DUB_AD_FROM_SCRIPT
+    else:
+      number_of_steps = _NUMBER_OF_STEPS_DUB_AD_FROM_SCRIPT - 1
+    self.progress_bar = tqdm(total=number_of_steps, initial=1)
     if self.use_elevenlabs and self.elevenlabs_clone_voices:
       logging.warning(
           "Voices won't be cloned when dubbing from script. You can only use"
@@ -1676,7 +1708,6 @@ class Dubber:
         google_text_to_speech_parameters=google_text_to_speech_parameters,
         elevenlabs_text_to_speech_parameters=elevenlabs_text_to_speech_parameters,
     )
-    self._rerun = True
     self.run_preprocessing_for_dubbing_from_script()
     if self.original_language != self.target_language:
       self.run_translation()
@@ -1689,12 +1720,12 @@ class Dubber:
         self.utterance_metadata = updated_utterance_metadata
     if self.with_verification:
       self._run_verify_utterance_metadata()
-      self._rerun = True
     self.run_text_to_speech()
     self.run_save_utterance_metadata()
     self.run_postprocessing()
     if self.clean_up:
       self.run_clean_directory()
+    self.progress_bar.close()
     logging.info("Dubbing process finished.")
     logging.info("Output files saved in: %s.", self.output_directory)
     return self.postprocessing_output
