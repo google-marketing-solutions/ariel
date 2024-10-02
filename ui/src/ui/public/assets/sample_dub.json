@@ -1,0 +1,22 @@
+[
+  {
+    "text": "Hello world.",
+    "start": 0.03096875,
+    "end": 9.160343750000003,
+    "path": "example/chunk_0.03096875_9.160343750000003.mp3",
+    "speaker_id": "speaker_01",
+    "ssml_gender": "Male",
+    "translated_text": "Hallo Welt.",
+    "assigned_google_voice": "en-US-Journey-D"
+  },
+  {
+    "text": "I am Ariel.",
+    "start": 9.160343750000004,
+    "end": 17.160343750000003,
+    "path": "example/chunk_0.03096875_9.160343750000003.mp3",
+    "speaker_id": "speaker_01",
+    "ssml_gender": "Male",
+    "translated_text": "Ich bin Ariel.",
+    "assigned_google_voice": "en-US-Journey-D"
+  }
+]

@@ -1,0 +1,28 @@
+<mat-form-field>
+  <mat-label>Video keywords</mat-label>
+  <mat-chip-grid
+    #templateChipGrid
+    aria-label="Enter template form keywords"
+    [(ngModel)]="chipsCollection"
+  >
+    @for (chip of chipsCollection(); track chip) {
+      <mat-chip-row
+        (removed)="remove(chip)"
+        [editable]="true"
+        (edited)="edit(chip, $event)"
+      >
+        {{ chip.name }}
+        <button matChipRemove aria-label="'remove template form' + keyword">
+          <mat-icon>cancel</mat-icon>
+        </button>
+      </mat-chip-row>
+    }
+  </mat-chip-grid>
+  <input
+    placeholder="New entry..."
+    [matChipInputFor]="templateChipGrid"
+    [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+    [matChipInputAddOnBlur]="addOnBlur"
+    (matChipInputTokenEnd)="add($event)"
+  />
+</mat-form-field>

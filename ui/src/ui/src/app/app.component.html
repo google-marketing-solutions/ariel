@@ -1,0 +1,391 @@
+<mat-toolbar color="secondary">
+  <button
+    mat-icon-button
+    class="example-icon"
+    aria-label="Example icon-button with menu icon"
+  >
+    <mat-icon>menu</mat-icon>
+  </button>
+  <span>Ariel - AI Video Ad Dubbing</span>
+</mat-toolbar>
+<br />
+<mat-stepper orientation="vertical" [linear]="isLinear" #stepper>
+  <mat-step [stepControl]="firstFormGroup">
+    <form [formGroup]="firstFormGroup">
+      <ng-template matStepLabel>Basic configuration</ng-template>
+      <mat-form-field class="full-width">
+        <mat-label>Google Cloud Project ID</mat-label>
+        <input
+          matInput
+          placeholder="e.g. my-cloud-project"
+          value="my-cloud-project"
+          formControlName="firstCtrl"
+          required
+        />
+      </mat-form-field>
+      <mat-form-field class="full-width">
+        <mat-label>Gemini API token</mat-label>
+        <input
+          matInput
+          placeholder="Generate an API token at Google AI Studio"
+          formControlName="firstCtrl"
+          required
+        />
+      </mat-form-field>
+      <mat-form-field class="full-width">
+        <mat-label>Hugging Face API token</mat-label>
+        <input
+          matInput
+          placeholder="Generate a token at HuggingFace"
+          formControlName="firstCtrl"
+          required
+        />
+      </mat-form-field>
+      <div>
+        <button mat-button matStepperNext type="button">Next</button>
+      </div>
+    </form>
+  </mat-step>
+  <mat-step [stepControl]="firstFormGroup">
+    <form [formGroup]="firstFormGroup">
+      <ng-template matStepLabel>Dubber settings</ng-template>
+      <mat-form-field class="full-width">
+        <mat-label>Advertiser name</mat-label>
+        <input
+          matInput
+          placeholder="Name of the advertiser."
+          formControlName="firstCtrl"
+          required
+        />
+      </mat-form-field>
+      <mat-form-field class="full-width">
+        <mat-label>Input file</mat-label>
+        <input
+          matInput
+          placeholder="Path to the input video or audio file e.g. gs://cloud-storage-bucket/ariel-input/"
+          formControlName="firstCtrl"
+          required
+        />
+      </mat-form-field>
+      <mat-form-field class="full-width">
+        <mat-label>Output directory</mat-label>
+        <input
+          matInput
+          placeholder="Directory to save output files e.g. gs://cloud-storage-bucket/ariel-output/"
+          formControlName="firstCtrl"
+          required
+        />
+      </mat-form-field>
+      <mat-form-field class="full-width">
+        <mat-label>Original Language</mat-label>
+        <select matNativeControl formControlName="firstCtrl" required>
+          <option value="ar-SA">Arabic (SA)</option>
+          <option value="ar-EG">Arabic (EG)</option>
+          <option value="bn-BD">Bengali (BD)</option>
+          <option value="bn-IN">Bengali (IN)</option>
+          <option value="bg-BG">Bulgarian (BG)</option>
+          <option value="zh-CN">Chinese (Simplified) (CN)</option>
+          <option value="zh-TW">Chinese (Traditional) (TW)</option>
+          <option value="hr-HR">Croatian (HR)</option>
+          <option value="cs-CZ">Czech (CZ)</option>
+          <option value="da-DK">Danish (DK)</option>
+          <option value="nl-NL">Dutch (NL)</option>
+          <option value="en-US" selected>English (US)</option>
+          <option value="en-GB">English (GB)</option>
+          <option value="en-CA">English (CA)</option>
+          <option value="en-AU">English (AU)</option>
+          <option value="et-EE">Estonian (EE)</option>
+          <option value="fi-FI">Finnish (FI)</option>
+          <option value="fr-FR">French (FR)</option>
+          <option value="fr-CA">French (CA)</option>
+          <option value="de-DE">German (DE)</option>
+          <option value="el-GR">Greek (GR)</option>
+          <option value="gu-IN">Gujarati (IN)</option>
+          <option value="he-IL">Hebrew (IL)</option>
+          <option value="hi-IN">Hindi (IN)</option>
+          <option value="hu-HU">Hungarian (HU)</option>
+          <option value="id-ID">Indonesian (ID)</option>
+          <option value="it-IT">Italian (IT)</option>
+          <option value="ja-JP">Japanese (JP)</option>
+          <option value="kn-IN">Kannada (IN)</option>
+          <option value="ko-KR">Korean (KR)</option>
+          <option value="lv-LV">Latvian (LV)</option>
+          <option value="lt-LT">Lithuanian (LT)</option>
+          <option value="ml-IN">Malayalam (IN)</option>
+          <option value="mr-IN">Marathi (IN)</option>
+          <option value="nb-NO">Norwegian (NB-NO)</option>
+          <option value="nn-NO">Norwegian (NN-NO)</option>
+          <option value="pl-PL">Polish (PL)</option>
+          <option value="pt-PT">Portuguese (PT)</option>
+          <option value="pt-BR">Portuguese (BR)</option>
+          <option value="ro-RO">Romanian (RO)</option>
+          <option value="ru-RU">Russian (RU)</option>
+          <option value="sr-RS">Serbian (RS)</option>
+          <option value="sk-SK">Slovak (SK)</option>
+          <option value="sl-SI">Slovenian (SI)</option>
+          <option value="es-ES">Spanish (ES)</option>
+          <option value="es-MX">Spanish (MX)</option>
+          <option value="sw-KE">Swahili (KE)</option>
+          <option value="sv-SE">Swedish (SE)</option>
+          <option value="ta-IN">Tamil (IN)</option>
+          <option value="ta-LK">Tamil (LK)</option>
+          <option value="te-IN">Telugu (IN)</option>
+          <option value="th-TH">Thai (TH)</option>
+          <option value="tr-TR">Turkish (TR)</option>
+          <option value="uk-UA">Ukrainian (UA)</option>
+          <option value="vi-VN">Vietnamese (VN)</option>
+        </select>
+      </mat-form-field>
+      <mat-form-field class="full-width">
+        <mat-label>Target Language</mat-label>
+        <select matNativeControl formControlName="firstCtrl" required>
+          <option value="ar-SA">Arabic (SA)</option>
+          <option value="ar-EG">Arabic (EG)</option>
+          <option value="bn-BD">Bengali (BD)</option>
+          <option value="bn-IN">Bengali (IN)</option>
+          <option value="bg-BG">Bulgarian (BG)</option>
+          <option value="zh-CN">Chinese (Simplified) (CN)</option>
+          <option value="zh-TW">Chinese (Traditional) (TW)</option>
+          <option value="hr-HR">Croatian (HR)</option>
+          <option value="cs-CZ">Czech (CZ)</option>
+          <option value="da-DK">Danish (DK)</option>
+          <option value="nl-NL">Dutch (NL)</option>
+          <option value="en-US">English (US)</option>
+          <option value="en-GB">English (GB)</option>
+          <option value="en-CA">English (CA)</option>
+          <option value="en-AU">English (AU)</option>
+          <option value="et-EE">Estonian (EE)</option>
+          <option value="fi-FI">Finnish (FI)</option>
+          <option value="fr-FR">French (FR)</option>
+          <option value="fr-CA">French (CA)</option>
+          <option value="de-DE" selected>German (DE)</option>
+          <option value="el-GR">Greek (GR)</option>
+          <option value="gu-IN">Gujarati (IN)</option>
+          <option value="he-IL">Hebrew (IL)</option>
+          <option value="hi-IN">Hindi (IN)</option>
+          <option value="hu-HU">Hungarian (HU)</option>
+          <option value="id-ID">Indonesian (ID)</option>
+          <option value="it-IT">Italian (IT)</option>
+          <option value="ja-JP">Japanese (JP)</option>
+          <option value="kn-IN">Kannada (IN)</option>
+          <option value="ko-KR">Korean (KR)</option>
+          <option value="lv-LV">Latvian (LV)</option>
+          <option value="lt-LT">Lithuanian (LT)</option>
+          <option value="ml-IN">Malayalam (IN)</option>
+          <option value="mr-IN">Marathi (IN)</option>
+          <option value="nb-NO">Norwegian (NB-NO)</option>
+          <option value="nn-NO">Norwegian (NN-NO)</option>
+          <option value="pl-PL">Polish (PL)</option>
+          <option value="pt-PT">Portuguese (PT)</option>
+          <option value="pt-BR">Portuguese (BR)</option>
+          <option value="ro-RO">Romanian (RO)</option>
+          <option value="ru-RU">Russian (RU)</option>
+          <option value="sr-RS">Serbian (RS)</option>
+          <option value="sk-SK">Slovak (SK)</option>
+          <option value="sl-SI">Slovenian (SI)</option>
+          <option value="es-ES">Spanish (ES)</option>
+          <option value="es-MX">Spanish (MX)</option>
+          <option value="sw-KE">Swahili (KE)</option>
+          <option value="sv-SE">Swedish (SE)</option>
+          <option value="ta-IN">Tamil (IN)</option>
+          <option value="ta-LK">Tamil (LK)</option>
+          <option value="te-IN">Telugu (IN)</option>
+          <option value="th-TH">Thai (TH)</option>
+          <option value="tr-TR">Turkish (TR)</option>
+          <option value="uk-UA">Ukrainian (UA)</option>
+          <option value="vi-VN">Vietnamese (VN)</option>
+        </select>
+      </mat-form-field>
+      <div class="slider-label-container full-width">
+        <label id="num-speakers-slider-label"
+          >Number of speakers in the ad
+        </label>
+        <label class="slider-value-label">{{ numSpeakersSlider.value }}</label>
+      </div>
+      <mat-slider min="0" max="5" step="1" class="full-width">
+        <input matSliderThumb value="1" #numSpeakersSlider />
+      </mat-slider>
+      <input-chips class="full-width" [(chips)]="preferredVoices">
+      </input-chips>
+      <!-- <input-chips [(chips)]="preferredVoices"> </input-chips> -->
+      <!-- <mat-form-field class="full-width">
+      <mat-label>Preferred voices</mat-label>
+      <mat-chip-grid
+        #chipGrid
+        aria-label="Enter your preferred voices"
+        matTooltip="Preferred voice names for text-to-speech (e.g., 'Wavenet' for Google's TTS or 'Calllum' for ElevenLabs"
+      >
+        @for (voice of preferredVoices(); track voice) {
+          <mat-chip-row
+            (removed)="remove(voice)"
+            [editable]="true"
+            (edited)="edit(voice, $event)"
+            [aria-description]="'press enter to edit ' + voice.item"
+          >
+            {{ voice.item }}
+            <button matChipRemove [attr.aria-label]="'remove ' + voice.item">
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </mat-chip-row>
+        }
+        <input
+          placeholder="Add voice..."
+          [matChipInputFor]="chipGrid"
+          [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+          [matChipInputAddOnBlur]="addOnBlur"
+          (matChipInputTokenEnd)="add($event)"
+        />
+      </mat-chip-grid>
+    </mat-form-field> -->
+      <!-- <mat-form-field class="full-width">
+      <mat-label>Exclude dubbing phrases</mat-label>
+      <mat-chip-grid
+        #chipGrid
+        aria-label="Enter phrases to exclude in the dubbing process"
+        matTooltip="These phrases will be excluded in the dubbing process and the original utterance will be used instead."
+      >
+        @for (phrase of noDubPhrases(); track phrase) {
+          <mat-chip-row
+            (removed)="remove(phrase)"
+            [editable]="true"
+            (edited)="edit(phrase, $event)"
+            [aria-description]="'press enter to edit ' + phrase.item"
+          >
+            {{ phrase.item }}
+            <button matChipRemove [attr.aria-label]="'remove ' + phrase.item">
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </mat-chip-row>
+        }
+        <input
+          placeholder="Add phrase..."
+          [matChipInputFor]="chipGrid"
+          [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+          [matChipInputAddOnBlur]="addOnBlur"
+          (matChipInputTokenEnd)="add($event)"
+        />
+      </mat-chip-grid>
+    </mat-form-field> -->
+      <mat-form-field class="full-width">
+        <mat-label>No dubbing phrases</mat-label>
+        <input
+          matInput
+          placeholder="Phrases to exclude in the dubbing process. The original utterance will be used instead."
+          formControlName="firstCtrl"
+        />
+      </mat-form-field>
+      <mat-form-field class="full-width">
+        <mat-label>Diarization Instructions</mat-label>
+        <input
+          matInput
+          placeholder="Specific instructions for speaker diarization."
+          formControlName="firstCtrl"
+        />
+      </mat-form-field>
+      <mat-form-field class="full-width">
+        <mat-label>Translation Instructions</mat-label>
+        <input
+          matInput
+          placeholder="Specific instructions for translation."
+          formControlName="firstCtrl"
+        />
+      </mat-form-field>
+      <mat-checkbox
+        class="full-width"
+        matTooltip="Merge utterances with timestamps closer than the threshold."
+        >Merge utterances</mat-checkbox
+      >
+      <div class="slider-label-container full-width">
+        <label id="num-speakers-slider-label"
+          >Minimum merge threshold (seconds)
+        </label>
+        <label class="slider-value-label">{{
+          minMergeThresholdSlider.value
+        }}</label>
+      </div>
+      <mat-slider min="0.0" max="3.0" step="0.001" class="full-width">
+        <input
+          matSliderThumb
+          value="0.001"
+          formControlName="firstCtrl"
+          #minMergeThresholdSlider
+        />
+      </mat-slider>
+      <div>
+        <button mat-button matStepperPrevious>Back</button>
+        <button mat-button matStepperNext (click)="generateTranslations()">
+          Generate translations
+        </button>
+      </div>
+    </form>
+  </mat-step>
+  <mat-step [stepControl]="secondFormGroup">
+    <form [formGroup]="secondFormGroup">
+      <ng-template matStepLabel>Review translations</ng-template>
+      <div class="mat-expansion-panel-body">
+        <div class="container">
+          @if (loadingTranslations) {
+            <mat-spinner></mat-spinner>
+          } @else {
+            @for (dubbing of dubbedInstances; track dubbing) {
+              <div class="row">
+                <div class="col">
+                  <mat-card>
+                    <mat-card-header>
+                      <mat-card-title>English</mat-card-title>
+                    </mat-card-header>
+                    <mat-card-content>
+                      <p>{{ dubbing.text }}</p>
+                    </mat-card-content>
+                  </mat-card>
+                </div>
+                <div class="col">
+                  <mat-card>
+                    <mat-card-header>
+                      <mat-card-title>German</mat-card-title>
+                    </mat-card-header>
+                    <mat-card-content>
+                      @if (dubbing.editing) {
+                        <mat-form-field class="full-width">
+                          <textarea
+                            matInput
+                            formControlName="secondCtrl"
+                            [(ngModel)]="dubbing.translated_text"
+                          ></textarea>
+                        </mat-form-field>
+                      } @else {
+                        <p>{{ dubbing.translated_text }}</p>
+                        <button
+                          mat-icon-button
+                          color="primary"
+                          (click)="toggleEdit(dubbing)"
+                        >
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                      }
+                    </mat-card-content>
+                  </mat-card>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+      <div>
+        <button mat-button matStepperPrevious>Back</button>
+        <button mat-button matStepperNext (click)="dubVideo()">
+          Dub video
+        </button>
+      </div>
+    </form>
+  </mat-step>
+  <mat-step>
+    <ng-template matStepLabel>Download videos</ng-template>
+    <p>Video generation is completed.</p>
+    <div>
+      <button mat-button matStepperPrevious>Back</button>
+      <button mat-button>Download video</button>
+      <button mat-button (click)="stepper.reset()">Dub another video</button>
+    </div>
+  </mat-step>
+</mat-stepper>
