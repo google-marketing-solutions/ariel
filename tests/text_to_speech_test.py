@@ -612,12 +612,13 @@ class TestElevenlabsCloneVoices(absltest.TestCase):
     mock_client.clone.assert_called()
 
 
-class TestDubUtterances(parameterized.TestCase):
+class TestDubAllUtterances(parameterized.TestCase):
 
   @parameterized.named_parameters(
-      ("not_for_dubbing", False, "original_path", False),
-      ("for_dubbing_elevenlabs", True, "dubbed_path.mp3", True),
-      ("for_dubbing_google", True, "dubbed_path.mp3", False),
+      ("not_for_dubbing", False, "original_path", False, False),
+      ("for_dubbing_elevenlabs", True, "dubbed_path.mp3", True, False),
+      ("for_dubbing_google", True, "dubbed_path.mp3", False, False),
+      ("for_dubbing_google_adjust_speed", True, "dubbed_path.mp3", False, True),
   )
   @patch("ariel.text_to_speech.convert_text_to_speech")
   @patch("ariel.text_to_speech.elevenlabs_convert_text_to_speech")
@@ -628,6 +629,7 @@ class TestDubUtterances(parameterized.TestCase):
       for_dubbing_value,
       expected_dubbed_path,
       use_elevenlabs,
+      adjust_speed,
       mock_calculate_target_utterance_speed,
       mock_adjust_audio_speed,
       mock_elevenlabs_convert_text_to_speech,
@@ -653,31 +655,84 @@ class TestDubUtterances(parameterized.TestCase):
         "use_speaker_boost": True,
     }]
     client = MagicMock()
-    mock_convert_text_to_speech.return_value = "dubbed_path.mp3"
-    mock_elevenlabs_convert_text_to_speech.return_value = "dubbed_path.mp3"
-    result = text_to_speech.dub_utterances(
+    preprocessing_output = dict(
+        video_file="test_output/test_video.mp4",
+        audio_file="test_output/test_audio.mp3",
+        audio_vocals_file="test_output/test_audio_vocals.mp3",
+        audio_background_file="test_output/test_audio_background.mp3",
+    )
+    tts = text_to_speech.TextToSpeech(
         client=client,
         utterance_metadata=utterance_metadata,
         output_directory="test_output",
         target_language="en-US",
+        preprocessing_output=preprocessing_output,
         use_elevenlabs=use_elevenlabs,
+        adjust_speed=adjust_speed,
     )
-    self.assertEqual(result[0]["dubbed_path"], expected_dubbed_path)
+    mock_convert_text_to_speech.return_value = "dubbed_path.mp3"
+    mock_elevenlabs_convert_text_to_speech.return_value = "dubbed_path.mp3"
+    mock_calculate_target_utterance_speed.return_value = 1.0
+
+    result = tts.dub_all_utterances()
+
+    self.assertEqual(result[0].get("dubbed_path"), expected_dubbed_path)
+
+  @patch("ariel.text_to_speech.audio_processing.run_cut_and_save_audio")
+  @patch("ariel.text_to_speech.create_speaker_to_paths_mapping")
+  @patch("ariel.text_to_speech.elevenlabs_run_clone_voices")
+  def test_voice_cloning(
+      self,
+      mock_elevenlabs_run_clone_voices,
+      mock_create_speaker_to_paths_mapping,
+      mock_run_cut_and_save_audio,
+  ):
+    utterance_metadata = [{"for_dubbing": True, "speaker_id": "spk_1"}]
+    client = MagicMock()
+    preprocessing_output = dict(
+        video_file="test_output/test_video.mp4",
+        audio_file="test_output/test_audio.mp3",
+        audio_vocals_file="test_output/test_audio_vocals.mp3",
+        audio_background_file="test_output/test_audio_background.mp3",
+    )
+    tts = text_to_speech.TextToSpeech(
+        client=client,
+        utterance_metadata=utterance_metadata,
+        output_directory="test_output",
+        target_language="en-US",
+        preprocessing_output=preprocessing_output,
+        use_elevenlabs=True,
+        elevenlabs_clone_voices=True,
+    )
+
+    tts.dub_all_utterances()
+
+    mock_run_cut_and_save_audio.assert_called_once()
+    mock_create_speaker_to_paths_mapping.assert_called_once()
+    mock_elevenlabs_run_clone_voices.assert_called_once()
 
   def test_value_error_when_cloning_without_elevenlabs(self):
     utterance_metadata = [{"for_dubbing": True, "speaker_id": "spk_1"}]
     client = MagicMock()
+    preprocessing_output = dict(
+        video_file="test_output/test_video.mp4",
+        audio_file="test_output/test_audio.mp3",
+        audio_vocals_file="test_output/test_audio_vocals.mp3",
+        audio_background_file="test_output/test_audio_background.mp3",
+    )
+    tts = text_to_speech.TextToSpeech(
+        client=client,
+        utterance_metadata=utterance_metadata,
+        output_directory="test_output",
+        target_language="en-US",
+        preprocessing_output=preprocessing_output,
+        use_elevenlabs=False,
+        elevenlabs_clone_voices=True,
+    )
     with self.assertRaisesRegex(
         ValueError, "Voice cloning requires using ElevenLabs API."
     ):
-      text_to_speech.dub_utterances(
-          client=client,
-          utterance_metadata=utterance_metadata,
-          output_directory="test_output",
-          target_language="en-US",
-          use_elevenlabs=False,
-          elevenlabs_clone_voices=True,
-      )
+      tts.dub_all_utterances()
 
 
 if __name__ == "__main__":

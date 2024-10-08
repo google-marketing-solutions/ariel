@@ -565,6 +565,7 @@ class Dubber:
     self.utterance_metadata = None
     self._number_of_steps = number_of_steps
     self.with_verification = with_verification
+    self.text_to_speech = None
 
   @functools.cached_property
   def input_file(self):
@@ -826,13 +827,6 @@ class Dubber:
         audio_file=audio_file,
         output_directory=self.output_directory,
     )
-    if self.elevenlabs_clone_voices:
-      utterance_metadata = audio_processing.run_cut_and_save_audio(
-          utterance_metadata=utterance_metadata,
-          audio_file=audio_vocals_file,
-          output_directory=self.output_directory,
-          elevenlabs_clone_voices=self.elevenlabs_clone_voices,
-      )
     self.utterance_metadata = utterance_metadata
     self.preprocessing_output = PreprocessingArtifacts(
         video_file=video_file,
@@ -1224,7 +1218,7 @@ class Dubber:
     """Asks the user if they want to review the metadata again after changes."""
     while True:
       review_choice = input(
-          "\nDo you want to review the metadata again after the changes?"
+          "\nDo you want to review the metadata again?"
           " (yes/no): "
       ).lower()
       if review_choice in ("yes", "no"):
@@ -1375,16 +1369,18 @@ class Dubber:
     Returns:
         Updated utterance metadata with generated speech file paths.
     """
-    self.utterance_metadata = text_to_speech.dub_utterances(
+    self.text_to_speech = text_to_speech.TextToSpeech(
         client=self.text_to_speech_client,
         utterance_metadata=self.utterance_metadata,
         output_directory=self.output_directory,
         target_language=self.target_language,
+        preprocessing_output=dataclasses.asdict(self.preprocessing_output),
         adjust_speed=self.adjust_speed,
         use_elevenlabs=self.use_elevenlabs,
         elevenlabs_model=self.elevenlabs_model,
         elevenlabs_clone_voices=self.elevenlabs_clone_voices,
     )
+    self.utterance_metadata = self.text_to_speech.dub_all_utterances()
     logging.info("Completed converting text to speech.")
     self.progress_bar.update()
 
