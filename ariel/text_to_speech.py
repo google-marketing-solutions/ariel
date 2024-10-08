@@ -18,6 +18,7 @@ import io
 import os
 from typing import Final, Mapping, Sequence
 from absl import logging
+from ariel import audio_processing
 from elevenlabs import VoiceSettings, save
 from elevenlabs.client import ElevenLabs
 from elevenlabs.types.voice import Voice
@@ -497,9 +498,8 @@ def elevenlabs_run_clone_voices(
 
 def adjust_audio_speed(
     *,
-    reference_length: float,
-    dubbed_file: str,
-    speed: float | None = None,
+    speed: float,
+    dubbed_path: str,
     chunk_size: int = _DEFAULT_CHUNK_SIZE,
 ) -> None:
   """Adjusts the speed of an MP3 file to match the reference file duration.
@@ -508,19 +508,14 @@ def adjust_audio_speed(
   is the same or shorter than the duration of the reference file.
 
   Args:
-      reference_length: The reference length of an audio chunk.
-      dubbed_file: The path to the dubbed MP3 file.
       speed: The desired speed in seconds. If None it will be determined based
         on the duration of the reference_file and dubbed_file.
+      dubbed_path: The path to the dubbed MP3 file.
       chunk_size: Duration of audio chunks (in ms) to preserve in the
         adjustement process.
   """
 
-  dubbed_audio = AudioSegment.from_file(dubbed_file)
-  if not speed:
-    speed = calculate_target_utterance_speed(
-        reference_length=reference_length, dubbed_file=dubbed_file
-    )
+  dubbed_audio = AudioSegment.from_file(dubbed_path)
   if speed <= 1.0:
     return
   logging.warning(
@@ -531,135 +526,294 @@ def adjust_audio_speed(
   output_audio = speedup(
       dubbed_audio, speed, chunk_size=chunk_size, crossfade=crossfade
   )
-  output_audio.export(dubbed_file, format="mp3")
+  output_audio.export(dubbed_path, format="mp3")
 
 
-def dub_utterances(
-    *,
-    client: texttospeech.TextToSpeechClient | ElevenLabs,
-    utterance_metadata: Sequence[Mapping[str, str | float]],
-    output_directory: str,
-    target_language: str,
-    adjust_speed: bool = True,
-    use_elevenlabs: bool = False,
-    elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
-    elevenlabs_clone_voices: bool = False,
-) -> Sequence[Mapping[str, str | float]]:
-  """Processes a list of utterance metadata, generating dubbed audio files.
+class TextToSpeech:
+  """Manages the Text-To-Speech (TTS) process during dubbing.
 
-  Args:
-      client: The TextToSpeechClient or ElevenLabs object to use.
-      utterance_metadata: A sequence of utterance metadata, each represented as
-        a dictionary with keys: "text", "start", "end", "speaker_id",
-        "ssml_gender", "translated_text", "assigned_google_voice",
-        "for_dubbing", "path", "google_voice_pitch", "google_voice_speed",
-        "google_voice_volume_gain_db" and optionally "vocals_path".
-      output_directory: Path to the directory for output files.
-      target_language: The target language (ISO 3166-1 alpha-2).
-      adjust_speed: Whether to force speed up of utterances to match the
-        duration of the utterances in the source language. Recommended when
-        using ElevenLabs and Google's 'Journey' voices.
-      use_elevenlabs: Whether to use ElevenLabs API for Text-To-Speech. If not
-        Google's Text-To-Speech will be used.
-      elevenlabs_model: The ElevenLabs model to use in the Text-To-Speech
-        process.
-      elevenlabs_clone_voices: Whether to clone source voices. It requires using
-        ElevenLabs API.
+  This class handles the conversion of translated text to speech using either
+  Google Cloud Text-to-Speech or ElevenLabs API. It provides functionalities
+  for voice cloning, assigning voices, running TTS, and adjusting speech speed
+  to match the original audio.
 
-  Returns:
-      List of processed utterance metadata with updated "dubbed_path".
-
-  Raises:
-      ValueError: When 'elevenlabs_clone_voices' is True and 'use_elevenlabs' is
-      False.
+  Attributes:
+    client: The TTS client object (either Google Cloud's or ElevenLabs').
+    utterance_metadata: A sequence of dictionaries, each containing metadata
+      about an utterance (e.g., speaker, text, timestamps).
+    output_directory: The directory to save the dubbed audio files.
+    target_language: The target language for dubbing.
+    preprocessing_output: A dictionary containing paths to preprocessed files.
+    adjust_speed: Whether to adjust the speed of the dubbed audio.
+    use_elevenlabs: Whether to use ElevenLabs API for TTS.
+    elevenlabs_model: The ElevenLabs model to use for speech synthesis.
+    elevenlabs_clone_voices: Whether to clone voices using ElevenLabs.
+    cloned_voices: A dictionary mapping speaker IDs to cloned voices.
   """
 
-  if elevenlabs_clone_voices:
-    if not use_elevenlabs:
+  def __init__(
+      self,
+      *,
+      client: texttospeech.TextToSpeechClient | ElevenLabs,
+      utterance_metadata: Sequence[Mapping[str, str | float]],
+      output_directory: str,
+      target_language: str,
+      preprocessing_output: Mapping[str, str],
+      adjust_speed: bool = True,
+      use_elevenlabs: bool = False,
+      elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
+      elevenlabs_clone_voices: bool = False,
+  ) -> None:
+    """Initializes TextToSpeech with the provided parameters.
+
+    Args:
+      client: The TTS client object.
+      utterance_metadata: Metadata for each utterance.
+      output_directory: Directory to save dubbed audio.
+      target_language: The target language.
+      preprocessing_output: Paths to preprocessed files.
+      adjust_speed: Whether to adjust dubbed audio speed.
+      use_elevenlabs: Whether to use ElevenLabs API.
+      elevenlabs_model: The ElevenLabs model to use.
+      elevenlabs_clone_voices: Whether to clone voices.
+    """
+    self.client = client
+    self.utterance_metadata = utterance_metadata
+    self.output_directory = output_directory
+    self.target_language = target_language
+    self.adjust_speed = adjust_speed
+    self.use_elevenlabs = use_elevenlabs
+    self.elevenlabs_model = elevenlabs_model
+    self.elevenlabs_clone_voices = elevenlabs_clone_voices
+    self.preprocessing_output = preprocessing_output
+    self.cloned_voices = None
+
+  def _clone_voices(self) -> Mapping[str, Voice]:
+    """Clones voices using ElevenLabs API.
+
+    This method clones voices based on the `elevenlabs_clone_voices` flag.
+    It extracts audio segments for each speaker, creates a mapping between
+    speakers and their audio files, and then uses ElevenLabs to clone the
+    voices.
+
+    Returns:
+      A dictionary mapping speaker IDs to their cloned voices.
+    """
+    if not self.elevenlabs_clone_voices:
+      return
+    if self.elevenlabs_clone_voices and not self.use_elevenlabs:
       raise ValueError("Voice cloning requires using ElevenLabs API.")
+    self.utterance_metadata = audio_processing.run_cut_and_save_audio(
+        utterance_metadata=self.utterance_metadata,
+        audio_file=self.preprocessing_output["audio_vocals_file"],
+        output_directory=self.output_directory,
+        elevenlabs_clone_voices=self.elevenlabs_clone_voices,
+    )
     speaker_to_paths_mapping = create_speaker_to_paths_mapping(
-        utterance_metadata
+        self.utterance_metadata
     )
-    speaker_to_voices_mapping = elevenlabs_run_clone_voices(
-        client=client, speaker_to_paths_mapping=speaker_to_paths_mapping
+    return elevenlabs_run_clone_voices(
+        client=self.client, speaker_to_paths_mapping=speaker_to_paths_mapping
     )
-  updated_utterance_metadata = []
-  for utterance in utterance_metadata:
-    utterance_copy = utterance.copy()
-    if not utterance_copy["for_dubbing"]:
-      try:
-        dubbed_path = utterance_copy["path"]
-      except KeyError:
-        dubbed_path = f"chunk_{utterance['start']}_{utterance['end']}.mp3"
-    else:
-      if elevenlabs_clone_voices:
-        assigned_voice = speaker_to_voices_mapping[utterance_copy["speaker_id"]]
-      else:
-        assigned_voice = utterance_copy["assigned_voice"]
-      reference_length = utterance_copy["end"] - utterance_copy["start"]
-      text = utterance_copy["translated_text"]
-      try:
-        path = utterance_copy["path"]
-        base_filename = os.path.splitext(os.path.basename(path))[0]
-        output_filename = os.path.join(
-            output_directory, f"dubbed_{base_filename}.mp3"
+
+  def _assign_output_path(self, utterance: Mapping[str, str | float]) -> str:
+    """Assigns the output path for the dubbed audio file.
+
+    Args:
+      utterance: A dictionary containing utterance metadata.
+
+    Returns:
+      The path for the dubbed audio file.
+    """
+    path = utterance["path"]
+    base_filename = os.path.splitext(os.path.basename(path))[0]
+    return os.path.join(self.output_directory, f"dubbed_{base_filename}.mp3")
+
+  def _find_voice(self, utterance: Mapping[str, str | float]) -> str | Voice:
+    """Finds the appropriate voice for the given utterance.
+
+    Args:
+      utterance: A dictionary containing utterance metadata.
+
+    Returns:
+      The voice ID (for Google Cloud) or Voice object (for ElevenLabs) to use.
+    """
+    if self.elevenlabs_clone_voices:
+      return self.cloned_voices[utterance["speaker_id"]]
+    return utterance["assigned_voice"]
+
+  def _assign_missing_voice(
+      self, utterance: Mapping[str, str | float]
+  ) -> Mapping[str, str | float]:
+    """Assigns a cloned voice if missing in the utterance metadata.
+
+    Args:
+      utterance: A dictionary containing utterance metadata.
+
+    Returns:
+      The updated utterance metadata with the assigned voice.
+    """
+    if not self.elevenlabs_clone_voices:
+      return utterance
+    utterance.update(
+        dict(
+            assigned_voice=self.cloned_voices[utterance["speaker_id"]].voice_id
         )
-      except KeyError:
-        output_filename = os.path.join(
-            output_directory,
-            f"dubbed_chunk_{utterance['start']}_{utterance['end']}.mp3",
-        )
-      if use_elevenlabs:
-        dubbed_path = elevenlabs_convert_text_to_speech(
-            client=client,
-            model=elevenlabs_model,
-            assigned_elevenlabs_voice=assigned_voice,
-            output_filename=output_filename,
-            text=text,
-            stability=utterance_copy["stability"],
-            similarity_boost=utterance_copy["similarity_boost"],
-            style=utterance_copy["style"],
-            use_speaker_boost=utterance_copy["use_speaker_boost"],
-        )
-      else:
-        dubbed_path = convert_text_to_speech(
-            client=client,
-            assigned_google_voice=assigned_voice,
-            target_language=target_language,
-            output_filename=output_filename,
-            text=text,
-            pitch=utterance_copy["pitch"],
-            speed=utterance_copy["speed"],
-            volume_gain_db=utterance_copy["volume_gain_db"],
-        )
-      condition_one = adjust_speed and use_elevenlabs
-      assigned_voice = utterance_copy.get("assigned_voice", None)
-      assigned_voice = assigned_voice if assigned_voice else ""
-      condition_two = adjust_speed and _EXCEPTION_VOICE in assigned_voice
-      speed = calculate_target_utterance_speed(
-          reference_length=reference_length, dubbed_file=dubbed_path
+    )
+    return utterance
+
+  def _run_text_to_speech(
+      self, utterance: Mapping[str, str | float]
+  ) -> Mapping[str, str | float]:
+    """Converts the translated text to speech using the chosen TTS engine.
+
+    Args:
+      utterance: A dictionary containing utterance metadata.
+
+    Returns:
+      The updated utterance metadata with the path to the dubbed audio.
+    """
+    if not utterance["for_dubbing"]:
+      dubbed_path = utterance["path"]
+    elif utterance["for_dubbing"] and not self.use_elevenlabs:
+      dubbed_path = convert_text_to_speech(
+          client=self.client,
+          assigned_google_voice=self._find_voice(utterance),
+          target_language=self.target_language,
+          output_filename=self._assign_output_path(utterance),
+          text=utterance["translated_text"],
+          pitch=utterance["pitch"],
+          speed=utterance["speed"],
+          volume_gain_db=utterance["volume_gain_db"],
       )
-      if condition_one or condition_two:
-        chunk_size = utterance_copy.get("chunk_size", _DEFAULT_CHUNK_SIZE)
-        adjust_audio_speed(
-            reference_length=reference_length,
-            dubbed_file=dubbed_path,
-            chunk_size=chunk_size,
-        )
-        utterance_copy["chunk_size"] = chunk_size
-      condition_three = adjust_speed and _EXCEPTION_VOICE not in assigned_voice
-      if speed != 1.0 and not use_elevenlabs and condition_three:
-        utterance_copy["speed"] = speed
-        dubbed_path = convert_text_to_speech(
-            client=client,
-            assigned_google_voice=assigned_voice,
-            target_language=target_language,
-            output_filename=output_filename,
-            text=text,
-            pitch=utterance_copy["pitch"],
-            speed=speed,
-            volume_gain_db=utterance_copy["volume_gain_db"],
-        )
-    utterance_copy["dubbed_path"] = dubbed_path
-    updated_utterance_metadata.append(utterance_copy)
-  return updated_utterance_metadata
+    elif utterance["for_dubbing"] and self.use_elevenlabs:
+      dubbed_path = elevenlabs_convert_text_to_speech(
+          client=self.client,
+          model=self.elevenlabs_model,
+          assigned_elevenlabs_voice=self._find_voice(utterance),
+          output_filename=self._assign_output_path(utterance),
+          text=utterance["translated_text"],
+          stability=utterance["stability"],
+          similarity_boost=utterance["similarity_boost"],
+          style=utterance["style"],
+          use_speaker_boost=utterance["use_speaker_boost"],
+      )
+    utterance.update(dict(dubbed_path=dubbed_path))
+    return utterance
+
+  def _verify_run_adjust_speed_elevenlabs_google(
+      self, utterance: Mapping[str, str | float]
+  ) -> bool:
+    """Verifies if audio speed adjustment is needed for ElevenLabs or specific Google voices.
+
+    Args:
+      utterance: A dictionary containing utterance metadata.
+
+    Returns:
+      True if adjustment is needed, False otherwise.
+    """
+    condition_one = self.adjust_speed and self.use_elevenlabs
+    condition_two = (
+        self.adjust_speed and _EXCEPTION_VOICE in utterance["assigned_voice"]
+    )
+    return condition_one or condition_two
+
+  def _verify_run_adjust_speed_google(
+      self, utterance: Mapping[str, str | float], speed: float
+  ) -> bool:
+    """Verifies if audio speed adjustment is needed for Google voices (excluding specific ones).
+
+    Args:
+      utterance: A dictionary containing utterance metadata.
+      speed: The calculated speed for the utterance.
+
+    Returns:
+      True if adjustment is needed, False otherwise.
+    """
+    condition_one = (
+        self.adjust_speed
+        and _EXCEPTION_VOICE not in utterance["assigned_voice"]
+    )
+    return speed != 1.0 and not self.use_elevenlabs and condition_one
+
+  def _run_adjust_speed(
+      self, *, utterance: Mapping[str, str | float], speed: float
+  ) -> Mapping[str, str | float]:
+    """Adjusts the speed of the dubbed audio using the `adjust_audio_speed` function.
+
+    Args:
+      utterance: A dictionary containing utterance metadata.
+      speed: The target speed for the audio.
+
+    Returns:
+      The updated utterance metadata with the adjusted audio.
+    """
+    chunk_size = utterance.get("chunk_size", _DEFAULT_CHUNK_SIZE)
+    adjust_audio_speed(
+        speed=speed,
+        dubbed_path=utterance["dubbed_path"],
+        chunk_size=chunk_size,
+    )
+    utterance.update(dict(chunk_size=chunk_size))
+    return utterance
+
+  def _adjust_speed(
+      self, utterance: Mapping[str, str | float]
+  ) -> Mapping[str, str | float]:
+    """Adjusts the speed of the dubbed audio to match the original utterance length.
+
+    This method calculates the required speed adjustment and applies it to the
+    dubbed audio.
+    It handles different scenarios based on the TTS engine used and whether
+    specific voices require
+    different treatment.
+
+    Args:
+      utterance: A dictionary containing utterance metadata.
+
+    Returns:
+      The updated utterance metadata with the speed-adjusted audio.
+    """
+    reference_length = utterance["end"] - utterance["start"]
+    speed = calculate_target_utterance_speed(
+        reference_length=reference_length, dubbed_file=utterance["dubbed_path"]
+    )
+    if self._verify_run_adjust_speed_elevenlabs_google(utterance):
+      self._run_adjust_speed(utterance=utterance, speed=speed)
+    if self._verify_run_adjust_speed_google(utterance, speed=speed):
+      convert_text_to_speech(
+          client=self.client,
+          assigned_google_voice=self._find_voice(utterance),
+          target_language=self.target_language,
+          output_filename=self._assign_output_path(utterance),
+          text=utterance["translated_text"],
+          pitch=utterance["pitch"],
+          speed=speed,
+          volume_gain_db=utterance["volume_gain_db"],
+      )
+    utterance.update(dict(speed=speed))
+    return utterance
+
+  def dub_all_utterances(self) -> Sequence[Mapping[str, str | float]]:
+    """Dubs all utterances in the `utterance_metadata`.
+
+    This method iterates through the `utterance_metadata`, performs voice
+    cloning if necessary,
+    converts the translated text to speech, adjusts the speed of the dubbed
+    audio, and returns
+    the updated metadata with the paths to the dubbed audio files.
+
+    Returns:
+      A sequence of dictionaries containing the updated utterance metadata.
+    """
+    self.cloned_voices = self._clone_voices()
+    utterance_metadata_copy = self.utterance_metadata.copy()
+    updated_utterance_metadata = []
+    for utterance in utterance_metadata_copy:
+      utterance_with_voice_assignment = self._assign_missing_voice(utterance)
+      dubbed_utterance = self._run_text_to_speech(
+          utterance_with_voice_assignment
+      )
+      final_utterance = self._adjust_speed(dubbed_utterance)
+      updated_utterance_metadata.append(final_utterance)
+    return updated_utterance_metadata
