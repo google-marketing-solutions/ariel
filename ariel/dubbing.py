@@ -446,6 +446,7 @@ class Dubber:
       merge_utterances: bool = True,
       minimum_merge_threshold: float = 0.001,
       preferred_voices: Sequence[str] | None = None,
+      assigned_voices_override: Mapping[str, str] | None = None,
       adjust_speed: bool = True,
       vocals_volume_adjustment: float = 5.0,
       background_volume_adjustment: float = 0.0,
@@ -499,6 +500,9 @@ class Dubber:
         preferred_voices: Preferred voice names for text-to-speech. Use
           high-level names, e.g. 'Wavenet', 'Standard' etc. Do not use the full
           voice names, e.g. 'pl-PL-Wavenet-A' etc.
+        assigned_voices_override: A mapping between unique speaker IDs and the
+          full name of their assigned voices. E.g. {'speaker_01':
+          'en-US-Casual-K'} or {'speaker_01': 'Charlie'}.
         adjust_speed: Whether to force speed up of utterances to match the
           duration of the utterances in the source language. Recommended when
           using ElevenLabs and Google's 'Journey' voices.
@@ -566,6 +570,8 @@ class Dubber:
     self._number_of_steps = number_of_steps
     self.with_verification = with_verification
     self.text_to_speech = None
+    self._voice_assigner = None
+    self.assigned_voices_override = assigned_voices_override
 
   @functools.cached_property
   def input_file(self):
@@ -948,22 +954,14 @@ class Dubber:
         Updated utterance metadata with assigned voices
         and Text-To-Speech settings.
     """
-    if not self.elevenlabs_clone_voices:
-      if not self.use_elevenlabs:
-        assigned_voices = text_to_speech.assign_voices(
-            utterance_metadata=self.utterance_metadata,
-            target_language=self.target_language,
-            client=self.text_to_speech_client,
-            preferred_voices=self.preferred_voices,
-        )
-      else:
-        assigned_voices = text_to_speech.elevenlabs_assign_voices(
-            utterance_metadata=self.utterance_metadata,
-            client=self.text_to_speech_client,
-            preferred_voices=self.preferred_voices,
-        )
-    else:
-      assigned_voices = None
+    self._voice_assigner = text_to_speech.VoiceAssigner(
+        utterance_metadata=self.utterance_metadata,
+        client=self.text_to_speech_client,
+        target_language=self.target_language,
+        preferred_voices=self.preferred_voices,
+        assigned_voices_override=self.assigned_voices_override,
+    )
+    assigned_voices = self._voice_assigner.assigned_voices
     self.utterance_metadata = text_to_speech.update_utterance_metadata(
         utterance_metadata=self.utterance_metadata,
         assigned_voices=assigned_voices,
@@ -1218,8 +1216,7 @@ class Dubber:
     """Asks the user if they want to review the metadata again after changes."""
     while True:
       review_choice = input(
-          "\nDo you want to review the metadata again?"
-          " (yes/no): "
+          "\nDo you want to review the metadata again? (yes/no): "
       ).lower()
       if review_choice in ("yes", "no"):
         return review_choice == "no"
