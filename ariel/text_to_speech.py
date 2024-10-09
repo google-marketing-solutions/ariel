@@ -24,6 +24,7 @@ from absl import logging
 from ariel import audio_processing
 from elevenlabs import VoiceSettings, save
 from elevenlabs.client import ElevenLabs
+from elevenlabs.client import is_voice_id
 from elevenlabs.types.voice import Voice
 from google.cloud import texttospeech
 from pydub import AudioSegment
@@ -52,6 +53,7 @@ _DEFAULT_SIMILARITY_BOOST: Final[float] = 0.75
 _DEFAULT_STYLE: Final[float] = 0.0
 _DEFAULT_USE_SPEAKER_BOOST: Final[bool] = True
 _DEFAULT_ELEVENLABS_MODEL: Final[str] = "eleven_multilingual_v2"
+_ALTERNATIVE_ELEVENLABS_MODEL: Final[str] = "eleven_turbo_v2_5"
 _DEFAULT_CHUNK_SIZE: Final[int] = 150
 
 
@@ -509,6 +511,49 @@ def calculate_target_utterance_speed(
   return dubbed_duration / reference_length
 
 
+def _find_voice_id(*, client: ElevenLabs, assigned_elevenlabs_voice: str) -> str:
+  """Retrieves the ElevenLabs voice ID.
+
+  The function uses the same logic as part of the `generate` method of the
+  ElevenLabs
+  class
+  in version 1.9.0, specifically the lines: 177 - 184. It's to accommodate for
+  the
+  `text_to_speech.convert` method accepting the voice_id only. The link:
+
+  https://github.com/elevenlabs/elevenlabs-python/blob/1.9.0/src/elevenlabs/client.py#L177
+
+  Args:
+    client: The ElevenLabs client object.
+    assigned_elevenlabs_voice: The voice ID or voice name.
+
+  Returns:
+    The ElevenLabs voice ID.
+
+  Raises:
+    ValueError: If the voice is not found and can't be assigned any voice ID.
+  """
+  if isinstance(assigned_elevenlabs_voice, str) and is_voice_id(
+      assigned_elevenlabs_voice
+  ):
+    return assigned_elevenlabs_voice
+  all_available_voices = client.voices.get_all(show_legacy=True)
+  voice_id = next(
+      (
+          voice.voice_id
+          for voice in all_available_voices.voices
+          if voice.name == assigned_elevenlabs_voice
+      ),
+      None,
+  )
+  if not voice_id:
+    raise ValueError(
+        f"No voice ID found for {assigned_elevenlabs_voice}. It is either"
+        " unavailable or you provided an incorrect name"
+    )
+  return voice_id
+
+
 def elevenlabs_convert_text_to_speech(
     *,
     client: ElevenLabs,
@@ -516,6 +561,7 @@ def elevenlabs_convert_text_to_speech(
     assigned_elevenlabs_voice: str,
     output_filename: str,
     text: str,
+    target_language: str,
     stability: float = _DEFAULT_STABILITY,
     similarity_boost: float = _DEFAULT_SIMILARITY_BOOST,
     style: float = _DEFAULT_STYLE,
@@ -536,6 +582,8 @@ def elevenlabs_convert_text_to_speech(
       output_filename: The path and filename where the generated audio will be
         saved.
       text: The text content to convert to speech.
+      target_language: The language to dub the ad into. It must be ISO 3166-1
+        alpha-2 country code.
       stability: Controls the stability of the generated voice (0.0 to 1.0).
         Default is _DEFAULT_STABILITY.
       similarity_boost:  Enhances the voice's similarity to the original (0.0 to
@@ -547,9 +595,17 @@ def elevenlabs_convert_text_to_speech(
   Returns:
       The path and filename of the saved audio file (same as `output_filename`).
   """
-  audio = client.generate(
-      model=model,
-      voice=assigned_elevenlabs_voice,
+  voice_id = _find_voice_id(
+      client=client, assigned_elevenlabs_voice=assigned_elevenlabs_voice
+  )
+  elevenlabs_language_code = (
+      target_language.split("-")[0]
+      if model == _ALTERNATIVE_ELEVENLABS_MODEL
+      else None
+  )
+  audio = client.text_to_speech.convert(
+      model_id=model,
+      voice_id=voice_id,
       text=text,
       voice_settings=VoiceSettings(
           stability=stability,
@@ -557,6 +613,7 @@ def elevenlabs_convert_text_to_speech(
           style=style,
           use_speaker_boost=use_speaker_boost,
       ),
+      language_code=elevenlabs_language_code,
   )
   save(audio, output_filename)
   return output_filename
@@ -829,6 +886,7 @@ class TextToSpeech:
           assigned_elevenlabs_voice=self._find_voice(utterance),
           output_filename=self._assign_output_path(utterance),
           text=utterance["translated_text"],
+          target_language=self.target_language,
           stability=utterance["stability"],
           similarity_boost=utterance["similarity_boost"],
           style=utterance["style"],

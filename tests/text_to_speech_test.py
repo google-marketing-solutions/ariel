@@ -433,16 +433,24 @@ class TestElevenlabsConvertTextToSpeech(absltest.TestCase):
   def test_convert_text_to_speech(self):
     mock_client = MagicMock(spec=ElevenLabs)
     mock_audio = b"mock_audio_data"
-    mock_client.generate = MagicMock(return_value=mock_audio)
+    mock_text_to_speech = MagicMock()
+    mock_client.text_to_speech = mock_text_to_speech
+    mock_text_to_speech.convert = MagicMock(return_value=mock_audio)
+    mock_voices = MagicMock()
+    mock_client.voices = mock_voices
+    mock_voice = Voice(voice_id="some_voice_id", name="Bella")
+    mock_voices.get_all = MagicMock(
+        return_value=MagicMock(voices=[mock_voice])
+    )
     with tempfile.NamedTemporaryFile(suffix=".mp3") as temporary_file:
       output_file = temporary_file.name
-
       result = text_to_speech.elevenlabs_convert_text_to_speech(
           client=mock_client,
           model="eleven_multilingual_v2",
           assigned_elevenlabs_voice="Bella",
           output_filename=output_file,
           text="This is a test for ElevenLabs conversion.",
+          target_language="en-US",
           stability=0.5,
           similarity_boost=0.8,
           style=0.6,
