@@ -30,232 +30,118 @@ from pydub import AudioSegment
 import scipy
 
 
-class ListAvailableVoicesTest(absltest.TestCase):
+class TestVoiceAssigner(absltest.TestCase):
 
-  def test_list_available_voices(self):
-    mock_client = MagicMock(spec=texttospeech.TextToSpeechClient)
-    mock_response = texttospeech.ListVoicesResponse(
-        voices=[
-            texttospeech.Voice(
-                name="en-US-Standard-A",
-                ssml_gender=texttospeech.SsmlVoiceGender.FEMALE,
-            ),
-            texttospeech.Voice(
-                name="en-US-Standard-B",
-                ssml_gender=texttospeech.SsmlVoiceGender.MALE,
-            ),
-            texttospeech.Voice(
-                name="en-US-Standard-C",
-                ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL,
-            ),
-        ]
+  def setUp(self):
+    """Set up mocks for Google Cloud TTS and ElevenLabs clients."""
+    super().setUp()
+    self.mock_google_client = MagicMock(spec=texttospeech.TextToSpeechClient)
+    self.mock_google_voices = [
+        texttospeech.Voice(
+            name="en-US-News-B", ssml_gender=texttospeech.SsmlVoiceGender.MALE
+        ),
+        texttospeech.Voice(
+            name="en-US-Studio-C",
+            ssml_gender=texttospeech.SsmlVoiceGender.FEMALE,
+        ),
+    ]
+    mock_google_response = texttospeech.ListVoicesResponse(
+        voices=self.mock_google_voices
     )
-    mock_client.list_voices.return_value = mock_response
-    result = text_to_speech.list_available_voices("en-US", client=mock_client)
-    self.assertEqual(
-        result,
-        {
-            "en-US-Standard-A": "Female",
-            "en-US-Standard-B": "Male",
-            "en-US-Standard-C": "Neutral",
-        },
-    )
-
-
-class TestAssignVoices(parameterized.TestCase):
-
-  @parameterized.named_parameters([
-      (
-          "preferred_voices_match",
-          [
-              {"speaker_id": "speaker1", "ssml_gender": "Male"},
-              {"speaker_id": "speaker2", "ssml_gender": "Female"},
-          ],
-          ["News", "Studio"],
-          {"speaker1": "en-US-News-B", "speaker2": "en-US-Studio-C"},
-      ),
-      (
-          "no_preferred",
-          [
-              {"speaker_id": "speaker1", "ssml_gender": "Male"},
-              {"speaker_id": "speaker2", "ssml_gender": "Female"},
-          ],
-          None,
-          {"speaker1": "en-US-News-B", "speaker2": "en-US-Studio-C"},
-      ),
-  ])
-  def test_assign_voices(
-      self,
-      utterance_metadata,
-      preferred_voices,
-      expected_assignment,
-  ):
-    mock_client = MagicMock(spec=texttospeech.TextToSpeechClient)
-    mock_response = texttospeech.ListVoicesResponse(
-        voices=[
-            texttospeech.Voice(
-                name="en-US-News-B",
-                ssml_gender=texttospeech.SsmlVoiceGender.MALE,
-            ),
-            texttospeech.Voice(
-                name="en-US-Studio-C",
-                ssml_gender=texttospeech.SsmlVoiceGender.FEMALE,
-            ),
-        ]
-    )
-    mock_client.list_voices.return_value = mock_response
-    assignment = text_to_speech.assign_voices(
-        utterance_metadata=utterance_metadata,
-        target_language="en-US",
-        client=mock_client,
-        preferred_voices=preferred_voices,
-    )
-    self.assertEqual(assignment, expected_assignment)
-
-  def test_assign_voices_value_error(self):
-    mock_client = MagicMock(spec=texttospeech.TextToSpeechClient)
-    mock_response = texttospeech.ListVoicesResponse(
-        voices=[
-            texttospeech.Voice(
-                name="en-US-News-B",
-                ssml_gender=texttospeech.SsmlVoiceGender.MALE,
-            ),
-            texttospeech.Voice(
-                name="en-US-Studio-C",
-                ssml_gender=texttospeech.SsmlVoiceGender.FEMALE,
-            ),
-        ]
-    )
-    mock_client.list_voices.return_value = mock_response
-    utterance_metatdata = [
+    self.mock_google_client.list_voices.return_value = mock_google_response
+    self.mock_elevenlabs_client = MagicMock(spec=ElevenLabs)
+    mock_voices_object = MagicMock()
+    self.mock_elevenlabs_voices = [
+        MagicMock(name="Voice1", labels={"gender": "male"}),
+        MagicMock(name="Voice2", labels={"gender": "female"}),
+        MagicMock(name="Rachel", labels={"gender": "female"}),
+    ]
+    self.mock_elevenlabs_voices[0].name = "Voice1"
+    self.mock_elevenlabs_voices[1].name = "Voice2"
+    self.mock_elevenlabs_voices[2].name = "Rachel"
+    mock_voices_object.get_all.return_value.voices = self.mock_elevenlabs_voices
+    self.mock_elevenlabs_client.voices = mock_voices_object
+    self.utterance_metadata = [
         {"speaker_id": "speaker1", "ssml_gender": "Male"},
         {"speaker_id": "speaker2", "ssml_gender": "Female"},
     ]
-    preferred_voices = ["NonExistent1", "NonExistent2"]
-    with self.assertRaisesRegex(
-        ValueError, "Could not allocate a voice for speaker_id"
-    ):
-      text_to_speech.assign_voices(
-          utterance_metadata=utterance_metatdata,
-          target_language="en-US",
-          client=mock_client,
-          preferred_voices=preferred_voices,
-      )
 
-
-class TestElevenLabsAssignVoices(absltest.TestCase):
-
-  def setUp(self):
-    self.mock_client = MagicMock()
-    voice1 = MagicMock(name="Voice1", labels={"gender": "male"})
-    voice2 = MagicMock(name="Voice2", labels={"gender": "female"})
-    rachel = MagicMock(name="Rachel", labels={"gender": "female"})
-    voice1.name = "Voice1"
-    voice2.name = "Voice2"
-    rachel.name = "Rachel"
-    self.mock_client.voices.get_all.return_value.voices = [
-        voice1,
-        voice2,
-        rachel,
-    ]
-
-  def test_assign_voices_with_preferred_voices(self):
-    utterance_metadata = [
-        {
-            "start": 0,
-            "end": 1,
-            "chunk_path": "path1",
-            "translated_text": "text1",
-            "speaker_id": "1",
-            "ssml_gender": "Male",
-        },
-        {
-            "start": 1,
-            "end": 2,
-            "chunk_path": "path2",
-            "translated_text": "text2",
-            "speaker_id": "2",
-            "ssml_gender": "Female",
-        },
-    ]
-    preferred_voices = ["Rachel"]
-    expected_result = {"1": "Voice1", "2": "Rachel"}
-    result = text_to_speech.elevenlabs_assign_voices(
-        utterance_metadata=utterance_metadata,
-        client=self.mock_client,
-        preferred_voices=preferred_voices,
+  def test_assigned_voices_google_tts_with_preferred_voices(self):
+    """Test Google Cloud TTS with preferred voices."""
+    assigner = text_to_speech.VoiceAssigner(
+        utterance_metadata=self.utterance_metadata,
+        client=self.mock_google_client,
+        target_language="en-US",
+        preferred_voices=["News"],
     )
-    self.assertEqual(result, expected_result)
+    expected_assignment = {
+        "speaker1": "en-US-News-B",
+        "speaker2": "en-US-Studio-C",
+    }
+    self.assertEqual(assigner.assigned_voices, expected_assignment)
 
-  def test_assign_voices_without_preferred_voices(self):
-    utterance_metadata = [
-        {
-            "start": 0,
-            "end": 1,
-            "chunk_path": "path1",
-            "translated_text": "text1",
-            "speaker_id": "1",
-            "ssml_gender": "Male",
-        },
-        {
-            "start": 1,
-            "end": 2,
-            "chunk_path": "path2",
-            "translated_text": "text2",
-            "speaker_id": "2",
-            "ssml_gender": "Female",
-        },
-    ]
-    expected_result = {"1": "Voice1", "2": "Voice2"}
-    result = text_to_speech.elevenlabs_assign_voices(
-        utterance_metadata=utterance_metadata,
-        client=self.mock_client,
+  def test_assigned_voices_google_tts_no_preferred_voices(self):
+    """Test Google Cloud TTS with no preferred voices."""
+    assigner = text_to_speech.VoiceAssigner(
+        utterance_metadata=self.utterance_metadata,
+        client=self.mock_google_client,
+        target_language="en-US",
     )
-    self.assertEqual(result, expected_result)
+    expected_assignment = {
+        "speaker1": "en-US-News-B",
+        "speaker2": "en-US-Studio-C",
+    }
+    self.assertEqual(assigner.assigned_voices, expected_assignment)
 
+  def test_assigned_voices_elevenlabs_with_preferred_voices(self):
+    """Test ElevenLabs with preferred voices."""
+    assigner = text_to_speech.VoiceAssigner(
+        utterance_metadata=self.utterance_metadata,
+        client=self.mock_elevenlabs_client,
+        target_language="en-US",
+        preferred_voices=["Rachel"],
+    )
+    expected_assignment = {
+        "speaker1": self.mock_elevenlabs_voices[0].name,
+        "speaker2": self.mock_elevenlabs_voices[2].name,
+    }
+    self.assertEqual(assigner.assigned_voices, expected_assignment)
 
-class TestElevenLabsAssignVoicesValueError(absltest.TestCase):
+  def test_assigned_voices_elevenlabs_no_preferred_voices(self):
+    """Test ElevenLabs with no preferred voices."""
+    assigner = text_to_speech.VoiceAssigner(
+        utterance_metadata=self.utterance_metadata,
+        client=self.mock_elevenlabs_client,
+        target_language="en-US",
+    )
+    expected_assignment = {
+        "speaker1": self.mock_elevenlabs_voices[0].name,
+        "speaker2": self.mock_elevenlabs_voices[1].name,
+    }
+    self.assertEqual(assigner.assigned_voices, expected_assignment)
 
-  def setUp(self):
-    self.mock_client = MagicMock()
-    self.mock_client.voices.get_all.return_value.voices = []
+  def test_assigned_voices_with_overrides(self):
+    """Test assigned_voices with overrides."""
+    overrides = {"speaker1": "en-US-Studio-C", "speaker2": "en-US-News-B"}
+    assigner = text_to_speech.VoiceAssigner(
+        utterance_metadata=self.utterance_metadata,
+        client=self.mock_google_client,
+        target_language="en-US",
+        assigned_voices_override=overrides,
+    )
+    self.assertEqual(assigner.assigned_voices, overrides)
 
-  def test_assign_voices_value_error(self):
-    self.mock_client.voices.get_all.return_value.voices = []
-    utterance_metadata = [
-        {
-            "start": 0,
-            "end": 1,
-            "chunk_path": "path1",
-            "translated_text": "text1",
-            "speaker_id": "1",
-            "ssml_gender": "Male",
-        },
-        {
-            "start": 1,
-            "end": 2,
-            "chunk_path": "path2",
-            "translated_text": "text2",
-            "speaker_id": "2",
-            "ssml_gender": "Female",
-        },
-        {
-            "start": 2,
-            "end": 3,
-            "chunk_path": "path3",
-            "translated_text": "text3",
-            "speaker_id": "3",
-            "ssml_gender": "Female",
-        },
-    ]
-    with self.assertRaisesRegex(
-        ValueError, "No suitable voice found for speaker_id"
-    ):
-      text_to_speech.elevenlabs_assign_voices(
-          utterance_metadata=utterance_metadata,
-          client=self.mock_client,
-          preferred_voices=["Unknown"],
-      )
+  def test_assigned_voices_with_overrides_missing_speaker(self):
+    """Test overrides with a missing speaker."""
+    overrides = {"speaker1": "en-US-Studio-C"}
+    assigner = text_to_speech.VoiceAssigner(
+        utterance_metadata=self.utterance_metadata,
+        client=self.mock_google_client,
+        target_language="en-US",
+        assigned_voices_override=overrides,
+    )
+    with self.assertRaisesRegex(ValueError, "Missing voice assignments"):
+      assigner.assigned_voices
 
 
 class TestAddTextToSpeechProperties(parameterized.TestCase):
@@ -565,34 +451,128 @@ class TestElevenlabsConvertTextToSpeech(absltest.TestCase):
       self.assertEqual(result, output_file)
 
 
-class TestCreateSpeakerToPathsMapping(parameterized.TestCase):
+class TestCreateSpeakerDataMapping(absltest.TestCase):
 
-  @parameterized.named_parameters(
-      ("empty_input", [], {}),
-      (
-          "single_speaker",
-          [
-              {"speaker_id": "speaker1", "vocals_path": "path/to/file1.wav"},
-              {"speaker_id": "speaker1", "vocals_path": "path/to/file2.wav"},
-          ],
-          {"speaker1": ["path/to/file1.wav", "path/to/file2.wav"]},
-      ),
-      (
-          "multiple_speakers",
-          [
-              {"speaker_id": "speaker1", "vocals_path": "path/to/file1.wav"},
-              {"speaker_id": "speaker2", "vocals_path": "path/to/file3.wav"},
-              {"speaker_id": "speaker1", "vocals_path": "path/to/file2.wav"},
-          ],
-          {
-              "speaker1": ["path/to/file1.wav", "path/to/file2.wav"],
-              "speaker2": ["path/to/file3.wav"],
-          },
-      ),
-  )
-  def test_create_speaker_to_paths_mapping(self, input_data, expected_result):
-    result = text_to_speech.create_speaker_to_paths_mapping(input_data)
-    self.assertEqual(result, expected_result)
+  def test_empty_metadata(self):
+    utterance_metadata = []
+    expected_speaker_data = []
+    self.assertEqual(
+        text_to_speech.create_speaker_data_mapping(utterance_metadata),
+        expected_speaker_data,
+    )
+
+  def test_single_speaker(self):
+    utterance_metadata = [{
+        "speaker_id": "speaker1",
+        "ssml_gender": "male",
+        "vocals_path": "path/to/audio1.wav",
+    }]
+    expected_speaker_data = [
+        text_to_speech.SpeakerData(
+            speaker_id="speaker1",
+            ssml_gender="male",
+            paths=["path/to/audio1.wav"],
+        )
+    ]
+    self.assertEqual(
+        text_to_speech.create_speaker_data_mapping(utterance_metadata),
+        expected_speaker_data,
+    )
+
+  def test_multiple_speakers_different_gender(self):
+    utterance_metadata = [
+        {
+            "speaker_id": "speaker1",
+            "ssml_gender": "male",
+            "vocals_path": "path/to/audio1.wav",
+        },
+        {
+            "speaker_id": "speaker2",
+            "ssml_gender": "female",
+            "vocals_path": "path/to/audio2.wav",
+        },
+    ]
+    expected_speaker_data = [
+        text_to_speech.SpeakerData(
+            speaker_id="speaker1",
+            ssml_gender="male",
+            paths=["path/to/audio1.wav"],
+        ),
+        text_to_speech.SpeakerData(
+            speaker_id="speaker2",
+            ssml_gender="female",
+            paths=["path/to/audio2.wav"],
+        ),
+    ]
+    self.assertEqual(
+        text_to_speech.create_speaker_data_mapping(utterance_metadata),
+        expected_speaker_data,
+    )
+
+  def test_multiple_speakers_same_gender(self):
+    utterance_metadata = [
+        {
+            "speaker_id": "speaker1",
+            "ssml_gender": "male",
+            "vocals_path": "path/to/audio1.wav",
+        },
+        {
+            "speaker_id": "speaker2",
+            "ssml_gender": "male",
+            "vocals_path": "path/to/audio2.wav",
+        },
+    ]
+    expected_speaker_data = [
+        text_to_speech.SpeakerData(
+            speaker_id="speaker1",
+            ssml_gender="male",
+            paths=["path/to/audio1.wav", "path/to/audio2.wav"],
+        )
+    ]
+    self.assertEqual(
+        text_to_speech.create_speaker_data_mapping(utterance_metadata),
+        expected_speaker_data,
+    )
+
+  def test_multiple_speakers_mixed_genders(self):
+    utterance_metadata = [
+        {
+            "speaker_id": "speaker1",
+            "ssml_gender": "male",
+            "vocals_path": "path/to/audio1.wav",
+        },
+        {
+            "speaker_id": "speaker2",
+            "ssml_gender": "female",
+            "vocals_path": "path/to/audio2.wav",
+        },
+        {
+            "speaker_id": "speaker3",
+            "ssml_gender": "male",
+            "vocals_path": "path/to/audio3.wav",
+        },
+        {
+            "speaker_id": "speaker4",
+            "ssml_gender": "female",
+            "vocals_path": "path/to/audio4.wav",
+        },
+    ]
+    expected_speaker_data = [
+        text_to_speech.SpeakerData(
+            speaker_id="speaker1",
+            ssml_gender="male",
+            paths=["path/to/audio1.wav", "path/to/audio3.wav"],
+        ),
+        text_to_speech.SpeakerData(
+            speaker_id="speaker2",
+            ssml_gender="female",
+            paths=["path/to/audio2.wav", "path/to/audio4.wav"],
+        ),
+    ]
+    self.assertEqual(
+        text_to_speech.create_speaker_data_mapping(utterance_metadata),
+        expected_speaker_data,
+    )
 
 
 class TestElevenlabsCloneVoices(absltest.TestCase):
@@ -601,12 +581,20 @@ class TestElevenlabsCloneVoices(absltest.TestCase):
     mock_client = MagicMock(spec=ElevenLabs)
     mock_voice = MagicMock(spec=Voice)
     mock_client.clone.return_value = mock_voice
-    speaker_to_paths_mapping = {
-        "speaker1": ["path/to/audio1.wav", "path/to/audio2.wav"],
-        "speaker2": ["path/to/audio3.wav"],
-    }
+    speaker_data_mapping = [
+        text_to_speech.SpeakerData(
+            speaker_id="speaker1",
+            ssml_gender="Female",
+            paths=["path/to/audio1.wav", "path/to/audio2.wav"],
+        ),
+        text_to_speech.SpeakerData(
+            speaker_id="speaker2",
+            ssml_gender="Female",
+            paths=["path/to/audio3.wav"],
+        ),
+    ]
     result = text_to_speech.elevenlabs_run_clone_voices(
-        client=mock_client, speaker_to_paths_mapping=speaker_to_paths_mapping
+        client=mock_client, speaker_data_mapping=speaker_data_mapping
     )
     self.assertEqual(result, {"speaker1": mock_voice, "speaker2": mock_voice})
     mock_client.clone.assert_called()
@@ -679,12 +667,12 @@ class TestDubAllUtterances(parameterized.TestCase):
     self.assertEqual(result[0].get("dubbed_path"), expected_dubbed_path)
 
   @patch("ariel.text_to_speech.audio_processing.run_cut_and_save_audio")
-  @patch("ariel.text_to_speech.create_speaker_to_paths_mapping")
+  @patch("ariel.text_to_speech.create_speaker_data_mapping")
   @patch("ariel.text_to_speech.elevenlabs_run_clone_voices")
   def test_voice_cloning(
       self,
       mock_elevenlabs_run_clone_voices,
-      mock_create_speaker_to_paths_mapping,
+      mock_create_speaker_data_mapping,
       mock_run_cut_and_save_audio,
   ):
     utterance_metadata = [{"for_dubbing": True, "speaker_id": "spk_1"}]
@@ -708,7 +696,7 @@ class TestDubAllUtterances(parameterized.TestCase):
     tts.dub_all_utterances()
 
     mock_run_cut_and_save_audio.assert_called_once()
-    mock_create_speaker_to_paths_mapping.assert_called_once()
+    mock_create_speaker_data_mapping.assert_called_once()
     mock_elevenlabs_run_clone_voices.assert_called_once()
 
   def test_value_error_when_cloning_without_elevenlabs(self):

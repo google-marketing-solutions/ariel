@@ -14,7 +14,10 @@
 
 """A text-to-speech module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
+import dataclasses
+import functools
 import io
+import json
 import os
 from typing import Final, Mapping, Sequence
 from absl import logging
@@ -52,187 +55,296 @@ _DEFAULT_ELEVENLABS_MODEL: Final[str] = "eleven_multilingual_v2"
 _DEFAULT_CHUNK_SIZE: Final[int] = 150
 
 
-def list_available_voices(
-    language_code: str, client: texttospeech.TextToSpeechClient
-) -> Mapping[str, str]:
-  """Lists available voices for a given language code.
-
-  Args:
-      language_code: The language code to list voices for. It must be ISO 3166-1
-        alpha-2 country code.
-      client: A TextToSpeechClient object.
-
-  Returns:
-      A dictionary mapping voice names to their genders.
-  """
-
-  request = texttospeech.ListVoicesRequest(language_code=language_code)
-  response = client.list_voices(request=request)
-  return {
-      voice.name: (
-          _SSML_MALE
-          if voice.ssml_gender == texttospeech.SsmlVoiceGender.MALE
-          else _SSML_FEMALE
-          if voice.ssml_gender == texttospeech.SsmlVoiceGender.FEMALE
-          else _SSML_NEUTRAL
-      )
-      for voice in response.voices
-  }
-
-
-def assign_voices(
-    *,
-    utterance_metadata: Sequence[Mapping[str, str | float]],
-    target_language: str,
-    client: texttospeech.TextToSpeechClient,
-    preferred_voices: Sequence[str] = _DEFAULT_PREFERRED_GOOGLE_VOICES,
-) -> Mapping[str, str | None]:
+class VoiceAssigner:
   """Assigns voices to speakers based on preferred voices and available voices.
 
-  Args:
-      utterance_metadata: A sequence of utterance metadata, each represented as
-        a dictionary with keys: "text", "start", "end", "speaker_id",
-        "ssml_gender", "translated_text", "for_dubbing", "path" and optionally
-        "vocals_path"
-      target_language: The target language (ISO 3166-1 alpha-2).
-      client: A TextToSpeechClient object.
-      preferred_voices: An optional list of preferred voice names. Defaults to
-        _DEFAULT_PREFERRED_GOOGLE_VOICES.
+  from different providers (Google Cloud Text-to-Speech, ElevenLabs).
 
-  Returns:
-      A mapping of unique speaker IDs to assigned voice names, or raises an
-      error if no voice
-      could be assigned.
-
-  Raises:
-      A value error when no voice can be allocated to any of the speakers.
+  This class handles voice assignment for both Google Cloud Text-to-Speech and
+  ElevenLabs, allowing you to specify preferred voices and override automatic
+  assignments. It ensures each speaker is assigned a unique voice that matches
+  their specified gender (SSML gender tag) while prioritizing preferred voices.
   """
 
-  if not preferred_voices:
-    preferred_voices = _DEFAULT_PREFERRED_GOOGLE_VOICES
-    logging.info(
-        "Preferred voices were None, defaulting to:"
-        f" {','.join(preferred_voices)}"
-    )
-  unique_speaker_mapping = {
-      item["speaker_id"]: item["ssml_gender"] for item in utterance_metadata
-  }
-  available_voices = list_available_voices(
-      language_code=target_language, client=client
-  )
-  available_voices_names = list(available_voices.keys())
-  grouped_available_preferred_voices = {}
-  for preferred_voice in preferred_voices:
-    available_preferred_voices = [
-        voice for voice in available_voices_names if preferred_voice in voice
-    ]
-    grouped_available_preferred_voices[preferred_voice] = (
-        available_preferred_voices
-    )
-  already_assigned_voices = {"Male": set(), "Female": set()}
-  voice_assignment = {}
-  for speaker_id, ssml_gender in unique_speaker_mapping.items():
-    preferred_category_matched = False
-    for (
-        preferred_category_voices
-    ) in grouped_available_preferred_voices.values():
-      if not preferred_category_voices:
-        continue
-      for preferred_voice in preferred_category_voices:
-        if (
-            ssml_gender == available_voices[preferred_voice]
-            and preferred_voice not in already_assigned_voices[ssml_gender]
-        ):
-          voice_assignment[speaker_id] = preferred_voice
-          already_assigned_voices[ssml_gender].add(preferred_voice)
-          preferred_category_matched = True
-          break
-      if speaker_id in voice_assignment:
-        break
-    if not preferred_category_matched:
+  def __init__(
+      self,
+      *,
+      utterance_metadata: Sequence[Mapping[str, str | float]],
+      client: texttospeech.TextToSpeechClient | ElevenLabs,
+      target_language: str,
+      preferred_voices: Sequence[str] | None = None,
+      assigned_voices_override: Mapping[str, str] | None = None,
+      elevenlabs_clone_voices: bool = False,
+  ):
+    """Initializes VoiceAssigner with necessary parameters.
+
+    Args:
+        utterance_metadata: A sequence of utterance metadata dictionaries. Each
+          dictionary should contain keys like "speaker_id" and "ssml_gender".
+        client: A client object for either Google Cloud Text-to-Speech
+          (texttospeech.TextToSpeechClient) or ElevenLabs.
+        target_language: The target language for voice selection (e.g.,
+          "en-US").
+        preferred_voices: An optional list of preferred voice names. These will
+          be prioritized during voice assignment.
+        assigned_voices_override: An optional dictionary mapping speaker IDs to
+          specific voice names. This allows you to completely override the
+          automatic voice assignment.
+        elevenlabs_clone_voices: Whether voices are cloned with ElevenLabs.
+    """
+    self.utterance_metadata = utterance_metadata
+    self.client = client
+    self.target_language = target_language
+    self._preferred_voices = preferred_voices
+    self.assigned_voices_override = assigned_voices_override
+    self.elevenlabs_clone_voices = elevenlabs_clone_voices
+
+  @functools.cached_property
+  def preferred_voices(self) -> Sequence[str]:
+    """Returns the preferred voice names.
+
+    Defaults to a set of common Google Cloud voices if not provided
+    for Google TTS and all available voices for ElevenLabs.
+
+    Returns:
+        A sequence of preferred voice names.
+    """
+    if self._preferred_voices:
+      return self._preferred_voices
+    if isinstance(self.client, texttospeech.TextToSpeechClient):
+      logging.info(
+          "Preferred voices were None, defaulting to:"
+          f" {','.join(_DEFAULT_PREFERRED_GOOGLE_VOICES)}"
+      )
+      return _DEFAULT_PREFERRED_GOOGLE_VOICES
+    elif isinstance(self.client, ElevenLabs):
+      logging.info(
+          "Preferred voices were None, defaulting to all available ElevenLabs"
+          " voices."
+      )
+      return [voice.name for voice in self.client.voices.get_all().voices]
+    else:
+      raise ValueError("Unsupported client type")
+
+  @functools.cached_property
+  def _unique_speaker_mapping(self) -> Mapping[str, str]:
+    """Returns a mapping of unique speaker IDs to their corresponding genders.
+
+    Returns:
+        A dictionary mapping speaker IDs to SSML genders.
+    """
+    return {
+        item["speaker_id"]: item["ssml_gender"]
+        for item in self.utterance_metadata
+    }
+
+  @functools.cached_property
+  def available_voices(self) -> Mapping[str, str]:
+    """Retrieves the available voices from the provider.
+
+    Returns:
+        A dictionary mapping voice names to genders (Male, Female, Neutral).
+    """
+    if isinstance(self.client, texttospeech.TextToSpeechClient):
+      request = texttospeech.ListVoicesRequest(
+          language_code=self.target_language
+      )
+      response = self.client.list_voices(request=request)
+      return {
+          voice.name: (
+              _SSML_MALE
+              if voice.ssml_gender == texttospeech.SsmlVoiceGender.MALE
+              else _SSML_FEMALE
+              if voice.ssml_gender == texttospeech.SsmlVoiceGender.FEMALE
+              else _SSML_NEUTRAL
+          )
+          for voice in response.voices
+      }
+    elif isinstance(self.client, ElevenLabs):
+      return {
+          voice.name: voice.labels["gender"].capitalize()
+          for voice in self.client.voices.get_all().voices
+      }
+    else:
+      raise ValueError("Unsupported client type.")
+
+  def _apply_overrides(self) -> Mapping[str, str]:
+    """Applies the assigned_voices_override to the voice assignments.
+
+    Validates that the override provides assignments for all unique speakers.
+
+    Returns:
+        A dictionary mapping speaker IDs to voice names based on the
+        override.
+
+    Raises:
+        ValueError: If the override does not provide assignments for all
+            unique speakers.
+    """
+    unique_speakers = set(self._unique_speaker_mapping.keys())
+    override_speakers = set(self.assigned_voices_override.keys())
+    missing_speakers = unique_speakers - override_speakers
+    if missing_speakers:
       raise ValueError(
-          f"Could not allocate a voice for speaker_id {speaker_id} with"
-          f" ssml_gender {ssml_gender}"
+          "Missing voice assignments for the following speakers in "
+          f"'assigned_voices_override': {', '.join(missing_speakers)}"
       )
-  return voice_assignment
+    return self.assigned_voices_override
 
+  def _can_assign_voice(
+      self,
+      *,
+      voice_name: str,
+      ssml_gender: str,
+      already_assigned_voices: Mapping[str, Sequence[str]],
+  ) -> bool:
+    """Checks if a voice can be assigned to a speaker with the given gender.
 
-def elevenlabs_assign_voices(
-    *,
-    utterance_metadata: Sequence[Mapping[str, str | float]],
-    client: ElevenLabs,
-    preferred_voices: Sequence[str] = None,
-) -> Mapping[str, str | None]:
-  """Assigns voices to speakers based on preferred voices and available voices.
+    The voice must be available, match the speaker's gender, and not be
+    already assigned to another speaker with the same gender.
 
-  Args:
-      utterance_metadata: A sequence of utterance metadata, each represented as
-        a dictionary with keys: "start", "end", "chunk_path", "translated_text",
-        "speaker_id", "ssml_gender".
-      client: An ElevenLabs object.
-      preferred_voices: Optional; A list of preferred voice names (e.g.,
-        "Rachel").
+    Args:
+        voice_name: The name of the voice to check.
+        ssml_gender: The SSML gender of the speaker.
+        already_assigned_voices: A dictionary mapping genders to a list of
+          already assigned voices for that gender.
 
-  Returns:
-      A mapping of unique speaker IDs to assigned voice names.
+    Returns:
+        True if the voice can be assigned, False otherwise.
+    """
+    return (
+        self.available_voices[voice_name].lower() == ssml_gender.lower()
+        and voice_name not in already_assigned_voices[ssml_gender]
+    )
 
-  Raises:
-      ValueError: If no suitable voice is available for a speaker.
-  """
-  unique_speaker_mapping = {
-      item["speaker_id"]: item["ssml_gender"] for item in utterance_metadata
-  }
+  def _find_matching_voice(
+      self,
+      *,
+      preferred_voice_name: str,
+      ssml_gender: str,
+      already_assigned_voices: Mapping[str, Sequence[str]],
+  ) -> str | None:
+    """Finds an available voice matching the preferred name and gender.
 
-  available_voices = client.voices.get_all().voices
+    Args:
+        preferred_voice_name: The preferred voice name to search for.
+        ssml_gender: The SSML gender of the speaker.
+        already_assigned_voices: A dictionary mapping genders to a list of
+          already assigned voices for that gender.
 
-  if not preferred_voices:
-    preferred_voices = [voice.name for voice in available_voices]
-    logging.info("No preferred voices provided. Using all available voices.")
-
-  voice_assignment = {}
-  already_assigned_voices = {"Male": set(), "Female": set()}
-
-  for speaker_id, ssml_gender in unique_speaker_mapping.items():
-    preferred_category_matched = False
-
-    for preferred_voice in preferred_voices:
-      voice_info = next(
-          (
-              voice
-              for voice in available_voices
-              if voice.name == preferred_voice
-          ),
-          None,
-      )
-
-      if (
-          voice_info
-          and voice_info.labels["gender"] == ssml_gender.lower()
-          and preferred_voice not in already_assigned_voices[ssml_gender]
+    Returns:
+        The name of the matching voice if found, None otherwise.
+    """
+    for voice_name in self.available_voices:
+      if preferred_voice_name in voice_name and self._can_assign_voice(
+          voice_name=voice_name,
+          ssml_gender=ssml_gender,
+          already_assigned_voices=already_assigned_voices,
       ):
-        voice_assignment[speaker_id] = preferred_voice
-        already_assigned_voices[ssml_gender].add(preferred_voice)
-        preferred_category_matched = True
-        break
+        return voice_name
+    return None
 
-    if not preferred_category_matched:
-      for voice_info in available_voices:
-        if (
-            voice_info.labels["gender"] == ssml_gender.lower()
-            and voice_info.name not in already_assigned_voices[ssml_gender]
-        ):
-          voice_assignment[speaker_id] = voice_info.name
-          already_assigned_voices[ssml_gender].add(voice_info.name)
-          preferred_category_matched = True
-          break
+  def _find_any_suitable_voice(
+      self,
+      *,
+      speaker_id: str,
+      ssml_gender: str,
+      already_assigned_voices: Mapping[str, Sequence[str]],
+  ) -> str:
+    """Finds any available voice matching the gender.
 
-    if not preferred_category_matched:
-      raise ValueError(
-          f"No suitable voice found for speaker_id {speaker_id} with gender"
-          f" {ssml_gender}"
+    Args:
+        speaker_id: A unique speaker ID.
+        ssml_gender: The SSML gender of the speaker.
+        already_assigned_voices: A dictionary mapping genders to a list of
+          already assigned voices for that gender.
+
+    Returns:
+        The name of a suitable voice.
+
+    Raises:
+        ValueError: If no suitable voice is found for the given gender.
+    """
+    for voice_name in self.available_voices.keys():
+      if self._can_assign_voice(
+          voice_name=voice_name,
+          ssml_gender=ssml_gender,
+          already_assigned_voices=already_assigned_voices,
+      ):
+        return voice_name
+    raise ValueError(
+        f"Could not allocate a voice '{speaker_id}' with ssml_gender"
+        f" '{ssml_gender}'."
+    )
+
+  def _find_voice_for_speaker(
+      self,
+      *,
+      speaker_id: str,
+      ssml_gender: str,
+      already_assigned_voices: Mapping[str, Sequence[str]],
+  ) -> str:
+    """Finds a suitable voice for a speaker, prioritizing preferred voices.
+
+    Args:
+        speaker_id: A unique speaker ID.
+        ssml_gender: The SSML gender of the speaker.
+        already_assigned_voices: A dictionary mapping genders to a list of
+          already assigned voices for that gender.
+
+    Returns:
+        The name of the assigned voice.
+    """
+    for preferred_voice_name in self.preferred_voices:
+      voice_name = self._find_matching_voice(
+          preferred_voice_name=preferred_voice_name,
+          ssml_gender=ssml_gender,
+          already_assigned_voices=already_assigned_voices,
       )
+      if voice_name:
+        return voice_name
+    return self._find_any_suitable_voice(
+        speaker_id=speaker_id,
+        ssml_gender=ssml_gender,
+        already_assigned_voices=already_assigned_voices,
+    )
 
-  return voice_assignment
+  def _assign_voices(self) -> Mapping[str, str]:
+    """Assigns voices to speakers based on preferred and available voices.
+
+    Prioritizes preferred voices and then assigns any suitable voice if
+    no preferred voice is available or matches the speaker's gender.
+
+    Returns:
+        A dictionary mapping speaker IDs to assigned voice names.
+    """
+    already_assigned_voices = {_SSML_MALE: set(), _SSML_FEMALE: set()}
+    voice_assignment = {}
+    for speaker_id, ssml_gender in self._unique_speaker_mapping.items():
+      selected_voice = self._find_voice_for_speaker(
+          speaker_id=speaker_id,
+          ssml_gender=ssml_gender,
+          already_assigned_voices=already_assigned_voices,
+      )
+      voice_assignment[speaker_id] = selected_voice
+      already_assigned_voices[ssml_gender].add(selected_voice)
+    return voice_assignment
+
+  @functools.cached_property
+  def assigned_voices(self) -> Mapping[str, str] | None:
+    """Returns the final voice assignments for each speaker.
+
+    Uses assigned_voices_override if provided; otherwise, automatically
+    assigns voices based on preferred voices and availability.
+
+    Returns:
+         A dictionary mapping speaker IDs to assigned voice names.
+    """
+    if self.elevenlabs_clone_voices:
+      return None
+    if self.assigned_voices_override:
+      return self._apply_overrides()
+    return self._assign_voices()
 
 
 def add_text_to_speech_properties(
@@ -450,49 +562,74 @@ def elevenlabs_convert_text_to_speech(
   return output_filename
 
 
-def create_speaker_to_paths_mapping(
-    utterance_metadata: Sequence[Mapping[str, float | str]],
-) -> Mapping[str, Sequence[str]]:
-  """Organizes a list of utterance metadata dictionaries into a speaker-to-paths mapping.
+@dataclasses.dataclass
+class SpeakerData:
+  """Instance with speaker data.
 
-  Args:
-      utterance_metadata: A list of dictionaries with 'speaker_id' and
-        'voice_path' keys.
-
-  Returns:
-      A mapping between speaker IDs to lists of file paths.
+  Attributes:
+      speaker_id: A unique speaker ID.
+      ssml_gender: A speaker gender.
+      paths: A sequence with paths to voice samples of the speaker.
   """
 
-  speaker_to_paths_mapping = {}
-  for utterance in utterance_metadata:
-    speaker_id = utterance["speaker_id"]
-    if speaker_id not in speaker_to_paths_mapping:
-      speaker_to_paths_mapping[speaker_id] = []
-    speaker_to_paths_mapping[speaker_id].append(utterance["vocals_path"])
-  return speaker_to_paths_mapping
+  speaker_id: str
+  ssml_gender: str
+  paths: Sequence[str]
+
+
+def create_speaker_data_mapping(
+    utterance_metadata: Sequence[Mapping[str, float | str]],
+) -> Sequence[SpeakerData]:
+  """Extracts speaker data from utterance metadata.
+
+  Args:
+      utterance_metadata: A list of dictionaries containing utterance metadata.
+
+  Returns:
+      A sequence of SpeakerData objects.
+  """
+
+  speaker_data = []
+  for metadata in utterance_metadata:
+    speaker_id = metadata["speaker_id"]
+    ssml_gender = metadata["ssml_gender"]
+    paths = [metadata["vocals_path"]]
+    existing_speaker = next(
+        (s for s in speaker_data if s.ssml_gender == ssml_gender), None
+    )
+    if existing_speaker:
+      existing_speaker.paths.extend(paths)
+    else:
+      speaker_data.append(
+          SpeakerData(
+              speaker_id=speaker_id, ssml_gender=ssml_gender, paths=paths
+          )
+      )
+  return speaker_data
 
 
 def elevenlabs_run_clone_voices(
-    *, client: ElevenLabs, speaker_to_paths_mapping: Mapping[str, Sequence[str]]
+    *, client: ElevenLabs, speaker_data_mapping: Sequence[SpeakerData]
 ) -> Mapping[str, Voice]:
   """Clones voices for speakers using ElevenLabs based on utterance metadata and file paths.
 
   Args:
       client: An authenticated ElevenLabs client object for API interaction.
-      speaker_to_paths_mapping: A mapping between speaker IDs to the sequnces
-        with file paths of the source utterances.
+      speaker_data_mapping: A sequence with speaker_id, ssml_gender and a
+        sequence with paths to voice_samples.
 
   Returns:
       A mapping between speaker IDs to their cloned voices.
   """
   speaker_to_voices_mapping = {}
-  for speaker_id, paths in speaker_to_paths_mapping.items():
+  for speaker_data in speaker_data_mapping:
     voice = client.clone(
-        name=f"{speaker_id}",
-        description=f"Voice for {speaker_id}",
-        files=paths,
+        name=f"{speaker_data.speaker_id}",
+        description=f"Voice for {speaker_data.speaker_id}",
+        files=speaker_data.paths,
+        labels=json.dumps(dict(gender=speaker_data.ssml_gender.lower())),
     )
-    speaker_to_voices_mapping[speaker_id] = voice
+    speaker_to_voices_mapping[speaker_data.speaker_id] = voice
   return speaker_to_voices_mapping
 
 
@@ -609,11 +746,10 @@ class TextToSpeech:
         output_directory=self.output_directory,
         elevenlabs_clone_voices=self.elevenlabs_clone_voices,
     )
-    speaker_to_paths_mapping = create_speaker_to_paths_mapping(
-        self.utterance_metadata
-    )
+    speaker_data_mapping = create_speaker_data_mapping(self.utterance_metadata)
     return elevenlabs_run_clone_voices(
-        client=self.client, speaker_to_paths_mapping=speaker_to_paths_mapping
+        client=self.client,
+        speaker_data_mapping=speaker_data_mapping,
     )
 
   def _assign_output_path(self, utterance: Mapping[str, str | float]) -> str:
