@@ -17,7 +17,6 @@
 import dataclasses
 import functools
 import io
-import json
 import os
 from typing import Final, Mapping, Sequence
 from absl import logging

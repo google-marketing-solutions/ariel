@@ -344,12 +344,24 @@ def run_cut_and_save_audio(
   prefix = "vocals_chunk" if elevenlabs_clone_voices else "chunk"
   updated_utterance_metadata = []
   for utterance in utterance_metadata:
-    chunk_path = cut_and_save_audio(
-        audio=audio,
-        utterance=utterance,
-        prefix=prefix,
-        output_directory=output_directory,
+    if elevenlabs_clone_voices:
+      expected_chunk_filename = (
+          f"{prefix}_{utterance['start']}_{utterance['end']}.mp3"
+      )
+    else:
+      expected_chunk_filename = (
+          f"{prefix}_{utterance['start']}_{utterance['end']}.mp3"
+      )
+    chunk_path = (
+        f"{output_directory}/{AUDIO_PROCESSING}/{expected_chunk_filename}"
     )
+    if not tf.io.gfile.exists(chunk_path):
+      chunk_path = cut_and_save_audio(
+          audio=audio,
+          utterance=utterance,
+          prefix=prefix,
+          output_directory=output_directory,
+      )
     utterance_copy = utterance.copy()
     utterance_copy[key] = chunk_path
     updated_utterance_metadata.append(utterance_copy)
