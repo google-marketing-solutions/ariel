@@ -36,8 +36,8 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           "basic",
           {},
           (
-              "python -m demucs.separate -o 'test' --device cpu --shifts 10"
-              " --overlap 0.25 -j 0 --two-stems vocals --mp3"
+              "python -m demucs.separate -o 'test/audio_processing' --device"
+              " cpu --shifts 10 --overlap 0.25 -j 0 --two-stems vocals --mp3"
               " --mp3-bitrate 320 --mp3-preset 2 'audio.mp3'"
           ),
       ),
@@ -45,8 +45,8 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           "flac",
           {"flac": True, "mp3": False},
           (
-              "python -m demucs.separate -o 'test' --device cpu --shifts 10"
-              " --overlap 0.25 -j 0 --two-stems vocals --flac"
+              "python -m demucs.separate -o 'test/audio_processing' --device"
+              " cpu --shifts 10 --overlap 0.25 -j 0 --two-stems vocals --flac"
               " 'audio.mp3'"
           ),
       ),
@@ -54,8 +54,8 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           "int24",
           {"int24": True, "mp3": False},
           (
-              "python -m demucs.separate -o 'test' --device cpu --shifts 10"
-              " --overlap 0.25 -j 0 --two-stems vocals --int24"
+              "python -m demucs.separate -o 'test/audio_processing' --device"
+              " cpu --shifts 10 --overlap 0.25 -j 0 --two-stems vocals --int24"
               " 'audio.mp3'"
           ),
       ),
@@ -63,27 +63,27 @@ class BuildDemucsCommandTest(parameterized.TestCase):
           "float32",
           {"float32": True, "mp3": False},
           (
-              "python -m demucs.separate -o 'test' --device cpu --shifts 10"
-              " --overlap 0.25 -j 0 --two-stems vocals --float32"
-              " 'audio.mp3'"
+              "python -m demucs.separate -o 'test/audio_processing' --device"
+              " cpu --shifts 10 --overlap 0.25 -j 0 --two-stems vocals"
+              " --float32 'audio.mp3'"
           ),
       ),
       (
           "segment",
           {"segment": 60},
           (
-              "python -m demucs.separate -o 'test' --device cpu --shifts 10"
-              " --overlap 0.25 -j 0 --two-stems vocals --segment"
-              " 60 --mp3 --mp3-bitrate 320 --mp3-preset 2 'audio.mp3'"
+              "python -m demucs.separate -o 'test/audio_processing' --device"
+              " cpu --shifts 10 --overlap 0.25 -j 0 --two-stems vocals"
+              " --segment 60 --mp3 --mp3-bitrate 320 --mp3-preset 2 'audio.mp3'"
           ),
       ),
       (
           "no_split",
           {"split": False},
           (
-              "python -m demucs.separate -o 'test' --device cpu --shifts 10"
-              " --overlap 0.25 -j 0 --two-stems vocals --no-split"
-              " --mp3 --mp3-bitrate 320 --mp3-preset 2 'audio.mp3'"
+              "python -m demucs.separate -o 'test/audio_processing' --device"
+              " cpu --shifts 10 --overlap 0.25 -j 0 --two-stems vocals"
+              " --no-split --mp3 --mp3-bitrate 320 --mp3-preset 2 'audio.mp3'"
           ),
       ),
   )
@@ -166,30 +166,39 @@ class TestAssembleSplitAudioFilePaths(parameterized.TestCase):
       (
           "Standard MP3",
           (
-              "python3 -m demucs.separate -o 'test' --device cpu --shifts 10"
-              " --overlap 0.25 --clip_mode rescale -j 0 --two-stems --segment"
-              " 60 'audio.mp3'"
+              "python3 -m demucs.separate -o 'test/audio_processing' --device"
+              " cpu --shifts 10 --overlap 0.25 --clip_mode rescale -j 0"
+              " --two-stems --segment 60 'audio.mp3'"
           ),
-          "test/htdemucs/audio/vocals.wav",
-          "test/htdemucs/audio/no_vocals.wav",
+          "test/audio_processing/htdemucs/audio/vocals.wav",
+          "test/audio_processing/htdemucs/audio/no_vocals.wav",
       ),
       (
           "FLAC Output",
-          "python3 -m demucs.separate -o 'out_flac' --flac 'audio.mp3'",
-          "out_flac/htdemucs/audio/vocals.flac",
-          "out_flac/htdemucs/audio/no_vocals.flac",
+          (
+              "python3 -m demucs.separate -o 'out_flac/audio_processing' --flac"
+              " 'audio.mp3'"
+          ),
+          "out_flac/audio_processing/htdemucs/audio/vocals.flac",
+          "out_flac/audio_processing/htdemucs/audio/no_vocals.flac",
       ),
       (
           "WAV Output (int24)",
-          "python3 -m demucs.separate -o 'out_wav' --int24 'audio.mp3'",
-          "out_wav/htdemucs/audio/vocals.wav",
-          "out_wav/htdemucs/audio/no_vocals.wav",
+          (
+              "python3 -m demucs.separate -o 'out_wav/audio_processing' --int24"
+              " 'audio.mp3'"
+          ),
+          "out_wav/audio_processing/htdemucs/audio/vocals.wav",
+          "out_wav/audio_processing/htdemucs/audio/no_vocals.wav",
       ),
       (
           "WAV Output (float32)",
-          "python3 -m demucs.separate -o 'out_float32' --float32 'audio.mp3'",
-          "out_float32/htdemucs/audio/vocals.wav",
-          "out_float32/htdemucs/audio/no_vocals.wav",
+          (
+              "python3 -m demucs.separate -o 'out_float32/audio_processing'"
+              " --float32 'audio.mp3'"
+          ),
+          "out_float32/audio_processing/htdemucs/audio/vocals.wav",
+          "out_float32/audio_processing/htdemucs/audio/no_vocals.wav",
       ),
   )
   def test_assemble_paths(
@@ -350,6 +359,9 @@ class TestCutAndSaveAudio(absltest.TestCase):
       )
       silence.write_audiofile(temporary_file.name)
       with tempfile.TemporaryDirectory() as output_directory:
+        os.makedirs(
+            os.path.join(output_directory, audio_processing.AUDIO_PROCESSING)
+        )
         audio = AudioSegment.from_file(temporary_file.name)
         audio_processing.cut_and_save_audio(
             audio=audio,
@@ -357,7 +369,11 @@ class TestCutAndSaveAudio(absltest.TestCase):
             prefix="chunk",
             output_directory=output_directory,
         )
-        expected_file = os.path.join(output_directory, "chunk_0.1_0.2.mp3")
+        expected_file = os.path.join(
+            output_directory,
+            audio_processing.AUDIO_PROCESSING,
+            "chunk_0.1_0.2.mp3",
+        )
         self.assertTrue(os.path.exists(expected_file))
 
 
@@ -373,18 +389,20 @@ class TestRunCutAndSaveAudio(absltest.TestCase):
       silence.write_audiofile(temporary_file.name)
       utterance_metadata = [{"start": 0.0, "end": 5.0}]
       with tempfile.TemporaryDirectory() as output_directory:
-        results = audio_processing.run_cut_and_save_audio(
+        os.makedirs(
+            os.path.join(output_directory, audio_processing.AUDIO_PROCESSING)
+        )
+        _ = audio_processing.run_cut_and_save_audio(
             utterance_metadata=utterance_metadata,
             audio_file=temporary_file.name,
             output_directory=output_directory,
             elevenlabs_clone_voices=False,
         )
-        expected_file = os.path.join(output_directory, "chunk_0.0_5.0.mp3")
-        expected_result = {
-            "path": os.path.join(output_directory, "chunk_0.0_5.0.mp3"),
-            "start": 0.0,
-            "end": 5.0,
-        }
+        expected_file = os.path.join(
+            output_directory,
+            audio_processing.AUDIO_PROCESSING,
+            "chunk_0.0_5.0.mp3",
+        )
         self.assertTrue(os.path.exists(expected_file))
 
 
@@ -393,28 +411,25 @@ class VerifyAddedAudioChunkTest(absltest.TestCase):
   @patch("ariel.audio_processing.cut_and_save_audio")
   def test_verify_added_audio_chunk(self, mock_cut_and_save_audio):
     with tempfile.TemporaryDirectory() as tmpdir:
+      os.makedirs(os.path.join(tmpdir, audio_processing.AUDIO_PROCESSING))
       mock_cut_and_save_audio.side_effect = [
-          os.path.join(tmpdir, "chunk_test.mp3"),
-          os.path.join(tmpdir, "vocals_chunk_test.mp3"),
+          os.path.join(
+              tmpdir, audio_processing.AUDIO_PROCESSING, "chunk_test.mp3"
+          ),
       ]
       audio_file_path = os.path.join(tmpdir, "test_audio.mp3")
-      audio_vocals_file_path = os.path.join(tmpdir, "test_vocals.mp3")
       AudioSegment.silent(duration=3000).export(audio_file_path, format="mp3")
-      AudioSegment.silent(duration=3000).export(
-          audio_vocals_file_path, format="mp3"
-      )
       utterance = {"start": 0.5, "end": 2.5}
       result = audio_processing.verify_added_audio_chunk(
           audio_file=audio_file_path,
-          audio_vocals_file=audio_vocals_file_path,
           utterance=utterance,
           output_directory=tmpdir,
-          elevenlabs_clone_voices=True,
       )
       expected_result = {
           **utterance,
-          "path": os.path.join(tmpdir, "chunk_test.mp3"),
-          "vocals_path": os.path.join(tmpdir, "vocals_chunk_test.mp3"),
+          "path": os.path.join(
+              tmpdir, audio_processing.AUDIO_PROCESSING, "chunk_test.mp3"
+          ),
       }
       self.assertEqual(result, expected_result)
 
@@ -427,49 +442,40 @@ class VerifyModifiedAudioChunkTest(absltest.TestCase):
       self, mock_cut_and_save_audio, mock_remove
   ):
     with tempfile.TemporaryDirectory() as tmpdir:
+      os.makedirs(os.path.join(tmpdir, audio_processing.AUDIO_PROCESSING))
       mock_cut_and_save_audio.side_effect = [
-          os.path.join(tmpdir, "chunk_correct.mp3"),
-          os.path.join(tmpdir, "vocals_chunk_correct.mp3"),
+          os.path.join(
+              tmpdir, audio_processing.AUDIO_PROCESSING, "chunk_correct.mp3"
+          ),
       ]
-      audio_file_path = os.path.join(tmpdir, "test_audio.mp3")
-      audio_vocals_file_path = os.path.join(tmpdir, "test_vocals.mp3")
-      AudioSegment.silent(duration=3000).export(audio_file_path, format="mp3")
-      AudioSegment.silent(duration=3000).export(
-          audio_vocals_file_path, format="mp3"
+      audio_file_path = os.path.join(
+          tmpdir, audio_processing.AUDIO_PROCESSING, "test_audio.mp3"
       )
+      AudioSegment.silent(duration=3000).export(audio_file_path, format="mp3")
       utterance = {
           "start": 1.0,
           "end": 2.0,
           "path": "wrong_chunk.mp3",
-          "vocals_path": "wrong_vocals_chunk.mp3",
       }
       result = audio_processing.verify_modified_audio_chunk(
           audio_file=audio_file_path,
-          audio_vocals_file=audio_vocals_file_path,
           utterance=utterance,
           output_directory=tmpdir,
-          elevenlabs_clone_voices=True,
       )
       expected_result = {
           **utterance,
-          "path": os.path.join(tmpdir, "chunk_correct.mp3"),
-          "vocals_path": os.path.join(tmpdir, "vocals_chunk_correct.mp3"),
+          "path": os.path.join(
+              tmpdir, audio_processing.AUDIO_PROCESSING, "chunk_correct.mp3"
+          ),
       }
       self.assertEqual(result, expected_result)
       mock_remove.assert_has_calls([
           mock.call("wrong_chunk.mp3"),
-          mock.call("wrong_vocals_chunk.mp3"),
       ])
       mock_cut_and_save_audio.assert_any_call(
           audio=AudioSegment.from_file(audio_file_path),
           utterance=utterance,
           prefix="chunk",
-          output_directory=tmpdir,
-      )
-      mock_cut_and_save_audio.assert_any_call(
-          audio=AudioSegment.from_file(audio_vocals_file_path),
-          utterance=utterance,
-          prefix="vocals_chunk",
           output_directory=tmpdir,
       )
 
@@ -478,6 +484,7 @@ class TestInsertAudioAtTimestamps(absltest.TestCase):
 
   def test_insert_audio_at_timestamps(self):
     with tempfile.TemporaryDirectory() as temporary_directory:
+      os.makedirs(os.path.join(temporary_directory, audio_processing._OUTPUT))
       background_audio_file = f"{temporary_directory}/test_background.mp3"
       silence_duration = 10
       silence = AudioArrayClip(
@@ -509,6 +516,7 @@ class MixMusicAndVocalsTest(absltest.TestCase):
 
   def test_mix_music_and_vocals(self):
     with tempfile.TemporaryDirectory() as temporary_directory:
+      os.makedirs(os.path.join(temporary_directory, audio_processing._OUTPUT))
       background_audio_path = f"{temporary_directory}/test_background.mp3"
       vocals_audio_path = f"{temporary_directory}/test_vocals.mp3"
       silence_duration = 10

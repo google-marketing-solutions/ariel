@@ -104,6 +104,7 @@ _REQUIRED_ELEVENLABS_PARAMETERS: Final[set] = {
     "style",
     "use_speaker_boost",
 }
+_OUTPUT: Final[str] = "output"
 
 
 def is_video(*, input_file: str) -> bool:
@@ -170,6 +171,26 @@ def read_system_settings(system_instructions: str) -> str:
     raise ValueError(f"Unsupported file type: {extension}")
   else:
     return system_instructions
+
+
+def create_output_directories(output_directory: str) -> None:
+  """Creates the output directory and subdirectories.
+
+  Args:
+    output_directory: The path to the output directory.
+  """
+  if not tf.io.gfile.exists(output_directory):
+    tf.io.gfile.makedirs(output_directory)
+  subdirectories = [
+      audio_processing.AUDIO_PROCESSING,
+      video_processing.VIDEO_PROCESSING,
+      text_to_speech.DUBBED_AUDIO_CHUNKS,
+      _OUTPUT,
+  ]
+  for subdir in subdirectories:
+    subdir_path = tf.io.gfile.join(output_directory, subdir)
+    if not tf.io.gfile.exists(subdir_path):
+      tf.io.gfile.makedirs(subdir_path)
 
 
 @dataclasses.dataclass
@@ -572,6 +593,7 @@ class Dubber:
     self.text_to_speech = None
     self._voice_assigner = None
     self.assigned_voices_override = assigned_voices_override
+    create_output_directories(output_directory)
 
   @functools.cached_property
   def input_file(self):
@@ -1039,10 +1061,8 @@ class Dubber:
       )
       verified_utterance = audio_processing.verify_added_audio_chunk(
           audio_file=self.preprocessing_output.audio_file,
-          audio_vocals_file=self.preprocessing_output.audio_vocals_file,
           utterance=utterance,
           output_directory=self.output_directory,
-          elevenlabs_clone_voices=self.elevenlabs_clone_voices,
       )
       verified_utterance = text_to_speech.add_text_to_speech_properties(
           utterance_metadata=verified_utterance,
@@ -1059,10 +1079,8 @@ class Dubber:
       )
       verified_utterance = audio_processing.verify_modified_audio_chunk(
           audio_file=self.preprocessing_output.audio_file,
-          audio_vocals_file=self.preprocessing_output.audio_vocals_file,
           utterance=utterance,
           output_directory=self.output_directory,
-          elevenlabs_clone_voices=self.elevenlabs_clone_voices,
       )
     transcribed_utterance = self._run_speech_to_text_on_single_utterance(
         verified_utterance
@@ -1434,6 +1452,7 @@ class Dubber:
     )
     utterance_metadata_file = os.path.join(
         self.output_directory,
+        _OUTPUT,
         _UTTERNACE_METADATA_FILE_NAME + target_language_suffix + ".json",
     )
     try:
@@ -1460,12 +1479,10 @@ class Dubber:
 
   def run_clean_directory(self) -> None:
     """Removes all files and directories from a directory, except for those listed in keep_files."""
-    keep_files = [
-        os.path.basename(self.postprocessing_output.audio_file),
-        os.path.basename(self.save_utterance_metadata_output),
-    ]
-    if self.postprocessing_output.video_file:
-      keep_files += [os.path.basename(self.postprocessing_output.video_file)]
+    output_folder = os.path.join(self.output_directory, _OUTPUT)
+    output_files = tf.io.gfile.listdir(output_folder)
+    keep_files = [os.path.join(output_folder, file) for file in output_files]
+    keep_files.append(output_folder)
     for item in tf.io.gfile.listdir(self.output_directory):
       item_path = os.path.join(self.output_directory, item)
       if item in keep_files:
@@ -1505,11 +1522,11 @@ class Dubber:
 
   def generate_utterance_metadata(self) -> Sequence[Mapping[str, str | float]]:
     """Returns utterance metadata for a user to edit in the UI."""
+    self._verify_api_access()
+    logging.info("Generating utterance metadata starting...")
     self.progress_bar = tqdm(
         total=_NUMBER_OF_STEPS_GENERATE_UTTERANCE_METADATA, initial=1
     )
-    self._verify_api_access()
-    logging.info("Generating utterance metadata started.")
     self.run_preprocessing()
     self.run_speech_to_text()
     self.run_translation()
@@ -1607,6 +1624,7 @@ class Dubber:
     Returns:
         PostprocessingArtifacts: Object containing the post-processed results.
     """
+
     logging.info("Re-run dubbing process starting...")
     self.target_language = target_language
     if self.clean_up:

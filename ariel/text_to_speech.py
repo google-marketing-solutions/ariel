@@ -31,6 +31,7 @@ from pydub import AudioSegment
 from pydub.effects import speedup
 import tensorflow as tf
 
+DUBBED_AUDIO_CHUNKS: Final[str] = "dubbed_audio_chunks"
 _SSML_MALE: Final[str] = "Male"
 _SSML_FEMALE: Final[str] = "Female"
 _SSML_NEUTRAL: Final[str] = "Neutral"
@@ -511,7 +512,9 @@ def calculate_target_utterance_speed(
   return dubbed_duration / reference_length
 
 
-def _find_voice_id(*, client: ElevenLabs, assigned_elevenlabs_voice: str) -> str:
+def _find_voice_id(
+    *, client: ElevenLabs, assigned_elevenlabs_voice: str
+) -> str:
   """Retrieves the ElevenLabs voice ID.
 
   The function uses the same logic as part of the `generate` method of the
@@ -667,7 +670,7 @@ def create_speaker_data_mapping(
 
 def elevenlabs_run_clone_voices(
     *, client: ElevenLabs, speaker_data_mapping: Sequence[SpeakerData]
-) -> Mapping[str, Voice]:
+) -> Mapping[str, str]:
   """Clones voices for speakers using ElevenLabs based on utterance metadata and file paths.
 
   Args:
@@ -684,9 +687,9 @@ def elevenlabs_run_clone_voices(
         name=f"{speaker_data.speaker_id}",
         description=f"Voice for {speaker_data.speaker_id}",
         files=speaker_data.paths,
-        labels=json.dumps(dict(gender=speaker_data.ssml_gender.lower())),
+        labels=dict(gender=speaker_data.ssml_gender.lower()),
     )
-    speaker_to_voices_mapping[speaker_data.speaker_id] = voice
+    speaker_to_voices_mapping[speaker_data.speaker_id] = voice.voice_id
   return speaker_to_voices_mapping
 
 
@@ -820,7 +823,11 @@ class TextToSpeech:
     """
     path = utterance["path"]
     base_filename = os.path.splitext(os.path.basename(path))[0]
-    return os.path.join(self.output_directory, f"dubbed_{base_filename}.mp3")
+    return os.path.join(
+        self.output_directory,
+        DUBBED_AUDIO_CHUNKS,
+        f"dubbed_{base_filename}.mp3",
+    )
 
   def _find_voice(self, utterance: Mapping[str, str | float]) -> str | Voice:
     """Finds the appropriate voice for the given utterance.
@@ -849,9 +856,7 @@ class TextToSpeech:
     if not self.elevenlabs_clone_voices:
       return utterance
     utterance.update(
-        dict(
-            assigned_voice=self.cloned_voices[utterance["speaker_id"]].voice_id
-        )
+        dict(assigned_voice=self.cloned_voices[utterance["speaker_id"]])
     )
     return utterance
 

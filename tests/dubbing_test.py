@@ -18,7 +18,10 @@ import os
 import tempfile
 from absl.testing import absltest
 from absl.testing import parameterized
+from ariel import audio_processing
 from ariel import dubbing
+from ariel import text_to_speech
+from ariel import video_processing
 import tensorflow as tf
 
 
@@ -72,6 +75,28 @@ class TestReadSystemSettings(absltest.TestCase):
         "You specified a .txt file that's not part of the Ariel package.",
     ):
       dubbing.read_system_settings("nonexistent.txt")
+
+
+class TestCreateOutputDirectories(absltest.TestCase):
+
+  def test_create_output_directories_without_elevenlabs(self):
+    with tempfile.TemporaryDirectory() as temp_dir:
+      output_dir = os.path.join(temp_dir, "output")
+      dubbing.create_output_directories(output_dir)
+      output = [
+          os.path.exists(output_dir),
+          os.path.exists(
+              os.path.join(output_dir, audio_processing.AUDIO_PROCESSING)
+          ),
+          os.path.exists(
+              os.path.join(output_dir, video_processing.VIDEO_PROCESSING)
+          ),
+          os.path.exists(
+              os.path.join(output_dir, text_to_speech.DUBBED_AUDIO_CHUNKS)
+          ),
+          os.path.exists(os.path.join(output_dir, dubbing._OUTPUT)),
+      ]
+      self.assertTrue(all(output))
 
 
 class TestAssembleUtteranceMetadata(parameterized.TestCase):
