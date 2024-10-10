@@ -828,17 +828,23 @@ class Dubber:
     else:
       video_file = None
       audio_file = self.input_file
-
     demucs_command = audio_processing.build_demucs_command(
         audio_file=audio_file,
         output_directory=self.output_directory,
         device=self.device,
     )
-    audio_processing.execute_demucs_command(command=demucs_command)
     audio_vocals_file, audio_background_file = (
         audio_processing.assemble_split_audio_file_paths(command=demucs_command)
     )
-
+    if tf.io.gfile.exists(audio_vocals_file) and tf.io.gfile.exists(
+        audio_background_file
+    ):
+      logging.info(
+          "The DEMUCS command will not be executed, because the expected files"
+          f" {audio_vocals_file} and {audio_background_file} already exist."
+      )
+    else:
+      audio_processing.execute_demucs_command(command=demucs_command)
     utterance_metadata = audio_processing.create_pyannote_timestamps(
         audio_file=audio_file,
         number_of_speakers=self.number_of_speakers,
