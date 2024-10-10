@@ -53,6 +53,9 @@ class TestSplitAudioVideo(absltest.TestCase):
 
   def test_split_audio_video_valid_duration(self):
     with tempfile.TemporaryDirectory() as temporary_directory:
+      os.makedirs(
+          os.path.join(temporary_directory, video_processing.VIDEO_PROCESSING)
+      )
       mock_video_file = _create_mock_video(temporary_directory, 5)
       video_processing.split_audio_video(
           video_file=mock_video_file, output_directory=temporary_directory
@@ -60,10 +63,18 @@ class TestSplitAudioVideo(absltest.TestCase):
       self.assertTrue(
           all([
               os.path.exists(
-                  os.path.join(temporary_directory, "mock_video_audio.mp3")
+                  os.path.join(
+                      temporary_directory,
+                      video_processing.VIDEO_PROCESSING,
+                      "mock_video_audio.mp3",
+                  )
               ),
               os.path.exists(
-                  os.path.join(temporary_directory, "mock_video_video.mp4")
+                  os.path.join(
+                      temporary_directory,
+                      video_processing.VIDEO_PROCESSING,
+                      "mock_video_video.mp4",
+                  )
               ),
           ])
       )
@@ -73,6 +84,7 @@ class CombineAudioVideoTest(absltest.TestCase):
 
   def test_combine_audio_video(self):
     with tempfile.TemporaryDirectory() as temporary_directory:
+      os.makedirs(os.path.join(temporary_directory, video_processing._OUTPUT))
       audio_path = f"{temporary_directory}/audio.mp3"
       audio_duration = 5
       audio = AudioArrayClip(
@@ -82,7 +94,9 @@ class CombineAudioVideoTest(absltest.TestCase):
       audio.write_audiofile(audio_path)
       video_duration = 5
       directory = temporary_directory
-      video_path = os.path.join(directory, "video.mp4")
+      video_path = os.path.join(
+          directory, video_processing._OUTPUT, "video.mp4"
+      )
       red = ColorClip((256, 200), color=(255, 0, 0)).set_duration(
           video_duration
       )

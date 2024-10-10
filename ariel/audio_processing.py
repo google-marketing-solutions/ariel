@@ -26,6 +26,8 @@ from pydub import AudioSegment
 import tensorflow as tf
 import torch
 
+AUDIO_PROCESSING: Final[str] = "audio_processing"
+_OUTPUT: Final[str] = "output"
 _DEFAULT_DUBBED_VOCALS_AUDIO_FILE: Final[str] = "dubbed_vocals.mp3"
 _DEFAULT_DUBBED_AUDIO_FILE: Final[str] = "dubbed_audio"
 _DEFAULT_OUTPUT_FORMAT: Final[str] = ".mp3"
@@ -77,12 +79,13 @@ def build_demucs_command(
 
   if int24 and float32:
     raise ValueError("Cannot set both int24 and float32 to True.")
+  updated_output_directory = os.path.join(output_directory, AUDIO_PROCESSING)
   command_parts = [
       "python",
       "-m",
       "demucs.separate",
       "-o",
-      f"'{output_directory}'",
+      f"'{updated_output_directory}'",
       "--device",
       device,
       "--shifts",
@@ -308,7 +311,7 @@ def cut_and_save_audio(
   end_time_ms = int(utterance["end"] * 1000)
   chunk = audio[start_time_ms:end_time_ms]
   chunk_filename = f"{prefix}_{utterance['start']}_{utterance['end']}.mp3"
-  chunk_path = f"{output_directory}/{chunk_filename}"
+  chunk_path = f"{output_directory}/{AUDIO_PROCESSING}/{chunk_filename}"
   chunk.export(chunk_path, format="mp3")
   return chunk_path
 
@@ -356,22 +359,16 @@ def run_cut_and_save_audio(
 def verify_added_audio_chunk(
     *,
     audio_file: str,
-    audio_vocals_file: str,
     utterance: Mapping[str, str | float],
     output_directory: str,
-    elevenlabs_clone_voices: bool = False,
 ) -> Mapping[str, str | float]:
-  """Verifies and processes a newly added audio chunk, potentially including isolated vocals.
+  """Verifies and processes a newly added audio chunk.
 
   Args:
       audio_file: The path to the main audio file containing the added chunk.
-      audio_vocals_file: The path to a separate file containing only the vocal
-        track of the audio (optional).
       utterance: A dictionary describing the start and end times of the added
         chunk.
       output_directory: The directory to save the processed chunk(s).
-      elevenlabs_clone_voices: Indicates whether to process vocals separately
-        (default: False).
 
   Returns:
       A modified copy of the utterance dictionary with added paths to the saved
@@ -381,8 +378,6 @@ def verify_added_audio_chunk(
         `elevenlabs_clone_voices` is True).
   """
   audio = AudioSegment.from_file(audio_file)
-  if elevenlabs_clone_voices:
-    vocal_only_audio = AudioSegment.from_file(audio_vocals_file)
   utterance_copy = utterance.copy()
   chunk_path = cut_and_save_audio(
       audio=audio,
@@ -391,36 +386,22 @@ def verify_added_audio_chunk(
       output_directory=output_directory,
   )
   utterance_copy["path"] = chunk_path
-  if elevenlabs_clone_voices:
-    vocals_chunk_path = cut_and_save_audio(
-        audio=vocal_only_audio,
-        utterance=utterance,
-        prefix="vocals_chunk",
-        output_directory=output_directory,
-    )
-    utterance_copy["vocals_path"] = vocals_chunk_path
   return utterance_copy
 
 
 def verify_modified_audio_chunk(
     *,
     audio_file: str,
-    audio_vocals_file: str,
     utterance: Mapping[str, str | float],
     output_directory: str,
-    elevenlabs_clone_voices: bool = False,
 ) -> Mapping[str, str | float]:
   """Verifies and reprocesses a potentially modified audio chunk, potentially including isolated vocals.
 
   Args:
       audio_file: The path to the main audio file containing the modified chunk.
-      audio_vocals_file: The path to a separate file containing only the vocal
-        track of the audio (optional).
       utterance: A dictionary describing the start and end times of the modified
         chunk and its expected paths.
       output_directory: The directory to save the processed chunk(s).
-      elevenlabs_clone_voices: Indicates whether the ElevenLabs voice cloning is
-        used.
 
   Returns:
       A modified copy of the utterance dictionary with potentially updated paths
@@ -431,8 +412,6 @@ def verify_modified_audio_chunk(
         `elevenlabs_clone_voices` is True and it was modified).
   """
   audio = AudioSegment.from_file(audio_file)
-  if elevenlabs_clone_voices:
-    vocal_only_audio = AudioSegment.from_file(audio_vocals_file)
   utterance_copy = utterance.copy()
   expected_chunk_path = f"chunk_{utterance['start']}_{utterance['end']}.mp3"
   actual_chunk_path = utterance_copy["path"]
@@ -445,20 +424,6 @@ def verify_modified_audio_chunk(
         output_directory=output_directory,
     )
     utterance_copy["path"] = chunk_path
-  if elevenlabs_clone_voices:
-    expected_vocals_chunk_path = (
-        f"vocals_chunk_{utterance['start']}_{utterance['end']}.mp3"
-    )
-    actual_vocals_chunk_path = utterance_copy["vocals_path"]
-    if expected_vocals_chunk_path != actual_vocals_chunk_path:
-      tf.io.gfile.remove(actual_vocals_chunk_path)
-      vocals_chunk_path = cut_and_save_audio(
-          audio=vocal_only_audio,
-          utterance=utterance,
-          prefix="vocals_chunk",
-          output_directory=output_directory,
-      )
-      utterance_copy["vocals_path"] = vocals_chunk_path
   return utterance_copy
 
 
@@ -492,7 +457,7 @@ def insert_audio_at_timestamps(
         audio_chunk, position=start_time, loop=False
     )
   dubbed_vocals_audio_file = os.path.join(
-      output_directory, _DEFAULT_DUBBED_VOCALS_AUDIO_FILE
+      output_directory, AUDIO_PROCESSING, _DEFAULT_DUBBED_VOCALS_AUDIO_FILE
   )
   output_audio.export(dubbed_vocals_audio_file, format="mp3")
   return dubbed_vocals_audio_file
@@ -515,8 +480,10 @@ def merge_background_and_vocals(
       output_directory: Path to save the mixed MP3 file.
       target_language: The language to dub the ad into. It must be ISO 3166-1
         alpha-2 country code.
-      vocals_volume_adjustment: By how much the vocals audio volume should be adjusted.
-      background_volume_adjustment: By how much the background audio volume should be adjusted.
+      vocals_volume_adjustment: By how much the vocals audio volume should be
+        adjusted.
+      background_volume_adjustment: By how much the background audio volume
+        should be adjusted.
 
   Returns:
     The path to the output audio file with merged dubbed vocals and original
@@ -536,6 +503,7 @@ def merge_background_and_vocals(
   target_language_suffix = "_" + target_language.replace("-", "_").lower()
   dubbed_audio_file = os.path.join(
       output_directory,
+      _OUTPUT,
       _DEFAULT_DUBBED_AUDIO_FILE
       + target_language_suffix
       + _DEFAULT_OUTPUT_FORMAT,

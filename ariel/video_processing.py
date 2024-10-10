@@ -18,6 +18,8 @@ import os
 from typing import Final
 from moviepy.editor import AudioFileClip, VideoFileClip, concatenate_videoclips
 
+VIDEO_PROCESSING: Final[str] = "video_processing"
+_OUTPUT: Final[str] = "output"
 _DEFAULT_FPS: Final[int] = 30
 _DEFAULT_DUBBED_VIDEO_FILE: Final[str] = "dubbed_video"
 _DEFAULT_OUTPUT_FORMAT: Final[str] = ".mp4"
@@ -41,12 +43,15 @@ def split_audio_video(
   filename, _ = os.path.splitext(base_filename)
   with VideoFileClip(video_file) as video_clip:
     audio_clip = video_clip.audio
-    audio_output_file = os.path.join(output_directory, filename + "_audio.mp3")
+    audio_output_file = os.path.join(
+        output_directory, VIDEO_PROCESSING, filename + "_audio.mp3"
+    )
     audio_clip.write_audiofile(audio_output_file, verbose=False, logger=None)
     video_clip_without_audio = video_clip.set_audio(None)
     fps = video_clip.fps or _DEFAULT_FPS
-
-    video_output_file = os.path.join(output_directory, filename + "_video.mp4")
+    video_output_file = os.path.join(
+        output_directory, VIDEO_PROCESSING, filename + "_video.mp4"
+    )
     video_clip_without_audio.write_videofile(
         video_output_file, codec="libx264", fps=fps, verbose=False, logger=None
     )
@@ -87,6 +92,7 @@ def combine_audio_video(
   target_language_suffix = "_" + target_language.replace("-", "_").lower()
   dubbed_video_file = os.path.join(
       output_directory,
+      _OUTPUT,
       _DEFAULT_DUBBED_VIDEO_FILE
       + target_language_suffix
       + _DEFAULT_OUTPUT_FORMAT,
