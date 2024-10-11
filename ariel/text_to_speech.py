@@ -366,6 +366,7 @@ def add_text_to_speech_properties(
     *,
     utterance_metadata: Mapping[str, str | float],
     use_elevenlabs: bool = False,
+    adjust_speed: bool = False,
 ) -> Mapping[str, str | float]:
   """Updates utterance metadata with Text-To-Speech properties.
 
@@ -376,6 +377,8 @@ def add_text_to_speech_properties(
         "vocals_path".
       use_elevenlabs: An indicator whether Eleven Labs API will be used in the
         Text-To-Speech proecess.
+      adjust_speed: Whether to force speed up of utterances to match the
+        duration of the utterances in the source language.
 
   Returns:
       Sequence of updated utterance metadata dictionaries.
@@ -400,6 +403,7 @@ def add_text_to_speech_properties(
         style=_DEFAULT_STYLE,
         use_speaker_boost=_DEFAULT_USE_SPEAKER_BOOST,
     )
+  voice_properties.update(dict(adjust_speed=adjust_speed))
   utterance_metadata_copy.update(voice_properties)
   return utterance_metadata_copy
 
@@ -410,6 +414,7 @@ def update_utterance_metadata(
     assigned_voices: Mapping[str, str] | None,
     use_elevenlabs: bool = False,
     elevenlabs_clone_voices: bool = False,
+    adjust_speed: bool = False,
 ) -> Sequence[Mapping[str, str | float]]:
   """Updates utterance metadata with assigned voices.
 
@@ -421,8 +426,10 @@ def update_utterance_metadata(
       assigned_voices: Mapping mapping speaker IDs to assigned Google voices.
       use_elevenlabs: An indicator whether Eleven Labs API will be used in the
         Text-To-Speech proecess.
-      clone_voices: Whether to clone source voices. It requires using ElevenLabs
-        API.
+      elevenlabs_clone_voices: Whether to clone source voices. It requires using
+        ElevenLabs API.
+      adjust_speed: Whether to force speed up of utterances to match the
+        duration of the utterances in the source language.
 
   Returns:
       Sequence of updated utterance metadata dictionaries.
@@ -441,7 +448,9 @@ def update_utterance_metadata(
       speaker_id = new_utterance.get("speaker_id")
       new_utterance["assigned_voice"] = assigned_voices.get(speaker_id)
     new_utterance = add_text_to_speech_properties(
-        utterance_metadata=new_utterance, use_elevenlabs=use_elevenlabs
+        utterance_metadata=new_utterance,
+        use_elevenlabs=use_elevenlabs,
+        adjust_speed=adjust_speed,
     )
     updated_utterance_metadata.append(new_utterance)
   return updated_utterance_metadata
@@ -1047,6 +1056,40 @@ class TextToSpeech:
       final_utterance = self._adjust_speed(dubbed_utterance)
       updated_utterance_metadata.append(final_utterance)
     return updated_utterance_metadata, self.cloned_voices
+
+  def dub_edited_utterances(
+      self,
+      *,
+      original_utterance_metadata: Sequence[Mapping[str, str | float]],
+      updated_utterance_metadata: Sequence[Mapping[str, str | float]],
+  ) -> Sequence[Mapping[str, str | float]]:
+    """Dubs only the edited utterances, returning their updated metadata.
+
+    This method compares the original and updated utterance metadata,
+    identifies the edited utterances, converts their translated text to
+    speech, adjusts the speed of the dubbed audio, and returns a list of
+    the updated metadata for the edited utterances.
+
+    Args:
+      original_utterance_metadata: The original utterance metadata.
+      updated_utterance_metadata: The updated utterance metadata after potential
+        edits.
+
+    Returns:
+      A sequence of dictionaries containing the updated metadata for the
+      edited utterances.
+    """
+    edited_utterances = []
+    for original, updated in zip(
+        original_utterance_metadata, updated_utterance_metadata
+    ):
+      if original != updated:
+        edited_utterances.append(updated)
+    for utterance in edited_utterances:
+      dubbed_utterance = self._run_text_to_speech(utterance)
+      if utterance["adjust_speed"]:
+        self._adjust_speed(dubbed_utterance)
+    return edited_utterances
 
   def remove_cloned_elevenlabs_voices(self) -> None:
     """Removes all voices cloned with ElevenLabs."""

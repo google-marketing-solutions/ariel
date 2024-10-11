@@ -38,7 +38,7 @@ from google.api_core.exceptions import BadRequest, ServiceUnavailable
 from google.cloud import texttospeech
 import google.generativeai as genai
 from google.generativeai.types import HarmBlockThreshold, HarmCategory
-from IPython.display import clear_output
+from IPython.display import Audio, clear_output, display
 from pyannote.audio import Pipeline
 import tensorflow as tf
 import torch
@@ -117,7 +117,20 @@ _ALLOWED_BULK_EDIT_KEYS: Sequence[str] = (
     "pitch",
     "speed",
     "volume_gain_db",
+    "adjust_speed",
 )
+_FLOAT_KEYS: Final[str] = (
+    "start",
+    "end",
+    "stability",
+    "similarity_boost",
+    "style",
+    "pitch",
+    "speed",
+    "volume_gain_db",
+)
+_BOOLEAN_KEYS: Final[str] = ("for_dubbing", "use_speaker_boost", "adjust_speed")
+_LOCKED_KEYS: Final[str] = ("path", "dubbed_path")
 
 
 def is_video(*, input_file: str) -> bool:
@@ -543,8 +556,7 @@ class Dubber:
           should be used again when utilizing the same class instance. It helps
           prevents repetitive voice assignment and cloning.
         adjust_speed: Whether to force speed up of utterances to match the
-          duration of the utterances in the source language. Recommended when
-          using ElevenLabs and Google's 'Journey' voices.
+          duration of the utterances in the source language.
         vocals_volume_adjustment: By how much the vocals audio volume should be
           adjusted.
         background_volume_adjustment: By how much the background audio volume
@@ -1021,6 +1033,7 @@ class Dubber:
         assigned_voices=self.voice_assignments,
         use_elevenlabs=self.use_elevenlabs,
         elevenlabs_clone_voices=self.elevenlabs_clone_voices,
+        adjust_speed=self.adjust_speed,
     )
 
   def _run_speech_to_text_on_single_utterance(
@@ -1198,22 +1211,69 @@ class Dubber:
       utterance_metadata: Sequence[Mapping[str, str | float]],
       edit_index: int,
   ) -> Mapping[str, str | float]:
-    """Runs the editing process of utterance metadata."""
-    ask_for_update = True
-    while ask_for_update:
-      try:
-        readline.set_startup_hook(
-            lambda: readline.insert_text(
-                json.dumps(utterance_metadata[edit_index], ensure_ascii=False)
-            )
+    """Lets you interactively edit the metadata of a single utterance.
+
+    Prompts you to choose a key to modify, enter a new value, and
+    validates your input. You can keep editing the same utterance until
+    you choose to stop.
+
+    Args:
+        utterance_metadata: The list of all utterance metadata.
+        edit_index: The index of the utterance to edit.
+
+    Returns:
+        The updated metadata for the edited utterance.
+    """
+    utterance = utterance_metadata[edit_index].copy()
+    while True:
+      while True:
+        key_to_modify = input(
+            f"Enter the key you want to modify for utterance {edit_index + 1}: "
         )
-        modified_input = input(f"Modify: ")
-        readline.set_startup_hook()
-        edited_utterance = json.loads(modified_input)
-        ask_for_update = False
-        return edited_utterance
-      except (json.JSONDecodeError, ValueError):
-        print("Invalid JSON or input. Please try again.")
+        if key_to_modify in _LOCKED_KEYS:
+          print(
+              f"'{key_to_modify}' cannot be edited. Please choose another key."
+          )
+        if key_to_modify in utterance:
+          break
+        else:
+          print(
+              f"Invalid key: {key_to_modify}. Available keys are:"
+              f" {', '.join(utterance.keys())}"
+          )
+      while True:
+        try:
+          new_value = input(f"Enter the new value for '{key_to_modify}': ")
+          if key_to_modify in _FLOAT_KEYS:
+            new_value = float(new_value)
+          elif key_to_modify in _BOOLEAN_KEYS:
+            if new_value.lower() == "true" or new_value.lower() == "True":
+              new_value = True
+            elif new_value.lower() == "false" or new_value.lower() == "False":
+              new_value = False
+            else:
+              raise ValueError
+          else:
+            new_value = str(new_value)
+          break
+        except ValueError:
+          print(
+              f"Invalid input for '{key_to_modify}'. Please enter a valid"
+              " value. Make sure it matches the orignal type, a float (e.g."
+              " 0.01), a string (e.g. 'example') or a boolean (e.g. 'True')."
+          )
+      utterance[key_to_modify] = new_value
+      while True:
+        modify_more = input(
+            "Do you want to modify anything else in this utterance? (yes/no): "
+        ).lower()
+        if modify_more in ("yes", "no"):
+          break
+        else:
+          print("Invalid input. Please enter 'yes' or 'no'.")
+      if modify_more != "yes":
+        break
+    return utterance
 
   def _remove_utterance_metadata(
       self, utterance_metadata: Sequence[Mapping[str, str | float]]
@@ -1387,17 +1447,78 @@ class Dubber:
           " (yes/no): "
       ).lower()
       if verify_voices_choice == "yes":
-        self._run_verify_utterance_metadata()
+        self._run_verify_utterance_metadata(with_verification=False)
         clear_output()
         break
       elif verify_voices_choice == "no":
         clear_output()
+        print("Please wait...")
         break
       else:
         print("Invalid choice.")
 
-  def _run_verify_utterance_metadata(self) -> None:
-    """Displays, allows editing, addig and removing utterance metadata."""
+  def _prompt_for_dubbed_utterances_verification(self) -> None:
+    """Prompts the user to verify dubbed utterances by listening to them."""
+    while True:
+      verify_dubbed_utterances_choice = input(
+          "\nUtterances have been dubbed. Would you like to listen to "
+          "them? (yes/no): "
+      ).lower()
+      if verify_dubbed_utterances_choice == "yes":
+        clear_output()
+        for i, utterance in enumerate(self.utterance_metadata):
+          if utterance.get("dubbed_path"):
+            print(
+                f"{i+1}. Playing utterance: {utterance.get('translated_text')}"
+            )
+            display(Audio(utterance["dubbed_path"]))
+        break
+      elif verify_dubbed_utterances_choice == "no":
+        break
+      else:
+        print("Invalid choice.")
+    while True:
+      verify_again_choice = input(
+          "\nWould you like to verify and potentially re-dub the utterances "
+          "again? (yes/no): "
+      ).lower()
+      if verify_again_choice == "yes":
+        original_metadata = self.utterance_metadata.copy()
+        self._run_verify_utterance_metadata(with_verification=False)
+        clear_output()
+        edited_utterances = self.text_to_speech.dub_edited_utterances(
+            original_utterance_metadata=original_metadata,
+            updated_utterance_metadata=self.utterance_metadata,
+        )
+        updated_utterance_metadata = self.utterance_metadata.copy()
+        for edited_utterance in edited_utterances:
+          for i, original_utterance in enumerate(updated_utterance_metadata):
+            if (
+                original_utterance["path"] == edited_utterance["path"]
+                and original_utterance["dubbed_path"]
+                != edited_utterance["dubbed_path"]
+            ):
+              updated_utterance_metadata[i] = edited_utterance
+        self.utterance_metadata = updated_utterance_metadata
+        self._prompt_for_dubbed_utterances_verification()
+        break
+      elif verify_again_choice == "no":
+        clear_output()
+        print("Please wait...")
+        break
+      else:
+        print("Invalid choice.")
+
+  def _run_verify_utterance_metadata(
+      self, with_verification: bool = True
+  ) -> None:
+    """Displays, allows editing, adding and removing utterance metadata.
+
+    Args:
+        within_dubbed_verification: A boolean indicating whether this method is
+          being called from within the
+          _prompt_for_dubbed_utterances_verification method.
+    """
     utterance_metadata = self.utterance_metadata
     clear_output()
     while True:
@@ -1464,15 +1585,17 @@ class Dubber:
         clear_output()
       elif action_choice == "continue":
         self.utterance_metadata = utterance_metadata
-        if not self.elevenlabs_clone_voices:
-          assign_voices_choice = self._prompt_for_assign_voices()
-          if assign_voices_choice == "yes":
-            self.run_configure_text_to_speech()
-        clear_output()
-        self._display_utterance_metadata(self.utterance_metadata)
-        if not self._verify_metadata_after_change():
-          utterance_metadata = self.utterance_metadata
-          continue
+        if with_verification:
+          if not self.elevenlabs_clone_voices:
+            assign_voices_choice = self._prompt_for_assign_voices()
+            if assign_voices_choice == "yes":
+              self.run_configure_text_to_speech()
+          clear_output()
+          self._display_utterance_metadata(self.utterance_metadata)
+          if not self._verify_metadata_after_change():
+            utterance_metadata = self.utterance_metadata
+            clear_output()
+            continue
         return
       else:
         print("Invalid choice.")
@@ -1617,6 +1740,8 @@ class Dubber:
     if self.with_verification:
       self._prompt_for_verification_after_voice_configured()
     self.run_text_to_speech()
+    if self.with_verification:
+      self._prompt_for_dubbed_utterances_verification()
     self.run_save_utterance_metadata()
     self.run_postprocessing()
     translation.save_srt_subtitles(
@@ -1717,6 +1842,8 @@ class Dubber:
       self._run_verify_utterance_metadata()
       clear_output()
     self.run_text_to_speech()
+    if self.with_verification:
+      self._prompt_for_dubbed_utterances_verification()
     if overwrite_utterance_metadata:
       self.run_save_utterance_metadata()
     self.run_postprocessing()
@@ -1770,6 +1897,8 @@ class Dubber:
     if self.with_verification:
       self._prompt_for_verification_after_voice_configured()
     self.run_text_to_speech()
+    if self.with_verification:
+      self._prompt_for_dubbed_utterances_verification()
     if overwrite_utterance_metadata:
       self.run_save_utterance_metadata()
     self.run_postprocessing()
@@ -1863,6 +1992,8 @@ class Dubber:
       self._run_verify_utterance_metadata()
       clear_output()
     self.run_text_to_speech()
+    if self.with_verification:
+      self._prompt_for_dubbed_utterances_verification()
     self.run_save_utterance_metadata()
     self.run_postprocessing()
     translation.save_srt_subtitles(
