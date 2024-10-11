@@ -38,6 +38,7 @@ from google.api_core.exceptions import BadRequest, ServiceUnavailable
 from google.cloud import texttospeech
 import google.generativeai as genai
 from google.generativeai.types import HarmBlockThreshold, HarmCategory
+from IPython.display import clear_output
 from pyannote.audio import Pipeline
 import tensorflow as tf
 import torch
@@ -1375,75 +1376,99 @@ class Dubber:
       updated_metadata[index] = updated_item
     return updated_metadata
 
+  def _prompt_for_verification_after_voice_configured(self) -> None:
+    """Prompts the user to verify voice assignments and properties."""
+    clear_output()
+    self._display_utterance_metadata(self.utterance_metadata)
+    while True:
+      verify_voices_choice = input(
+          "\nVoices and voice properties were added to the utterance metadata"
+          " above. Would you like to verify them before the process completes?"
+          " (yes/no): "
+      ).lower()
+      if verify_voices_choice == "yes":
+        self._run_verify_utterance_metadata()
+        clear_output()
+        break
+      elif verify_voices_choice == "no":
+        clear_output()
+        break
+      else:
+        print("Invalid choice.")
+
   def _run_verify_utterance_metadata(self) -> None:
     """Displays, allows editing, addig and removing utterance metadata."""
     utterance_metadata = self.utterance_metadata
+    clear_output()
     while True:
       self._display_utterance_metadata(utterance_metadata)
       action_choice = input(
           "\nChoose action: (edit/bulk_edit/add/remove/continue): "
       ).lower()
-      if action_choice == "edit":
-        edit_index = self._select_edit_number(
-            utterance_metadata=utterance_metadata
-        )
-        unmodified_start_end = (
-            utterance_metadata[edit_index]["start"],
-            utterance_metadata[edit_index]["end"],
-        )
-        unmodified_text = utterance_metadata[edit_index]["text"]
-        gemini_translation_chat_choice = (
-            self._prompt_for_gemini_translation_chat()
-        )
-        if gemini_translation_chat_choice == "yes":
-          edited_utterance = self._translate_utterance_with_gemini(
-              utterance_metadata=utterance_metadata, edit_index=edit_index
+      if action_choice in ("edit", "bulk_edit", "add", "remove"):
+        if action_choice == "edit":
+          edit_index = self._select_edit_number(
+              utterance_metadata=utterance_metadata
           )
-        else:
-          edited_utterance = self._edit_utterance_metadata(
-              utterance_metadata=utterance_metadata, edit_index=edit_index
+          unmodified_start_end = (
+              utterance_metadata[edit_index]["start"],
+              utterance_metadata[edit_index]["end"],
           )
-        modified_start_end = (
-            edited_utterance["start"],
-            edited_utterance["end"],
-        )
-        modified_text = edited_utterance["text"]
-        if unmodified_start_end != modified_start_end:
-          edited_utterance = self._repopulate_metadata(
-              utterance=edited_utterance
+          unmodified_text = utterance_metadata[edit_index]["text"]
+          gemini_translation_chat_choice = (
+              self._prompt_for_gemini_translation_chat()
           )
-        if unmodified_text != modified_text:
-          translate_choice = self._prompt_for_translation()
-          if translate_choice == "yes":
-            edited_utterance = self._run_translation_on_single_utterance(
-                edited_utterance
+          if gemini_translation_chat_choice == "yes":
+            edited_utterance = self._translate_utterance_with_gemini(
+                utterance_metadata=utterance_metadata, edit_index=edit_index
             )
-        utterance_metadata = self._update_utterance_metadata(
-            updated_utterance=edited_utterance,
-            utterance_metadata=utterance_metadata,
-            edit_index=edit_index,
-        )
-      elif action_choice == "bulk_edit":
-        utterance_metadata = self._bulk_edit_utterance_metadata(
-            utterance_metadata
-        )
-      elif action_choice == "add":
-        added_utterance = self._add_utterance_metadata()
-        added_utterance = self._repopulate_metadata(
-            utterance=added_utterance, modified=False
-        )
-        utterance_metadata = self._update_utterance_metadata(
-            updated_utterance=added_utterance,
-            utterance_metadata=utterance_metadata,
-        )
-      elif action_choice == "remove":
-        self._remove_utterance_metadata(utterance_metadata)
+          else:
+            edited_utterance = self._edit_utterance_metadata(
+                utterance_metadata=utterance_metadata, edit_index=edit_index
+            )
+          modified_start_end = (
+              edited_utterance["start"],
+              edited_utterance["end"],
+          )
+          modified_text = edited_utterance["text"]
+          if unmodified_start_end != modified_start_end:
+            edited_utterance = self._repopulate_metadata(
+                utterance=edited_utterance
+            )
+          if unmodified_text != modified_text:
+            translate_choice = self._prompt_for_translation()
+            if translate_choice == "yes":
+              edited_utterance = self._run_translation_on_single_utterance(
+                  edited_utterance
+              )
+          utterance_metadata = self._update_utterance_metadata(
+              updated_utterance=edited_utterance,
+              utterance_metadata=utterance_metadata,
+              edit_index=edit_index,
+          )
+        elif action_choice == "bulk_edit":
+          utterance_metadata = self._bulk_edit_utterance_metadata(
+              utterance_metadata
+          )
+        elif action_choice == "add":
+          added_utterance = self._add_utterance_metadata()
+          added_utterance = self._repopulate_metadata(
+              utterance=added_utterance, modified=False
+          )
+          utterance_metadata = self._update_utterance_metadata(
+              updated_utterance=added_utterance,
+              utterance_metadata=utterance_metadata,
+          )
+        elif action_choice == "remove":
+          self._remove_utterance_metadata(utterance_metadata)
+        clear_output()
       elif action_choice == "continue":
         self.utterance_metadata = utterance_metadata
         if not self.elevenlabs_clone_voices:
           assign_voices_choice = self._prompt_for_assign_voices()
           if assign_voices_choice == "yes":
             self.run_configure_text_to_speech()
+        clear_output()
         self._display_utterance_metadata(self.utterance_metadata)
         if not self._verify_metadata_after_change():
           utterance_metadata = self.utterance_metadata
@@ -1587,7 +1612,10 @@ class Dubber:
     self.run_translation()
     if self.with_verification:
       self._run_verify_utterance_metadata()
+      clear_output()
     self.run_configure_text_to_speech()
+    if self.with_verification:
+      self._prompt_for_verification_after_voice_configured()
     self.run_text_to_speech()
     self.run_save_utterance_metadata()
     self.run_postprocessing()
@@ -1687,6 +1715,7 @@ class Dubber:
     )
     if self.with_verification:
       self._run_verify_utterance_metadata()
+      clear_output()
     self.run_text_to_speech()
     if overwrite_utterance_metadata:
       self.run_save_utterance_metadata()
@@ -1736,7 +1765,10 @@ class Dubber:
     self.run_translation()
     if self.with_verification:
       self._run_verify_utterance_metadata()
+      clear_output()
     self.run_configure_text_to_speech()
+    if self.with_verification:
+      self._prompt_for_verification_after_voice_configured()
     self.run_text_to_speech()
     if overwrite_utterance_metadata:
       self.run_save_utterance_metadata()
@@ -1829,6 +1861,7 @@ class Dubber:
         self.utterance_metadata = updated_utterance_metadata
     if self.with_verification:
       self._run_verify_utterance_metadata()
+      clear_output()
     self.run_text_to_speech()
     self.run_save_utterance_metadata()
     self.run_postprocessing()
