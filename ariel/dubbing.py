@@ -468,6 +468,7 @@ class Dubber:
       minimum_merge_threshold: float = 0.001,
       preferred_voices: Sequence[str] | None = None,
       assigned_voices_override: Mapping[str, str] | None = None,
+      keep_voice_assignments: bool = True,
       adjust_speed: bool = True,
       vocals_volume_adjustment: float = 5.0,
       background_volume_adjustment: float = 0.0,
@@ -524,6 +525,9 @@ class Dubber:
         assigned_voices_override: A mapping between unique speaker IDs and the
           full name of their assigned voices. E.g. {'speaker_01':
           'en-US-Casual-K'} or {'speaker_01': 'Charlie'}.
+        keep_voice_assignments: Whether the voices assinged on the first run
+          should be used again when utilizing the same class instance. It helps
+          prevents repetetive voice assignment and cloning.
         adjust_speed: Whether to force speed up of utterances to match the
           duration of the utterances in the source language. Recommended when
           using ElevenLabs and Google's 'Journey' voices.
@@ -593,6 +597,8 @@ class Dubber:
     self.text_to_speech = None
     self._voice_assigner = None
     self.assigned_voices_override = assigned_voices_override
+    self.keep_voice_assignments = keep_voice_assignments
+    self.voice_assignments = None
     create_output_directories(output_directory)
 
   @functools.cached_property
@@ -988,11 +994,14 @@ class Dubber:
         target_language=self.target_language,
         preferred_voices=self.preferred_voices,
         assigned_voices_override=self.assigned_voices_override,
+        keep_voice_assignments=self.keep_voice_assignments,
+        voice_assignments=self.voice_assignments,
+        elevenlabs_clone_voices=self.elevenlabs_clone_voices,
     )
-    assigned_voices = self._voice_assigner.assigned_voices
+    self.voice_assignments = self._voice_assigner.assigned_voices
     self.utterance_metadata = text_to_speech.update_utterance_metadata(
         utterance_metadata=self.utterance_metadata,
-        assigned_voices=assigned_voices,
+        assigned_voices=self.voice_assignments,
         use_elevenlabs=self.use_elevenlabs,
         elevenlabs_clone_voices=self.elevenlabs_clone_voices,
     )
@@ -1400,8 +1409,14 @@ class Dubber:
         use_elevenlabs=self.use_elevenlabs,
         elevenlabs_model=self.elevenlabs_model,
         elevenlabs_clone_voices=self.elevenlabs_clone_voices,
+        keep_voice_assignments=self.keep_voice_assignments,
+        voice_assignments=self.voice_assignments,
     )
-    self.utterance_metadata = self.text_to_speech.dub_all_utterances()
+    self.utterance_metadata, cloned_voice_assignments = (
+        self.text_to_speech.dub_all_utterances()
+    )
+    if self.elevenlabs_clone_voices and not self.voice_assignments:
+      self.voice_assignments = cloned_voice_assignments
     logging.info("Completed converting text to speech.")
     self.progress_bar.update()
 

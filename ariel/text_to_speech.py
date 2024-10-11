@@ -76,6 +76,8 @@ class VoiceAssigner:
       target_language: str,
       preferred_voices: Sequence[str] | None = None,
       assigned_voices_override: Mapping[str, str] | None = None,
+      keep_voice_assignments: bool = True,
+      voice_assignments: Mapping[str, str] | None = None,
       elevenlabs_clone_voices: bool = False,
   ):
     """Initializes VoiceAssigner with necessary parameters.
@@ -92,6 +94,13 @@ class VoiceAssigner:
         assigned_voices_override: An optional dictionary mapping speaker IDs to
           specific voice names. This allows you to completely override the
           automatic voice assignment.
+        keep_voice_assignments: Whether the voices assigned on the first run
+          should be used again when utilizing the same class instance. It helps
+          prevents repetitive voice assignment and cloning.
+        voice_assignments: A dictionary mapping speaker IDs to specific voice
+          names from the previous runs when utiizing the class instance. It
+          works similar to `assigned_voices_override`, but requires
+          `keep_voice_assignments` to be True to take effect.
         elevenlabs_clone_voices: Whether voices are cloned with ElevenLabs.
     """
     self.utterance_metadata = utterance_metadata
@@ -99,6 +108,8 @@ class VoiceAssigner:
     self.target_language = target_language
     self._preferred_voices = preferred_voices
     self.assigned_voices_override = assigned_voices_override
+    self.keep_voice_assignments = keep_voice_assignments
+    self.voice_assignments = voice_assignments
     self.elevenlabs_clone_voices = elevenlabs_clone_voices
 
   @functools.cached_property
@@ -124,7 +135,7 @@ class VoiceAssigner:
           "Preferred voices were None, defaulting to all available ElevenLabs"
           " voices."
       )
-      return [voice.name for voice in self.client.voices.get_all().voices]
+      return [voice.voice_id for voice in self.client.voices.get_all().voices]
     else:
       raise ValueError("Unsupported client type")
 
@@ -342,10 +353,12 @@ class VoiceAssigner:
     Returns:
          A dictionary mapping speaker IDs to assigned voice names.
     """
-    if self.elevenlabs_clone_voices:
-      return None
     if self.assigned_voices_override:
       return self._apply_overrides()
+    if self.keep_voice_assignments and self.voice_assignments:
+      return self.voice_assignments
+    if self.elevenlabs_clone_voices:
+      return None
     return self._assign_voices()
 
 
@@ -511,9 +524,7 @@ def calculate_target_utterance_speed(
   return dubbed_duration / reference_length
 
 
-def _find_voice_id(
-    *, client: ElevenLabs, assigned_elevenlabs_voice: str
-) -> str:
+def _find_voice_id(*, client: ElevenLabs, elevenlabs_voice: str) -> str:
   """Retrieves the ElevenLabs voice ID.
 
   The function uses the same logic as part of the `generate` method of the
@@ -527,7 +538,7 @@ def _find_voice_id(
 
   Args:
     client: The ElevenLabs client object.
-    assigned_elevenlabs_voice: The voice ID or voice name.
+    elevenlabs_voice: The voice ID or voice name.
 
   Returns:
     The ElevenLabs voice ID.
@@ -535,23 +546,21 @@ def _find_voice_id(
   Raises:
     ValueError: If the voice is not found and can't be assigned any voice ID.
   """
-  if isinstance(assigned_elevenlabs_voice, str) and is_voice_id(
-      assigned_elevenlabs_voice
-  ):
-    return assigned_elevenlabs_voice
+  if isinstance(elevenlabs_voice, str) and is_voice_id(elevenlabs_voice):
+    return elevenlabs_voice
   all_available_voices = client.voices.get_all(show_legacy=True)
   voice_id = next(
       (
           voice.voice_id
           for voice in all_available_voices.voices
-          if voice.name == assigned_elevenlabs_voice
+          if voice.name == elevenlabs_voice
       ),
       None,
   )
   if not voice_id:
     raise ValueError(
-        f"No voice ID found for {assigned_elevenlabs_voice}. It is either"
-        " unavailable or you provided an incorrect name"
+        f"No voice ID found for {elevenlabs_voice}. It is either"
+        " unavailable or you provided an incorrect name."
     )
   return voice_id
 
@@ -597,9 +606,6 @@ def elevenlabs_convert_text_to_speech(
   Returns:
       The path and filename of the saved audio file (same as `output_filename`).
   """
-  voice_id = _find_voice_id(
-      client=client, assigned_elevenlabs_voice=assigned_elevenlabs_voice
-  )
   elevenlabs_language_code = (
       target_language.split("-")[0]
       if model == _ALTERNATIVE_ELEVENLABS_MODEL
@@ -607,7 +613,9 @@ def elevenlabs_convert_text_to_speech(
   )
   audio = client.text_to_speech.convert(
       model_id=model,
-      voice_id=voice_id,
+      voice_id=_find_voice_id(
+          client=client, elevenlabs_voice=assigned_elevenlabs_voice
+      ),
       text=text,
       voice_settings=VoiceSettings(
           stability=stability,
@@ -688,7 +696,7 @@ def elevenlabs_run_clone_voices(
         files=speaker_data.paths,
         labels=dict(gender=speaker_data.ssml_gender.lower()),
     )
-    speaker_to_voices_mapping[speaker_data.speaker_id] = voice.voice_id
+    speaker_to_voices_mapping[speaker_data.speaker_id] = voice.name
   return speaker_to_voices_mapping
 
 
@@ -759,6 +767,8 @@ class TextToSpeech:
       use_elevenlabs: bool = False,
       elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
       elevenlabs_clone_voices: bool = False,
+      keep_voice_assignments: bool = True,
+      voice_assignments: Mapping[str, str] | None = None,
   ) -> None:
     """Initializes TextToSpeech with the provided parameters.
 
@@ -772,6 +782,12 @@ class TextToSpeech:
       use_elevenlabs: Whether to use ElevenLabs API.
       elevenlabs_model: The ElevenLabs model to use.
       elevenlabs_clone_voices: Whether to clone voices.
+      keep_voice_assignments: Whether the voices assigned on the first run
+        should be used again when utilizing the same class instance. It helps
+        prevents repetitive voice assignment and cloning.
+      voice_assignments: A dictionary mapping speaker IDs to specific voice
+        names from the previous runs when utiizing the class instance. It
+        requires `keep_voice_assignments` to be True to take effect.
     """
     self.client = client
     self.utterance_metadata = utterance_metadata
@@ -783,8 +799,10 @@ class TextToSpeech:
     self.elevenlabs_clone_voices = elevenlabs_clone_voices
     self.preprocessing_output = preprocessing_output
     self.cloned_voices = None
+    self.keep_voice_assignments = keep_voice_assignments
+    self.voice_assignments = voice_assignments
 
-  def _clone_voices(self) -> Mapping[str, Voice]:
+  def _clone_voices(self) -> Mapping[str, str] | None:
     """Clones voices using ElevenLabs API.
 
     This method clones voices based on the `elevenlabs_clone_voices` flag.
@@ -797,8 +815,19 @@ class TextToSpeech:
     """
     if not self.elevenlabs_clone_voices:
       return
-    if self.elevenlabs_clone_voices and not self.use_elevenlabs:
+    if not self.use_elevenlabs:
       raise ValueError("Voice cloning requires using ElevenLabs API.")
+    if self.keep_voice_assignments and self.voice_assignments:
+      try:
+        for assigned_voice in self.voice_assignments.values():
+          _find_voice_id(client=self.client, elevenlabs_voice=assigned_voice)
+        return self.voice_assignments
+      except ValueError:
+        logging.warning(
+            "One or more of the pre-assigned cloned voices was not identified"
+            " by ElevenLabs API. The voices will be cloned again."
+        )
+        pass
     self.utterance_metadata = audio_processing.run_cut_and_save_audio(
         utterance_metadata=self.utterance_metadata,
         audio_file=self.preprocessing_output["audio_vocals_file"],
@@ -992,7 +1021,9 @@ class TextToSpeech:
     utterance.update(dict(speed=speed))
     return utterance
 
-  def dub_all_utterances(self) -> Sequence[Mapping[str, str | float]]:
+  def dub_all_utterances(
+      self,
+  ) -> tuple[Sequence[Mapping[str, str | float]], Mapping[str, str]]:
     """Dubs all utterances in the `utterance_metadata`.
 
     This method iterates through the `utterance_metadata`, performs voice
@@ -1002,7 +1033,8 @@ class TextToSpeech:
     the updated metadata with the paths to the dubbed audio files.
 
     Returns:
-      A sequence of dictionaries containing the updated utterance metadata.
+      A sequence of dictionaries containing the updated utterance metadata and
+      the cloned voice assignment.
     """
     self.cloned_voices = self._clone_voices()
     utterance_metadata_copy = self.utterance_metadata.copy()
@@ -1014,4 +1046,4 @@ class TextToSpeech:
       )
       final_utterance = self._adjust_speed(dubbed_utterance)
       updated_utterance_metadata.append(final_utterance)
-    return updated_utterance_metadata
+    return updated_utterance_metadata, self.cloned_voices
