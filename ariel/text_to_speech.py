@@ -1047,3 +1047,99 @@ class TextToSpeech:
       final_utterance = self._adjust_speed(dubbed_utterance)
       updated_utterance_metadata.append(final_utterance)
     return updated_utterance_metadata, self.cloned_voices
+
+  def remove_cloned_elevenlabs_voices(self) -> None:
+    """Removes all voices cloned with ElevenLabs."""
+    if (
+        not isinstance(self.client, ElevenLabs)
+        and not self.elevenlabs_clone_voices
+    ):
+      return
+    cloned_voice_ids = [
+        _find_voice_id(client=self.client, elevenlabs_voice=voice)
+        for voice in self.cloned_voices.values()
+    ]
+    for voice_id in cloned_voice_ids:
+      self.client.voices.delete(voice_id=voice_id)
+    logging.info("All voices cloned with ElevenLabs were removed.")
+
+  def edit_cloned_elevenlabs_voice_settings(
+      self,
+      *,
+      voice: str,
+      stability: float,
+      similarity_boost: float,
+      style: float,
+  ) -> None:
+    """Edits the settings of a cloned ElevenLabs voice.
+
+    This allows you to fine-tune the voice's stability, similarity boost, and
+    style.
+    You can only edit voices that you have cloned with ElevenLabs.
+
+    Args:
+      voice: Name of the cloned voice to edit.
+      stability: Voice stability (0.0 to 1.0). A higher value makes the voice
+        sound more consistent and less expressive.
+      similarity_boost: Similarity boost (0.0 to 1.0). Increases the similarity
+        between the cloned voice and the original voice used for cloning.
+      style: Voice style (0.0 to 1.0).  A higher value can make the voice sound
+        more expressive or dramatic.
+    """
+    if (
+        not isinstance(self.client, ElevenLabs)
+        and not self.elevenlabs_clone_voices
+    ):
+      raise ValueError(
+          "You can't edit voice settings of voices from outside of ElevenLabs"
+          " or the ones that were not cloned by you."
+      )
+    voice_id = _find_voice_id(client=self.client, elevenlabs_voice=voice)
+    self.client.voices.edit_settings(
+        voice_id=voice_id,
+        request=VoiceSettings(
+            stability=stability,
+            similarity_boost=similarity_boost,
+            style=style,
+        ),
+    )
+    logging.info("The voice settings of `{voice}` were edited successfully.")
+
+  def edit_cloned_elevenlabs_voice(
+      self,
+      *,
+      voice: str,
+      name: str,
+      description: str,
+      labels: Mapping[str, str | float],
+  ) -> None:
+    """Edits the information of a cloned ElevenLabs voice.
+
+    This allows you to change the name, description, and labels associated with
+    the voice.
+    You can only edit voices that you have cloned with ElevenLabs.
+
+    Args:
+      voice: The name of the cloned voice to edit.
+      name: The new name for the voice.
+      description: A new description for the voice.
+      labels:  A dictionary of labels to add or update for the voice. Labels can
+        be used to organize and categorize your voices. For example, you could
+        add labels like "gender", "accent", or "emotion".
+    """
+    if (
+        not isinstance(self.client, ElevenLabs)
+        and not self.elevenlabs_clone_voices
+    ):
+      raise ValueError(
+          "You can't edit voices from outside of ElevenLabs or the ones that"
+          " were not cloned by you."
+      )
+    voice_id = _find_voice_id(client=self.client, elevenlabs_voice=voice)
+    self.client.voices.edit(
+        voice_id=voice_id,
+        name=name,
+        description=description,
+        labels=labels,
+    )
+    logging.info("The voice of `{voice}` was edited successfully.")

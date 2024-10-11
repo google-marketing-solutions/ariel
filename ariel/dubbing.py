@@ -489,6 +489,7 @@ class Dubber:
       elevenlabs_token: str | None = None,
       elevenlabs_clone_voices: bool = False,
       elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
+      elevenlabs_remove_cloned_voices: bool = True,
       number_of_steps: int = _NUMBER_OF_STEPS,
       with_verification: bool = True,
   ) -> None:
@@ -525,9 +526,9 @@ class Dubber:
         assigned_voices_override: A mapping between unique speaker IDs and the
           full name of their assigned voices. E.g. {'speaker_01':
           'en-US-Casual-K'} or {'speaker_01': 'Charlie'}.
-        keep_voice_assignments: Whether the voices assinged on the first run
+        keep_voice_assignments: Whether the voices assigned on the first run
           should be used again when utilizing the same class instance. It helps
-          prevents repetetive voice assignment and cloning.
+          prevents repetitive voice assignment and cloning.
         adjust_speed: Whether to force speed up of utterances to match the
           duration of the utterances in the source language. Recommended when
           using ElevenLabs and Google's 'Journey' voices.
@@ -555,6 +556,8 @@ class Dubber:
           using ElevenLabs API.
         elevenlabs_model: The ElevenLabs model to use in the Text-To-Speech
           process.
+        elevenlabs_remove_cloned_voices: Whether to remove all the voices
+          that were cloned with ELevenLabs during the dubbing process.
         number_of_steps: The total number of steps in the dubbing process.
         with_verification: Whether a user wishes to verify, and optionally edit,
           the utterance metadata in the dubbing process.
@@ -582,6 +585,7 @@ class Dubber:
     self.elevenlabs_token = elevenlabs_token
     self._elevenlabs_clone_voices = elevenlabs_clone_voices
     self.elevenlabs_model = elevenlabs_model
+    self.elevenlabs_remove_cloned_voices = elevenlabs_remove_cloned_voices
     self.diarization_system_instructions = diarization_system_instructions
     self.translation_system_instructions = translation_system_instructions
     self.gemini_model_name = gemini_model_name
@@ -1534,6 +1538,8 @@ class Dubber:
     self.run_postprocessing()
     if self.clean_up:
       self.run_clean_directory()
+    if self.elevenlabs_remove_cloned_voices:
+      self.text_to_speech.remove_cloned_elevenlabs_voices()
     self.progress_bar.close()
     logging.info("Dubbing process finished.")
     end_time = time.time()
@@ -1626,6 +1632,8 @@ class Dubber:
     if overwrite_utterance_metadata:
       self.run_save_utterance_metadata()
     self.run_postprocessing()
+    if self.elevenlabs_remove_cloned_voices:
+      self.text_to_speech.remove_cloned_elevenlabs_voices()
     self.progress_bar.close()
     logging.info("Dubbing process finished.")
     logging.info("Output files saved in: %s.", self.output_directory)
@@ -1670,6 +1678,8 @@ class Dubber:
     if overwrite_utterance_metadata:
       self.run_save_utterance_metadata()
     self.run_postprocessing()
+    if self.elevenlabs_remove_cloned_voices:
+      self.text_to_speech.remove_cloned_elevenlabs_voices()
     self.progress_bar.close()
     logging.info("Dubbing process finished.")
     logging.info("Output files saved in: %s.", self.output_directory)
