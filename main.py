@@ -158,10 +158,10 @@ _TOP_K = flags.DEFINE_integer(
 )
 _GEMINI_SAFETY_SETTINGS = flags.DEFINE_string(
     "gemini_safety_settings",
-    "medium",
+    "Medium",
     "The indicator of what kind of Gemini safety settings should"
     " be used in the dubbing process. Can be"
-    " 'low', 'medium', 'high', or 'none'",
+    " 'Low', 'Medium', 'High', or 'None'",
 )
 _MAX_OUTPUT_TOKENS = flags.DEFINE_integer(
     "max_output_tokens",
