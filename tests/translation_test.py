@@ -14,11 +14,14 @@
 
 """Tests for utility functions in translation.py."""
 
+import os
+import tempfile
 from unittest.mock import MagicMock
 from absl.testing import absltest
 from absl.testing import parameterized
 from ariel import translation
 import google.generativeai as genai
+import tensorflow as tf
 
 
 class GenerateScriptTest(parameterized.TestCase):
@@ -194,12 +197,50 @@ class AddTranslationsTest(parameterized.TestCase):
     ]
     translated_script = "Bonjour<BREAK>Le Monde<BREAK>Another Segment"
     with self.assertRaisesRegex(
-        translation.GeminiTranslationError, "The utterance metadata must be of the same length"
+        translation.GeminiTranslationError,
+        "The utterance metadata must be of the same length",
     ):
       translation.add_translations(
           utterance_metadata=utterance_metadata,
           translated_script=translated_script,
       )
+
+
+class SaveSRTSubtitlesTest(absltest.TestCase):
+
+  def test_create_srt_subtitles(self):
+    with tempfile.TemporaryDirectory() as tmpdir:
+      utterance_metadata = [
+          {
+              "start": 1.81971875,
+              "end": 3.8109687500000002,
+              "translated_text": "It's good to catch the last train.",
+          },
+          {
+              "start": 6.13971875,
+              "end": 8.14784375,
+              "translated_text": "Just like understanding words.",
+          },
+      ]
+
+      translation.save_srt_subtitles(
+          utterance_metadata=utterance_metadata, output_directory=tmpdir
+      )
+
+      expected_srt_content = (
+          "1\n"
+          "00:00:01,819 --> 00:00:03,810\n"
+          "It's good to catch the last train.\n\n"
+          "2\n"
+          "00:00:06,139 --> 00:00:08,147\n"
+          "Just like understanding words.\n\n"
+      )
+
+      srt_file_path = os.path.join(tmpdir, "translated_subtitles.srt")
+      with tf.io.gfile.GFile(srt_file_path, "r") as f:
+        actual_srt_content = f.read()
+
+      self.assertEqual(actual_srt_content, expected_srt_content)
 
 
 if __name__ == "__main__":

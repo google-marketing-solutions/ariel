@@ -14,9 +14,13 @@
 
 """A translation module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
+from datetime import timedelta
+import os
 import re
 from typing import Final, Mapping, Sequence
 import google.generativeai as genai
+import tensorflow as tf
+
 
 _TRANSLATION_PROMPT: Final[str] = (
     "You're hired by a company called: {}. The received transcript is: {}."
@@ -26,11 +30,7 @@ _BREAK_MARKER: Final[str] = "<BREAK>"
 _DONT_TRANSLATE_MARKER: Final[str] = "<DO NOT TRANSLATE>"
 
 
-def generate_script(
-    *,
-    utterance_metadata,
-    key: str = "text"
-) -> str:
+def generate_script(*, utterance_metadata, key: str = "text") -> str:
   """Generates a script string from a list of utterance metadata.
 
   Args:
@@ -44,8 +44,7 @@ def generate_script(
     between chunks.
   """
   trimmed_lines = [
-      item[key].strip() if item[key] else ""
-      for item in utterance_metadata
+      item[key].strip() if item[key] else "" for item in utterance_metadata
   ]
   return _BREAK_MARKER + _BREAK_MARKER.join(trimmed_lines) + _BREAK_MARKER
 
@@ -126,3 +125,32 @@ def add_translations(
     else:
       continue
   return updated_utterance_metadata
+
+
+def save_srt_subtitles(
+    *,
+    utterance_metadata: Sequence[Mapping[str, str | float]],
+    output_directory: str,
+) -> None:
+  """Creates and saves SRT subtitle file from utterance metadata.
+
+  Args:
+    utterance_metadata: A list of dictionaries, where each dictionary contains
+      information about an utterance, including 'start', 'end', and
+      'translated_text'.
+    output_directory: The directory where the SRT file will be saved.
+  """
+  srt_content = ""
+  for i, utterance in enumerate(utterance_metadata):
+    start_time = str(timedelta(seconds=utterance["start"]))[:-3]
+    end_time = str(timedelta(seconds=utterance["end"]))[:-3]
+    start_time = start_time.replace(".", ",").zfill(12)
+    end_time = end_time.replace(".", ",").zfill(12)
+    srt_content += f"{i+1}\n"
+    srt_content += (
+        f"{start_time.replace('.', ',')} --> {end_time.replace('.', ',')}\n"
+    )
+    srt_content += f"{utterance['translated_text']}\n\n"
+  srt_file_path = os.path.join(output_directory, "translated_subtitles.srt")
+  with tf.io.gfile.GFile(srt_file_path, "w") as subtitles_file:
+    subtitles_file.write(srt_content)

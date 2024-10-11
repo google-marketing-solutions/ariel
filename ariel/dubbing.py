@@ -556,8 +556,8 @@ class Dubber:
           using ElevenLabs API.
         elevenlabs_model: The ElevenLabs model to use in the Text-To-Speech
           process.
-        elevenlabs_remove_cloned_voices: Whether to remove all the voices
-          that were cloned with ELevenLabs during the dubbing process.
+        elevenlabs_remove_cloned_voices: Whether to remove all the voices that
+          were cloned with ELevenLabs during the dubbing process.
         number_of_steps: The total number of steps in the dubbing process.
         with_verification: Whether a user wishes to verify, and optionally edit,
           the utterance metadata in the dubbing process.
@@ -1530,15 +1530,19 @@ class Dubber:
     self.run_preprocessing()
     self.run_speech_to_text()
     self.run_translation()
-    self.run_configure_text_to_speech()
     if self.with_verification:
       self._run_verify_utterance_metadata()
+    self.run_configure_text_to_speech()
     self.run_text_to_speech()
     self.run_save_utterance_metadata()
     self.run_postprocessing()
+    translation.save_srt_subtitles(
+        utterance_metadata=self.utterance_metadata,
+        output_directory=os.path.join(self.output_directory, _OUTPUT),
+    )
     if self.clean_up:
       self.run_clean_directory()
-    if self.elevenlabs_remove_cloned_voices:
+    if self.elevenlabs_clone_voices and self.elevenlabs_remove_cloned_voices:
       self.text_to_speech.remove_cloned_elevenlabs_voices()
     self.progress_bar.close()
     logging.info("Dubbing process finished.")
@@ -1632,7 +1636,11 @@ class Dubber:
     if overwrite_utterance_metadata:
       self.run_save_utterance_metadata()
     self.run_postprocessing()
-    if self.elevenlabs_remove_cloned_voices:
+    translation.save_srt_subtitles(
+        utterance_metadata=self.utterance_metadata,
+        output_directory=os.path.join(self.output_directory, _OUTPUT),
+    )
+    if self.elevenlabs_clone_voices and self.elevenlabs_remove_cloned_voices:
       self.text_to_speech.remove_cloned_elevenlabs_voices()
     self.progress_bar.close()
     logging.info("Dubbing process finished.")
@@ -1671,14 +1679,18 @@ class Dubber:
         total=_NUMBER_OF_STEPS_DUB_AD_WITH_DIFFERENT_LANGUAGE, initial=1
     )
     self.run_translation()
-    self.run_configure_text_to_speech()
     if self.with_verification:
       self._run_verify_utterance_metadata()
+    self.run_configure_text_to_speech()
     self.run_text_to_speech()
     if overwrite_utterance_metadata:
       self.run_save_utterance_metadata()
     self.run_postprocessing()
-    if self.elevenlabs_remove_cloned_voices:
+    translation.save_srt_subtitles(
+        utterance_metadata=self.utterance_metadata,
+        output_directory=os.path.join(self.output_directory, _OUTPUT),
+    )
+    if self.elevenlabs_clone_voices and self.elevenlabs_remove_cloned_voices:
       self.text_to_speech.remove_cloned_elevenlabs_voices()
     self.progress_bar.close()
     logging.info("Dubbing process finished.")
@@ -1765,6 +1777,10 @@ class Dubber:
     self.run_text_to_speech()
     self.run_save_utterance_metadata()
     self.run_postprocessing()
+    translation.save_srt_subtitles(
+        utterance_metadata=self.utterance_metadata,
+        output_directory=os.path.join(self.output_directory, _OUTPUT),
+    )
     if self.clean_up:
       self.run_clean_directory()
     self.progress_bar.close()
