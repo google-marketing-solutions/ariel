@@ -41,6 +41,7 @@ from google.generativeai.types import HarmBlockThreshold, HarmCategory
 from IPython.display import Audio
 from IPython.display import clear_output
 from IPython.display import display
+from IPython.display import HTML
 from pyannote.audio import Pipeline
 import tensorflow as tf
 import torch
@@ -451,19 +452,19 @@ def get_safety_settings(
   """Returns safety settings based on the provided level.
 
   Args:
-    level: The safety level. Can be 'low', 'medium', 'high', or 'none'.
+    level: The safety level. Can be 'Low', 'Medium', 'High', or 'None'.
 
   Returns:
     A dictionary mapping HarmCategory to HarmBlockThreshold.
   """
 
-  if level == "low":
+  if level == "Low":
     threshold = HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
-  elif level == "medium":
+  elif level == "Medium":
     threshold = HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-  elif level == "high":
+  elif level == "High":
     threshold = HarmBlockThreshold.BLOCK_ONLY_HIGH
-  elif level == "none":
+  elif level == "None":
     threshold = HarmBlockThreshold.BLOCK_NONE
   else:
     raise ValueError(f"Invalid safety level: {level}")
@@ -1134,8 +1135,8 @@ class Dubber:
   ) -> Mapping[str, str | float]:
     if not modified:
       print(
-          "Populating the metadata fields for the added utterance. It might"
-          " take a minute."
+          "Populating the metadata fields for the added speech chunk"
+          " (utterance). It might take a minute."
       )
       verified_utterance = audio_processing.verify_added_audio_chunk(
           audio_file=self.preprocessing_output.audio_file,
@@ -1152,8 +1153,8 @@ class Dubber:
       )
     else:
       print(
-          "Updating the metadata fields for the modified utterance. It might"
-          " take a minute."
+          "Updating the metadata fields for the modified speech chunk"
+          " (utterance). It might take a minute."
       )
       verified_utterance = audio_processing.verify_modified_audio_chunk(
           audio_file=self.preprocessing_output.audio_file,
@@ -1187,7 +1188,7 @@ class Dubber:
       self, utterance_metadata: Sequence[Mapping[str, str | float]]
   ) -> None:
     """Displays the current utterance metadata."""
-    print("Current utterance metadata:")
+    print("Current speech chunk (utterance) metadata:")
     for i, item in enumerate(utterance_metadata):
       print(f"{i+1}. {json.dumps(item, ensure_ascii=False, indent=2)}")
 
@@ -1343,18 +1344,6 @@ class Dubber:
       else:
         print("Invalid choice.")
 
-  def _prompt_for_assign_voices(self) -> str:
-    """Prompts the user if they want to re-assign voices."""
-    while True:
-      assign_voices_choice = input(
-          "\nDo you want to re-assign voices (recommended only after modifying"
-          " speaker IDs)? (yes/no): "
-      ).lower()
-      if assign_voices_choice in ("yes", "no"):
-        return assign_voices_choice
-      else:
-        print("Invalid choice.")
-
   def _verify_metadata_after_change(self):
     """Asks the user if they want to review the metadata again after changes."""
     while True:
@@ -1476,7 +1465,7 @@ class Dubber:
     while True:
       verify_voices_choice = input(
           "\nVoices and voice properties were added to the utterance metadata"
-          " above. Would you like to verify them before the process completes?"
+          " above. Would you like to edit them before the process completes?"
           " (yes/no): "
       ).lower()
       if verify_voices_choice == "yes":
@@ -1490,6 +1479,26 @@ class Dubber:
       else:
         print("Invalid choice.")
 
+  def _verify_and_redub_utterances(self) -> None:
+    """Verifies and allows re-dubbing of utterances."""
+    original_metadata = self.utterance_metadata.copy()
+    self._run_verify_utterance_metadata(with_verification=False)
+    clear_output()
+    edited_utterances = self.text_to_speech.dub_edited_utterances(
+        original_utterance_metadata=original_metadata,
+        updated_utterance_metadata=self.utterance_metadata,
+    )
+    updated_utterance_metadata = self.utterance_metadata.copy()
+    for edited_utterance in edited_utterances:
+      for i, original_utterance in enumerate(updated_utterance_metadata):
+        if (
+            original_utterance["path"] == edited_utterance["path"]
+            and original_utterance["dubbed_path"]
+            != edited_utterance["dubbed_path"]
+        ):
+          updated_utterance_metadata[i] = edited_utterance
+    self.utterance_metadata = updated_utterance_metadata
+
   def _prompt_for_dubbed_utterances_verification(self) -> None:
     """Prompts the user to verify dubbed utterances by listening to them."""
     while True:
@@ -1502,7 +1511,8 @@ class Dubber:
         for i, utterance in enumerate(self.utterance_metadata):
           if utterance.get("dubbed_path"):
             print(
-                f"{i+1}. Playing utterance: {utterance.get('translated_text')}"
+                f"{i+1}. Playing speech chunk (utterance):"
+                f" {utterance.get('translated_text')}"
             )
             display(Audio(utterance["dubbed_path"]))
         break
@@ -1512,32 +1522,61 @@ class Dubber:
         print("Invalid choice.")
     while True:
       verify_again_choice = input(
-          "\nWould you like to verify and potentially re-dub the utterances "
-          "again? (yes/no): "
+          "\nWould you like to edit and re-dub the edited speech chunks"
+          " (utterances) again? (yes/no): "
       ).lower()
       if verify_again_choice == "yes":
-        original_metadata = self.utterance_metadata.copy()
-        self._run_verify_utterance_metadata(with_verification=False)
-        clear_output()
-        edited_utterances = self.text_to_speech.dub_edited_utterances(
-            original_utterance_metadata=original_metadata,
-            updated_utterance_metadata=self.utterance_metadata,
-        )
-        updated_utterance_metadata = self.utterance_metadata.copy()
-        for edited_utterance in edited_utterances:
-          for i, original_utterance in enumerate(updated_utterance_metadata):
-            if (
-                original_utterance["path"] == edited_utterance["path"]
-                and original_utterance["dubbed_path"]
-                != edited_utterance["dubbed_path"]
-            ):
-              updated_utterance_metadata[i] = edited_utterance
-        self.utterance_metadata = updated_utterance_metadata
+        self._verify_and_redub_utterances()
         self._prompt_for_dubbed_utterances_verification()
         break
       elif verify_again_choice == "no":
         clear_output()
         print("Please wait...")
+        break
+      else:
+        print("Invalid choice.")
+
+  def _prompt_for_output_preview(self) -> None:
+    """Prompts the user to preview the output video/audio after postprocessing."""
+    while True:
+      preview_choice = input(
+          "\nPostprocessing is complete. Would you like to preview the dubbed "
+          "output? (yes/no): "
+      ).lower()
+      if preview_choice == "yes":
+        print("Previewing the dubbed output:")
+        if self.is_video:
+          output_video_path = self.postprocessing_output.video_file
+          video_html = f"""
+          <video width="640" height="480" controls>
+              <source src="{output_video_path}" type="video/mp4">
+          </video>
+          """
+          display(HTML(video_html))
+        else:
+          output_audio_path = self.postprocessing_output.audio_file
+          display(Audio(output_audio_path))
+        break
+      elif preview_choice == "no":
+        break
+      else:
+        print("Invalid choice.")
+    while True:
+      change_choice = input(
+          "\nDo you want to change anything in the dubbed output? (yes/no): "
+      ).lower()
+      if change_choice == "yes":
+        clear_output()
+        if self.with_verification:
+          self._verify_and_redub_utterances()
+        print("Please wait...")
+        self.run_postprocessing()
+        if self.with_verification:
+          self._prompt_for_dubbed_utterances_verification()
+        self._prompt_for_output_preview()
+        break
+      elif change_choice == "no":
+        clear_output()
         break
       else:
         print("Invalid choice.")
@@ -1548,8 +1587,8 @@ class Dubber:
     """Displays, allows editing, adding and removing utterance metadata.
 
     Args:
-        with_verification: A boolean indicating whether to ask for
-          the final verification.
+        with_verification: A boolean indicating whether to ask for the final
+          verification.
     """
     utterance_metadata = self.utterance_metadata
     clear_output()
@@ -1617,20 +1656,11 @@ class Dubber:
         clear_output()
       elif action_choice == "continue":
         self.utterance_metadata = utterance_metadata
-        if with_verification:
-          if not self.elevenlabs_clone_voices:
-            assign_voices_choice = self._prompt_for_assign_voices()
-            if assign_voices_choice == "yes":
-              self.run_configure_text_to_speech()
-          clear_output()
-          self._display_utterance_metadata(self.utterance_metadata)
-          if not self._verify_metadata_after_change():
-            utterance_metadata = self.utterance_metadata
-            clear_output()
-            continue
+        clear_output()
         return
       else:
-        print("Invalid choice.")
+        clear_output()
+        print("Option unavailable or you had a typo. Try again.")
 
   def run_text_to_speech(self) -> None:
     """Converts translated text to speech and dubs utterances with Google's Text-To-Speech.
@@ -1774,8 +1804,10 @@ class Dubber:
     self.run_text_to_speech()
     if self.with_verification:
       self._prompt_for_dubbed_utterances_verification()
-    self.run_save_utterance_metadata()
     self.run_postprocessing()
+    if self.with_verification:
+      self._prompt_for_output_preview()
+    self.run_save_utterance_metadata()
     translation.save_srt_subtitles(
         utterance_metadata=self.utterance_metadata,
         output_directory=os.path.join(self.output_directory, _OUTPUT),
@@ -1876,9 +1908,11 @@ class Dubber:
     self.run_text_to_speech()
     if self.with_verification:
       self._prompt_for_dubbed_utterances_verification()
+    self.run_postprocessing()
+    if self.with_verification:
+      self._prompt_for_output_preview()
     if overwrite_utterance_metadata:
       self.run_save_utterance_metadata()
-    self.run_postprocessing()
     translation.save_srt_subtitles(
         utterance_metadata=self.utterance_metadata,
         output_directory=os.path.join(self.output_directory, _OUTPUT),
@@ -1931,9 +1965,11 @@ class Dubber:
     self.run_text_to_speech()
     if self.with_verification:
       self._prompt_for_dubbed_utterances_verification()
+    self.run_postprocessing()
+    if self.with_verification:
+      self._prompt_for_output_preview()
     if overwrite_utterance_metadata:
       self.run_save_utterance_metadata()
-    self.run_postprocessing()
     translation.save_srt_subtitles(
         utterance_metadata=self.utterance_metadata,
         output_directory=os.path.join(self.output_directory, _OUTPUT),
@@ -2026,8 +2062,10 @@ class Dubber:
     self.run_text_to_speech()
     if self.with_verification:
       self._prompt_for_dubbed_utterances_verification()
-    self.run_save_utterance_metadata()
     self.run_postprocessing()
+    if self.with_verification:
+      self._prompt_for_output_preview()
+    self.run_save_utterance_metadata()
     translation.save_srt_subtitles(
         utterance_metadata=self.utterance_metadata,
         output_directory=os.path.join(self.output_directory, _OUTPUT),

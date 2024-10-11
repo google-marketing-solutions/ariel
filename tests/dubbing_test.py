@@ -196,8 +196,8 @@ class TestGetSafetySettings(parameterized.TestCase):
 
   @parameterized.named_parameters(
       (
-          "low",
-          "low",
+          "Low",
+          "Low",
           {
               HarmCategory.HARM_CATEGORY_HATE_SPEECH: (
                   HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
@@ -214,8 +214,8 @@ class TestGetSafetySettings(parameterized.TestCase):
           },
       ),
       (
-          "medium",
-          "medium",
+          "Medium",
+          "Medium",
           {
               HarmCategory.HARM_CATEGORY_HATE_SPEECH: (
                   HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
@@ -232,8 +232,8 @@ class TestGetSafetySettings(parameterized.TestCase):
           },
       ),
       (
-          "high",
-          "high",
+          "High",
+          "High",
           {
               HarmCategory.HARM_CATEGORY_HATE_SPEECH: (
                   HarmBlockThreshold.BLOCK_ONLY_HIGH
@@ -250,8 +250,8 @@ class TestGetSafetySettings(parameterized.TestCase):
           },
       ),
       (
-          "none",
-          "none",
+          "None",
+          "None",
           {
               HarmCategory.HARM_CATEGORY_HATE_SPEECH: (
                   HarmBlockThreshold.BLOCK_NONE
