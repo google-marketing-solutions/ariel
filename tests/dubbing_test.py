@@ -22,6 +22,8 @@ from ariel import audio_processing
 from ariel import dubbing
 from ariel import text_to_speech
 from ariel import video_processing
+from google.generativeai.types import HarmBlockThreshold
+from google.generativeai.types import HarmCategory
 import tensorflow as tf
 
 
@@ -188,6 +190,93 @@ class TestAssembleUtteranceMetadata(parameterized.TestCase):
           ],
           assigned_voice="Jane Smith",
       )
+
+
+class TestGetSafetySettings(parameterized.TestCase):
+
+  @parameterized.named_parameters(
+      (
+          "low",
+          "low",
+          {
+              HarmCategory.HARM_CATEGORY_HATE_SPEECH: (
+                  HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+              ),
+              HarmCategory.HARM_CATEGORY_HARASSMENT: (
+                  HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+              ),
+              HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: (
+                  HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+              ),
+              HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: (
+                  HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+              ),
+          },
+      ),
+      (
+          "medium",
+          "medium",
+          {
+              HarmCategory.HARM_CATEGORY_HATE_SPEECH: (
+                  HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+              ),
+              HarmCategory.HARM_CATEGORY_HARASSMENT: (
+                  HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+              ),
+              HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: (
+                  HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+              ),
+              HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: (
+                  HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+              ),
+          },
+      ),
+      (
+          "high",
+          "high",
+          {
+              HarmCategory.HARM_CATEGORY_HATE_SPEECH: (
+                  HarmBlockThreshold.BLOCK_ONLY_HIGH
+              ),
+              HarmCategory.HARM_CATEGORY_HARASSMENT: (
+                  HarmBlockThreshold.BLOCK_ONLY_HIGH
+              ),
+              HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: (
+                  HarmBlockThreshold.BLOCK_ONLY_HIGH
+              ),
+              HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: (
+                  HarmBlockThreshold.BLOCK_ONLY_HIGH
+              ),
+          },
+      ),
+      (
+          "none",
+          "none",
+          {
+              HarmCategory.HARM_CATEGORY_HATE_SPEECH: (
+                  HarmBlockThreshold.BLOCK_NONE
+              ),
+              HarmCategory.HARM_CATEGORY_HARASSMENT: (
+                  HarmBlockThreshold.BLOCK_NONE
+              ),
+              HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: (
+                  HarmBlockThreshold.BLOCK_NONE
+              ),
+              HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: (
+                  HarmBlockThreshold.BLOCK_NONE
+              ),
+          },
+      ),
+  )
+  def test_get_safety_settings(self, level, expected_settings):
+    self.assertEqual(dubbing.get_safety_settings(level), expected_settings)
+
+  @parameterized.named_parameters(
+      ("invalid", "invalid level"),
+  )
+  def test_get_safety_settings_invalid_level(self, level):
+    with self.assertRaisesRegex(ValueError, f"Invalid safety level: {level}"):
+      dubbing.get_safety_settings(level)
 
 
 class TestRenameInputFile(parameterized.TestCase):

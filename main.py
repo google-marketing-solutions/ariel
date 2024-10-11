@@ -14,11 +14,12 @@
 
 """A main file executing an end-to-end dubbing prcoesses of Ariel package from the Google EMEA gTech Ads Data Science."""
 
+import ast
 from typing import Sequence
 from absl import app
 from absl import flags
 from ariel.dubbing import Dubber
-import tensorflow as tf
+from ariel.dubbing import get_safety_settings
 
 FLAGS = flags.FLAGS
 
@@ -96,13 +97,27 @@ _MINIMUM_MERGE_THRESHOLD = flags.DEFINE_float(
 )
 _PREFERRED_VOICES = flags.DEFINE_list(
     "preferred_voices",
-    ["Journey", "Studio", "Wavenet", "Polyglot", "News", "Neural2", "Standard"],
-    "Preferred voice names for text-to-speech (e.g., 'Wavenet' for Google's TTS"
-    " or 'Calllum' for ElevenLabs).",
+    [],
+    "Preferred voice names for text-to-speech (e.g., ['Wavenet'] for Google's"
+    " TTS or ['Calllum'] for ElevenLabs).",
+)
+_ASSIGNED_VOICES_OVERRIDE = flags.DEFINE_string(
+    "assigned_voices_override",
+    None,
+    "A mapping between unique speaker IDs and the"
+    " full name of their assigned voices. E.g. {'speaker_01':"
+    " 'en-US-Casual-K'} or {'speaker_01': 'Charlie'}.",
+)
+_KEEP_VOICE_ASSIGNMENTS = flags.DEFINE_bool(
+    "keep_voice_assignments",
+    False,
+    "Whether the voices assigned on the first run"
+    " should be used again when utilizing the same class instance. It helps"
+    " prevents repetitive voice assignment and cloning.",
 )
 _ADJUST_SPEED = flags.DEFINE_bool(
     "adjust_speed",
-    True,
+    False,
     "Whether to adjust the duration of the dubbed audio files to match the"
     " duration of the source audio files.",
 )
@@ -114,7 +129,7 @@ _VOCALS_VOLUME_ADJUSTMENT = flags.DEFINE_float(
 _BACKGROUND_VOLUME_ADJUSTMENT = flags.DEFINE_float(
     "background_volume_adjustment",
     0.0,
-    "By how much the background audio volume should be adjusted."
+    "By how much the background audio volume should be adjusted.",
 )
 _CLEAN_UP = flags.DEFINE_bool(
     "clean_up",
@@ -141,16 +156,17 @@ _TOP_K = flags.DEFINE_integer(
     64,
     "Top-k sampling parameter.",
 )
+_GEMINI_SAFETY_SETTINGS = flags.DEFINE_string(
+    "gemini_safety_settings",
+    "medium",
+    "The indicator of what kind of Gemini safety settings should"
+    " be used in the dubbing process. Can be"
+    " 'low', 'medium', 'high', or 'none'",
+)
 _MAX_OUTPUT_TOKENS = flags.DEFINE_integer(
     "max_output_tokens",
     8192,
     "Maximum number of tokens in the generated response.",
-)
-_USE_ELEVENLABS = flags.DEFINE_bool(
-    "use_elevenlabs",
-    False,
-    "Whether to use ElevenLabs API for Text-To-Speech. If not Google's"
-    " Text-To-Speech will be used.",
 )
 _ELEVENLABS_TOKEN = flags.DEFINE_string(
     "elevenlabs_token",
@@ -162,10 +178,22 @@ _ELEVENLABS_CLONE_VOICES = flags.DEFINE_bool(
     False,
     "Whether to clone source voices. It requires using ElevenLabs API.",
 )
+_ELEVENLABS_MODEL = flags.DEFINE_string(
+    "elevenlabs_model",
+    "eleven_multilingual_v2",
+    "The ElevenLabs model to use in the Text-To-Speech process.",
+)
+_ELEVENLABS_REMOVE_CLONED_VOICES = flags.DEFINE_bool(
+    "elevenlabs_remove_cloned_voices",
+    False,
+    "Whether to remove all the voices that"
+    " were cloned with ELevenLabs during the dubbing process.",
+)
 _WITH_VERIFICATION = flags.DEFINE_bool(
     "with_verification",
     True,
-    "Verify, and optionally edit, the utterance metadata in the dubbing process.",
+    "Verify, and optionally edit, the utterance metadata in the dubbing"
+    " process.",
 )
 
 
@@ -173,8 +201,7 @@ def main(argv: Sequence[str]) -> None:
   """Parses command-line arguments and runs the dubbing process."""
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
-  if not tf.io.gfile.exists(_OUTPUT_DIRECTORY.value):
-    tf.io.gfile.makedirs(_OUTPUT_DIRECTORY.value)
+
   dubber = Dubber(
       input_file=_INPUT_FILE.value,
       output_directory=_OUTPUT_DIRECTORY.value,
@@ -190,6 +217,8 @@ def main(argv: Sequence[str]) -> None:
       merge_utterances=_MERGE_UTTERANCES.value,
       minimum_merge_threshold=_MINIMUM_MERGE_THRESHOLD.value,
       preferred_voices=_PREFERRED_VOICES.value,
+      assigned_voices_override=ast.literal_eval(_ASSIGNED_VOICES_OVERRIDE),
+      keep_voice_assignments=_KEEP_VOICE_ASSIGNMENTS.value,
       adjust_speed=_ADJUST_SPEED.value,
       vocals_volume_adjustment=_VOCALS_VOLUME_ADJUSTMENT.value,
       background_volume_adjustment=_BACKGROUND_VOLUME_ADJUSTMENT.value,
@@ -199,9 +228,12 @@ def main(argv: Sequence[str]) -> None:
       top_p=_TOP_P.value,
       top_k=_TOP_K.value,
       max_output_tokens=_MAX_OUTPUT_TOKENS.value,
-      use_elevenlabs=_USE_ELEVENLABS.value,
+      safety_settings=get_safety_settings(_GEMINI_SAFETY_SETTINGS.value),
+      use_elevenlabs=False if _ELEVENLABS_TOKEN.value == "".strip() else True,
       elevenlabs_token=_ELEVENLABS_TOKEN.value,
       elevenlabs_clone_voices=_ELEVENLABS_CLONE_VOICES.value,
+      elevenlabs_model=_ELEVENLABS_MODEL.value,
+      elevenlabs_remove_cloned_voices=_ELEVENLABS_REMOVE_CLONED_VOICES.value,
       with_verification=_WITH_VERIFICATION.value,
   )
   dubber.dub_ad()
