@@ -25,3 +25,4 @@ google-cloud-texttospeech == 2.16.3
 tensorflow == 2.16.1
 elevenlabs == 1.9.0
 google-api-core == 2.19.1
+ipython == 8.28.0
