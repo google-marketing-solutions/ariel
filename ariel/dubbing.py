@@ -105,6 +105,18 @@ _REQUIRED_ELEVENLABS_PARAMETERS: Final[set] = {
     "use_speaker_boost",
 }
 _OUTPUT: Final[str] = "output"
+_ALLOWED_BULK_EDIT_KEYS: Sequence[str] = (
+    "for_dubbing",
+    "speaker_id",
+    "ssml_gender",
+    "stability",
+    "similarity_boost",
+    "style",
+    "use_speaker_boost",
+    "pitch",
+    "speed",
+    "volume_gain_db",
+)
 
 
 def is_video(*, input_file: str) -> bool:
@@ -1324,13 +1336,52 @@ class Dubber:
     edited_utterance["translated_text"] = updated_translation
     return edited_utterance
 
+  def _bulk_edit_utterance_metadata(
+      self, utterance_metadata: Sequence[Mapping[str, str | float]]
+  ) -> Sequence[Mapping[str, str | float]]:
+    """Allows bulk editing of utterance metadata entries."""
+    while True:
+      try:
+        indices_str = input("Enter item numbers to edit (comma-separated): ")
+        indices = [int(x.strip()) - 1 for x in indices_str.split(",")]
+        for index in indices:
+          if not 0 <= index < len(utterance_metadata):
+            raise ValueError("Invalid item number.")
+        break
+      except ValueError:
+        print("Invalid input format. Please try again.")
+    while True:
+      try:
+        readline.set_startup_hook(lambda: readline.insert_text("{}"))
+        updates_str = input("Enter updates as a JSON dictionary: ")
+        readline.set_startup_hook()
+        updates = json.loads(updates_str)
+        if not isinstance(updates, dict):
+          raise ValueError("Updates must be a dictionary.")
+        invalid_keys = set(updates.keys()) - _ALLOWED_BULK_EDIT_KEYS
+        if invalid_keys:
+          print(
+              f"Invalid keys found: {invalid_keys}. Allowed keys are:"
+              f" {_ALLOWED_BULK_EDIT_KEYS}"
+          )
+          continue
+        break
+      except (json.JSONDecodeError, ValueError):
+        print("Invalid JSON or input. Please try again.")
+    updated_metadata = utterance_metadata.copy()
+    for index in indices:
+      updated_item = updated_metadata[index].copy()
+      updated_item.update(updates)
+      updated_metadata[index] = updated_item
+    return updated_metadata
+
   def _run_verify_utterance_metadata(self) -> None:
     """Displays, allows editing, addig and removing utterance metadata."""
     utterance_metadata = self.utterance_metadata
     while True:
       self._display_utterance_metadata(utterance_metadata)
       action_choice = input(
-          "\nChoose action: (edit/add/remove/continue): "
+          "\nChoose action: (edit/bulk_edit/add/remove/continue): "
       ).lower()
       if action_choice == "edit":
         edit_index = self._select_edit_number(
@@ -1371,6 +1422,10 @@ class Dubber:
             updated_utterance=edited_utterance,
             utterance_metadata=utterance_metadata,
             edit_index=edit_index,
+        )
+      elif action_choice == "bulk_edit":
+        utterance_metadata = self._bulk_edit_utterance_metadata(
+            utterance_metadata
         )
       elif action_choice == "add":
         added_utterance = self._add_utterance_metadata()
