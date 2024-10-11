@@ -484,7 +484,9 @@ class TestInsertAudioAtTimestamps(absltest.TestCase):
 
   def test_insert_audio_at_timestamps(self):
     with tempfile.TemporaryDirectory() as temporary_directory:
-      os.makedirs(os.path.join(temporary_directory, audio_processing.AUDIO_PROCESSING))
+      os.makedirs(
+          os.path.join(temporary_directory, audio_processing.AUDIO_PROCESSING)
+      )
       background_audio_file = f"{temporary_directory}/test_background.mp3"
       silence_duration = 10
       silence = AudioArrayClip(

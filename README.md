@@ -6,7 +6,7 @@
 [![PyPI](https://img.shields.io/pypi/v/gtech-ariel?logo=pypi&logoColor=white&style=flat)](https://pypi.org/project/gtech-ariel/)
 [![GitHub last commit](https://img.shields.io/github/last-commit/google-marketing-solutions/ariel)](https://github.com/google-marketing-solutions/ariel/commits)
 [![Code Style: Google](https://img.shields.io/badge/code%20style-google-blueviolet.svg)](https://google.github.io/styleguide/pyguide.html)
-[![Open in Colab](https://img.shields.io/badge/Dubbing_Workflow-blue?style=flat&logo=google%20colab&labelColor=grey)](https://colab.research.google.com/github/google-marketing-solutions/ariel/blob/main/examples/video_ad_dubbing_gtech_ads_ariel_demo.ipynb)
+[![Open in Colab](https://img.shields.io/badge/Dubbing_Workflow-blue?style=flat&logo=google%20colab&labelColor=grey)](https://colab.research.google.com/github/google-marketing-solutions/ariel/blob/main/examples/dubbing_workflow.ipynb)
 
 ##### _This is not an official Google product._
 

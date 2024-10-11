@@ -38,7 +38,9 @@ from google.api_core.exceptions import BadRequest, ServiceUnavailable
 from google.cloud import texttospeech
 import google.generativeai as genai
 from google.generativeai.types import HarmBlockThreshold, HarmCategory
-from IPython.display import Audio, clear_output, display
+from IPython.display import Audio
+from IPython.display import clear_output
+from IPython.display import display
 from pyannote.audio import Pipeline
 import tensorflow as tf
 import torch
@@ -443,6 +445,37 @@ def assemble_utterance_metadata_for_dubbing_from_script(
   )
 
 
+def get_safety_settings(
+    level: str,
+) -> Mapping[HarmCategory, HarmBlockThreshold]:
+  """Returns safety settings based on the provided level.
+
+  Args:
+    level: The safety level. Can be 'low', 'medium', 'high', or 'none'.
+
+  Returns:
+    A dictionary mapping HarmCategory to HarmBlockThreshold.
+  """
+
+  if level == "low":
+    threshold = HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+  elif level == "medium":
+    threshold = HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+  elif level == "high":
+    threshold = HarmBlockThreshold.BLOCK_ONLY_HIGH
+  elif level == "none":
+    threshold = HarmBlockThreshold.BLOCK_NONE
+  else:
+    raise ValueError(f"Invalid safety level: {level}")
+
+  return {
+      HarmCategory.HARM_CATEGORY_HATE_SPEECH: threshold,
+      HarmCategory.HARM_CATEGORY_HARASSMENT: threshold,
+      HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: threshold,
+      HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: threshold,
+  }
+
+
 def rename_input_file(original_input_file: str) -> str:
   """Converts a filename to lowercase letters and numbers only, preserving the file extension.
 
@@ -495,7 +528,7 @@ class Dubber:
       preferred_voices: Sequence[str] | None = None,
       assigned_voices_override: Mapping[str, str] | None = None,
       keep_voice_assignments: bool = True,
-      adjust_speed: bool = True,
+      adjust_speed: bool = False,
       vocals_volume_adjustment: float = 5.0,
       background_volume_adjustment: float = 0.0,
       clean_up: bool = True,
@@ -515,7 +548,7 @@ class Dubber:
       elevenlabs_token: str | None = None,
       elevenlabs_clone_voices: bool = False,
       elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
-      elevenlabs_remove_cloned_voices: bool = True,
+      elevenlabs_remove_cloned_voices: bool = False,
       number_of_steps: int = _NUMBER_OF_STEPS,
       with_verification: bool = True,
   ) -> None:
@@ -1419,7 +1452,7 @@ class Dubber:
         updates = json.loads(updates_str)
         if not isinstance(updates, dict):
           raise ValueError("Updates must be a dictionary.")
-        invalid_keys = set(updates.keys()) - _ALLOWED_BULK_EDIT_KEYS
+        invalid_keys = set(updates.keys()) - set(_ALLOWED_BULK_EDIT_KEYS)
         if invalid_keys:
           print(
               f"Invalid keys found: {invalid_keys}. Allowed keys are:"
@@ -1515,9 +1548,8 @@ class Dubber:
     """Displays, allows editing, adding and removing utterance metadata.
 
     Args:
-        within_dubbed_verification: A boolean indicating whether this method is
-          being called from within the
-          _prompt_for_dubbed_utterances_verification method.
+        with_verification: A boolean indicating whether to ask for
+          the final verification.
     """
     utterance_metadata = self.utterance_metadata
     clear_output()
