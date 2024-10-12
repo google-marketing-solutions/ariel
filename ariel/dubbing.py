@@ -133,7 +133,7 @@ _FLOAT_KEYS: Final[str] = (
     "volume_gain_db",
 )
 _BOOLEAN_KEYS: Final[str] = ("for_dubbing", "use_speaker_boost", "adjust_speed")
-_LOCKED_KEYS: Final[str] = ("path", "dubbed_path")
+_LOCKED_KEYS: Final[str] = ("path", "dubbed_path", "vocals_path")
 
 
 def is_video(*, input_file: str) -> bool:
@@ -1187,10 +1187,33 @@ class Dubber:
   def _display_utterance_metadata(
       self, utterance_metadata: Sequence[Mapping[str, str | float]]
   ) -> None:
-    """Displays the current utterance metadata."""
-    print("Current speech chunk (utterance) metadata:")
+    """Displays the current utterance metadata as formatted HTML.
+
+    This method iterates through the provided utterance metadata, 
+    formats each utterance as an HTML snippet with headings and lists,
+    and then renders the HTML using IPython.display.HTML for a more
+    visually appealing presentation in the IPython environment.
+
+    Args:
+      utterance_metadata: A sequence of dictionaries, where each dictionary
+                           contains metadata for a single utterance.
+    """
     for i, item in enumerate(utterance_metadata):
-      print(f"{i+1}. {json.dumps(item, ensure_ascii=False, indent=2)}")
+        item_copy = item.copy()
+        for key in _LOCKED_KEYS:
+            item_copy.pop(key, None)
+
+        html = "<h3>Utterance {}</h3>".format(i+1)
+        html += "<ul>"
+        for key, value in item_copy.items():
+            formatted_value = (
+                str(value)
+                if isinstance(value, float)
+                else str(value).lower()
+            )
+            html += "<li><b>{}:</b> {}</li>".format(key, formatted_value)
+        html += "</ul>"
+        display(HTML(html))
 
   def _add_utterance_metadata(self) -> Mapping[str, str | float]:
     """Allows adding a new utterance metadata entry, prompting for each field."""
