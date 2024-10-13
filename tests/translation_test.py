@@ -20,8 +20,8 @@ from unittest.mock import MagicMock
 from absl.testing import absltest
 from absl.testing import parameterized
 from ariel import translation
-import google.generativeai as genai
 import tensorflow as tf
+from vertexai.generative_models import GenerativeModel
 
 
 class GenerateScriptTest(parameterized.TestCase):
@@ -90,10 +90,8 @@ class GenerateScriptTest(parameterized.TestCase):
 class TranslateScriptTest(absltest.TestCase):
 
   def test_translate_script(self):
-    mock_model = MagicMock(spec=genai.GenerativeModel)
-    mock_chat_session = MagicMock()
-    mock_chat_session.send_message.return_value = MagicMock(text="Test.")
-    mock_model.start_chat.return_value = mock_chat_session
+    mock_model = MagicMock(spec=GenerativeModel)
+    mock_model.generate_content.return_value = MagicMock(text="Test.")
     translation_output = translation.translate_script(
         script="Test.",
         advertiser_name="Advertiser Name",

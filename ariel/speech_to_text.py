@@ -14,22 +14,19 @@
 
 """A speech-to-text module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
-import os
 import re
-import time
 from typing import Final, Mapping, Sequence
 from absl import logging
 from faster_whisper import WhisperModel
-import google.generativeai as genai
-from google.generativeai.types import file_types
+from google.cloud import storage
+from vertexai.generative_models import GenerativeModel
+from vertexai.generative_models import Part
 
-_PROCESSING: Final[str] = "PROCESSING"
-_ACTIVE: Final[str] = "ACTIVE"
-_SLEEP_TIME: Final[int] = 10
 _DIARIZATION_PROMPT: Final[str] = (
-    "You got the video attached. The transcript is: {}. The number of speakers"
-    " in the video is: {}. You must provide only {} annotations, each for one"
-    " dictionary in the transcript. And the specific instructions are: {}."
+    "You got the video / audio attached. The transcript is: {}. The number of"
+    " speakers in the video / audio is: {}. You must provide only {}"
+    " annotations, each for one dictionary in the transcript. And the specific"
+    " instructions are: {}."
 )
 _MIME_TYPE_MAPPING: Final[Mapping[str, str]] = {
     ".mp4": "video/mp4",
@@ -150,52 +147,52 @@ def transcribe_audio_chunks(
   return updated_utterance_metadata
 
 
-def upload_to_gemini(file: str) -> file_types.File:
-  """Uploads an MP4 video file to Gemini and logs the URI.
+def create_gcs_bucket(
+    *, gcp_project_id: str, gcs_bucket_name: str, gcp_region: str
+) -> None:
+  """Creates a new GCS bucket in the specified region.
 
   Args:
-      file: The path to the MP4 video or MP3 audio file to upload.
-
-  Returns:
-      The uploaded file object.
+    gcp_project_id: The ID of the Google Cloud project.
+    gcs_bucket_name: The name of the bucket to create.
+    gcp_region: The region to create the bucket in.
   """
-  _, extension = os.path.splitext(file)
-  if extension not in _MIME_TYPE_MAPPING.keys():
-    raise ValueError(
-        "The extension must be either"
-        f" {(', ').join(_MIME_TYPE_MAPPING.keys())}. Received: {extension}"
-    )
-  mime_type = _MIME_TYPE_MAPPING[extension]
-  file = genai.upload_file(file, mime_type=mime_type)
-  logging.info(f"Uploaded file '{file.display_name}' as: {file.uri}")
-  return file
+  storage_client = storage.Client(project=gcp_project_id)
+  bucket = storage_client.bucket(gcs_bucket_name)
+  bucket.create(location=gcp_region)
+  logging.info(f"Bucket {gcs_bucket_name} created in {gcp_region}.")
 
 
-class FileProcessingError(Exception):
-  """Error when processing a file for the Gemini model."""
-
-  pass
-
-
-def wait_for_file_active(*, file: Sequence[file_types.File]) -> None:
-  """Waits for a single file to reach an 'ACTIVE' state.
+def upload_file_to_gcs(
+    *, gcp_project_id: str, gcs_bucket_name: str, file_path: str
+) -> str:
+  """Returns a GCS file path after upload.
 
   Args:
-      file: A file object to wait for.
-
-  Raises:
-      Exception: If the file fails to reach the 'ACTIVE' state.
+    gcp_project_id: The ID of the Google Cloud project.
+    gcs_bucket_name: The name of the bucket to upload to.
+    file_path: The local path to the input file.
   """
-  logging.info("Processing the video file for Gemini.")
-  file = file[0]
-  while file.state.name == _PROCESSING:
-    time.sleep(_SLEEP_TIME)
-    file = genai.get_file(file.name)
-  if file.state.name != _ACTIVE:
-    raise FileProcessingError(f"File {file.name} failed to process.")
-  logging.info(
-      "The video file is ready to be used by Gemini for speaker diarization."
-  )
+  storage_client = storage.Client(project=gcp_project_id)
+  bucket = storage_client.bucket(gcs_bucket_name)
+  destination_blob_name = file_path.split("/")[-1]
+  blob = bucket.blob(destination_blob_name)
+  blob.upload_from_filename(file_path)
+  output_gcs_file_path = f"gs://{gcs_bucket_name}/{destination_blob_name}"
+  logging.info(f"File uploaded to {output_gcs_file_path}")
+  return output_gcs_file_path
+
+
+def remove_gcs_bucket(*, gcp_project_id: str, gcs_bucket_name: str) -> None:
+  """Removes a GCS bucket.
+
+  Args:
+    gcp_project_id: The ID of the Google Cloud project.
+    gcs_bucket_name: The name of the bucket to remove.
+  """
+  storage_client = storage.Client(project=gcp_project_id)
+  bucket = storage_client.bucket(gcs_bucket_name)
+  bucket.delete(force=True)
 
 
 def process_speaker_diarization_response(
@@ -229,20 +226,21 @@ def process_speaker_diarization_response(
 
 def diarize_speakers(
     *,
-    file: str,
+    gcs_input_path: str,
     utterance_metadata: Sequence[Mapping[str, str | float]],
     number_of_speakers: int,
-    model: genai.GenerativeModel,
+    model: GenerativeModel,
     diarization_instructions: str | None = None,
 ) -> Sequence[tuple[str, str]]:
   """Diarizes speakers in a video/audio using a Gemini generative model.
 
   Args:
-      file: The path to the MP4 video or MP3 audio file.
-      utterance_metadata: The transcript of the video, represented as a sequence
-        of mappings with keys "start", "end" "text", "path", "for_dubbing" and
-        optionally "vocals_path".
-      number_of_speakers: The number of speakers in the video.
+      gcs_input_path: The path to the MP4 video or MP3 audio file on Google
+        Cloud Storage (GCS).
+      utterance_metadata: The transcript of the input file, represented as a
+        sequence of mappings with keys "start", "end" "text", "path",
+        "for_dubbing" and optionally "vocals_path".
+      number_of_speakers: The number of speakers in the input file.
       model: The pre-configured Gemini GenerativeModel instance.
       diarization_instructions: The specific instructions for diarization.
 
@@ -251,19 +249,18 @@ def diarize_speakers(
       contains the speaker name and the start time of the speaker
       segment.
   """
-  uploaded_file = [upload_to_gemini(file=file)]
-  wait_for_file_active(file=uploaded_file)
-  chat_session = model.start_chat(
-      history=[{"role": "user", "parts": uploaded_file}]
-  )
   prompt = _DIARIZATION_PROMPT.format(
       utterance_metadata,
       number_of_speakers,
       len(utterance_metadata),
       diarization_instructions or "",
   )
-  response = chat_session.send_message(prompt)
-  chat_session.rewind()
+  file_extension = "." + gcs_input_path.split(".")[-1]
+  mime_type = _MIME_TYPE_MAPPING[file_extension]
+  response = model.generate_content([
+      Part.from_uri(gcs_input_path, mime_type=mime_type),
+      prompt,
+  ])
   return process_speaker_diarization_response(response=response.text)
 
 

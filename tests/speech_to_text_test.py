@@ -16,16 +16,14 @@
 
 from collections import namedtuple
 import tempfile
-import time
 from unittest.mock import MagicMock, patch
 from absl.testing import absltest
 from absl.testing import parameterized
 from ariel import speech_to_text
 from faster_whisper import WhisperModel
-import google.generativeai as genai
-from google.generativeai.types import file_types
 from moviepy.audio.AudioClip import AudioArrayClip
 import numpy as np
+from vertexai.generative_models import GenerativeModel
 
 
 class TranscribeTests(parameterized.TestCase):
@@ -113,66 +111,53 @@ class TranscribeTests(parameterized.TestCase):
       self.assertEqual(transcribed_audio_chunks, expected_result)
 
 
-class UploadToGeminiTest(parameterized.TestCase):
+class GCSTest(absltest.TestCase):
 
-  @parameterized.named_parameters(
-      ("mp4_success", "test_path.mp4", "test_file.mp4", "video/mp4"),
-      ("mp3_success", "test_path.mp3", "test_file.mp3", "audio/mpeg"),
-  )
-  def test_upload_to_gemini_success(
-      self, file, expected_display_name, expected_mime_type
-  ):
-    mock_file = MagicMock(spec=file_types.File)
-    mock_file.display_name = expected_display_name
-    mock_file.uri = f"gs://test-bucket/{expected_display_name}"
+  @patch("google.cloud.storage.Client", autospec=True)
+  def test_create_gcs_bucket(self, mock_storage_client):
+    mock_client = mock_storage_client.return_value
+    mock_bucket = MagicMock()
+    mock_client.bucket.return_value = mock_bucket
 
-    with patch(
-        "google.generativeai.upload_file", return_value=mock_file
-    ) as mock_upload_file:
-      result_file = speech_to_text.upload_to_gemini(file=file)
-      self.assertEqual(result_file.display_name, expected_display_name)
-      self.assertEqual(
-          result_file.uri, f"gs://test-bucket/{expected_display_name}"
-      )
-      mock_upload_file.assert_called_once_with(
-          file, mime_type=expected_mime_type
-      )
+    speech_to_text.create_gcs_bucket(
+        gcp_project_id="test-project",
+        gcs_bucket_name="test-bucket",
+        gcp_region="US",
+    )
 
-  def test_upload_to_gemini_invalid_extension(self):
-    with self.assertRaises(ValueError):
-      speech_to_text.upload_to_gemini(file="test_path.txt")
+    mock_client.bucket.assert_called_once_with("test-bucket")
+    mock_bucket.create.assert_called_once_with(location="US")
 
+  @patch("google.cloud.storage.Client", autospec=True)
+  def test_upload_file_to_gcs(self, mock_storage_client):
+    mock_client = mock_storage_client.return_value
+    mock_bucket = MagicMock()
+    mock_client.bucket.return_value = mock_bucket
+    mock_blob = MagicMock()
+    mock_bucket.blob.return_value = mock_blob
 
-class WaitForFileActiveTest(absltest.TestCase):
+    speech_to_text.upload_file_to_gcs(
+        gcp_project_id="test-project",
+        gcs_bucket_name="test-bucket",
+        file_path="test_file.txt",
+    )
 
-  def test_wait_for_file_active_success(self):
-    mock_file = MagicMock(spec=file_types.File)
-    mock_file.state.name = speech_to_text._PROCESSING
-    mock_file.name = "test_file.mp4"
-    with patch("ariel.speech_to_text.wait_for_file_active", return_value=None):
-      mock_file.state.name = speech_to_text._ACTIVE
-      speech_to_text.wait_for_file_active(file=mock_file)
+    mock_client.bucket.assert_called_once_with("test-bucket")
+    mock_bucket.blob.assert_called_once_with("test_file.txt")
+    mock_blob.upload_from_filename.assert_called_once_with("test_file.txt")
 
-  def test_wait_for_file_active_timeout(self):
-    mock_file = MagicMock(spec=file_types.File)
-    mock_file.state.name = speech_to_text._PROCESSING
-    mock_file.name = "test_file.mp4"
-    mock_get_file = MagicMock(return_value=mock_file)
-    with patch("ariel.speech_to_text.genai.get_file", new=mock_get_file):
-      with patch(
-          "ariel.speech_to_text.wait_for_file_active"
-      ) as mock_wait_for_file:
-        mock_wait_for_file.side_effect = speech_to_text.FileProcessingError(
-            "File 'test_file.mp4' failed to process."
-        )
-        with patch(
-            "time.sleep", side_effect=lambda _: time.sleep(0.1)
-        ) as mock_sleep:
-          with self.assertRaisesRegex(
-              speech_to_text.FileProcessingError,
-              "File 'test_file.mp4' failed to process.",
-          ):
-            speech_to_text.wait_for_file_active(file=mock_file)
+  @patch("google.cloud.storage.Client", autospec=True)
+  def test_remove_gcs_bucket(self, mock_storage_client):
+    mock_client = mock_storage_client.return_value
+    mock_bucket = MagicMock()
+    mock_client.bucket.return_value = mock_bucket
+
+    speech_to_text.remove_gcs_bucket(
+        gcp_project_id="test-project", gcs_bucket_name="test-bucket"
+    )
+
+    mock_client.bucket.assert_called_once_with("test-bucket")
+    mock_bucket.delete.assert_called_once_with(force=True)
 
 
 class TestProcessSpeakerDiarizationResponse(parameterized.TestCase):
@@ -190,77 +175,38 @@ class TestProcessSpeakerDiarizationResponse(parameterized.TestCase):
     )
 
 
-class DiarizeSpeakersTest(absltest.TestCase):
+class DiarizationTest(absltest.TestCase):
 
-  @patch("google.generativeai")
-  @patch("ariel.speech_to_text.wait_for_file_active")
-  @patch("ariel.speech_to_text.upload_to_gemini")
-  def test_diarize_speakers(
-      self, mock_upload_to_gemini, mock_wait_for_file_active, mock_genai
-  ):
-    video_file = "test_video.mp4"
+  @patch("vertexai.generative_models.GenerativeModel.generate_content")
+  def test_diarize_speakers(self, mock_generate_content):
+    del mock_generate_content
+    mock_model = MagicMock(spec=GenerativeModel)
+    mock_model.generate_content.return_value = MagicMock(
+        text="(speaker_01, Female), (speaker_02, Female)")
     utterance_metadata = [
-        {"start": 0.0, "stop": 5.0, "text": "Hello, this is a test video."},
-        {"start": 5.0, "stop": 10.0, "text": "How are you?"},
+        {
+            "start": 0.00,
+            "end": 10.00,
+            "text": "Hello there!",
+            "path": "path/to/audio1.mp3",
+            "for_dubbing": True,
+        },
+        {
+            "start": 10.00,
+            "end": 20.00,
+            "text": "How are you?",
+            "path": "path/to/audio2.mp3",
+            "for_dubbing": True,
+        },
     ]
-    number_of_speakers = 2
-    model = MagicMock(spec=genai.GenerativeModel)
-    diarization_instructions = "Please be specific."
-
-    mock_chat_session = MagicMock()
-    mock_chat_session.send_message.return_value = MagicMock(
-        text="(speaker_1, Male), (speaker_2, Female)"
-    )
-    mock_chat_session.rewind.return_value = None
-    model.start_chat.return_value = mock_chat_session
-
-    mock_file = MagicMock()
-    mock_file.name = "test_video.mp4"
-    mock_file.state = MagicMock(name="ACTIVE")
-    mock_upload_to_gemini.return_value = mock_file
-
     result = speech_to_text.diarize_speakers(
-        file=video_file,
+        gcs_input_path="gs://test-bucket/test-video.mp4",
         utterance_metadata=utterance_metadata,
-        number_of_speakers=number_of_speakers,
-        model=model,
-        diarization_instructions=diarization_instructions,
+        number_of_speakers=2,
+        model=mock_model,
     )
-
-    self.assertEqual(result, [("speaker_1", "Male"), ("speaker_2", "Female")])
-
-  @patch("google.generativeai")
-  @patch("ariel.speech_to_text.wait_for_file_active")
-  @patch("ariel.speech_to_text.upload_to_gemini")
-  def test_diarize_speakers_file_processing_error(
-      self, mock_upload_to_gemini, mock_wait_for_file_active, mock_genai
-  ):
-    video_file = "test_video.mp4"
-    utterance_metadata = [
-        {"start": 0.0, "stop": 5.0, "text": "Hello, this is a test video."},
-        {"start": 5.0, "stop": 10.0, "text": "How are you?"},
-    ]
-    number_of_speakers = 2
-    model = MagicMock(spec=genai.GenerativeModel)
-
-    mock_file = MagicMock()
-    mock_file.name = "test_video.mp4"
-    mock_file.state = MagicMock(name="PROCESSING")
-    mock_upload_to_gemini.return_value = mock_file
-
-    mock_wait_for_file_active.side_effect = speech_to_text.FileProcessingError(
-        "File processing failed."
-    )
-
-    with self.assertRaises(speech_to_text.FileProcessingError) as context:
-      speech_to_text.diarize_speakers(
-          file=video_file,
-          utterance_metadata=utterance_metadata,
-          number_of_speakers=number_of_speakers,
-          model=model,
-      )
-
-    self.assertEqual(str(context.exception), "File processing failed.")
+    expected_result = [("speaker_01", "Female"), ("speaker_02", "Female")]
+    self.assertEqual(result, expected_result)
 
 
 class AddSpeakerInfoTest(absltest.TestCase):

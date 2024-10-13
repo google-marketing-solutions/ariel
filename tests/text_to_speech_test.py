@@ -109,11 +109,17 @@ class TestVoiceAssigner(absltest.TestCase):
 
   def test_assigned_voices_elevenlabs_no_preferred_voices(self):
     """Test ElevenLabs with no preferred voices."""
+    self.mock_elevenlabs_client.voices.get_all.return_value.voices = (
+        self.mock_elevenlabs_voices
+    )
     assigner = text_to_speech.VoiceAssigner(
         utterance_metadata=self.utterance_metadata,
         client=self.mock_elevenlabs_client,
         target_language="en-US",
     )
+    assigner.preferred_voices = [
+        voice.name for voice in self.mock_elevenlabs_voices
+    ]
     expected_assignment = {
         "speaker1": self.mock_elevenlabs_voices[0].name,
         "speaker2": self.mock_elevenlabs_voices[1].name,
@@ -160,6 +166,7 @@ class TestAddTextToSpeechProperties(parameterized.TestCase):
               "pitch": text_to_speech._DEFAULT_SSML_FEMALE_PITCH,
               "speed": text_to_speech._DEFAULT_SPEED,
               "volume_gain_db": text_to_speech._DEFAULT_VOLUME_GAIN_DB,
+              "adjust_speed": False,
           },
       ),
       (
@@ -175,6 +182,7 @@ class TestAddTextToSpeechProperties(parameterized.TestCase):
               "pitch": text_to_speech._DEFAULT_SSML_MALE_PITCH,
               "speed": text_to_speech._DEFAULT_SPEED,
               "volume_gain_db": text_to_speech._DEFAULT_VOLUME_GAIN_DB,
+              "adjust_speed": False,
           },
       ),
       (
@@ -191,6 +199,7 @@ class TestAddTextToSpeechProperties(parameterized.TestCase):
               "similarity_boost": text_to_speech._DEFAULT_SIMILARITY_BOOST,
               "style": text_to_speech._DEFAULT_STYLE,
               "use_speaker_boost": text_to_speech._DEFAULT_USE_SPEAKER_BOOST,
+              "adjust_speed": False,
           },
       ),
   )
@@ -251,6 +260,7 @@ class UpdateUtteranceMetadataTest(parameterized.TestCase):
                   "pitch": -10.0,
                   "speed": 1.0,
                   "volume_gain_db": 16.0,
+                  "adjust_speed": False,
               },
               {
                   "start": 1.0,
@@ -263,6 +273,7 @@ class UpdateUtteranceMetadataTest(parameterized.TestCase):
                   "pitch": -5.0,
                   "speed": 1.0,
                   "volume_gain_db": 16.0,
+                  "adjust_speed": False,
               },
           ],
       ),
@@ -302,6 +313,7 @@ class UpdateUtteranceMetadataTest(parameterized.TestCase):
                   "similarity_boost": 0.75,
                   "style": 0.0,
                   "use_speaker_boost": True,
+                  "adjust_speed": False,
               },
               {
                   "start": 1.0,
@@ -315,6 +327,7 @@ class UpdateUtteranceMetadataTest(parameterized.TestCase):
                   "similarity_boost": 0.75,
                   "style": 0.0,
                   "use_speaker_boost": True,
+                  "adjust_speed": False,
               },
           ],
       ),
@@ -342,6 +355,7 @@ class UpdateUtteranceMetadataTest(parameterized.TestCase):
               "similarity_boost": 0.75,
               "style": 0.0,
               "use_speaker_boost": True,
+              "adjust_speed": False,
           }],
       ),
   )
@@ -439,9 +453,7 @@ class TestElevenlabsConvertTextToSpeech(absltest.TestCase):
     mock_voices = MagicMock()
     mock_client.voices = mock_voices
     mock_voice = Voice(voice_id="some_voice_id", name="Bella")
-    mock_voices.get_all = MagicMock(
-        return_value=MagicMock(voices=[mock_voice])
-    )
+    mock_voices.get_all = MagicMock(return_value=MagicMock(voices=[mock_voice]))
     with tempfile.NamedTemporaryFile(suffix=".mp3") as temporary_file:
       output_file = temporary_file.name
       result = text_to_speech.elevenlabs_convert_text_to_speech(
@@ -588,6 +600,7 @@ class TestElevenlabsCloneVoices(absltest.TestCase):
   def test_clone_voices_success(self):
     mock_client = MagicMock(spec=ElevenLabs)
     mock_voice = MagicMock(spec=Voice)
+    mock_voice.name = "cloned_voice_name"
     mock_client.clone.return_value = mock_voice
     speaker_data_mapping = [
         text_to_speech.SpeakerData(
@@ -604,7 +617,10 @@ class TestElevenlabsCloneVoices(absltest.TestCase):
     result = text_to_speech.elevenlabs_run_clone_voices(
         client=mock_client, speaker_data_mapping=speaker_data_mapping
     )
-    self.assertEqual(result, {"speaker1": mock_voice, "speaker2": mock_voice})
+    self.assertEqual(
+        result,
+        {"speaker1": "cloned_voice_name", "speaker2": "cloned_voice_name"},
+    )
     mock_client.clone.assert_called()
 
 
@@ -672,7 +688,7 @@ class TestDubAllUtterances(parameterized.TestCase):
 
     result = tts.dub_all_utterances()
 
-    self.assertEqual(result[0].get("dubbed_path"), expected_dubbed_path)
+    self.assertEqual(result[0][0].get("dubbed_path"), expected_dubbed_path)
 
   @patch("ariel.text_to_speech.audio_processing.run_cut_and_save_audio")
   @patch("ariel.text_to_speech.create_speaker_data_mapping")

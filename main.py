@@ -54,6 +54,21 @@ _TARGET_LANGUAGE = flags.DEFINE_string(
     "Target language for dubbing (ISO 3166-1 alpha-2 country code).",
     required=True,
 )
+_GCP_PROJECT_ID = flags.DEFINE_string(
+    "gcp_project_id",
+    None,
+    "Google Cloud Platform (GCP) project ID for Gemini model"
+    " access and Google Text-To-Speech API (if this method is picked)",
+    required=True,
+)
+_GCP_REGION = flags.DEFINE_string(
+    "gcp_region",
+    "europe_west_2",
+    "GCP region to use when making API calls and where a temporary"
+    " bucket will be created for Gemini to analyze the video / audio ad."
+    " The bucket with all its contents will be removed immediately afterwards.",
+    required=True,
+)
 _NUMBER_OF_SPEAKERS = flags.DEFINE_integer(
     "number_of_speakers",
     1,
@@ -153,7 +168,7 @@ _TOP_P = flags.DEFINE_float(
 )
 _TOP_K = flags.DEFINE_integer(
     "top_k",
-    64,
+    40,
     "Top-k sampling parameter.",
 )
 _GEMINI_SAFETY_SETTINGS = flags.DEFINE_string(
@@ -208,6 +223,8 @@ def main(argv: Sequence[str]) -> None:
       advertiser_name=_ADVERTISER_NAME.value,
       original_language=_ORIGINAL_LANGUAGE.value,
       target_language=_TARGET_LANGUAGE.value,
+      gcp_project_id=_GCP_PROJECT_ID.value,
+      gcp_region=_GCP_REGION.value,
       number_of_speakers=_NUMBER_OF_SPEAKERS.value,
       gemini_token=_GEMINI_TOKEN.value,
       hugging_face_token=_HUGGING_FACE_TOKEN.value,
@@ -245,4 +262,5 @@ if __name__ == "__main__":
   flags.mark_flag_as_required("advertiser_name")
   flags.mark_flag_as_required("original_language")
   flags.mark_flag_as_required("target_language")
+  flags.mark_flag_as_required("gcp_project_id")
   app.run(main)
