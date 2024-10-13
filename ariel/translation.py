@@ -14,13 +14,12 @@
 
 """A translation module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
-from datetime import timedelta
+import datetime
 import os
 import re
 from typing import Final, Mapping, Sequence
-import google.generativeai as genai
 import tensorflow as tf
-
+from vertexai.generative_models import GenerativeModel
 
 _TRANSLATION_PROMPT: Final[str] = (
     "You're hired by a company called: {}. The received transcript is: {}."
@@ -55,7 +54,7 @@ def translate_script(
     advertiser_name: str,
     translation_instructions: str,
     target_language: str,
-    model: genai.GenerativeModel,
+    model: GenerativeModel,
 ) -> str:
   """Translates the provided transcript to the target language using a Generative AI model.
 
@@ -72,9 +71,7 @@ def translate_script(
   prompt = _TRANSLATION_PROMPT.format(
       advertiser_name, script, translation_instructions, target_language
   )
-  translation_chat_session = model.start_chat()
-  response = translation_chat_session.send_message(prompt)
-  translation_chat_session.rewind()
+  response = model.generate_content(prompt)
   return response.text
 
 
@@ -131,8 +128,8 @@ def save_srt_subtitles(
     *,
     utterance_metadata: Sequence[Mapping[str, str | float]],
     output_directory: str,
-) -> None:
-  """Creates and saves SRT subtitle file from utterance metadata.
+) -> str:
+  """Returns a path to an SRT subtitle file from utterance metadata.
 
   Args:
     utterance_metadata: A list of dictionaries, where each dictionary contains
@@ -142,8 +139,8 @@ def save_srt_subtitles(
   """
   srt_content = ""
   for i, utterance in enumerate(utterance_metadata):
-    start_time = str(timedelta(seconds=utterance["start"]))[:-3]
-    end_time = str(timedelta(seconds=utterance["end"]))[:-3]
+    start_time = str(datetime.timedelta(seconds=utterance["start"]))[:-3]
+    end_time = str(datetime.timedelta(seconds=utterance["end"]))[:-3]
     start_time = start_time.replace(".", ",").zfill(12)
     end_time = end_time.replace(".", ",").zfill(12)
     srt_content += f"{i+1}\n"
@@ -154,3 +151,4 @@ def save_srt_subtitles(
   srt_file_path = os.path.join(output_directory, "translated_subtitles.srt")
   with tf.io.gfile.GFile(srt_file_path, "w") as subtitles_file:
     subtitles_file.write(srt_content)
+  return srt_file_path

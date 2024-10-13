@@ -15,6 +15,7 @@
 """A dubbing module of Ariel package from the Google EMEA gTech Ads Data Science."""
 
 import dataclasses
+import datetime
 import functools
 import importlib.resources
 import json
@@ -22,7 +23,6 @@ import os
 import re
 import readline
 import shutil
-import tempfile
 import time
 from typing import Final, Mapping, Sequence
 from absl import logging
@@ -34,10 +34,8 @@ from ariel import video_processing
 from elevenlabs.client import ElevenLabs
 from elevenlabs.core import ApiError
 from faster_whisper import WhisperModel
-from google.api_core.exceptions import BadRequest, ServiceUnavailable
+from google.api_core.exceptions import ServiceUnavailable
 from google.cloud import texttospeech
-import google.generativeai as genai
-from google.generativeai.types import HarmBlockThreshold, HarmCategory
 from IPython.display import Audio
 from IPython.display import clear_output
 from IPython.display import display
@@ -46,6 +44,10 @@ from pyannote.audio import Pipeline
 import tensorflow as tf
 import torch
 from tqdm import tqdm
+import vertexai
+from vertexai.generative_models import GenerativeModel
+from vertexai.generative_models import HarmBlockThreshold
+from vertexai.generative_models import HarmCategory
 
 _ACCEPTED_VIDEO_FORMATS: Final[tuple[str, ...]] = (".mp4",)
 _ACCEPTED_AUDIO_FORMATS: Final[tuple[str, ...]] = (".wav", ".mp3", ".flac")
@@ -53,7 +55,6 @@ _UTTERNACE_METADATA_FILE_NAME: Final[str] = "utterance_metadata"
 _EXPECTED_HUGGING_FACE_ENVIRONMENTAL_VARIABLE_NAME: Final[str] = (
     "HUGGING_FACE_TOKEN"
 )
-_EXPECTED_GEMINI_ENVIRONMENTAL_VARIABLE_NAME: Final[str] = "GEMINI_TOKEN"
 _EXPECTED_ELEVENLABS_ENVIRONMENTAL_VARIABLE_NAME: Final[str] = (
     "ELEVENLABS_TOKEN"
 )
@@ -63,7 +64,7 @@ _DEFAULT_TRANSCRIPTION_MODEL: Final[str] = "large-v3"
 _DEFAULT_GEMINI_MODEL: Final[str] = "gemini-1.5-flash"
 _DEFAULT_GEMINI_TEMPERATURE: Final[float] = 1.0
 _DEFAULT_GEMINI_TOP_P: Final[float] = 0.95
-_DEFAULT_GEMINI_TOP_K: Final[int] = 64
+_DEFAULT_GEMINI_TOP_K: Final[int] = 40
 _DEFAULT_GEMINI_MAX_OUTPUT_TOKENS: Final[int] = 8192
 _DEFAULT_GEMINI_RESPONSE_MIME_TYPE: Final[str] = "text/plain"
 _DEFAULT_GEMINI_SAFETY_SETTINGS: Final[
@@ -247,10 +248,16 @@ class PostprocessingArtifacts:
   Attributes:
       audio_file: A path to a dubbed audio file.
       video_file: A path to a dubbed video file. The video is optional.
+      utterance_metadata: A JSON file with the complete speech chunk (utterance)
+        metadata. It's useful when using the `dub_ad_with_utterance_metadata`
+        method.
+      subtitles: An SRT file with the subtitles.
   """
 
   audio_file: str
   video_file: str | None
+  utterance_metadata: str | None = None
+  subtitles: str | None = None
 
 
 class PyAnnoteAccessError(Exception):
@@ -518,8 +525,9 @@ class Dubber:
       advertiser_name: str,
       original_language: str,
       target_language: str,
+      gcp_project_id: str,
+      gcp_region: str,
       number_of_speakers: int = 1,
-      gemini_token: str | None = None,
       hugging_face_token: str | None = None,
       no_dubbing_phrases: Sequence[str] | None = None,
       diarization_instructions: str | None = None,
@@ -565,10 +573,14 @@ class Dubber:
           3166-1 alpha-2 country code, e.g. 'en-US'.
         target_language: The language to dub the ad into. It must be ISO 3166-1
           alpha-2 country code.
+        gcp_project_id: Google Cloud Platform (GCP) project ID for Gemini model
+          access and Google Text-To-Speech API (if this method is picked).
+        gcp_region: GCP region to use when making API calls and where a
+          temporary bucket will be created for Gemini to analyze the video /
+          audio ad. The bucket with all its contents will be removed immediately
+          afterwards.
         number_of_speakers: The exact number of speakers in the ad (including a
           lector if applicable).
-        gemini_token: Gemini API token (can be set via 'GEMINI_TOKEN'
-          environment variable).
         hugging_face_token: Hugging Face API token (can be set via
           'HUGGING_FACE_TOKEN' environment variable).
         no_dubbing_phrases: A sequence of strings representing the phrases that
@@ -639,7 +651,8 @@ class Dubber:
     self.clean_up = clean_up
     self.pyannote_model = pyannote_model
     self.hugging_face_token = hugging_face_token
-    self.gemini_token = gemini_token
+    self.gcp_project_id = gcp_project_id
+    self.gcp_region = gcp_region
     self.use_elevenlabs = use_elevenlabs
     self.elevenlabs_token = elevenlabs_token
     self._elevenlabs_clone_voices = elevenlabs_clone_voices
@@ -734,7 +747,7 @@ class Dubber:
 
   def configure_gemini_model(
       self, *, system_instructions: str
-  ) -> genai.GenerativeModel:
+  ) -> GenerativeModel:
     """Configures the Gemini generative model.
 
     Args:
@@ -744,12 +757,7 @@ class Dubber:
     Returns:
         The configured Gemini model instance.
     """
-
-    gemini_token = self.get_api_token(
-        environmental_variable=_EXPECTED_GEMINI_ENVIRONMENTAL_VARIABLE_NAME,
-        provided_token=self.gemini_token,
-    )
-    genai.configure(api_key=gemini_token)
+    vertexai.init(project=self.gcp_project_id, location=self.gcp_region)
     gemini_configuration = dict(
         temperature=self.temperature,
         top_p=self.top_p,
@@ -757,7 +765,7 @@ class Dubber:
         max_output_tokens=self.max_output_tokens,
         response_mime_type=self.response_mime_type,
     )
-    return genai.GenerativeModel(
+    return GenerativeModel(
         model_name=self.gemini_model_name,
         generation_config=gemini_configuration,
         system_instruction=system_instructions,
@@ -798,22 +806,6 @@ class Dubber:
           " (https://huggingface.co/pyannote/speaker-diarization-3.1)."
       )
     logging.info("Access to PyAnnote from HuggingFace verified.")
-    logging.info("Verifying access to Gemini.")
-    try:
-      gemini_token = self.get_api_token(
-          environmental_variable=_EXPECTED_GEMINI_ENVIRONMENTAL_VARIABLE_NAME,
-          provided_token=self.gemini_token,
-      )
-      genai.configure(api_key=gemini_token)
-      genai.get_model(f"models/{_DEFAULT_GEMINI_MODEL}")
-    except BadRequest:
-      raise GeminiAccessError(
-          "No access to Gemini. Make sure you passed the correct API token"
-          " either as 'gemini_token' or through the"
-          f" '{_EXPECTED_GEMINI_ENVIRONMENTAL_VARIABLE_NAME}' environmental"
-          " variable."
-      )
-    logging.info("Access to Gemini verified.")
     if not self.use_elevenlabs:
       logging.info("Verifying access to Google's Text-To-Speech.")
       try:
@@ -883,6 +875,12 @@ class Dubber:
           " voices from ElevenLabs periodically to avoid errors."
       )
     return self._elevenlabs_clone_voices
+
+  @functools.cached_property
+  def _gcs_bucket_name(self) -> bool:
+    """Returns a GCS bucket name where the video will be uploaded for Gemini temporarily."""
+    now = datetime.datetime.now()
+    return "dubbing-speakeridentification-" + now.strftime("%Y%m%d%H%M%S%f")
 
   def run_preprocessing(self) -> None:
     """Splits audio/video, applies DEMUCS, and segments audio into utterances with PyAnnote.
@@ -981,12 +979,22 @@ class Dubber:
     speaker_diarization_model = self.configure_gemini_model(
         system_instructions=self.processed_diarization_system_instructions
     )
+    speech_to_text.create_gcs_bucket(
+        gcp_project_id=self.gcp_project_id,
+        gcs_bucket_name=self._gcs_bucket_name,
+        gcp_region=self.gcp_region,
+    )
+    gcs_input_file_path = speech_to_text.upload_file_to_gcs(
+        gcp_project_id=self.gcp_project_id,
+        gcs_bucket_name=self._gcs_bucket_name,
+        file_path=media_file,
+    )
     attempt = 0
     success = False
     while attempt < _MAX_GEMINI_RETRIES and not success:
       try:
         speaker_info = speech_to_text.diarize_speakers(
-            file=media_file,
+            gcs_input_path=gcs_input_file_path,
             utterance_metadata=utterance_metadata,
             number_of_speakers=self.number_of_speakers,
             model=speaker_diarization_model,
@@ -1003,6 +1011,10 @@ class Dubber:
         )
         if attempt == _MAX_GEMINI_RETRIES:
           raise RuntimeError("Can't diarize speakers. Try again.")
+    speech_to_text.remove_gcs_bucket(
+        gcp_project_id=self.gcp_project_id,
+        gcs_bucket_name=self._gcs_bucket_name,
+    )
     logging.info("Completed transcription.")
     self.progress_bar.update()
 
@@ -1189,31 +1201,27 @@ class Dubber:
   ) -> None:
     """Displays the current utterance metadata as formatted HTML.
 
-    This method iterates through the provided utterance metadata, 
+    This method iterates through the provided utterance metadata,
     formats each utterance as an HTML snippet with headings and lists,
     and then renders the HTML using IPython.display.HTML for a more
     visually appealing presentation in the IPython environment.
 
     Args:
       utterance_metadata: A sequence of dictionaries, where each dictionary
-                           contains metadata for a single utterance.
+        contains metadata for a single utterance.
     """
     for i, item in enumerate(utterance_metadata):
-        item_copy = item.copy()
-        for key in _LOCKED_KEYS:
-            item_copy.pop(key, None)
+      item_copy = item.copy()
+      for key in _LOCKED_KEYS:
+        item_copy.pop(key, None)
 
-        html = "<h3>Utterance {}</h3>".format(i+1)
-        html += "<ul>"
-        for key, value in item_copy.items():
-            formatted_value = (
-                str(value)
-                if isinstance(value, float)
-                else str(value).lower()
-            )
-            html += "<li><b>{}:</b> {}</li>".format(key, formatted_value)
-        html += "</ul>"
-        display(HTML(html))
+      html = "<h3>Utterance {}</h3>".format(i + 1)
+      html += "<ul>"
+      for key, value in item_copy.items():
+        formatted_value = str(value) if isinstance(value, float) else str(value)
+        html += "<li><b>{}:</b> {}</li>".format(key, formatted_value)
+      html += "</ul>"
+      display(HTML(html))
 
   def _add_utterance_metadata(self) -> Mapping[str, str | float]:
     """Allows adding a new utterance metadata entry, prompting for each field."""
@@ -1316,7 +1324,7 @@ class Dubber:
         except ValueError:
           print(
               f"Invalid input for '{key_to_modify}'. Please enter a valid"
-              " value. Make sure it matches the orignal type, a float (e.g."
+              " value. Make sure it matches the original type, a float (e.g."
               " 0.01), a string (e.g. 'example') or a boolean (e.g. 'True')."
           )
       utterance[key_to_modify] = new_value
@@ -1435,10 +1443,6 @@ class Dubber:
         turn += 1
       else:
         continue_chat = False
-    try:
-      edit_translation_chat_session.rewind()
-    except IndexError:
-      pass
     edited_utterance["translated_text"] = updated_translation
     return edited_utterance
 
@@ -1492,7 +1496,7 @@ class Dubber:
           " (yes/no): "
       ).lower()
       if verify_voices_choice == "yes":
-        self._run_verify_utterance_metadata(with_verification=False)
+        self._run_verify_utterance_metadata()
         clear_output()
         break
       elif verify_voices_choice == "no":
@@ -1505,7 +1509,7 @@ class Dubber:
   def _verify_and_redub_utterances(self) -> None:
     """Verifies and allows re-dubbing of utterances."""
     original_metadata = self.utterance_metadata.copy()
-    self._run_verify_utterance_metadata(with_verification=False)
+    self._run_verify_utterance_metadata()
     clear_output()
     edited_utterances = self.text_to_speech.dub_edited_utterances(
         original_utterance_metadata=original_metadata,
@@ -1525,6 +1529,7 @@ class Dubber:
   def _prompt_for_dubbed_utterances_verification(self) -> None:
     """Prompts the user to verify dubbed utterances by listening to them."""
     while True:
+      with_playback = False
       verify_dubbed_utterances_choice = input(
           "\nUtterances have been dubbed. Would you like to listen to "
           "them? (yes/no): "
@@ -1538,30 +1543,35 @@ class Dubber:
                 f" {utterance.get('translated_text')}"
             )
             display(Audio(utterance["dubbed_path"]))
+        with_playback = True
         break
       elif verify_dubbed_utterances_choice == "no":
-        break
-      else:
-        print("Invalid choice.")
-    while True:
-      verify_again_choice = input(
-          "\nWould you like to edit and re-dub the edited speech chunks"
-          " (utterances) again? (yes/no): "
-      ).lower()
-      if verify_again_choice == "yes":
-        self._verify_and_redub_utterances()
-        self._prompt_for_dubbed_utterances_verification()
-        break
-      elif verify_again_choice == "no":
         clear_output()
         print("Please wait...")
         break
       else:
         print("Invalid choice.")
+    if with_playback:
+      while True:
+        verify_again_choice = input(
+            "\nWould you like to edit and re-dub the edited speech chunks"
+            " (utterances) again? (yes/no): "
+        ).lower()
+        if verify_again_choice == "yes":
+          self._verify_and_redub_utterances()
+          self._prompt_for_dubbed_utterances_verification()
+          break
+        elif verify_again_choice == "no":
+          clear_output()
+          print("Please wait...")
+          break
+        else:
+          print("Invalid choice.")
 
   def _prompt_for_output_preview(self) -> None:
     """Prompts the user to preview the output video/audio after postprocessing."""
     while True:
+      with_preview = False
       preview_choice = input(
           "\nPostprocessing is complete. Would you like to preview the dubbed "
           "output? (yes/no): "
@@ -1579,40 +1589,35 @@ class Dubber:
         else:
           output_audio_path = self.postprocessing_output.audio_file
           display(Audio(output_audio_path))
+        with_preview = True
         break
       elif preview_choice == "no":
         break
       else:
         print("Invalid choice.")
-    while True:
-      change_choice = input(
-          "\nDo you want to change anything in the dubbed output? (yes/no): "
-      ).lower()
-      if change_choice == "yes":
-        clear_output()
-        if self.with_verification:
-          self._verify_and_redub_utterances()
-        print("Please wait...")
-        self.run_postprocessing()
-        if self.with_verification:
-          self._prompt_for_dubbed_utterances_verification()
-        self._prompt_for_output_preview()
-        break
-      elif change_choice == "no":
-        clear_output()
-        break
-      else:
-        print("Invalid choice.")
+    if with_preview:
+      while True:
+        change_choice = input(
+            "\nDo you want to change anything in the dubbed output? (yes/no): "
+        ).lower()
+        if change_choice == "yes":
+          clear_output()
+          if self.with_verification:
+            self._verify_and_redub_utterances()
+          print("Please wait...")
+          self.run_postprocessing()
+          if self.with_verification:
+            self._prompt_for_dubbed_utterances_verification()
+          self._prompt_for_output_preview()
+          break
+        elif change_choice == "no":
+          clear_output()
+          break
+        else:
+          print("Invalid choice.")
 
-  def _run_verify_utterance_metadata(
-      self, with_verification: bool = True
-  ) -> None:
-    """Displays, allows editing, adding and removing utterance metadata.
-
-    Args:
-        with_verification: A boolean indicating whether to ask for the final
-          verification.
-    """
+  def _run_verify_utterance_metadata(self) -> None:
+    """Displays, allows editing, adding and removing utterance metadata."""
     utterance_metadata = self.utterance_metadata
     clear_output()
     while True:
@@ -1769,19 +1774,10 @@ class Dubber:
         _UTTERNACE_METADATA_FILE_NAME + target_language_suffix + ".json",
     )
     try:
-      json_data = json.dumps(
-          self.utterance_metadata, ensure_ascii=False, indent=4
-      )
-      with tempfile.NamedTemporaryFile(
-          mode="w", delete=False, encoding="utf-8"
-      ) as temporary_file:
-        json.dump(json_data, temporary_file, ensure_ascii=False)
-        temporary_file.flush()
-        os.fsync(temporary_file.fileno())
-      tf.io.gfile.copy(
-          temporary_file.name, utterance_metadata_file, overwrite=True
-      )
-      os.remove(temporary_file.name)
+      with open(utterance_metadata_file, "w", encoding="utf-8") as json_file:
+        json.dump(
+            self.utterance_metadata, json_file, ensure_ascii=False, indent=4
+        )
       logging.info(
           "Utterance metadata saved successfully to"
           f" '{utterance_metadata_file}'"
@@ -1831,10 +1827,14 @@ class Dubber:
     if self.with_verification:
       self._prompt_for_output_preview()
     self.run_save_utterance_metadata()
-    translation.save_srt_subtitles(
+    self.postprocessing_output.utterance_metadata = (
+        self.save_utterance_metadata_output
+    )
+    subtitles_path = translation.save_srt_subtitles(
         utterance_metadata=self.utterance_metadata,
         output_directory=os.path.join(self.output_directory, _OUTPUT),
     )
+    self.postprocessing_output.subtitles = subtitles_path
     if self.clean_up:
       self.run_clean_directory()
     if self.elevenlabs_clone_voices and self.elevenlabs_remove_cloned_voices:
@@ -1865,7 +1865,7 @@ class Dubber:
   def dub_ad_with_utterance_metadata(
       self,
       *,
-      utterance_metadata: Sequence[Mapping[str, str | float]],
+      utterance_metadata: str | Sequence[Mapping[str, str | float]],
       preprocessing_artifacts: PreprocessingArtifacts | None = None,
       overwrite_utterance_metadata: bool = False,
   ) -> PostprocessingArtifacts:
@@ -1875,11 +1875,12 @@ class Dubber:
     returns the post-processed results.
 
     Args:
-        utterance_metadata: A sequence of mappings detailing each utterance's
-          metadata. If not provided, uses `self.utterance_metadata`. Each
-          mapping should contain: * 'path': Audio file path (str). * 'start',
-          'end': Utterance start/end times in seconds (float). * 'text',
-          'translated_text': Original and translated text (str). *
+        utterance_metadata: A path to the JSON file with the utterance metadata
+          from the previous run. Or a sequence of mappings detailing each
+          utterance's metadata. If not provided, uses `self.utterance_metadata`.
+          Each mapping should contain: * 'path': Audio file path (str). *
+          'start', 'end': Utterance start/end times in seconds (float). *
+          'text', 'translated_text': Original and translated text (str). *
           'for_dubbing': Whether to dub this utterance (bool). * 'speaker_id':
           Speaker identifier (str). * 'ssml_gender': Text-to-speech voice gender
           (str). * 'assigned_voice': Google/ElevenLabs voice name (str). *
@@ -1907,8 +1908,10 @@ class Dubber:
           " during the last run. They might not be available now and the"
           " process might not complete successfully."
       )
-    if utterance_metadata:
-      self.utterance_metadata = utterance_metadata
+    if isinstance(utterance_metadata, str):
+      with open(utterance_metadata, "r", encoding="utf-8") as json_file:
+        utterance_metadata = json.load(json_file)
+    self.utterance_metadata = utterance_metadata
     logging.warning(
         "The class utterance metadata was overwritten with the provided input."
     )
@@ -1936,10 +1939,14 @@ class Dubber:
       self._prompt_for_output_preview()
     if overwrite_utterance_metadata:
       self.run_save_utterance_metadata()
-    translation.save_srt_subtitles(
+    self.postprocessing_output.utterance_metadata = (
+        self.save_utterance_metadata_output
+    )
+    subtitles_path = translation.save_srt_subtitles(
         utterance_metadata=self.utterance_metadata,
         output_directory=os.path.join(self.output_directory, _OUTPUT),
     )
+    self.postprocessing_output.subtitles = subtitles_path
     if self.elevenlabs_clone_voices and self.elevenlabs_remove_cloned_voices:
       self.text_to_speech.remove_cloned_elevenlabs_voices()
     self.progress_bar.close()
@@ -1993,10 +2000,14 @@ class Dubber:
       self._prompt_for_output_preview()
     if overwrite_utterance_metadata:
       self.run_save_utterance_metadata()
-    translation.save_srt_subtitles(
+    self.postprocessing_output.utterance_metadata = (
+        self.save_utterance_metadata_output
+    )
+    subtitles_path = translation.save_srt_subtitles(
         utterance_metadata=self.utterance_metadata,
         output_directory=os.path.join(self.output_directory, _OUTPUT),
     )
+    self.postprocessing_output.subtitles = subtitles_path
     if self.elevenlabs_clone_voices and self.elevenlabs_remove_cloned_voices:
       self.text_to_speech.remove_cloned_elevenlabs_voices()
     self.progress_bar.close()
@@ -2089,10 +2100,14 @@ class Dubber:
     if self.with_verification:
       self._prompt_for_output_preview()
     self.run_save_utterance_metadata()
-    translation.save_srt_subtitles(
+    self.postprocessing_output.utterance_metadata = (
+        self.save_utterance_metadata_output
+    )
+    subtitles_path = translation.save_srt_subtitles(
         utterance_metadata=self.utterance_metadata,
         output_directory=os.path.join(self.output_directory, _OUTPUT),
     )
+    self.postprocessing_output.subtitles = subtitles_path
     if self.clean_up:
       self.run_clean_directory()
     self.progress_bar.close()

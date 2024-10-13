@@ -22,9 +22,9 @@ from ariel import audio_processing
 from ariel import dubbing
 from ariel import text_to_speech
 from ariel import video_processing
-from google.generativeai.types import HarmBlockThreshold
-from google.generativeai.types import HarmCategory
 import tensorflow as tf
+from vertexai.generative_models import HarmBlockThreshold
+from vertexai.generative_models import HarmCategory
 
 
 class TestIsVideo(parameterized.TestCase):
