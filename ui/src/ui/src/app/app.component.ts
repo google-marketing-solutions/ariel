@@ -82,7 +82,7 @@ export class AppComponent {
 
   readonly configPanelOpenState = signal(true);
   readonly videoSettingsPanelOpenState = signal(true);
-  dubbedInstances: any;
+  dubbedInstances!: Dubbing[];
   dubbedUrl: string = '/assets/sample_dub.json';
 
   constructor(private http: HttpClient) {}
@@ -92,11 +92,11 @@ export class AppComponent {
     this.loadingTranslations = true;
     await new Promise(r => setTimeout(r, 2000)); // TODO(): Get rid of me.
     this.http.get(this.dubbedUrl).subscribe(res => {
-      this.dubbedInstances = res;
+      this.dubbedInstances = res as Dubbing[];
       this.loadingTranslations = false;
     });
   }
-  toggleEdit(dubbing: any): void {
+  toggleEdit(dubbing: Dubbing): void {
     dubbing.editing = !dubbing.editing;
   }
 
