@@ -21,8 +21,10 @@ from typing import Final
 from typing import Final, Mapping, Sequence
 from typing import Mapping, Sequence
 from absl import logging
+import numpy as np
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
+from pyloudnorm import Meter
 import tensorflow as tf
 import torch
 
@@ -33,6 +35,8 @@ _DEFAULT_DUBBED_AUDIO_FILE: Final[str] = "dubbed_audio"
 _DEFAULT_OUTPUT_FORMAT: Final[str] = ".mp3"
 _SUPPORTED_DEVICES: Final[tuple[str, str]] = ("cpu", "cuda")
 _TIMESTAMP_THRESHOLD: Final[float] = 0.001
+_DEFAULT_RATE: Final[float] = 44100
+_TARGET_LUFS: Final[float] = -16
 
 
 def build_demucs_command(
@@ -462,8 +466,14 @@ def insert_audio_at_timestamps(
   background_audio = AudioSegment.from_mp3(background_audio_file)
   total_duration = background_audio.duration_seconds
   output_audio = AudioSegment.silent(duration=total_duration * 1000)
+  meter = Meter(rate=_DEFAULT_RATE)
   for item in utterance_metadata:
     audio_chunk = AudioSegment.from_mp3(item["dubbed_path"])
+    samples = np.array(audio_chunk.get_array_of_samples())
+    samples = samples.astype(np.float32) / np.iinfo(samples.dtype).max
+    loudness = meter.integrated_loudness(samples)
+    loudness_difference = _TARGET_LUFS - loudness
+    audio_chunk = audio_chunk.apply_gain(loudness_difference)
     start_time = int(item["start"] * 1000)
     output_audio = output_audio.overlay(
         audio_chunk, position=start_time, loop=False
@@ -471,6 +481,7 @@ def insert_audio_at_timestamps(
   dubbed_vocals_audio_file = os.path.join(
       output_directory, AUDIO_PROCESSING, _DEFAULT_DUBBED_VOCALS_AUDIO_FILE
   )
+  output_audio = output_audio.normalize()
   output_audio.export(dubbed_vocals_audio_file, format="mp3")
   return dubbed_vocals_audio_file
 
@@ -504,8 +515,6 @@ def merge_background_and_vocals(
 
   background = AudioSegment.from_mp3(background_audio_file)
   vocals = AudioSegment.from_mp3(dubbed_vocals_audio_file)
-  background = background.normalize()
-  vocals = vocals.normalize()
   background = background + background_volume_adjustment
   vocals = vocals + vocals_volume_adjustment
   shortest_length = min(len(background), len(vocals))
@@ -520,5 +529,6 @@ def merge_background_and_vocals(
       + target_language_suffix
       + _DEFAULT_OUTPUT_FORMAT,
   )
+  mixed_audio.normalize()
   mixed_audio.export(dubbed_audio_file, format="mp3")
   return dubbed_audio_file
