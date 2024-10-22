@@ -98,6 +98,7 @@ You can dub video ads from and to the following languages:
         *   **Enabled Cloud Storage API:** Enable the Cloud Storage API in your GCP project. See [here](https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstarts/quickstart-multimodal) for instructions.
             *    You need access to create and delete Google Cloud Storage (GCS) buckets.
         *   **Enabled Text-To-Speech API:** Enable the Text-To-Speech API in your GCP project if you choose it for the Text-To-Speech part of the process. See [here](https://cloud.google.com/text-to-speech/docs/before-you-begin) for instructions.
+        *   **Google Drive API:** Enable the Google Drive API if you use the demo notebook called 'dubbing_workflow.ipynb in Google Colab.
     *   **Hugging Face Token:** To access the PyAnnote speaker diarization model. See [here](https://huggingface.co/docs/hub/en/security-tokens) on how to get the token.
         *   **Hugging Face Model License:** You must accept the user conditions for the PyAnnote speaker diarization [here](https://huggingface.co/pyannote/speaker-diarization-3.1) and segmentation models [here](https://huggingface.co/pyannote/segmentation-3.0).
     *   **[OPTIONAL] ElevenLabs API:** To access the ElevenLabs API. See [here](https://help.elevenlabs.io/hc/en-us/articles/14599447207697-How-to-authorize-yourself-using-your-xi-api-key).
