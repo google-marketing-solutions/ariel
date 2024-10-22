@@ -128,6 +128,7 @@ def save_srt_subtitles(
     *,
     utterance_metadata: Sequence[Mapping[str, str | float]],
     output_directory: str,
+    target_language: str,
 ) -> str:
   """Returns a path to an SRT subtitle file from utterance metadata.
 
@@ -136,6 +137,8 @@ def save_srt_subtitles(
       information about an utterance, including 'start', 'end', and
       'translated_text'.
     output_directory: The directory where the SRT file will be saved.
+    target_language: The language to dub the ad into. It must be ISO 3166-1
+      alpha-2 country code.
   """
   srt_content = ""
   for i, utterance in enumerate(utterance_metadata):
@@ -148,7 +151,10 @@ def save_srt_subtitles(
         f"{start_time.replace('.', ',')} --> {end_time.replace('.', ',')}\n"
     )
     srt_content += f"{utterance['translated_text']}\n\n"
-  srt_file_path = os.path.join(output_directory, "translated_subtitles.srt")
+    target_language_suffix = "_" + target_language.replace("-", "_").lower()
+  srt_file_path = os.path.join(
+      output_directory, f"translated_subtitles{target_language_suffix}.srt"
+  )
   with tf.io.gfile.GFile(srt_file_path, "w") as subtitles_file:
     subtitles_file.write(srt_content)
   return srt_file_path

@@ -23,6 +23,7 @@ from googleapiclient.discovery import Resource
 import tensorflow as tf
 
 _BASE_DIRECTORY_COLAB: Final[str] = "/content"
+_BASE_DIRECTORY_DRIVE: Final[str] = "/content/drive"
 
 
 def extract_file_id(sharable_link: str) -> str | None:
@@ -90,7 +91,7 @@ def get_file_path_from_sharable_link(sharable_link: str) -> str | None:
         .get(fileId=file_id, fields="name,parents", supportsAllDrives=True)
         .execute()
     )
-    path = _BASE_DIRECTORY_COLAB
+    path = _BASE_DIRECTORY_DRIVE
     if "parents" in metadata:
       parent_id = metadata["parents"][0]
       path += get_parent_path(service, parent_id)

@@ -23,6 +23,7 @@ import os
 import re
 import readline
 import shutil
+import sys
 import time
 from typing import Final, Mapping, Sequence
 from absl import logging
@@ -1056,13 +1057,60 @@ class Dubber:
     logging.info("Completed translation.")
     self.progress_bar.update()
 
-  def run_configure_text_to_speech(self) -> None:
+  def _prompt_for_voice_reassignment(self):
+    """Displays a prompt asking the user how they want to handle voice reassignment."""
+    clear_output()
+    html = "<h3>Current voice assignment settings</h3>"
+    html += "<ul>"
+    html += "<li><b>assigned_voices_override:</b> {}</li>".format(
+        self.assigned_voices_override
+    )
+    html += "<li><b>preferred_voices:</b> {}</li>".format(self.preferred_voices)
+    html += "<li><b>voice_assignments:</b> {}</li>".format(
+        self.voice_assignments
+    )
+    html += "</ul>"
+    display(HTML(html))
+    print(
+        """\nSince you're dubbing to another language, there might be language compatibility issues with the previously assigned voices when using Google Text-To-Speech."""
+    )
+    while True:
+      sys.stdout.flush()
+      reassign_choice = input("""
+              \nWould you like to:
+                  1. Edit voice assignments manually (edit)?
+                  2. Reassign voices automatically (continue)?
+              Enter your choice ('edit' or 'continue'): 
+              """)
+      if reassign_choice == "edit":
+        self._run_verify_utterance_metadata()
+        clear_output()
+        break
+      elif reassign_choice == "continue":
+        self.voice_assignments = None
+        self.preferred_voices = None
+        self.assigned_voices_override = None
+        clear_output()
+        print("Voices will be automatically reassigned.")
+        break
+      else:
+        print("Invalid choice.")
+
+  def run_configure_text_to_speech(
+      self, dubbing_to_another_language: bool = False
+  ) -> None:
     """Configures the Text-To-Speech process.
+
+    Args:
+      dubbing_to_another_language: An indicator if the voice property
+        reassignment should be run for a new langugage.
 
     Returns:
         Updated utterance metadata with assigned voices
         and Text-To-Speech settings.
     """
+    if dubbing_to_another_language:
+      self._prompt_for_voice_reassignment()
     self._voice_assigner = text_to_speech.VoiceAssigner(
         utterance_metadata=self.utterance_metadata,
         client=self.text_to_speech_client,
@@ -1239,6 +1287,7 @@ class Dubber:
     for field in required_fields:
       while True:
         try:
+          sys.stdout.flush()
           value = input(f"Enter value for '{field}': ")
           if field in ["start", "end"]:
             value = float(value)
@@ -1262,6 +1311,7 @@ class Dubber:
     ask_for_index = True
     while ask_for_index:
       try:
+        sys.stdout.flush()
         index = int(input("Enter item number to edit: ")) - 1
         if not 0 <= index < len(utterance_metadata):
           print("Invalid item number.")
@@ -1292,6 +1342,7 @@ class Dubber:
     utterance = utterance_metadata[edit_index].copy()
     while True:
       while True:
+        sys.stdout.flush()
         key_to_modify = input(
             f"Enter the key you want to modify for utterance {edit_index + 1}: "
         )
@@ -1308,6 +1359,7 @@ class Dubber:
           )
       while True:
         try:
+          sys.stdout.flush()
           new_value = input(f"Enter the new value for '{key_to_modify}': ")
           if key_to_modify in _FLOAT_KEYS:
             new_value = float(new_value)
@@ -1329,6 +1381,7 @@ class Dubber:
           )
       utterance[key_to_modify] = new_value
       while True:
+        sys.stdout.flush()
         modify_more = input(
             "Do you want to modify anything else in this utterance? (yes/no): "
         ).lower()
@@ -1346,6 +1399,7 @@ class Dubber:
     """Allows hiding utterance metadata by marking 'for_dubbing' as False."""
     while True:
       try:
+        sys.stdout.flush()
         index = (
             int(input("Enter item number to remove from the dubbing process: "))
             - 1
@@ -1365,6 +1419,7 @@ class Dubber:
   def _prompt_for_translation(self) -> str:
     """Prompts the user if they want to run translation."""
     while True:
+      sys.stdout.flush()
       translate_choice = input(
           "\nYou modified 'text' of the utterance. Do you want to run"
           " translation (it's recommended after modifying the source utterance"
@@ -1378,6 +1433,7 @@ class Dubber:
   def _verify_metadata_after_change(self):
     """Asks the user if they want to review the metadata again after changes."""
     while True:
+      sys.stdout.flush()
       review_choice = input(
           "\nDo you want to review the metadata again? (yes/no): "
       ).lower()
@@ -1389,6 +1445,7 @@ class Dubber:
   def _prompt_for_gemini_translation_chat(self) -> str:
     """Prompts the user if they want to chat with Gemini about a translation."""
     while True:
+      sys.stdout.flush()
       gemini_translation_chat_choice = input(
           "\nWould you like to chat with Gemini about a translation? (yes/no): "
       ).lower()
@@ -1428,6 +1485,7 @@ class Dubber:
     print(f"The source text is: {source_text}")
     print(f"The initial translation is: {discussed_translation}")
     while continue_chat:
+      sys.stdout.flush()
       user_message = input(
           "Type your message to Gemini about the translation. Or type in 'exit'"
           " to approve the translation and to exit the chat: "
@@ -1452,6 +1510,7 @@ class Dubber:
     """Allows bulk editing of utterance metadata entries."""
     while True:
       try:
+        sys.stdout.flush()
         indices_str = input("Enter item numbers to edit (comma-separated): ")
         indices = [int(x.strip()) - 1 for x in indices_str.split(",")]
         for index in indices:
@@ -1463,6 +1522,7 @@ class Dubber:
     while True:
       try:
         readline.set_startup_hook(lambda: readline.insert_text("{}"))
+        sys.stdout.flush()
         updates_str = input("Enter updates as a JSON dictionary: ")
         readline.set_startup_hook()
         updates = json.loads(updates_str)
@@ -1490,6 +1550,7 @@ class Dubber:
     clear_output()
     self._display_utterance_metadata(self.utterance_metadata)
     while True:
+      sys.stdout.flush()
       verify_voices_choice = input(
           "\nVoices and voice properties were added to the utterance metadata"
           " above. Would you like to edit them before the process completes?"
@@ -1530,6 +1591,7 @@ class Dubber:
     """Prompts the user to verify dubbed utterances by listening to them."""
     while True:
       with_playback = False
+      sys.stdout.flush()
       verify_dubbed_utterances_choice = input(
           "\nUtterances have been dubbed. Would you like to listen to "
           "them? (yes/no): "
@@ -1553,6 +1615,7 @@ class Dubber:
         print("Invalid choice.")
     if with_playback:
       while True:
+        sys.stdout.flush()
         verify_again_choice = input(
             "\nWould you like to edit and re-dub the edited speech chunks"
             " (utterances) again? (yes/no): "
@@ -1572,6 +1635,7 @@ class Dubber:
     """Prompts the user to preview the output video/audio after postprocessing."""
     while True:
       with_preview = False
+      sys.stdout.flush()
       preview_choice = input(
           "\nPostprocessing is complete. Would you like to preview the dubbed "
           "output? (yes/no): "
@@ -1597,6 +1661,7 @@ class Dubber:
         print("Invalid choice.")
     if with_preview:
       while True:
+        sys.stdout.flush()
         change_choice = input(
             "\nDo you want to change anything in the dubbed output? (yes/no): "
         ).lower()
@@ -1622,6 +1687,7 @@ class Dubber:
     clear_output()
     while True:
       self._display_utterance_metadata(utterance_metadata)
+      sys.stdout.flush()
       action_choice = input(
           "\nChoose action: (edit/bulk_edit/add/remove/continue): "
       ).lower()
@@ -1716,6 +1782,47 @@ class Dubber:
       self.voice_assignments = cloned_voice_assignments
     logging.info("Completed converting text to speech.")
     self.progress_bar.update()
+
+  def _prompt_if_dub_to_another_language(self) -> None:
+    """Asks the user if they want to dub the ad to another language and runs the process if yes."""
+    while True:
+      sys.stdout.flush()
+      dub_to_another_language_choice = input(
+          "\nWould you like to dub the ad to another language? (yes/no): "
+      ).lower()
+      if dub_to_another_language_choice == "yes":
+        print("\nAvailable language formats (ISO 3166-1):")
+        print("""
+                  Arabic - ar-SA, Arabic - ar-EG, Bengali - bn-BD, Bengali - bn-IN, Bulgarian - bg-BG, 
+                  Chinese (Simplified) - zh-CN, Chinese (Traditional) - zh-TW, Croatian - hr-HR, Czech - cs-CZ, 
+                  Danish - da-DK, Dutch - nl-NL, English - en-US, English - en-GB, English - en-CA, English - en-AU, 
+                  Estonian - et-EE, Finnish - fi-FI, French - fr-FR, French - fr-CA, German - de-DE, Greek - el-GR, 
+                  Gujarati - gu-IN, Hebrew - he-IL, Hindi - hi-IN, Hungarian - hu-HU, Indonesian - id-ID, Italian - it-IT, 
+                  Japanese - ja-JP, Kannada - kn-IN, Korean - ko-KR, Latvian - lv-LV, Lithuanian - lt-LT, Malayalam - ml-IN, 
+                  Marathi - mr-IN, Norwegian - nb-NO, Norwegian - nn-NO, Polish - pl-PL, Portuguese - pt-PT, Portuguese - pt-BR, 
+                  Romanian - ro-RO, Russian - ru-RU, Serbian - sr-RS, Slovak - sk-SK, Slovenian - sl-SI, Spanish - es-ES, 
+                  Spanish - es-MX, Swahili - sw-KE, Swedish - sv-SE, Tamil - ta-IN, Tamil - ta-LK, Telugu - te-IN, 
+                  Thai - th-TH, Turkish - tr-TR, Ukrainian - uk-UA, Vietnamese - vi-VN
+                  """)
+        while True:
+          try:
+            sys.stdout.flush()
+            target_language = input(
+                "\nEnter the target language in the ISO 3166-1 format (e.g.,"
+                " 'fr-FR'): "
+            )
+            self.dub_ad_with_different_language(target_language=target_language)
+            break
+          except ValueError:
+            print(
+                "Invalid language format. Please use the ISO 3166-1 format"
+                " (e.g., 'fr-FR')."
+            )
+        break
+      elif dub_to_another_language_choice == "no":
+        break
+      else:
+        print("Invalid choice.")
 
   def run_postprocessing(self) -> None:
     """Merges dubbed audio with the original background audio and video (if applicable).
@@ -1844,6 +1951,7 @@ class Dubber:
     end_time = time.time()
     logging.info("Total execution time: %.2f seconds.", end_time - start_time)
     logging.info("Output files saved in: %s.", self.output_directory)
+    self._prompt_if_dub_to_another_language()
     return self.postprocessing_output
 
   def generate_utterance_metadata(self) -> Sequence[Mapping[str, str | float]]:
@@ -1955,15 +2063,13 @@ class Dubber:
     return self.postprocessing_output
 
   def dub_ad_with_different_language(
-      self, target_language: str, overwrite_utterance_metadata: bool = False
+      self, target_language: str
   ) -> PostprocessingArtifacts:
     """Orchestrates the complete ad dubbing process using a new target language.
 
     Args:
         target_language: The new language to dub the ad into. It must be ISO
           3166-1 alpha-2 country code, e.g. 'en-US'.
-        overwrite_utterance_metadata: If the exisitng utterance metadata file
-          should be reaplced with an updated one.
 
     Returns:
         PostprocessingArtifacts: Object containing the post-processed results.
@@ -1989,7 +2095,7 @@ class Dubber:
     if self.with_verification:
       self._run_verify_utterance_metadata()
       clear_output()
-    self.run_configure_text_to_speech()
+    self.run_configure_text_to_speech(dubbing_to_another_language=True)
     if self.with_verification:
       self._prompt_for_verification_after_voice_configured()
     self.run_text_to_speech()
@@ -1998,8 +2104,7 @@ class Dubber:
     self.run_postprocessing()
     if self.with_verification:
       self._prompt_for_output_preview()
-    if overwrite_utterance_metadata:
-      self.run_save_utterance_metadata()
+    self.run_save_utterance_metadata()
     self.postprocessing_output.utterance_metadata = (
         self.save_utterance_metadata_output
     )
@@ -2013,6 +2118,7 @@ class Dubber:
     self.progress_bar.close()
     logging.info("Dubbing process finished.")
     logging.info("Output files saved in: %s.", self.output_directory)
+    self._prompt_if_dub_to_another_language()
     return self.postprocessing_output
 
   def dub_ad_from_script(

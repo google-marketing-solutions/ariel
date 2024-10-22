@@ -93,7 +93,7 @@ class GetFilePathFromSharableLinkTest(absltest.TestCase):
     service_mock.files.return_value.get.return_value.execute.return_value = {
         "name": "MyFile.txt",
     }
-    expected_path = f"{colab_utils._BASE_DIRECTORY_COLAB}/MyFile.txt"
+    expected_path = f"{colab_utils._BASE_DIRECTORY_DRIVE}/MyFile.txt"
     result = colab_utils.get_file_path_from_sharable_link(
         "https://drive.google.com/file/d/12345/view?usp=sharing"
     )
@@ -118,7 +118,7 @@ class GetFilePathFromSharableLinkTest(absltest.TestCase):
 
     get_parent_path_mock.return_value = "/Folder1/Folder2"
     expected_path = (
-        f"{colab_utils._BASE_DIRECTORY_COLAB}/Folder1/Folder2/MyFile.txt"
+        f"{colab_utils._BASE_DIRECTORY_DRIVE}/Folder1/Folder2/MyFile.txt"
     )
     result = colab_utils.get_file_path_from_sharable_link(
         "https://drive.google.com/file/d/12345/view?usp=sharing"

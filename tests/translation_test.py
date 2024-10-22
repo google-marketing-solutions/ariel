@@ -222,7 +222,7 @@ class SaveSRTSubtitlesTest(absltest.TestCase):
       ]
 
       translation.save_srt_subtitles(
-          utterance_metadata=utterance_metadata, output_directory=tmpdir
+          utterance_metadata=utterance_metadata, output_directory=tmpdir, target_language="en-US"
       )
 
       expected_srt_content = (
@@ -234,7 +234,7 @@ class SaveSRTSubtitlesTest(absltest.TestCase):
           "Just like understanding words.\n\n"
       )
 
-      srt_file_path = os.path.join(tmpdir, "translated_subtitles.srt")
+      srt_file_path = os.path.join(tmpdir, "translated_subtitles_en_us.srt")
       with tf.io.gfile.GFile(srt_file_path, "r") as f:
         actual_srt_content = f.read()
 
