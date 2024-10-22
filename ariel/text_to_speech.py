@@ -858,8 +858,11 @@ class TextToSpeech:
     Returns:
       The path for the dubbed audio file.
     """
-    path = utterance["path"]
-    base_filename = os.path.splitext(os.path.basename(path))[0]
+    try:
+      path = utterance["path"]
+      base_filename = os.path.splitext(os.path.basename(path))[0]
+    except KeyError:
+      base_filename = f"chunk_{str(utterance['start'])}_{str(utterance['end'])}"
     return os.path.join(
         self.output_directory,
         DUBBED_AUDIO_CHUNKS,

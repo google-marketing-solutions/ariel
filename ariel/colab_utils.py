@@ -14,12 +14,16 @@
 
 """A module streamlining Ariel runs in Google Colab only."""
 
+import dataclasses
 import os
 from typing import Final
+from typing import Mapping, Sequence
 from absl import logging
 from google.auth import default
 from googleapiclient.discovery import build
 from googleapiclient.discovery import Resource
+import gspread
+import pandas as pd
 import tensorflow as tf
 
 _BASE_DIRECTORY_COLAB: Final[str] = "/content"
@@ -137,3 +141,105 @@ def copy_output_to_google_drive(
     destination_path = os.path.join(destination_dir, filename)
     if not tf.io.gfile.exists(destination_path):
       tf.io.gfile.copy(source_path, destination_path, overwrite=True)
+  print(f"The output is now saved under: {destination_dir}")
+
+
+def get_google_sheet_as_dataframe(sheet_link: str) -> pd.DataFrame:
+  """Returns Google Sheet using the provided URL as a Pandas DataFrame.
+
+  Args:
+    sheet_link: The URL of the Google Sheet.
+
+  Returns:
+    A Pandas DataFrame containing the sheet data.
+  """
+  creds, _ = default()
+  gc = gspread.authorize(creds)
+  spreadsheet = gc.open_by_url(sheet_link)
+  worksheet = spreadsheet.sheet1
+  rows = worksheet.get_all_values()
+  return pd.DataFrame(rows[1:], columns=rows[0])
+
+
+@dataclasses.dataclass
+class ScriptMetadata:
+  """Instance with script metadata.
+
+  Attributes:
+      script_with_timestamps: A sequence of dictionaries, where each dictionary
+        represents a speech segment and contains the keys "start", "end", and
+        "text".
+      assigned_voice: A sequence of assigned voices for speech segments.
+      google_text_to_speech_parameters: A sequence of mappings with Google
+        Text-to-Speech parameters ("pitch", "speed", "volume_gain_db"), or None
+        if not applicable.
+      elevenlabs_text_to_speech_parameters: A sequence of mappings with
+        ElevenLabs Text-to-Speech parameters ("stability", "similarity_boost",
+        "style", "use_speaker_boost"), or None if not applicable.
+  """
+
+  script_with_timestamps: Sequence[Mapping[str, float | str]]
+  assigned_voice: Sequence[str]
+  google_text_to_speech_parameters: (
+      Sequence[Mapping[str, float | int]] | None
+  ) = None
+  elevenlabs_text_to_speech_parameters: (
+      Sequence[Mapping[str, float | int | bool]] | None
+  ) = None
+
+
+def create_script_metadata_from_dataframe(df: pd.DataFrame) -> ScriptMetadata:
+  """Returns a ScriptMetadata instance from a Pandas DataFrame.
+
+  Args:
+    df: The DataFrame to process.
+  """
+  script_with_timestamps = [
+      {
+          "start": float(start),
+          "end": float(end),
+          "text": str(text),
+          "speaker_id": str(speaker_id),
+          "ssml_gender": str(ssml_gender),
+      }
+      for start, end, text, speaker_id, ssml_gender in zip(
+          df["start"],
+          df["end"],
+          df["text"],
+          df["speaker_id"],
+          df["ssml_gender"],
+      )
+  ]
+  metadata_kwargs = {
+      "script_with_timestamps": script_with_timestamps,
+      "assigned_voice": df["assigned_voice"].tolist(),
+  }
+  if {"stability", "similarity_boost", "style", "use_speaker_boost"} <= set(
+      df.columns
+  ):
+    metadata_kwargs["elevenlabs_text_to_speech_parameters"] = [
+        {
+            "stability": float(stability),
+            "similarity_boost": float(similarity_boost),
+            "style": float(style),
+            "use_speaker_boost": bool(use_speaker_boost),
+        }
+        for stability, similarity_boost, style, use_speaker_boost in zip(
+            df["stability"],
+            df["similarity_boost"],
+            df["style"],
+            df["use_speaker_boost"],
+        )
+    ]
+  elif {"pitch", "speed", "volume_gain_db"} <= set(df.columns):
+    metadata_kwargs["google_text_to_speech_parameters"] = [
+        {
+            "pitch": float(pitch),
+            "speed": float(speed),
+            "volume_gain_db": float(volume_gain_db),
+        }
+        for pitch, speed, volume_gain_db in zip(
+            df["pitch"], df["speed"], df["volume_gain_db"]
+        )
+    ]
+  return ScriptMetadata(**metadata_kwargs)

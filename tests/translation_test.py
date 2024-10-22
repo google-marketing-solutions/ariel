@@ -222,7 +222,9 @@ class SaveSRTSubtitlesTest(absltest.TestCase):
       ]
 
       translation.save_srt_subtitles(
-          utterance_metadata=utterance_metadata, output_directory=tmpdir, target_language="en-US"
+          utterance_metadata=utterance_metadata,
+          output_directory=tmpdir,
+          target_language="en-US",
       )
 
       expected_srt_content = (
