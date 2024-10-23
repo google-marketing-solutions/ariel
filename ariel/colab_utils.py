@@ -141,7 +141,7 @@ def copy_output_to_google_drive(
     destination_path = os.path.join(destination_dir, filename)
     if not tf.io.gfile.exists(destination_path):
       tf.io.gfile.copy(source_path, destination_path, overwrite=True)
-  print(f"The output is now saved under: {destination_dir}")
+  print(f"The output is saved in: {destination_dir}")
 
 
 def get_google_sheet_as_dataframe(sheet_link: str) -> pd.DataFrame:

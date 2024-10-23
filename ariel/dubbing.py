@@ -1681,6 +1681,7 @@ class Dubber:
         ).lower()
         if verify_again_choice == "yes":
           self._verify_and_redub_utterances()
+          clear_output(wait=True)
           self._prompt_for_dubbed_utterances_verification()
           break
         elif verify_again_choice == "no":

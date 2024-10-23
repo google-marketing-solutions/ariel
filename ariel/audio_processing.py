@@ -468,13 +468,16 @@ def insert_audio_at_timestamps(
   output_audio = AudioSegment.silent(duration=total_duration * 1000)
   meter = Meter(rate=_DEFAULT_RATE)
   for item in utterance_metadata:
-    audio_chunk = AudioSegment.from_mp3(item["dubbed_path"])
-    samples = np.array(audio_chunk.get_array_of_samples())
-    samples = samples.astype(np.float32) / np.iinfo(samples.dtype).max
-    loudness = meter.integrated_loudness(samples)
-    loudness_difference = _TARGET_LUFS - loudness
-    audio_chunk = audio_chunk.apply_gain(loudness_difference)
     start_time = int(item["start"] * 1000)
+    if not item["for_dubbing"]:
+      audio_chunk = AudioSegment.from_mp3(item["path"])
+    else:
+      audio_chunk = AudioSegment.from_mp3(item["dubbed_path"])
+      samples = np.array(audio_chunk.get_array_of_samples())
+      samples = samples.astype(np.float32) / np.iinfo(samples.dtype).max
+      loudness = meter.integrated_loudness(samples)
+      loudness_difference = _TARGET_LUFS - loudness
+      audio_chunk = audio_chunk.apply_gain(loudness_difference)
     output_audio = output_audio.overlay(
         audio_chunk, position=start_time, loop=False
     )
