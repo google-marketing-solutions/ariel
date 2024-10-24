@@ -249,6 +249,136 @@ class TestExecuteDemucsCommand(absltest.TestCase):
       )
 
 
+class TestExecuteVocalNonVocalsSplit(absltest.TestCase):
+
+  @mock.patch("ariel.audio_processing.execute_demucs_command")
+  @mock.patch("tensorflow.io.gfile.exists")
+  def test_execute_vocals_non_vocals_split_files_exist(
+      self, mock_exists, mock_execute_demucs_command
+  ):
+    mock_exists.side_effect = [True, True]
+    audio_file = "test.wav"
+    output_directory = "output_dir"
+    device = "cpu"
+    _, _ = audio_processing.execute_vocals_non_vocals_split(
+        audio_file=audio_file, output_directory=output_directory, device=device
+    )
+    mock_execute_demucs_command.assert_not_called()
+
+  @mock.patch("ariel.audio_processing.execute_demucs_command")
+  @mock.patch("tensorflow.io.gfile.exists")
+  def test_execute_vocals_non_vocals_split_files_dont_exist(
+      self, mock_exists, mock_execute_demucs_command
+  ):
+    mock_exists.side_effect = [False, False]
+    audio_file = "test.wav"
+    output_directory = "output_dir"
+    device = "cpu"
+    audio_processing.execute_vocals_non_vocals_split(
+        audio_file=audio_file, output_directory=output_directory, device=device
+    )
+    mock_execute_demucs_command.assert_called_once()
+
+  @mock.patch("ariel.audio_processing.build_demucs_command")
+  @mock.patch("ariel.audio_processing.execute_demucs_command")
+  @mock.patch("tensorflow.io.gfile.exists")
+  def test_execute_vocals_non_vocals_split_correct_command(
+      self, mock_exists, mock_execute_demucs_command, mock_build_demucs_command
+  ):
+    mock_exists.side_effect = [False, False]
+    audio_file = "test.wav"
+    output_directory = "output_dir"
+    device = "cpu"
+    expected_command = (
+        "python -m demucs.separate -o 'output_dir/audio_processing' --device"
+        " cpu --shifts 10 --overlap 0.25 -j 0 --two-stems vocals 'test.wav'"
+    )
+    mock_build_demucs_command.return_value = expected_command
+    audio_processing.execute_vocals_non_vocals_split(
+        audio_file=audio_file, output_directory=output_directory, device=device
+    )
+    mock_build_demucs_command.assert_called_once_with(
+        audio_file=audio_file, output_directory=output_directory, device=device
+    )
+    mock_execute_demucs_command.assert_called_once_with(
+        command=expected_command
+    )
+
+
+class TestSplitAudioTrack(absltest.TestCase):
+
+  @patch("tensorflow.io.gfile.exists")
+  @patch("tensorflow.io.gfile.copy")
+  @patch("tensorflow.io.gfile.rmtree")
+  @patch("ariel.audio_processing.execute_vocals_non_vocals_split")
+  @patch("ariel.audio_processing.build_demucs_command")
+  @patch("ariel.audio_processing.assemble_split_audio_file_paths")
+  def test_split_audio_track(
+      self,
+      mock_assemble_split_paths,
+      mock_build_command,
+      mock_execute_split,
+      mock_rmtree,
+      mock_copy,
+      mock_exists,
+  ):
+    mock_execute_split.return_value = ("vocals_file.wav", "background_file.wav")
+    mock_build_command.return_value = "demucs_command"
+    mock_assemble_split_paths.return_value = (
+        "vocals_file.wav",
+        "background_file.wav",
+    )
+    mock_exists.side_effect = [False, False]
+    vocals_path, background_path = audio_processing.split_audio_track(
+        audio_file="input.wav",
+        output_directory="output_dir",
+        device="cpu",
+        voice_separation_rounds=2,
+    )
+    self.assertEqual(
+        vocals_path,
+        os.path.join(
+            "output_dir", audio_processing.AUDIO_PROCESSING, "vocals.wav"
+        ),
+    )
+    self.assertEqual(
+        background_path,
+        os.path.join(
+            "output_dir", audio_processing.AUDIO_PROCESSING, "no_vocals.wav"
+        ),
+    )
+
+    mock_build_command.assert_called_once_with(
+        audio_file="input.wav", output_directory="output_dir", device="cpu"
+    )
+    mock_copy.assert_any_call("vocals_file.wav", vocals_path)
+    mock_copy.assert_any_call("background_file.wav", background_path)
+    mock_rmtree.assert_called_once_with(
+        os.path.join(
+            "output_dir", audio_processing.AUDIO_PROCESSING, "htdemucs"
+        )
+    )
+
+  @patch("tensorflow.io.gfile.exists")
+  def test_split_audio_track_files_exist(self, mock_exists):
+    mock_exists.side_effect = [True, True]
+    vocals_path, background_path = audio_processing.split_audio_track(
+        audio_file="input.wav", output_directory="output_dir", device="cpu"
+    )
+    self.assertEqual(
+        vocals_path,
+        os.path.join(
+            "output_dir", audio_processing.AUDIO_PROCESSING, "vocals.mp3"
+        ),
+    )
+    self.assertEqual(
+        background_path,
+        os.path.join(
+            "output_dir", audio_processing.AUDIO_PROCESSING, "no_vocals.mp3"
+        ),
+    )
+
+
 class CreatePyannoteTimestampsTest(absltest.TestCase):
 
   def test_create_timestamps_with_silence(self):
@@ -456,6 +586,7 @@ class VerifyModifiedAudioChunkTest(absltest.TestCase):
           "start": 1.0,
           "end": 2.0,
           "path": "wrong_chunk.mp3",
+          "for_dubbing": True,
       }
       result = audio_processing.verify_modified_audio_chunk(
           audio_file=audio_file_path,
@@ -505,6 +636,7 @@ class TestInsertAudioAtTimestamps(absltest.TestCase):
           "start": 3.0,
           "end": 5.0,
           "dubbed_path": audio_chunk_path,
+          "for_dubbing": True,
       }]
       output_path = audio_processing.insert_audio_at_timestamps(
           utterance_metadata=utterance_metadata,

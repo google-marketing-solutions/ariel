@@ -146,6 +146,13 @@ _BACKGROUND_VOLUME_ADJUSTMENT = flags.DEFINE_float(
     0.0,
     "By how much the background audio volume should be adjusted.",
 )
+_VOICE_SEPARATION_ROUNDS = flags.DEFINE_float(
+    "voice_separation_rounds",
+    2,
+    "The number of times the background audio file"
+    " should be processed for voice detection and removal. It helps with"
+    " the old voice artifacts being present in the dubbed ad.",
+)
 _CLEAN_UP = flags.DEFINE_bool(
     "clean_up",
     False,
@@ -239,6 +246,7 @@ def main(argv: Sequence[str]) -> None:
       adjust_speed=_ADJUST_SPEED.value,
       vocals_volume_adjustment=_VOCALS_VOLUME_ADJUSTMENT.value,
       background_volume_adjustment=_BACKGROUND_VOLUME_ADJUSTMENT.value,
+      voice_separation_rounds=_VOICE_SEPARATION_ROUNDS.value,
       clean_up=_CLEAN_UP.value,
       gemini_model_name=_GEMINI_MODEL_NAME.value,
       temperature=_TEMPERATURE.value,
