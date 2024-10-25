@@ -37,6 +37,7 @@ _SUPPORTED_DEVICES: Final[tuple[str, str]] = ("cpu", "cuda")
 _TIMESTAMP_THRESHOLD: Final[float] = 0.001
 _DEFAULT_RATE: Final[float] = 44100
 _TARGET_LUFS: Final[float] = -16
+_MIN_BLOCK_SIZE_MS: Final[int] = 400
 
 
 def build_demucs_command(
@@ -581,11 +582,26 @@ def insert_audio_at_timestamps(
       audio_chunk = AudioSegment.from_mp3(item["path"])
     else:
       audio_chunk = AudioSegment.from_mp3(item["dubbed_path"])
-      samples = np.array(audio_chunk.get_array_of_samples())
-      samples = samples.astype(np.float32) / np.iinfo(samples.dtype).max
-      loudness = meter.integrated_loudness(samples)
-      loudness_difference = _TARGET_LUFS - loudness
-      audio_chunk = audio_chunk.apply_gain(loudness_difference)
+      if len(audio_chunk) < _MIN_BLOCK_SIZE_MS:
+        logging.error(
+            f"The dubbed chunk duaration is less than {_MIN_BLOCK_SIZE_MS}."
+            f" Silent padding of {_MIN_BLOCK_SIZE_MS} will be added to"
+            " normalize the volume."
+        )
+        padding_duration = _MIN_BLOCK_SIZE_MS - len(audio_chunk)
+        audio_chunk += AudioSegment.silent(duration=padding_duration)
+      try:
+        samples = np.array(audio_chunk.get_array_of_samples())
+        samples = samples.astype(np.float32) / np.iinfo(samples.dtype).max
+        loudness = meter.integrated_loudness(samples)
+        loudness_difference = _TARGET_LUFS - loudness
+        audio_chunk = audio_chunk.apply_gain(loudness_difference)
+      except ValueError:
+        logging.error(
+            "Dubbed chunk volume could not be normalized. The orginial volume is"
+            " used."
+        )
+        pass
     output_audio = output_audio.overlay(
         audio_chunk, position=start_time, loop=False
     )
