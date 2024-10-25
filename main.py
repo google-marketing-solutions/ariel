@@ -178,8 +178,8 @@ _TOP_K = flags.DEFINE_integer(
     40,
     "Top-k sampling parameter.",
 )
-_GEMINI_SAFETY_SETTINGS = flags.DEFINE_string(
-    "gemini_safety_settings",
+_SAFETY_SETTINGS = flags.DEFINE_string(
+    "_safety_settings",
     "Medium",
     "The indicator of what kind of Gemini safety settings should"
     " be used in the dubbing process. Can be"
@@ -253,7 +253,7 @@ def main(argv: Sequence[str]) -> None:
       top_p=_TOP_P.value,
       top_k=_TOP_K.value,
       max_output_tokens=_MAX_OUTPUT_TOKENS.value,
-      safety_settings=get_safety_settings(_GEMINI_SAFETY_SETTINGS.value),
+      safety_settings=get_safety_settings(_SAFETY_SETTINGS.value),
       use_elevenlabs=False if _ELEVENLABS_TOKEN.value == "".strip() else True,
       elevenlabs_token=_ELEVENLABS_TOKEN.value,
       elevenlabs_clone_voices=_ELEVENLABS_CLONE_VOICES.value,
