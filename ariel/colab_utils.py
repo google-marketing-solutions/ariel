@@ -28,6 +28,28 @@ import tensorflow as tf
 
 _BASE_DIRECTORY_COLAB: Final[str] = "/content"
 _BASE_DIRECTORY_DRIVE: Final[str] = "/content/drive"
+_STRING_COLUMNS: Final[Sequence[str]] = (
+    "text",
+    "translated_text",
+    "speaker_id",
+    "ssml_gender",
+    "assigned_voice",
+)
+_FLOAT_COLUMNS: Final[Sequence[str]] = (
+    "start",
+    "end",
+    "pitch",
+    "speed",
+    "volume_gain_db",
+    "stability",
+    "similarity_boost",
+    "style",
+)
+_BOOL_COLUMNS: Final[Sequence[str]] = (
+    "for_dubbing",
+    "adjust_speed",
+    "use_speaker_boost",
+)
 
 
 def extract_file_id(sharable_link: str) -> str | None:
@@ -243,3 +265,52 @@ def create_script_metadata_from_dataframe(df: pd.DataFrame) -> ScriptMetadata:
         )
     ]
   return ScriptMetadata(**metadata_kwargs)
+
+
+def convert_utterance_metadata(
+    utterance_metadata: pd.DataFrame,
+) -> pd.DataFrame:
+  """Converts specific columns in utterance metadata.
+
+  Expected columns:
+      Always present:
+          - text: The original text of the utterance.
+          - translated_text: The translated text of the utterance.
+          - speaker_id: An identifier for the speaker.
+          - ssml_gender: The gender specified in SSML for the speaker.
+          - assigned_voice: The voice assigned to the speaker.
+          - start: The start time of the utterance in seconds.
+          - end: The end time of the utterance in seconds.
+          - for_dubbing: Whether the utterance is for dubbing.
+          - adjust_speed: Whether to adjust the speed of the utterance.
+
+      Optional:
+          Case 1:
+              - pitch: The pitch adjustment for the utterance.
+              - speed: The speed adjustment for the utterance.
+              - volume_gain: The volume gain for the utterance.
+
+          Case 2:
+              - stability: A stability value for the utterance (e.g., for voice
+              synthesis).
+              - similarity_boost: A similarity boost value (e.g., for voice
+              synthesis).
+              - style: A style value (e.g., for voice synthesis).
+              - use_speaker_boost: Whether to use speaker boost.
+
+  Args:
+    utterance_metadata: The input utterance metadata with the expected columns.
+
+  Returns:
+    The converted utterance metadata with the correct data types.
+  """
+  for col in _STRING_COLUMNS:
+    if col in utterance_metadata.columns:
+      utterance_metadata[col] = utterance_metadata[col].astype(str)
+  for col in _FLOAT_COLUMNS:
+    if col in utterance_metadata.columns:
+      utterance_metadata[col] = utterance_metadata[col].astype(float)
+  for col in _BOOL_COLUMNS:
+    if col in utterance_metadata.columns:
+      utterance_metadata[col] = utterance_metadata[col].astype(bool)
+  return utterance_metadata

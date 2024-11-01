@@ -379,6 +379,66 @@ class TestSplitAudioTrack(absltest.TestCase):
     )
 
 
+class TestPrepareOverrideAudioFiles(absltest.TestCase):
+
+  def test_valid_mp3_files(self):
+    """Test with valid MP3 files."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+      os.makedirs(os.path.join(temp_dir, audio_processing.AUDIO_PROCESSING))
+      vocals_file = os.path.join(temp_dir, "vocals.mp3")
+      background_file = os.path.join(temp_dir, "background.mp3")
+      with open(vocals_file, "w") as f:
+        f.write("test mp3 content")
+      with open(background_file, "w") as f:
+        f.write("test mp3 content")
+      vocals_path, background_path = (
+          audio_processing.prepare_override_audio_files(
+              vocals_audio_file=vocals_file,
+              background_audio_file=background_file,
+              output_directory=temp_dir,
+          )
+      )
+      self.assertTrue(os.path.exists(vocals_path))
+      self.assertTrue(os.path.exists(background_path))
+      self.assertEqual(
+          vocals_path, os.path.join(temp_dir, "audio_processing", "vocals.mp3")
+      )
+      self.assertEqual(
+          background_path,
+          os.path.join(temp_dir, "audio_processing", "no_vocals.mp3"),
+      )
+
+  def test_missing_files(self):
+    """Test with missing input files."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+      with self.assertRaisesRegex(
+          ValueError,
+          "Both `vocals_audio_file` and `background_audio_file` must be"
+          " provided.",
+      ):
+        audio_processing.prepare_override_audio_files(
+            vocals_audio_file=None,
+            background_audio_file=None,
+            output_directory=temp_dir,
+        )
+
+  def test_invalid_file_format(self):
+    """Test with invalid file formats."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+      vocals_file = os.path.join(temp_dir, "vocals.wav")
+      background_file = os.path.join(temp_dir, "background.mp3")
+      with open(vocals_file, "w") as f:
+        f.write("test wav content")
+      with open(background_file, "w") as f:
+        f.write("test mp3 content")
+      with self.assertRaisesRegex(ValueError, "must be in the MP3 format"):
+        audio_processing.prepare_override_audio_files(
+            vocals_audio_file=vocals_file,
+            background_audio_file=background_file,
+            output_directory=temp_dir,
+        )
+
+
 class CreatePyannoteTimestampsTest(absltest.TestCase):
 
   def test_create_timestamps_with_silence(self):

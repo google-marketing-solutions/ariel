@@ -329,6 +329,50 @@ def split_audio_track(
   return vocals_path, background_path
 
 
+def prepare_override_audio_files(
+    *, vocals_audio_file: str, background_audio_file: str, output_directory: str
+) -> Sequence[str]:
+  """Prepares override audio files for processing.
+
+  Args:
+    vocals_audio_file: Path to the override vocals audio file.
+    background_audio_file: Path to the override background audio file.
+    output_directory: The path to the output directory.
+
+  Returns:
+    A tuple containing the paths to the processed vocals and background audio
+    files.
+
+  Raises:
+    ValueError: If the input files are not provided or are not in MP3 format.
+  """
+  if not (vocals_audio_file and background_audio_file):
+    raise ValueError(
+        "Both `vocals_audio_file` and `background_audio_file` must be provided."
+    )
+  _, vocals_extension = os.path.splitext(vocals_audio_file)
+  _, background_extension = os.path.splitext(background_audio_file)
+  if (
+      vocals_extension.lower() != ".mp3"
+      or background_extension.lower() != ".mp3"
+  ):
+    raise ValueError(
+        "The vocals and background files must be in the MP3 format, now they"
+        f" are {vocals_extension} and {background_extension} respectively."
+    )
+  target_vocals_path = os.path.join(
+      output_directory, AUDIO_PROCESSING, "vocals.mp3"
+  )
+  target_background_path = os.path.join(
+      output_directory, AUDIO_PROCESSING, "no_vocals.mp3"
+  )
+  tf.io.gfile.copy(vocals_audio_file, target_vocals_path, overwrite=True)
+  tf.io.gfile.copy(
+      background_audio_file, target_background_path, overwrite=True
+  )
+  return target_vocals_path, target_background_path
+
+
 def create_pyannote_timestamps(
     *,
     audio_file: str,
@@ -598,8 +642,8 @@ def insert_audio_at_timestamps(
         audio_chunk = audio_chunk.apply_gain(loudness_difference)
       except ValueError:
         logging.error(
-            "Dubbed chunk volume could not be normalized. The orginial volume is"
-            " used."
+            "Dubbed chunk volume could not be normalized. The orginial volume"
+            " is used."
         )
         pass
     output_audio = output_audio.overlay(

@@ -1,0 +1,3 @@
+start,end,text,for_dubbing,speaker_id,ssml_gender,translated_text,assigned_voice,stability,similarity_boost,style,use_speaker_boost,adjust_speed
+0.5,1.5,Test,TRUE,speaker_01,Male,Test,Charlie,0.9,0.5,0,TRUE,FALSE
+2.9,8.9,Test,TRUE,speaker_01,Male,Test,Charlie,0.9,0.5,0,TRUE,FALSE

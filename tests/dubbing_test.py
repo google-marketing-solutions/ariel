@@ -16,6 +16,7 @@
 
 import os
 import tempfile
+from unittest import mock
 from absl.testing import absltest
 from absl.testing import parameterized
 from ariel import audio_processing
@@ -322,6 +323,54 @@ class TestOverwriteInputFile(parameterized.TestCase):
         f.write("Test content")
       dubbing.overwrite_input_file(original_full_path, expected_full_path)
       self.assertTrue(tf.io.gfile.exists(expected_full_path))
+
+
+class TestCheckDirectoryContents(absltest.TestCase):
+
+  @mock.patch("tensorflow.io.gfile.listdir")
+  @mock.patch("tensorflow.io.gfile.exists")
+  def test_valid_directory(self, mock_exists, mock_listdir):
+    mock_exists.return_value = True
+    mock_listdir.side_effect = [
+        ["vocals.mp3", "no_vocals.mp3", "chunk_1.mp3"],
+        ["video.mp3", "video.mp4"]
+    ]
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+      self.assertTrue(dubbing.check_directory_contents(tmpdir))
+
+  @mock.patch("tensorflow.io.gfile.exists")
+  def test_missing_audio_directory(self, mock_exists):
+    mock_exists.return_value = False
+    with tempfile.TemporaryDirectory() as tmpdir:
+      self.assertFalse(dubbing.check_directory_contents(tmpdir))
+
+  @mock.patch("tensorflow.io.gfile.listdir")
+  @mock.patch("tensorflow.io.gfile.exists")
+  def test_missing_audio_files(self, mock_exists, mock_listdir):
+    mock_exists.return_value = True
+    mock_listdir.return_value = ["vocals.mp3"]
+    with tempfile.TemporaryDirectory() as tmpdir:
+      self.assertFalse(dubbing.check_directory_contents(tmpdir))
+
+  @mock.patch("tensorflow.io.gfile.listdir")
+  @mock.patch("tensorflow.io.gfile.exists")
+  def test_missing_video_directory(self, mock_exists, mock_listdir):
+    mock_exists.side_effect = [True, False]
+    mock_listdir.return_value = ["vocals.mp3", "no_vocals.mp3", "chunk_1.mp3"]
+    with tempfile.TemporaryDirectory() as tmpdir:
+      self.assertFalse(dubbing.check_directory_contents(tmpdir))
+
+  @mock.patch("tensorflow.io.gfile.listdir")
+  @mock.patch("tensorflow.io.gfile.exists")
+  def test_missing_video_files(self, mock_exists, mock_listdir):
+    mock_exists.return_value = True
+    mock_listdir.side_effect = [
+        ["vocals.mp3", "no_vocals.mp3", "chunk_1.mp3"],
+        ["video.mp3"]
+    ]
+    with tempfile.TemporaryDirectory() as tmpdir:
+      self.assertFalse(dubbing.check_directory_contents(tmpdir))
 
 
 if __name__ == "__main__":

@@ -528,6 +528,56 @@ def overwrite_input_file(input_file: str, updated_input_file: str) -> None:
   tf.io.gfile.rename(input_file, updated_input_file, overwrite=True)
 
 
+def check_directory_contents(output_directory: str) -> bool:
+  """Checks if the output directory contains the expected files.
+
+  Args:
+    output_directory: The path to the directory to check.
+
+  Returns:
+    True if the directory contains the expected files, False otherwise.
+  """
+
+  audio_processing_path = os.path.join(
+      output_directory, audio_processing.AUDIO_PROCESSING
+  )
+  video_processing_path = os.path.join(
+      output_directory, video_processing.VIDEO_PROCESSING
+  )
+  if not tf.io.gfile.exists(audio_processing_path):
+    logging.warning(
+        f"'{audio_processing.AUDIO_PROCESSING}' directory not found in"
+        f" '{output_directory}'"
+    )
+    return False
+  audio_files = tf.io.gfile.listdir(audio_processing_path)
+  has_vocals = "vocals.mp3" in audio_files
+  has_no_vocals = "no_vocals.mp3" in audio_files
+  has_chunks = any(
+      tf.strings.regex_full_match(file, "chunk_.*\.mp3") for file in audio_files
+  )
+  if not (has_vocals and has_no_vocals and has_chunks):
+    logging.warning(f"Missing required files in '{audio_processing_path}'")
+    return False
+  if not tf.io.gfile.exists(video_processing_path):
+    logging.warning(
+        f"'{video_processing.VIDEO_PROCESSING}' folder not found in"
+        f" '{output_directory}'"
+    )
+    return False
+  video_files = tf.io.gfile.listdir(video_processing_path)
+  has_mp3 = any(
+      tf.strings.regex_full_match(file, ".*\.mp3") for file in video_files
+  )
+  has_mp4 = any(
+      tf.strings.regex_full_match(file, ".*\.mp4") for file in video_files
+  )
+  if not (has_mp3 and has_mp4):
+    logging.warning(f"Missing required files in '{video_processing_path}'")
+    return False
+  return True
+
+
 class Dubber:
   """A class to manage the entire ad dubbing process."""
 
@@ -555,6 +605,8 @@ class Dubber:
       vocals_volume_adjustment: float = 5.0,
       background_volume_adjustment: float = 0.0,
       voice_separation_rounds: int = 2,
+      vocals_audio_file: str | None,
+      background_audio_file: str | None,
       clean_up: bool = True,
       pyannote_model: str = _DEFAULT_PYANNOTE_MODEL,
       gemini_model_name: str = _DEFAULT_GEMINI_MODEL,
@@ -625,6 +677,14 @@ class Dubber:
         voice_separation_rounds: The number of times the background audio file
           should be processed for voice detection and removal. It helps with the
           old voice artifacts being present in the dubbed ad.
+        vocals_audio_file: An optional path to a file with the speaking part
+          only. It will be used instead of AI splitting the entire audio track
+          into vocals and background audio files. If this is provided then also
+          `background_audio_file` is required. Must be an MP3 file.
+        background_audio_file: An optional path to a file with the background
+          part only. It will be used instead of AI splitting the entire audio
+          track into vocals and background audio files. If this is provided then
+          also `vocals_audio_file` is required. Must be an MP3 file.
         clean_up: Whether to delete intermediate files after dubbing. Only the
           final ouput and the utterance metadata will be kept.
         pyannote_model: Name of the PyAnnote diarization model.
@@ -667,6 +727,8 @@ class Dubber:
     self.vocals_volume_adjustment = vocals_volume_adjustment
     self.background_volume_adjustment = background_volume_adjustment
     self.voice_separation_rounds = voice_separation_rounds
+    self.vocals_audio_file = vocals_audio_file
+    self.background_audio_file = background_audio_file
     self.clean_up = clean_up
     self.pyannote_model = pyannote_model
     self.hugging_face_token = hugging_face_token
@@ -695,6 +757,7 @@ class Dubber:
     self.keep_voice_assignments = keep_voice_assignments
     self.voice_assignments = None
     self._run_from_script = False
+    self._dubbing_from_utterance_metadata = False
     create_output_directories(output_directory)
 
   @functools.cached_property
@@ -915,37 +978,48 @@ class Dubber:
     else:
       video_file = None
       audio_file = self.input_file
-    audio_vocals_file, audio_background_file = (
-        audio_processing.split_audio_track(
-            audio_file=audio_file,
-            output_directory=self.output_directory,
-            device=self.device,
-            voice_separation_rounds=self.voice_separation_rounds,
-        )
-    )
-    utterance_metadata = audio_processing.create_pyannote_timestamps(
-        audio_file=audio_file,
-        number_of_speakers=self.number_of_speakers,
-        pipeline=self.pyannote_pipeline,
-        device=self.device,
-    )
-    if self.merge_utterances:
-      utterance_metadata = audio_processing.merge_utterances(
-          utterance_metadata=utterance_metadata,
-          minimum_merge_threshold=self.minimum_merge_threshold,
+    if not self.vocals_audio_file and not self.background_audio_file:
+      audio_vocals_file, audio_background_file = (
+          audio_processing.split_audio_track(
+              audio_file=audio_file,
+              output_directory=self.output_directory,
+              device=self.device,
+              voice_separation_rounds=self.voice_separation_rounds,
+          )
       )
+    else:
+      audio_vocals_file, audio_background_file = (
+          audio_processing.prepare_override_audio_files(
+              vocals_audio_file=self.vocals_audio_file,
+              background_audio_file=self.background_audio_file,
+              output_directory=self.output_directory,
+          )
+      )
+    if not self._dubbing_from_utterance_metadata:
+      utterance_metadata = audio_processing.create_pyannote_timestamps(
+          audio_file=audio_file,
+          number_of_speakers=self.number_of_speakers,
+          pipeline=self.pyannote_pipeline,
+          device=self.device,
+      )
+      if self.merge_utterances:
+        utterance_metadata = audio_processing.merge_utterances(
+            utterance_metadata=utterance_metadata,
+            minimum_merge_threshold=self.minimum_merge_threshold,
+        )
+      self.utterance_metadata = utterance_metadata
     utterance_metadata = audio_processing.run_cut_and_save_audio(
-        utterance_metadata=utterance_metadata,
+        utterance_metadata=self.utterance_metadata,
         audio_file=audio_file,
         output_directory=self.output_directory,
     )
-    self.utterance_metadata = utterance_metadata
     self.preprocessing_output = PreprocessingArtifacts(
         video_file=video_file,
         audio_file=audio_file,
         audio_vocals_file=audio_vocals_file,
         audio_background_file=audio_background_file,
     )
+    self.utterance_metadata = utterance_metadata
     logging.info("Completed preprocessing.")
     self.progress_bar.update()
 
@@ -1867,7 +1941,7 @@ class Dubber:
         print("Option unavailable or you had a typo. Try again.")
 
   def _prompt_if_dub_to_another_language_from_script(self) -> None:
-    """Asks the user if they want to dub the ad to another language from script and runs the process if yes."""
+    """Asks the user if they want to dub the ad to another language from script."""
     while True:
       time.sleep(1)
       sys.stdout.flush()
@@ -1891,8 +1965,9 @@ class Dubber:
               time.sleep(1)
               sys.stdout.flush()
               spreadsheet_choice = input(
-                  "\nDo you have a spreadsheet with the script metadata?"
-                  " (yes/no): "
+                  "\nDo you have a spreadsheet with the script? In the new"
+                  " sheet ensure the `translated_text` column contains the text"
+                  " already translated to the new target language. (yes/no): "
               ).lower()
               if spreadsheet_choice == "yes":
                 time.sleep(1)
@@ -1919,6 +1994,80 @@ class Dubber:
                 )
                 break
               elif spreadsheet_choice == "no":
+                self.dub_ad_with_different_language(target_language)
+                break
+              else:
+                print("Invalid choice.")
+            break
+          except ValueError:
+            print(
+                "Invalid language format. Please use the ISO 3166-1 format"
+                " (e.g., 'fr-FR')."
+            )
+        break
+      elif dub_to_another_language_choice == "no":
+        break
+      else:
+        print("Invalid choice.")
+
+  def _prompt_if_dub_to_another_language_from_utterance_metadata(self) -> None:
+    """Asks the user if they want to dub the ad to another language from utterance metadata."""
+    while True:
+      time.sleep(1)
+      sys.stdout.flush()
+      dub_to_another_language_choice = input(
+          "\nWould you like to dub the ad to another language from utterance"
+          " metadata? (yes/no): "
+      ).lower()
+      if dub_to_another_language_choice == "yes":
+        print("\nAvailable language formats (ISO 3166-1):")
+        print(_AVAILABLE_LANGUAGES_PROMPT)
+        while True:
+          try:
+            time.sleep(1)
+            sys.stdout.flush()
+            target_language = input(
+                "\nEnter the target language in the ISO 3166-1 format (e.g.,"
+                " 'fr-FR'): "
+            )
+            self.target_language = target_language
+            while True:
+              time.sleep(1)
+              sys.stdout.flush()
+              spreadsheet_choice = input(
+                  "\nDo you have a spreadsheet with the utterance metadata?"
+                  " (yes/no): "
+              ).lower()
+              if spreadsheet_choice == "yes":
+                time.sleep(1)
+                sys.stdout.flush()
+                google_sheet_link = input(
+                    "\nPlease provide the Google Sheet link: "
+                )
+                # We assume a user already authenticated themselves with
+                # `auth.authenticate_user() (`from google.colab import auth`)
+                self.original_language = target_language
+                utterance_metadata_df = (
+                    colab_utils.get_google_sheet_as_dataframe(google_sheet_link)
+                )
+                converted_utterance_metadata_df = (
+                    colab_utils.convert_utterance_metadata(
+                        utterance_metadata_df
+                    )
+                )
+                utterance_metadata = converted_utterance_metadata_df.to_dict(
+                    "records"
+                )
+                self.dub_ad_with_utterance_metadata(
+                    utterance_metadata=utterance_metadata,
+                )
+                break
+              elif spreadsheet_choice == "no":
+                logging.warning(
+                    "The script will be translated by Ariel. Typically"
+                    " advertisers dub ads with utterance metadata where the"
+                    " translations are verified by copywriters beforehand."
+                )
                 self.dub_ad_with_different_language(target_language)
                 break
               else:
@@ -2146,7 +2295,7 @@ class Dubber:
       *,
       utterance_metadata: str | Sequence[Mapping[str, str | float]],
       preprocessing_artifacts: PreprocessingArtifacts | None = None,
-      overwrite_utterance_metadata: bool = False,
+      overwrite_utterance_metadata: bool = True,
   ) -> PostprocessingArtifacts:
     """Orchestrates the complete ad dubbing process using utterance metadata.
 
@@ -2178,15 +2327,9 @@ class Dubber:
       ValueError: When `preprocessing_artifacts` argument is not provided and
          the method is run using a new instance class.
     """
-
-    logging.info("Re-run dubbing process starting...")
-    if self.clean_up:
-      logging.warning(
-          "You are trying to run the dubbing process using utterance metadata."
-          " But it looks like you have cleaned up all the process artifacts"
-          " during the last run. They might not be available now and the"
-          " process might not complete successfully."
-      )
+    self._verify_api_access()
+    logging.info("Dubbing from utterance metadata process starting...")
+    self._dubbing_from_utterance_metadata = True
     if isinstance(utterance_metadata, str):
       with open(utterance_metadata, "r", encoding="utf-8") as json_file:
         utterance_metadata = json.load(json_file)
@@ -2194,19 +2337,26 @@ class Dubber:
     logging.warning(
         "The class utterance metadata was overwritten with the provided input."
     )
-    if not hasattr(self, "preprocessing_output") and preprocessing_artifacts:
-      self.preprocessing_output = preprocessing_artifacts
-    elif (
-        not hasattr(self, "preprocessing_output")
-        and not preprocessing_artifacts
-    ):
-      raise ValueError(
-          "You need to provide 'preprocessing_artifacts' argument "
-          "in a new class instance."
+    if not check_directory_contents(self.output_directory):
+      logging.info("Dubbing from utterance metadata process starting...")
+      self.progress_bar = tqdm(
+          total=_NUMBER_OF_STEPS_DUB_AD_WITH_UTTERANCE_METADATA + 1, initial=1
       )
-    self.progress_bar = tqdm(
-        total=_NUMBER_OF_STEPS_DUB_AD_WITH_UTTERANCE_METADATA, initial=1
-    )
+      self.run_preprocessing()
+    else:
+      if preprocessing_artifacts:
+        self.preprocessing_output = preprocessing_artifacts
+        self.progress_bar = tqdm(
+            total=_NUMBER_OF_STEPS_DUB_AD_WITH_UTTERANCE_METADATA, initial=1
+        )
+      elif (
+          not hasattr(self, "preprocessing_output")
+          and not preprocessing_artifacts
+      ):
+        raise ValueError(
+            "You need to provide 'preprocessing_artifacts' argument "
+            "in a new class instance."
+        )
     if self.with_verification:
       self._run_verify_utterance_metadata()
       clear_output(wait=True)
@@ -2230,6 +2380,9 @@ class Dubber:
     if self.elevenlabs_clone_voices and self.elevenlabs_remove_cloned_voices:
       self.text_to_speech.remove_cloned_elevenlabs_voices()
     self.progress_bar.close()
+    if self.with_verification:
+      self._prompt_if_dub_to_another_language_from_utterance_metadata()
+    self._dubbing_from_utterance_metadata = False
     logging.info("Dubbing process finished.")
     logging.info("Output files saved in: %s.", self.output_directory)
     return self.postprocessing_output
@@ -2291,12 +2444,14 @@ class Dubber:
     if self.elevenlabs_clone_voices and self.elevenlabs_remove_cloned_voices:
       self.text_to_speech.remove_cloned_elevenlabs_voices()
     self.progress_bar.close()
+    if self._dubbing_from_utterance_metadata:
+      self._prompt_if_dub_to_another_language_from_utterance_metadata()
+    elif self._run_from_script:
+      self._prompt_if_dub_to_another_language_from_script()
+    else:
+      self._prompt_if_dub_to_another_language()
     logging.info("Dubbing process finished.")
     logging.info("Output files saved in: %s.", self.output_directory)
-    if not self._run_from_script:
-      self._prompt_if_dub_to_another_language()
-    else:
-      self._prompt_if_dub_to_another_language_from_script()
     return self.postprocessing_output
 
   def dub_ad_from_script(

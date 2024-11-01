@@ -310,5 +310,45 @@ class TestCreateScriptMetadataFromDataFrame(parameterized.TestCase):
     self.assertEqual(result_metadata, expected_metadata)
 
 
+class TestConvertUtteranceMetadata(absltest.TestCase):
+
+  def test_convert_utterance_metadata(self):
+    data = {
+        "start": ["0", "12.98"],
+        "end": ["1.5", "13.9"],
+        "text": ["Test1", "Test2"],
+        "translated_text": ["Test1", "Test2"],
+        "assigned_voice": ["Ben", "Ben"],
+        "stability": ["0.5", "0.5"],
+        "similarity_boost": ["0.75", "0.75"],
+        "style": ["0", " 0"],
+        "use_speaker_boost": ["True", "False"],
+        "speaker_id": ["speaker_01", "speaker_01"],
+        "ssml_gender": ["Female", "Female"],
+        "pitch": ["0.1", "0.2"],
+        "speed": ["1", "2"],
+        "volume_gain_db": ["10", "20"],
+        "for_dubbing": ["True", "True"],
+        "adjust_speed": ["False", "False"],
+    }
+    df = pd.DataFrame(data)
+    converted_df = colab_utils.convert_utterance_metadata(df)
+    self.assertTrue(converted_df["start"].dtype == float)
+    self.assertTrue(converted_df["end"].dtype == float)
+    self.assertTrue(converted_df["text"].dtype == object)
+    self.assertTrue(converted_df["translated_text"].dtype == object)
+    self.assertTrue(converted_df["assigned_voice"].dtype == object)
+    self.assertTrue(converted_df["speaker_id"].dtype == object)
+    self.assertTrue(converted_df["ssml_gender"].dtype == object)
+    self.assertTrue(converted_df["stability"].dtype == float)
+    self.assertTrue(converted_df["similarity_boost"].dtype == float)
+    self.assertTrue(converted_df["style"].dtype == float)
+    self.assertTrue(converted_df["pitch"].dtype == float)
+    self.assertTrue(converted_df["pitch"].dtype == float)
+    self.assertTrue(converted_df["volume_gain_db"].dtype == float)
+    self.assertTrue(converted_df["adjust_speed"].dtype == bool)
+    self.assertTrue(converted_df["use_speaker_boost"].dtype == bool)
+
+
 if __name__ == "__main__":
   absltest.main()

@@ -1,3 +1,0 @@
-start,end,text,speaker_id,ssml_gender,assigned_voice,pitch,speed,volume_gain_db
-0.5,1.5,Testing gTech Ariel with script metadata.,speaker_01,Female,en-US-Journey-F,-5,1,16
-2.9,8.9,Running another test for gTech Ads Ariel.,speaker_01,Female,en-US-Journey-F,-5,1,16
