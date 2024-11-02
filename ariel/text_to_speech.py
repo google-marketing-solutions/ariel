@@ -671,7 +671,7 @@ def create_speaker_data_mapping(
     ssml_gender = metadata["ssml_gender"]
     paths = [metadata["vocals_path"]]
     existing_speaker = next(
-        (s for s in speaker_data if s.ssml_gender == ssml_gender), None
+        (s for s in speaker_data if s.speaker_id == speaker_id), None
     )
     if existing_speaker:
       existing_speaker.paths.extend(paths)
