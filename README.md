@@ -8,6 +8,10 @@
 [![Code Style: Google](https://img.shields.io/badge/code%20style-google-blueviolet.svg)](https://google.github.io/styleguide/pyguide.html)
 [![Open in Colab](https://img.shields.io/badge/Dubbing_Workflow-blue?style=flat&logo=google%20colab&labelColor=grey)](https://colab.research.google.com/github/google-marketing-solutions/ariel/blob/main/examples/dubbing_workflow.ipynb)
 
+<div align="center">
+    <img src="ariel_logo.png" alt="Ariel Logo" width="300">
+</div>
+
 ##### _This is not an official Google product._
 
 [Overview](#overview) •

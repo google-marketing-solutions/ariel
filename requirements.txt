@@ -33,3 +33,4 @@ gspread == 6.0.2
 torch == 2.5.0
 torchaudio == 2.5.0
 ctranslate2 == 4.4.0
+gspread-dataframe == 4.0.0

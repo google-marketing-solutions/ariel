@@ -15,14 +15,18 @@
 """A module streamlining Ariel runs in Google Colab only."""
 
 import dataclasses
+import datetime
 import os
-from typing import Final
-from typing import Mapping, Sequence
+import re
+import time
+from typing import Any, Final, Mapping, Sequence
 from absl import logging
 from google.auth import default
 from googleapiclient.discovery import build
 from googleapiclient.discovery import Resource
 import gspread
+from gspread_dataframe import set_with_dataframe
+from IPython.display import clear_output
 import pandas as pd
 import tensorflow as tf
 
@@ -146,7 +150,7 @@ def copy_file_to_colab(
 
 def copy_output_to_google_drive(
     *, colab_dir: str, google_drive_dir: str
-) -> None:
+) -> str:
   """Copies the contents of the 'output' subdirectory in a Colab directory.
 
   to a new directory in Google Drive with the same name as the Colab directory.
@@ -154,6 +158,9 @@ def copy_output_to_google_drive(
   Args:
     colab_dir: The path to the Colab directory.
     google_drive_dir: The path to the Google Drive directory.
+
+  Returns:
+    The path to the Google Drive destination directory.
   """
   output_dir = os.path.join(colab_dir, "output")
   destination_dir = os.path.join(google_drive_dir, os.path.basename(colab_dir))
@@ -163,7 +170,7 @@ def copy_output_to_google_drive(
     destination_path = os.path.join(destination_dir, filename)
     if not tf.io.gfile.exists(destination_path):
       tf.io.gfile.copy(source_path, destination_path, overwrite=True)
-  print(f"The output is saved in: {destination_dir}")
+  return destination_dir
 
 
 def get_google_sheet_as_dataframe(sheet_link: str) -> pd.DataFrame:
@@ -314,3 +321,340 @@ def convert_utterance_metadata(
     if col in utterance_metadata.columns:
       utterance_metadata[col] = utterance_metadata[col].astype(bool)
   return utterance_metadata
+
+
+def get_folder_id_by_path(path: str) -> str:
+  """Returns the Google Drive folder ID for a specified path.
+
+  Args:
+    path : The full path of the folder in Google Drive, starting from
+    '/content/drive/My Drive/...'. For example: '/content/drive/My
+    Drive/parent_folder/sub_folder'.
+
+  Raises:
+    FileNotFoundError: If any part of the specified path does not exist in
+    Google Drive.
+  """
+  path_parts = path.split("/")[4:]
+  folder_id = "root"
+  creds, _ = default()
+  service = build("drive", "v3", credentials=creds)
+  for part in path_parts:
+    query = (
+        f"'{folder_id}' in parents and name = '{part}' and mimeType ="
+        " 'application/vnd.google-apps.folder' and trashed = false"
+    )
+    results = service.files().list(q=query, fields="files(id, name)").execute()
+    items = results.get("files", [])
+    if not items:
+      raise FileNotFoundError(f"Folder '{part}' not found in the current path.")
+    folder_id = items[0]["id"]
+  return folder_id
+
+
+def save_dataframe_to_gdrive(
+    *, dataframe: str, google_drive_directory_id: str, sheet_name: str
+) -> None:
+  """Saves a DataFrame as a Google Sheet in a specified folder.
+
+  Args:
+    dataframe: The DataFrame to be saved as a Google Sheet.
+    google_drive_directory_id: The ID of the Google Drive folder where the
+      Google Sheet should be saved.
+    sheet_name: The desired name of the Google Sheet.
+  """
+  creds, _ = default()
+  service = build("drive", "v3", credentials=creds)
+  client = gspread.authorize(creds)
+  file_metadata = {
+      "name": sheet_name,
+      "mimeType": "application/vnd.google-apps.spreadsheet",
+      "parents": [google_drive_directory_id],
+  }
+  file = service.files().create(body=file_metadata, fields="id").execute()
+  spreadsheet_id = file.get("id")
+  spreadsheet = client.open_by_key(spreadsheet_id)
+  worksheet = spreadsheet.get_worksheet(0)
+  set_with_dataframe(worksheet, dataframe)
+
+
+def convert_utterance_metadata_to_google_sheets(
+    *,
+    input_file_google_drive_path: str,
+    output_directory: str,
+    wait: bool = True,
+    wait_time: int = 10,
+    remove_json: bool = True,
+) -> None:
+  """Converts utterance metadata from JSON files to Google Sheets.
+
+  Args:
+    input_file_google_drive_path: The Google Drive path of the input directory
+      containing JSON files.
+    output_directory: The output directory in Google Drive where the Google
+      Sheets will be saved.
+    wait: Whether to wait for JSON files to appear in Google Drive.
+    wait_time: How long to wait for all the files to appear on Google Drive.
+    remove_json: Whether to remove the original JSON files after conversion.
+      Defaults to True.
+  """
+  google_drive_directory = os.path.join(
+      os.path.split(input_file_google_drive_path)[0],
+      os.path.split(output_directory)[1],
+  )
+  if wait:
+    logging.info(
+        f"Waiting {wait_time}s for all the files to appear on Google Drive."
+    )
+    time.sleep(wait_time)
+  google_drive_directory_id = get_folder_id_by_path(google_drive_directory)
+  json_files = [
+      file
+      for file in tf.io.gfile.listdir(google_drive_directory)
+      if file.endswith(".json")
+  ]
+  if not json_files:
+    logging.info(
+        f"No JSON files found in the directory: {google_drive_directory}"
+    )
+    return
+  json_paths = [
+      os.path.join(google_drive_directory, file) for file in json_files
+  ]
+  spreadsheet_names = [os.path.splitext(file)[0] for file in json_files]
+  for json_path, spreadsheet_name in zip(json_paths, spreadsheet_names):
+    utterance_metadata_df = pd.read_json(json_path)
+    save_dataframe_to_gdrive(
+        dataframe=utterance_metadata_df,
+        google_drive_directory_id=google_drive_directory_id,
+        sheet_name=spreadsheet_name,
+    )
+    if remove_json:
+      tf.io.gfile.remove(json_path)
+
+
+@dataclasses.dataclass
+class ColabPaths:
+  """Instance with Colab file paths.
+
+  Attributes:
+    input_file_google_drive_path: The Google Drive path of the input file.
+    input_file_colab_path: The path to the input file in Colab after copying
+      from Google Drive.
+    vocals_file_colab_path: The path to the vocals file in Colab after copying
+      from Google Drive, or None if not provided.
+    background_file_colab_path: The path to the background file in Colab after
+      copying from Google Drive, or None if not provided.
+  """
+
+  input_file_google_drive_path: str
+  input_file_colab_path: str | None
+  vocals_file_colab_path: str | None = None
+  background_file_colab_path: str | None = None
+
+
+def generate_colab_file_paths(
+    *,
+    video_google_drive_link: str,
+    vocals_google_drive_link: str | None = None,
+    background_google_drive_link: str | None = None,
+) -> ColabPaths:
+  """Generates Colab file paths for the specified Google Drive links and copies files to Colab.
+
+  Args:
+      video_google_drive_link: The Google Drive link to the main input file.
+      vocals_google_drive_link: The Google Drive link to the vocals file, if
+        available. Defaults to None.
+      background_google_drive_link: The Google Drive link to the background
+        file, if available. Defaults to None.
+
+  Returns:
+      ColabPaths: An instance of ColabPaths containing the Google Drive and
+      Colab paths for each file.
+  """
+  input_file_google_drive_path = get_file_path_from_sharable_link(
+      video_google_drive_link
+  )
+  input_file_colab_path = copy_file_to_colab(
+      source_file_path=input_file_google_drive_path
+  )
+  vocals_file_colab_path = None
+  if vocals_google_drive_link:
+    vocals_file_google_drive_path = get_file_path_from_sharable_link(
+        vocals_google_drive_link
+    )
+    vocals_file_colab_path = copy_file_to_colab(
+        source_file_path=vocals_file_google_drive_path
+    )
+  background_file_colab_path = None
+  if background_google_drive_link:
+    background_file_google_drive_path = get_file_path_from_sharable_link(
+        background_google_drive_link
+    )
+    background_file_colab_path = copy_file_to_colab(
+        source_file_path=background_file_google_drive_path
+    )
+  return ColabPaths(
+      input_file_google_drive_path=input_file_google_drive_path,
+      input_file_colab_path=input_file_colab_path,
+      vocals_file_colab_path=vocals_file_colab_path,
+      background_file_colab_path=background_file_colab_path,
+  )
+
+
+def _generate_default_output_folder(advertiser_name: str) -> str:
+  """Generates a default output folder path.
+
+  The function removes any non-alphabet characters from the advertiser's name,
+  converts it to lowercase,
+  and appends a timestamp (in the format YYYYMMDDHHMMSSffffff) to ensure the
+  folder name is unique.
+
+  Args:
+      advertiser_name: The name of the advertiser used to create the folder
+      name.
+
+  Returns:
+    A string representing the full path of the output folder, starting with
+    '/content' and ending
+    with the formatted advertiser name and timestamp.
+  """
+  formatted_advertiser_name = re.sub(r"[^a-zA-Z]", "", advertiser_name).lower()
+  now = datetime.datetime.now()
+  return os.path.join(
+      "/content",
+      "dubbing_" + formatted_advertiser_name + now.strftime("%Y%m%d%H%M%S%f"),
+  )
+
+
+def setup_output_folder(
+    *,
+    advertiser_name: str,
+    input_file_google_drive_path: str,
+    output_folder: str | None = None,
+    metadata_google_drive_link: str | None = None,
+) -> str:
+  """Returns output folder path, either based on user input or generated automatically.
+
+  If `output_folder` is not provided, a default folder name will be generated
+  using the advertiser's
+  name and a timestamp. If a folder with the specified name already exists in
+  Google Drive, the user
+  will be prompted to overwrite it or enter a new name. If the user leaves the
+  input blank, a default
+  folder name will be created automatically.
+
+  Args:
+      advertiser_name: The name of the advertiser, used for generating a default
+      folder name.
+      input_file_google_drive_path: The path of the input file in Google Drive.
+      output_folder: An optional specified output folder name. Defaults to None.
+      metadata_google_drive_link: A link to a utterance metadata Google Sheet.
+
+  Returns:
+      The path of the created output folder.
+  """
+  if not output_folder:
+    output_folder = _generate_default_output_folder(advertiser_name)
+  google_drive_output_path = os.path.join(
+      os.path.split(input_file_google_drive_path)[0], output_folder
+  )
+  while tf.io.gfile.exists(google_drive_output_path):
+    user_response = input(
+        f"The folder '{google_drive_output_path}' already exists in your Google"
+        " Drive. Do you want to overwrite it? (yes/no): "
+    )
+    if user_response.lower() == "yes":
+      break
+    else:
+      output_folder = input(
+          "Please enter a new output folder name, or leave it empty to"
+          " auto-generate one: "
+      ).strip()
+      if not output_folder:
+        output_folder = _generate_default_output_folder(advertiser_name)
+      google_drive_output_path = os.path.join(
+          os.path.split(input_file_google_drive_path)[0], output_folder
+      )
+  output_folder = os.path.join("/content", output_folder)
+  if metadata_google_drive_link:
+    logging.info(
+        "You're using utterance metadata from Google Sheets. The Colab output"
+        " directory will be cleaned if it exists already."
+    )
+    try:
+      tf.io.gfile.rmtree(output_folder)
+    except tf.errors.NotFoundError:
+      pass
+  tf.io.gfile.makedirs(output_folder)
+  return output_folder
+
+
+def process_dubbing(
+    *,
+    dubber: Any,
+    input_file_google_drive_path: str,
+    output_folder: str,
+    script_google_drive_link: str | None = None,
+    metadata_google_drive_link: str | None = None,
+) -> None:
+  """Processes the dubbing workflow based on provided Google Drive links for script or metadata.
+
+  This function authenticates the user, retrieves data from Google Sheets, and
+  performs the dubbing
+  based on the type of metadata provided. If a script link is provided, it
+  processes it with voice
+  metadata; if only a metadata link is provided, it uses utterance metadata. If
+  neither is provided,
+  it defaults to a basic dubbing process. Finally, it copies the output to
+  Google Drive.
+
+  Args:
+      dubber: The dubbing object responsible for dubbing functionality.
+      input_file_google_drive_path: The path of the input file in Google Drive.
+      output_folder: The output folder in Google Drive where results will be
+      saved.
+      script_google_drive_link: Google Drive link to the script with voice
+      metadata.
+      metadata_google_drive_link: Google Drive link to the utterance metadata.
+  """
+  if script_google_drive_link:
+    script_with_voice_metadata_df = get_google_sheet_as_dataframe(
+        script_google_drive_link
+    )
+    script_with_voice_metadata = create_script_metadata_from_dataframe(
+        script_with_voice_metadata_df
+    )
+    _ = dubber.dub_ad_from_script(
+        script_with_timestamps=script_with_voice_metadata.script_with_timestamps,
+        assigned_voice=script_with_voice_metadata.assigned_voice,
+        google_text_to_speech_parameters=script_with_voice_metadata.google_text_to_speech_parameters,
+        elevenlabs_text_to_speech_parameters=script_with_voice_metadata.elevenlabs_text_to_speech_parameters,
+    )
+  elif metadata_google_drive_link:
+    utterance_metadata_df = get_google_sheet_as_dataframe(
+        metadata_google_drive_link
+    )
+    converted_utterance_metadata_df = convert_utterance_metadata(
+        utterance_metadata_df
+    )
+    utterance_metadata = converted_utterance_metadata_df.to_dict("records")
+    _ = dubber.dub_ad_with_utterance_metadata(
+        utterance_metadata=utterance_metadata
+    )
+  else:
+    _ = dubber.dub_ad()
+  clear_output(wait=True)
+  print(
+      "The dubbing process is finished. Copying files to your Google Drive."
+      " Please wait..."
+  )
+  destination_dir = copy_output_to_google_drive(
+      colab_dir=output_folder,
+      google_drive_dir=os.path.dirname(input_file_google_drive_path),
+  )
+  convert_utterance_metadata_to_google_sheets(
+      input_file_google_drive_path=input_file_google_drive_path,
+      output_directory=output_folder,
+  )
+  print(f"The output is saved in: {destination_dir}")

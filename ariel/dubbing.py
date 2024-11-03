@@ -1950,6 +1950,9 @@ class Dubber:
           " (yes/no): "
       ).lower()
       if dub_to_another_language_choice == "yes":
+        clear_output(wait=True)
+        time.sleep(1)
+        sys.stdout.flush()
         print("\nAvailable language formats (ISO 3166-1):")
         print(_AVAILABLE_LANGUAGES_PROMPT)
         while True:
@@ -2020,6 +2023,9 @@ class Dubber:
           " metadata? (yes/no): "
       ).lower()
       if dub_to_another_language_choice == "yes":
+        clear_output(wait=True)
+        time.sleep(1)
+        sys.stdout.flush()
         print("\nAvailable language formats (ISO 3166-1):")
         print(_AVAILABLE_LANGUAGES_PROMPT)
         while True:
@@ -2120,6 +2126,9 @@ class Dubber:
           "\nWould you like to dub the ad to another language? (yes/no): "
       ).lower()
       if dub_to_another_language_choice == "yes":
+        clear_output(wait=True)
+        time.sleep(1)
+        sys.stdout.flush()
         print("\nAvailable language formats (ISO 3166-1):")
         print(_AVAILABLE_LANGUAGES_PROMPT)
         while True:

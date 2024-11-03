@@ -321,33 +321,92 @@ class TestConvertUtteranceMetadata(absltest.TestCase):
         "assigned_voice": ["Ben", "Ben"],
         "stability": ["0.5", "0.5"],
         "similarity_boost": ["0.75", "0.75"],
-        "style": ["0", " 0"],
-        "use_speaker_boost": ["True", "False"],
+        "style": ["0", "0"],
+        "use_speaker_boost": ["True", "True"],
         "speaker_id": ["speaker_01", "speaker_01"],
         "ssml_gender": ["Female", "Female"],
         "pitch": ["0.1", "0.2"],
         "speed": ["1", "2"],
         "volume_gain_db": ["10", "20"],
         "for_dubbing": ["True", "True"],
-        "adjust_speed": ["False", "False"],
+        "adjust_speed": ["True", "True"],
     }
     df = pd.DataFrame(data)
     converted_df = colab_utils.convert_utterance_metadata(df)
-    self.assertTrue(converted_df["start"].dtype == float)
-    self.assertTrue(converted_df["end"].dtype == float)
-    self.assertTrue(converted_df["text"].dtype == object)
-    self.assertTrue(converted_df["translated_text"].dtype == object)
-    self.assertTrue(converted_df["assigned_voice"].dtype == object)
-    self.assertTrue(converted_df["speaker_id"].dtype == object)
-    self.assertTrue(converted_df["ssml_gender"].dtype == object)
-    self.assertTrue(converted_df["stability"].dtype == float)
-    self.assertTrue(converted_df["similarity_boost"].dtype == float)
-    self.assertTrue(converted_df["style"].dtype == float)
-    self.assertTrue(converted_df["pitch"].dtype == float)
-    self.assertTrue(converted_df["pitch"].dtype == float)
-    self.assertTrue(converted_df["volume_gain_db"].dtype == float)
-    self.assertTrue(converted_df["adjust_speed"].dtype == bool)
-    self.assertTrue(converted_df["use_speaker_boost"].dtype == bool)
+    self.assertEqual(converted_df["start"].values.tolist(), [0, 12.98])
+    self.assertEqual(converted_df["end"].values.tolist(), [1.5, 13.9])
+    self.assertEqual(converted_df["text"].values.tolist(), ["Test1", "Test2"])
+    self.assertEqual(
+        converted_df["translated_text"].values.tolist(), ["Test1", "Test2"]
+    )
+    self.assertEqual(
+        converted_df["assigned_voice"].values.tolist(), ["Ben", "Ben"]
+    )
+    self.assertEqual(
+        converted_df["speaker_id"].values.tolist(), ["speaker_01", "speaker_01"]
+    )
+    self.assertEqual(
+        converted_df["ssml_gender"].values.tolist(), ["Female", "Female"]
+    )
+    self.assertEqual(converted_df["stability"].values.tolist(), [0.5, 0.5])
+    self.assertEqual(
+        converted_df["similarity_boost"].values.tolist(), [0.75, 0.75]
+    )
+    self.assertEqual(converted_df["style"].values.tolist(), [0, 0])
+    self.assertEqual(converted_df["pitch"].values.tolist(), [0.1, 0.2])
+    self.assertEqual(converted_df["volume_gain_db"].values.tolist(), [10, 20])
+    self.assertEqual(converted_df["adjust_speed"].values.tolist(), [True, True])
+    self.assertEqual(
+        converted_df["use_speaker_boost"].values.tolist(), [True, True]
+    )
+
+
+class ColabPathsTest(parameterized.TestCase):
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="all_attributes",
+          input_file_google_drive_path="drive/MyDrive/input.mp3",
+          input_file_colab_path="/content/input.mp3",
+          vocals_file_colab_path="/content/vocals.mp3",
+          background_file_colab_path="/content/background.mp3",
+          expected_vocals="/content/vocals.mp3",
+          expected_background="/content/background.mp3",
+      ),
+      dict(
+          testcase_name="missing_optional_attributes",
+          input_file_google_drive_path="drive/MyDrive/input.mp3",
+          input_file_colab_path="/content/input.mp3",
+          vocals_file_colab_path=None,
+          background_file_colab_path=None,
+          expected_vocals=None,
+          expected_background=None,
+      ),
+  )
+  def test_colab_paths_initialization(
+      self,
+      input_file_google_drive_path,
+      input_file_colab_path,
+      vocals_file_colab_path,
+      background_file_colab_path,
+      expected_vocals,
+      expected_background,
+  ):
+    colab_paths = colab_utils.ColabPaths(
+        input_file_google_drive_path=input_file_google_drive_path,
+        input_file_colab_path=input_file_colab_path,
+        vocals_file_colab_path=vocals_file_colab_path,
+        background_file_colab_path=background_file_colab_path,
+    )
+
+    self.assertEqual(
+        colab_paths.input_file_google_drive_path, input_file_google_drive_path
+    )
+    self.assertEqual(colab_paths.input_file_colab_path, input_file_colab_path)
+    self.assertEqual(colab_paths.vocals_file_colab_path, expected_vocals)
+    self.assertEqual(
+        colab_paths.background_file_colab_path, expected_background
+    )
 
 
 if __name__ == "__main__":
