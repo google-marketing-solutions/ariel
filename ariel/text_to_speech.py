@@ -415,6 +415,7 @@ def update_utterance_metadata(
     use_elevenlabs: bool = False,
     elevenlabs_clone_voices: bool = False,
     adjust_speed: bool = False,
+    update_text_to_speech_properties: bool = True,
 ) -> Sequence[Mapping[str, str | float]]:
   """Updates utterance metadata with assigned voices.
 
@@ -430,6 +431,8 @@ def update_utterance_metadata(
         ElevenLabs API.
       adjust_speed: Whether to force speed up of utterances to match the
         duration of the utterances in the source language.
+      update_text_to_speech_properties: Whether to update Text-To-Speech
+        properties.
 
   Returns:
       Sequence of updated utterance metadata dictionaries.
@@ -447,11 +450,12 @@ def update_utterance_metadata(
     if not elevenlabs_clone_voices:
       speaker_id = new_utterance.get("speaker_id")
       new_utterance["assigned_voice"] = assigned_voices.get(speaker_id)
-    new_utterance = add_text_to_speech_properties(
-        utterance_metadata=new_utterance,
-        use_elevenlabs=use_elevenlabs,
-        adjust_speed=adjust_speed,
-    )
+    if update_text_to_speech_properties:
+      new_utterance = add_text_to_speech_properties(
+          utterance_metadata=new_utterance,
+          use_elevenlabs=use_elevenlabs,
+          adjust_speed=adjust_speed,
+      )
     updated_utterance_metadata.append(new_utterance)
   return updated_utterance_metadata
 
@@ -671,7 +675,7 @@ def create_speaker_data_mapping(
     ssml_gender = metadata["ssml_gender"]
     paths = [metadata["vocals_path"]]
     existing_speaker = next(
-        (s for s in speaker_data if s.ssml_gender == ssml_gender), None
+        (s for s in speaker_data if s.speaker_id == speaker_id), None
     )
     if existing_speaker:
       existing_speaker.paths.extend(paths)

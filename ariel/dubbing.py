@@ -42,6 +42,7 @@ from IPython.display import Audio
 from IPython.display import clear_output
 from IPython.display import display
 from IPython.display import HTML
+from IPython.display import Video
 from pyannote.audio import Pipeline
 import tensorflow as tf
 import torch
@@ -149,6 +150,11 @@ _AVAILABLE_LANGUAGES_PROMPT: Final[str] = """
                 Spanish - es-MX, Swahili - sw-KE, Swedish - sv-SE, Tamil - ta-IN, Tamil - ta-LK, Telugu - te-IN,
                 Thai - th-TH, Turkish - tr-TR, Ukrainian - uk-UA, Vietnamese - vi-VN
                 """
+_SPECIAL_KEYS: Final[Sequence[str]] = (
+    "speaker_id",
+    "ssml_gender",
+    "assigned_voice",
+)
 
 
 def is_video(*, input_file: str) -> bool:
@@ -758,6 +764,8 @@ class Dubber:
     self.voice_assignments = None
     self._run_from_script = False
     self._dubbing_from_utterance_metadata = False
+    self._voice_allocation_needed = False
+    self._voice_properties_added = False
     create_output_directories(output_directory)
 
   @functools.cached_property
@@ -1182,13 +1190,19 @@ class Dubber:
         print("Invalid choice.")
 
   def run_configure_text_to_speech(
-      self, dubbing_to_another_language: bool = False
+      self,
+      dubbing_to_another_language: bool = False,
+      utterance_metadata_overrides: (
+          Sequence[Mapping[str, str | float]] | None
+      ) = None,
   ) -> None:
     """Configures the Text-To-Speech process.
 
     Args:
       dubbing_to_another_language: An indicator if the voice property
         reassignment should be run for a new language.
+      utterance_metadata_overrides: Utterance metadata to ue in the process
+        instead of `self.utterance_metadata`.
 
     Returns:
         Updated utterance metadata with assigned voices
@@ -1196,8 +1210,14 @@ class Dubber:
     """
     if dubbing_to_another_language:
       self._prompt_for_voice_reassignment()
+    if not utterance_metadata_overrides:
+      utterance_metadata = self.utterance_metadata
+      update_text_to_speech_properties = True
+    else:
+      utterance_metadata = utterance_metadata_overrides
+      update_text_to_speech_properties = False
     self._voice_assigner = text_to_speech.VoiceAssigner(
-        utterance_metadata=self.utterance_metadata,
+        utterance_metadata=utterance_metadata,
         client=self.text_to_speech_client,
         target_language=self.target_language,
         preferred_voices=self.preferred_voices,
@@ -1208,12 +1228,14 @@ class Dubber:
     )
     self.voice_assignments = self._voice_assigner.assigned_voices
     self.utterance_metadata = text_to_speech.update_utterance_metadata(
-        utterance_metadata=self.utterance_metadata,
+        utterance_metadata=utterance_metadata,
         assigned_voices=self.voice_assignments,
         use_elevenlabs=self.use_elevenlabs,
         elevenlabs_clone_voices=self.elevenlabs_clone_voices,
         adjust_speed=self.adjust_speed,
+        update_text_to_speech_properties=update_text_to_speech_properties,
     )
+    self._voice_properties_added = True
 
   def _run_speech_to_text_on_single_utterance(
       self, modified_utterance: Mapping[str, str | float]
@@ -1288,10 +1310,11 @@ class Dubber:
           utterance=utterance,
           output_directory=self.output_directory,
       )
-      verified_utterance = text_to_speech.add_text_to_speech_properties(
-          utterance_metadata=verified_utterance,
-          use_elevenlabs=self.use_elevenlabs,
-      )
+      if self._voice_properties_added:
+        verified_utterance = text_to_speech.add_text_to_speech_properties(
+            utterance_metadata=verified_utterance,
+            use_elevenlabs=self.use_elevenlabs,
+        )
       logging.warning(
           "Updated the added utterance with the default Text-To-Speech"
           " properties."
@@ -1356,33 +1379,67 @@ class Dubber:
       html += "</ul>"
       display(HTML(html))
 
+  @functools.cached_property
+  def _voice_properties_fields(self) -> Sequence[str]:
+    """Provides a list of voice prperties depending on the client type."""
+    voice_properties_fields = ["adjust_speed"]
+    if isinstance(self.text_to_speech_client, texttospeech.TextToSpeechClient):
+      return voice_properties_fields + ["pitch", "speed", "volume_gain_db"]
+    else:
+      return voice_properties_fields + [
+          "stability",
+          "similarity_boost",
+          "style",
+          "use_speaker_boost",
+      ]
+
   def _add_utterance_metadata(self) -> Mapping[str, str | float]:
     """Allows adding a new utterance metadata entry, prompting for each field."""
     new_utterance = {}
-    base_required_fields = ["start", "end", "speaker_id", "ssml_gender"]
-    if self.elevenlabs_clone_voices:
-      required_fields = base_required_fields
-    elif self._run_from_script:
-      required_fields = base_required_fields + ["text", "assigned_voice"]
-      if isinstance(
-          self.text_to_speech_client, texttospeech.TextToSpeechClient
-      ):
-        required_fields = required_fields + ["pitch", "speed", "volume_gain_db"]
-      else:
-        required_fields = required_fields + [
-            "stability",
-            "similarity_boost",
-            "style",
-            "use_speaker_boost",
-        ]
+    required_fields = ["start", "end", "ssml_gender"]
+    if not self._voice_properties_added:
+      if self._run_from_script:
+        required_fields += [
+            "assigned_voice",
+            "text",
+        ] + self._voice_properties_fields
     else:
-      required_fields = base_required_fields + ["assigned_voice"]
+      required_fields += ["assigned_voice"] + self._voice_properties_fields
+      if self._run_from_script:
+        required_fields += ["text"]
+    while True:
+      speaker_id = input("\nEnter value for 'speaker_id': ")
+      new_utterance.update({"speaker_id": speaker_id})
+      existing_metadata = next(
+          (
+              entry
+              for entry in self.utterance_metadata
+              if entry.get("speaker_id") == speaker_id
+          ),
+          None,
+      )
+      if existing_metadata:
+        choice = (
+            input(
+                f"Speaker '{speaker_id}' found. Do you want to reuse existing"
+                " metadata? (yes/no): "
+            )
+            .strip()
+            .lower()
+        )
+        if choice == "yes":
+          new_utterance.update({
+              field: value
+              for field, value in existing_metadata.items()
+              if field not in ["start", "end"]
+          })
+          required_fields = ["start", "end"]
+          break
+      break
     for field in required_fields:
       while True:
         try:
-          time.sleep(1)
-          sys.stdout.flush()
-          value = input(f"Enter value for '{field}': ")
+          value = input(f"\nEnter value for '{field}': ")
           if field in [
               "start",
               "end",
@@ -1401,12 +1458,11 @@ class Dubber:
             ):
               print("End time cannot be less than or equal to start time.")
               continue
-          if field in ["use_speaker_boost"]:
+          elif field == "use_speaker_boost":
             value = bool(value)
           new_utterance[field] = value
-          if self._run_from_script:
-            if field == "text":
-              new_utterance["translated_text"] = value
+          if self._run_from_script and field == "text":
+            new_utterance["translated_text"] = value
             new_utterance["for_dubbing"] = True
           break
         except ValueError:
@@ -1422,7 +1478,7 @@ class Dubber:
       try:
         time.sleep(1)
         sys.stdout.flush()
-        index = int(input("Enter item number to edit: ")) - 1
+        index = int(input("""\nEnter item number to edit: """)) - 1
         if not 0 <= index < len(utterance_metadata):
           print("Invalid item number.")
         else:
@@ -1455,7 +1511,7 @@ class Dubber:
         time.sleep(1)
         sys.stdout.flush()
         key_to_modify = input(
-            f"Enter the key you want to modify for utterance {edit_index + 1}: "
+            f"""\nEnter the key you want to modify for utterance {edit_index + 1}: """
         )
         if key_to_modify in _LOCKED_KEYS:
           print(
@@ -1472,7 +1528,9 @@ class Dubber:
         try:
           time.sleep(1)
           sys.stdout.flush()
-          new_value = input(f"Enter the new value for '{key_to_modify}': ")
+          new_value = input(
+              f"""\nEnter the new value for '{key_to_modify}': """
+          )
           if key_to_modify in _FLOAT_KEYS:
             new_value = float(new_value)
           elif key_to_modify in _BOOLEAN_KEYS:
@@ -1496,7 +1554,7 @@ class Dubber:
         time.sleep(1)
         sys.stdout.flush()
         modify_more = input(
-            "Do you want to modify anything else in this utterance? (yes/no): "
+            """\nDo you want to modify anything else? (yes/no): """
         ).lower()
         if modify_more in ("yes", "no"):
           break
@@ -1515,7 +1573,11 @@ class Dubber:
         time.sleep(1)
         sys.stdout.flush()
         index = (
-            int(input("Enter item number to remove from the dubbing process: "))
+            int(
+                input(
+                    """\nEnter item number to remove from the dubbing process: """
+                )
+            )
             - 1
         )
         if 0 <= index < len(utterance_metadata):
@@ -1535,11 +1597,10 @@ class Dubber:
     while True:
       time.sleep(1)
       sys.stdout.flush()
-      translate_choice = input(
-          "\nYou modified 'text' of the utterance. Do you want to run"
-          " translation (it's recommended after modifying the source utterance"
-          " text)? (yes/no): "
-      ).lower()
+      translate_choice = input("""
+                              \nYou modified 'text' of the utterance. Do you want to run
+                              \ntranslation (it's recommended after modifying the source utterance text)? (yes/no):
+                               """).lower()
       if translate_choice in ("yes", "no"):
         return translate_choice
       else:
@@ -1551,7 +1612,7 @@ class Dubber:
       time.sleep(1)
       sys.stdout.flush()
       review_choice = input(
-          "\nDo you want to review the metadata again? (yes/no): "
+          """\nDo you want to review the metadata again? (yes/no): """
       ).lower()
       if review_choice in ("yes", "no"):
         return review_choice == "no"
@@ -1564,7 +1625,7 @@ class Dubber:
       time.sleep(1)
       sys.stdout.flush()
       gemini_translation_chat_choice = input(
-          "\nWould you like to chat with Gemini about a translation? (yes/no): "
+          """\nWould you like to chat with Gemini about a translation? (yes/no): """
       ).lower()
       if gemini_translation_chat_choice in ("yes", "no"):
         return gemini_translation_chat_choice
@@ -1605,8 +1666,9 @@ class Dubber:
       time.sleep(1)
       sys.stdout.flush()
       user_message = input(
-          "Type your message to Gemini about the translation. Or type in 'exit'"
-          " to approve the translation and to exit the chat: "
+          """
+                           \nType your message to Gemini about the translation.
+                           \nOr type in 'exit' to approve it and exit the chat: """
       ).lower()
       if user_message != "exit":
         if turn == 0:
@@ -1630,7 +1692,9 @@ class Dubber:
       try:
         time.sleep(1)
         sys.stdout.flush()
-        indices_str = input("Enter item numbers to edit (comma-separated): ")
+        indices_str = input(
+            """\nEnter item numbers to edit (comma-separated): """
+        )
         indices = [int(x.strip()) - 1 for x in indices_str.split(",")]
         for index in indices:
           if not 0 <= index < len(utterance_metadata):
@@ -1643,7 +1707,7 @@ class Dubber:
         readline.set_startup_hook(lambda: readline.insert_text("{}"))
         time.sleep(1)
         sys.stdout.flush()
-        updates_str = input("Enter updates as a JSON dictionary: ")
+        updates_str = input("""\nEnter updates as a JSON dictionary: """)
         readline.set_startup_hook()
         updates = json.loads(updates_str)
         if not isinstance(updates, dict):
@@ -1673,9 +1737,9 @@ class Dubber:
       time.sleep(1)
       sys.stdout.flush()
       verify_voices_choice = input(
-          "\nVoices and voice properties were added to the utterance metadata"
-          " above. Would you like to edit them before the process completes?"
-          " (yes/no): "
+          """
+                                  \nVoices and voice properties were added to the utterance metadata above.
+                                  \n Would you like to edit them before the process completes?(yes/no): """
       ).lower()
       if verify_voices_choice == "yes":
         if not self._run_from_script:
@@ -1721,8 +1785,7 @@ class Dubber:
       time.sleep(1)
       sys.stdout.flush()
       verify_dubbed_utterances_choice = input(
-          "\nUtterances have been dubbed. Would you like to listen to "
-          "them? (yes/no): "
+          """\nUtterances have been dubbed. Would you like to listen to them? (yes/no): """
       ).lower()
       if verify_dubbed_utterances_choice == "yes":
         clear_output(wait=True)
@@ -1746,10 +1809,10 @@ class Dubber:
         time.sleep(1)
         sys.stdout.flush()
         verify_again_choice = input(
-            "\nWould you like to edit and re-dub the edited speech chunks"
-            " (utterances) again? (yes/no): "
+            """\nWould you like to edit and re-dub the edited speech chunks (utterances) again? (yes/no): """
         ).lower()
         if verify_again_choice == "yes":
+          clear_output(wait=True)
           self._verify_and_redub_utterances()
           clear_output(wait=True)
           self._prompt_for_dubbed_utterances_verification()
@@ -1768,22 +1831,21 @@ class Dubber:
       time.sleep(1)
       sys.stdout.flush()
       preview_choice = input(
-          "\nPostprocessing is complete. Would you like to preview the dubbed "
-          "output? (yes/no): "
+          """\nPostprocessing is complete. Would you like to preview the dubbed output? (yes/no): """
       ).lower()
       if preview_choice == "yes":
         print("Previewing the dubbed output:")
         if self.is_video:
-          output_video_path = self.postprocessing_output.video_file
-          video_html = f"""
-          <video width="640" height="480" controls>
-              <source src="{output_video_path}" type="video/mp4">
-          </video>
-          """
-          display(HTML(video_html))
+          display(
+              Video(
+                  self.postprocessing_output.video_file,
+                  embed=True,
+                  width=640,
+                  height=480,
+              )
+          )
         else:
-          output_audio_path = self.postprocessing_output.audio_file
-          display(Audio(output_audio_path))
+          display(Audio(self.postprocessing_output.audio_file))
         with_preview = True
         break
       elif preview_choice == "no":
@@ -1795,7 +1857,7 @@ class Dubber:
         time.sleep(1)
         sys.stdout.flush()
         change_choice = input(
-            "\nDo you want to change anything in the dubbed output? (yes/no): "
+            """\nDo you want to change anything in the dubbed output? (yes/no): """
         ).lower()
         if change_choice == "yes":
           clear_output(wait=True)
@@ -1822,18 +1884,14 @@ class Dubber:
       time.sleep(1)
       sys.stdout.flush()
       action_choice = input(
-          "\nChoose action: (edit/bulk_edit/add/remove/continue): "
+          """\nChoose action: (edit/bulk_edit/add/remove/continue): """
       ).lower()
       if action_choice in ("edit", "bulk_edit", "add", "remove"):
         if action_choice == "edit":
           edit_index = self._select_edit_number(
               utterance_metadata=utterance_metadata
           )
-          unmodified_start_end = (
-              utterance_metadata[edit_index]["start"],
-              utterance_metadata[edit_index]["end"],
-          )
-          unmodified_text = utterance_metadata[edit_index]["text"]
+          unmodified_metadata = utterance_metadata[edit_index].copy()
           gemini_translation_chat_choice = (
               self._prompt_for_gemini_translation_chat()
           )
@@ -1845,26 +1903,38 @@ class Dubber:
             edited_utterance = self._edit_utterance_metadata(
                 utterance_metadata=utterance_metadata, edit_index=edit_index
             )
-          modified_start_end = (
+          if (unmodified_metadata["start"], unmodified_metadata["end"]) != (
               edited_utterance["start"],
               edited_utterance["end"],
-          )
-          modified_text = edited_utterance["text"]
-          if unmodified_start_end != modified_start_end:
+          ):
             edited_utterance = self._repopulate_metadata(
                 utterance=edited_utterance
             )
-          if unmodified_text != modified_text:
+          if unmodified_metadata["text"] != edited_utterance["text"]:
             translate_choice = self._prompt_for_translation()
             if translate_choice == "yes":
               edited_utterance = self._run_translation_on_single_utterance(
                   edited_utterance
               )
+          edited_utterance = self._handle_special_key_changes(
+              unmodified_metadata, edited_utterance
+          )
           utterance_metadata = self._update_utterance_metadata(
               updated_utterance=edited_utterance,
               utterance_metadata=utterance_metadata,
               edit_index=edit_index,
           )
+          if self._voice_allocation_needed:
+            logging.info(
+                "Voice reassignment was requested. Resetting"
+                " `self.voice_assignments`"
+            )
+            self.voice_assignments = None
+            self.run_configure_text_to_speech(
+                utterance_metadata_overrides=utterance_metadata
+            )
+            self._voice_allocation_needed = False
+            utterance_metadata = self.utterance_metadata
         elif action_choice == "bulk_edit":
           utterance_metadata = self._bulk_edit_utterance_metadata(
               utterance_metadata
@@ -1889,6 +1959,169 @@ class Dubber:
         clear_output(wait=True)
         print("Option unavailable or you had a typo. Try again.")
 
+  def _handle_special_key_changes(
+      self,
+      unmodified_metadata: Mapping[str, str | float],
+      edited_utterance: Mapping[str, str | float],
+  ) -> Mapping[str, str | float]:
+    """Handles changes to special metadata keys.
+
+    This function checks for changes in the special metadata keys
+    ('speaker_id', 'ssml_gender', 'assigned_voice') between the unmodified
+    and edited utterance metadata. It then calls the appropriate handler
+    function based on the key that was changed.
+
+    Args:
+      unmodified_metadata: The original metadata of the utterance.
+      edited_utterance: The edited metadata of the utterance.
+
+    Returns:
+      The updated metadata after handling the special key changes.
+    """
+    changed_keys = [
+        key
+        for key in _SPECIAL_KEYS
+        if unmodified_metadata.get(key) != edited_utterance.get(key)
+    ]
+    if not changed_keys or len(changed_keys) == 3:
+      return edited_utterance
+    if "speaker_id" in changed_keys:
+      return self._handle_speaker_id_change(edited_utterance)
+    elif "ssml_gender" in changed_keys:
+      return self._handle_ssml_gender_change(edited_utterance)
+    elif "assigned_voice" in changed_keys:
+      return self._handle_assigned_voice_change(edited_utterance)
+
+  def _handle_speaker_id_change(
+      self, edited_utterance: Mapping[str, str | float]
+  ) -> Mapping[str, str | float]:
+    """Handles changes to the 'speaker_id' metadata key.
+
+    This function is called when the 'speaker_id' of an utterance is changed.
+    It attempts to find another utterance with the same 'speaker_id' and copy
+    its 'ssml_gender' and 'assigned_voice' values. If no matching utterance
+    is found, it prompts the user to input these values.
+
+    Args:
+      edited_utterance: The edited metadata of the utterance with the changed
+        'speaker_id'.
+
+    Returns:
+      The updated metadata after handling the 'speaker_id' change.
+    """
+    new_speaker_id = edited_utterance["speaker_id"]
+    matching_utterances = [
+        utterance
+        for utterance in self.utterance_metadata
+        if utterance.get("speaker_id") == new_speaker_id
+    ]
+    if matching_utterances:
+      matched_utterance = matching_utterances[0]
+      edited_utterance["ssml_gender"] = matched_utterance["ssml_gender"]
+      edited_utterance["assigned_voice"] = matched_utterance["assigned_voice"]
+    else:
+      edited_utterance["ssml_gender"] = input(
+          """\nNo matching metadata found for 'speaker_id'. Please specify 'ssml_gender': """
+      )
+      assigned_voice = input(
+          """
+                               \nNo matching metadata found for 'speaker_id'.
+                               \nPlease specify 'assigned_voice' (you can also type 'continue' and the voice will be assigned automatically): """
+      ).lower()
+      if assigned_voice == "continue":
+        self._voice_allocation_needed = True
+        print(
+            "You selected 'continue'. Voices will be reassigned after editing"
+            " is completed."
+        )
+      else:
+        edited_utterance["assigned_voice"] = assigned_voice
+    return edited_utterance
+
+  def _handle_ssml_gender_change(
+      self, edited_utterance: Mapping[str, str | float]
+  ) -> Mapping[str, str | float]:
+    """Handles changes to the 'ssml_gender' metadata key.
+
+    This function is called when the 'ssml_gender' of an utterance is changed.
+    It prompts the user to input a 'speaker_id' and attempts to find another
+    utterance with the same 'speaker_id' to copy its 'assigned_voice' value.
+    If no matching utterance is found, it prompts the user to input the
+    'assigned_voice'.
+
+    Args:
+      edited_utterance: The edited metadata of the utterance with the changed
+        'ssml_gender'.
+
+    Returns:
+      The updated metadata after handling the 'ssml_gender' change.
+    """
+    new_speaker_id = input(
+        """\nPlease specify 'speaker_id' to find associated metadata: """
+    )
+    edited_utterance["speaker_id"] = new_speaker_id
+    matching_utterances = [
+        utterance
+        for utterance in self.utterance_metadata
+        if utterance.get("speaker_id") == new_speaker_id
+    ]
+    if matching_utterances:
+      matched_utterance = matching_utterances[0]
+      edited_utterance["assigned_voice"] = matched_utterance["assigned_voice"]
+    else:
+      assigned_voice = input(
+          """
+                               \nNo matching metadata found for 'speaker_id'.
+                               \nPlease specify 'assigned_voice' (you can also type 'continue' and the voice will be assigned automatically): """
+      ).lower()
+      if assigned_voice == "continue":
+        self._voice_allocation_needed = True
+        print(
+            "You selected 'continue'. Voices will be reassigned after editing"
+            " is completed."
+        )
+      else:
+        edited_utterance["assigned_voice"] = assigned_voice
+    return edited_utterance
+
+  def _handle_assigned_voice_change(
+      self, edited_utterance: Mapping[str, str | float]
+  ) -> Mapping[str, str | float]:
+    """Handles changes to the 'assigned_voice' metadata key.
+
+    This function is called when the 'assigned_voice' of an utterance is
+    changed.
+    It attempts to find another utterance with the same 'assigned_voice' and
+    copy
+    its 'speaker_id' and 'ssml_gender' values. If no matching utterance
+    is found, it prompts the user to input these values.
+
+    Args:
+      edited_utterance: The edited metadata of the utterance with the changed
+        'assigned_voice'.
+
+    Returns:
+      The updated metadata after handling the 'assigned_voice' change.
+    """
+    new_assigned_voice = edited_utterance["assigned_voice"]
+    matching_utterances = [
+        utterance
+        for utterance in self.utterance_metadata
+        if utterance.get("assigned_voice") == new_assigned_voice
+    ]
+    if matching_utterances:
+      matched_utterance = matching_utterances[0]
+      edited_utterance["speaker_id"] = matched_utterance["speaker_id"]
+      edited_utterance["ssml_gender"] = matched_utterance["ssml_gender"]
+    else:
+      edited_utterance["speaker_id"] = input(
+          """\nNo matching metadata found for 'assigned_voice'. Please specify 'speaker_id': """
+      )
+      edited_utterance["ssml_gender"] = input(
+          """\nNo matching metadata found for 'assigned_voice'. Please specify 'ssml_gender': """
+      )
+    return edited_utterance
+
   def _run_verify_utterance_metadata_script_workflow(self) -> None:
     """Displays, allows editing, adding and removing utterance metadata."""
     utterance_metadata = self.utterance_metadata
@@ -1898,13 +2131,14 @@ class Dubber:
       time.sleep(1)
       sys.stdout.flush()
       action_choice = input(
-          "\nChoose action: (edit/bulk_edit/add/continue): "
+          """\nChoose action: (edit/bulk_edit/add/continue): """
       ).lower()
       if action_choice in ("edit", "bulk_edit", "add"):
         if action_choice == "edit":
           edit_index = self._select_edit_number(
               utterance_metadata=utterance_metadata
           )
+          unmodified_metadata = utterance_metadata[edit_index].copy()
           gemini_translation_chat_choice = (
               self._prompt_for_gemini_translation_chat()
           )
@@ -1916,11 +2150,25 @@ class Dubber:
             edited_utterance = self._edit_utterance_metadata(
                 utterance_metadata=utterance_metadata, edit_index=edit_index
             )
+          edited_utterance = self._handle_special_key_changes(
+              unmodified_metadata, edited_utterance
+          )
           utterance_metadata = self._update_utterance_metadata(
               updated_utterance=edited_utterance,
               utterance_metadata=utterance_metadata,
               edit_index=edit_index,
           )
+          if self._voice_allocation_needed:
+            logging.info(
+                "Voice reassignment was requested. Resetting"
+                " `self.voice_assignments`"
+            )
+            self.voice_assignments = None
+            self.run_configure_text_to_speech(
+                utterance_metadata_overrides=utterance_metadata
+            )
+            self._voice_allocation_needed = False
+            utterance_metadata = self.utterance_metadata
         elif action_choice == "bulk_edit":
           utterance_metadata = self._bulk_edit_utterance_metadata(
               utterance_metadata
@@ -1946,8 +2194,7 @@ class Dubber:
       time.sleep(1)
       sys.stdout.flush()
       dub_to_another_language_choice = input(
-          "\nWould you like to dub the ad to another language from script?"
-          " (yes/no): "
+          """\nWould you like to dub the ad to another language from script? (yes/no): """
       ).lower()
       if dub_to_another_language_choice == "yes":
         clear_output(wait=True)
@@ -1960,23 +2207,22 @@ class Dubber:
             time.sleep(1)
             sys.stdout.flush()
             target_language = input(
-                "\nEnter the target language in the ISO 3166-1 format (e.g.,"
-                " 'fr-FR'): "
+                """\nEnter the target language in the ISO 3166-1 format (e.g. 'fr-FR'): """
             )
             self.target_language = target_language
             while True:
               time.sleep(1)
               sys.stdout.flush()
-              spreadsheet_choice = input(
-                  "\nDo you have a spreadsheet with the script? In the new"
-                  " sheet ensure the `translated_text` column contains the text"
-                  " already translated to the new target language. (yes/no): "
-              ).lower()
+              spreadsheet_choice = input("""
+                  \nDo you have a spreadsheet with the script? In the new
+                  \n sheet ensure the `translated_text` column contains the text
+                  \n already translated to the new target language. (yes/no):
+                   """).lower()
               if spreadsheet_choice == "yes":
                 time.sleep(1)
                 sys.stdout.flush()
                 google_sheet_link = input(
-                    "\nPlease provide the Google Sheet link: "
+                    """\nPlease provide the Google Sheet link: """
                 )
                 # We assume a user already authenticated themselves with
                 # `auth.authenticate_user() (`from google.colab import auth`)
@@ -2018,10 +2264,10 @@ class Dubber:
     while True:
       time.sleep(1)
       sys.stdout.flush()
-      dub_to_another_language_choice = input(
-          "\nWould you like to dub the ad to another language from utterance"
-          " metadata? (yes/no): "
-      ).lower()
+      dub_to_another_language_choice = input("""
+                                             \nWould you like to dub the ad to
+                                             \n another language from utterance metadata? (yes/no):
+                                              """).lower()
       if dub_to_another_language_choice == "yes":
         clear_output(wait=True)
         time.sleep(1)
@@ -2033,22 +2279,20 @@ class Dubber:
             time.sleep(1)
             sys.stdout.flush()
             target_language = input(
-                "\nEnter the target language in the ISO 3166-1 format (e.g.,"
-                " 'fr-FR'): "
+                """\nEnter the target language in the ISO 3166-1 format (e.g. 'fr-FR'): """
             )
             self.target_language = target_language
             while True:
               time.sleep(1)
               sys.stdout.flush()
               spreadsheet_choice = input(
-                  "\nDo you have a spreadsheet with the utterance metadata?"
-                  " (yes/no): "
+                  """\nDo you have a spreadsheet with the utterance metadata? (yes/no): """
               ).lower()
               if spreadsheet_choice == "yes":
                 time.sleep(1)
                 sys.stdout.flush()
                 google_sheet_link = input(
-                    "\nPlease provide the Google Sheet link: "
+                    """\nPlease provide the Google Sheet link: """
                 )
                 # We assume a user already authenticated themselves with
                 # `auth.authenticate_user() (`from google.colab import auth`)
@@ -2123,7 +2367,7 @@ class Dubber:
       time.sleep(1)
       sys.stdout.flush()
       dub_to_another_language_choice = input(
-          "\nWould you like to dub the ad to another language? (yes/no): "
+          """\nWould you like to dub the ad to another language? (yes/no): """
       ).lower()
       if dub_to_another_language_choice == "yes":
         clear_output(wait=True)
@@ -2136,8 +2380,7 @@ class Dubber:
             time.sleep(1)
             sys.stdout.flush()
             target_language = input(
-                "\nEnter the target language in the ISO 3166-1 format (e.g.,"
-                " 'fr-FR'): "
+                """\nEnter the target language in the ISO 3166-1 format (e.g. 'fr-FR'): """
             )
             self.dub_ad_with_different_language(target_language=target_language)
             break
