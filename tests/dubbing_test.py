@@ -108,10 +108,25 @@ class TestAssembleUtteranceMetadata(parameterized.TestCase):
       (
           "Basic Case",
           [
-              {"text": "Hello there!", "start": 0.0, "end": 2.5},
-              {"text": "How are you?", "start": 3.0, "end": 5.2},
+              {
+                  "text": "Hello there!",
+                  "start": 0.0,
+                  "end": 2.5,
+                  "speaker_id": "speaker_01",
+                  "ssml_gender": "Male",
+                  "assigned_voice": "John Doe",
+                  "adjust_speed": False,
+              },
+              {
+                  "text": "How are you?",
+                  "start": 3.0,
+                  "end": 5.2,
+                  "speaker_id": "speaker_01",
+                  "ssml_gender": "Male",
+                  "assigned_voice": "John Doe",
+                  "adjust_speed": False,
+              },
           ],
-          "John Doe",
           False,
           {"pitch": -3.0, "speed": 1.2, "volume_gain_db": 10.0},
           None,
@@ -125,6 +140,9 @@ class TestAssembleUtteranceMetadata(parameterized.TestCase):
                   "pitch": -3.0,
                   "speed": 1.2,
                   "volume_gain_db": 10.0,
+                  "adjust_speed": False,
+                  "ssml_gender": "Male",
+                  "speaker_id": "speaker_01",
               },
               {
                   "text": "How are you?",
@@ -135,15 +153,25 @@ class TestAssembleUtteranceMetadata(parameterized.TestCase):
                   "pitch": -3.0,
                   "speed": 1.2,
                   "volume_gain_db": 10.0,
+                  "adjust_speed": False,
+                  "ssml_gender": "Male",
+                  "speaker_id": "speaker_01",
               },
           ],
       ),
       (
           "ElevenLabs Case",
           [
-              {"text": "This is for ElevenLabs", "start": 0.0, "end": 2.0},
+              {
+                  "text": "This is for ElevenLabs",
+                  "start": 0.0,
+                  "end": 2.0,
+                  "ssml_gender": "Male",
+                  "speaker_id": "speaker_01",
+                  "assigned_voice": "David",
+                  "adjust_speed": False,
+              },
           ],
-          "David",
           True,
           None,
           {
@@ -162,13 +190,15 @@ class TestAssembleUtteranceMetadata(parameterized.TestCase):
               "similarity_boost": 0.8,
               "style": 0.2,
               "use_speaker_boost": False,
+              "adjust_speed": False,
+              "ssml_gender": "Male",
+              "speaker_id": "speaker_01",
           }],
       ),
   )
   def test_assemble_utterance_metadata(
       self,
       script_with_timestamps,
-      assigned_voice,
       use_elevenlabs,
       google_text_to_speech_parameters,
       elevenlabs_text_to_speech_parameters,
@@ -176,7 +206,6 @@ class TestAssembleUtteranceMetadata(parameterized.TestCase):
   ):
     result = dubbing.assemble_utterance_metadata_for_dubbing_from_script(
         script_with_timestamps=script_with_timestamps,
-        assigned_voice=assigned_voice,
         use_elevenlabs=use_elevenlabs,
         google_text_to_speech_parameters=google_text_to_speech_parameters,
         elevenlabs_text_to_speech_parameters=elevenlabs_text_to_speech_parameters,
@@ -189,7 +218,6 @@ class TestAssembleUtteranceMetadata(parameterized.TestCase):
           script_with_timestamps=[
               {"text": "This is incomplete", "start": 1.0},
           ],
-          assigned_voice="Jane Smith",
       )
 
 
@@ -333,7 +361,7 @@ class TestCheckDirectoryContents(absltest.TestCase):
     mock_exists.return_value = True
     mock_listdir.side_effect = [
         ["vocals.mp3", "no_vocals.mp3", "chunk_1.mp3"],
-        ["video.mp3", "video.mp4"]
+        ["video.mp3", "video.mp4"],
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -367,7 +395,7 @@ class TestCheckDirectoryContents(absltest.TestCase):
     mock_exists.return_value = True
     mock_listdir.side_effect = [
         ["vocals.mp3", "no_vocals.mp3", "chunk_1.mp3"],
-        ["video.mp3"]
+        ["video.mp3"],
     ]
     with tempfile.TemporaryDirectory() as tmpdir:
       self.assertFalse(dubbing.check_directory_contents(tmpdir))

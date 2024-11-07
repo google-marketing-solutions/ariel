@@ -25,7 +25,7 @@ import readline
 import shutil
 import sys
 import time
-from typing import Final, Mapping, Sequence
+from typing import Final, Mapping, Set, Sequence
 from absl import logging
 from ariel import audio_processing
 from ariel import colab_utils
@@ -100,7 +100,15 @@ _EDIT_TRANSLATION_PROMPT: Final[str] = (
     " You translated it as: '{}'. The target language was: '{}'. The company"
     " asks you to modify this translation: '{}'"
 )
-_REQUIRED_KEYS: Final[set] = {"text", "start", "end"}
+_REQUIRED_KEYS: Final[Set[str]] = {
+    "text",
+    "start",
+    "end",
+    "speaker_id",
+    "ssml_gender",
+    "assigned_voice",
+    "adjust_speed",
+}
 _REQUIRED_GOOGLE_TTS_PARAMETERS: Final[set] = {
     "pitch",
     "speed",
@@ -371,7 +379,6 @@ def _verify_dictionary(
 def assemble_utterance_metadata_for_dubbing_from_script(
     *,
     script_with_timestamps: Sequence[Mapping[str, str | float]],
-    assigned_voice: str | Sequence[str],
     use_elevenlabs: bool = False,
     google_text_to_speech_parameters: (
         Mapping[str, str | float] | Sequence[Mapping[str, str | float]] | None
@@ -394,11 +401,7 @@ def assemble_utterance_metadata_for_dubbing_from_script(
 
   Args:
       script_with_timestamps: A sequence of dictionaries, each containing
-        information about an utterance in the script: - "text": The text of the
-        utterance. - "start": The start time of the utterance (in seconds). -
-        "end": The end time of the utterance (in seconds).
-      assigned_voice: The name of the assigned voice (or a list of names if each
-        utterance has a different voice).
+        information about an utterance in the script.
       use_elevenlabs: If True, use ElevenLabs TTS parameters; otherwise, use
         Google TTS parameters.
       google_text_to_speech_parameters: A dictionary or list of dictionaries
@@ -408,33 +411,13 @@ def assemble_utterance_metadata_for_dubbing_from_script(
 
   Returns:
       A sequence of dictionaries, each containing enriched metadata for an
-      utterance:
-          - All keys from the original `script_with_timestamps` dictionaries.
-          - "for_dubbing": Always set to True.
-          - "assigned_voice": The assigned voice name.
-          - Additional TTS parameters based on the `use_elevenlabs` flag and the
-          corresponding parameter dictionaries.
+      utterance.
 
   Raises:
       KeyError: If a dictionary in `script_with_timestamps` is missing "text",
       "start", or "end" keys.
       KeyError: If the specified TTS parameter dictionary is missing required
       keys.
-
-  Example:
-      ```python
-      script = [
-          {"text": "Hello, world!", "start": 0.0, "end": 1.5},
-          {"text": "This is a test.", "start": 2.0, "end": 3.8},
-      ]
-      metadata = assemble_utterance_metadata_for_dubbing_from_script(
-          script_with_timestamps=script,
-          assigned_voice=["Alice", "Bob"],
-          use_elevenlabs=False,
-          google_text_to_speech_parameters=[{"pitch": -2.0}, {"speed": 0.9}],
-      )
-      print(metadata)
-      ```
   """
   _verify_dictionary(
       dictionary_to_verify=script_with_timestamps, required_keys=_REQUIRED_KEYS
@@ -445,13 +428,6 @@ def assemble_utterance_metadata_for_dubbing_from_script(
       utterance_metadata=script_with_timestamps,
       items=for_dubbing,
       key="for_dubbing",
-  )
-  if not isinstance(assigned_voice, list):
-    assigned_voice = [assigned_voice] * number_of_utterances
-  utterance_metadata_with_assigned_voice = _add_items_to_dictionaries(
-      utterance_metadata=utterance_metadata_with_for_dubbing,
-      items=assigned_voice,
-      key="assigned_voice",
   )
   if use_elevenlabs:
     text_to_speech_parameters = elevenlabs_text_to_speech_parameters
@@ -468,7 +444,7 @@ def assemble_utterance_metadata_for_dubbing_from_script(
       required_keys=required_keys,
   )
   return _add_items_to_dictionaries(
-      utterance_metadata=utterance_metadata_with_assigned_voice,
+      utterance_metadata=utterance_metadata_with_for_dubbing,
       items=text_to_speech_parameters,
   )
 
@@ -1768,14 +1744,15 @@ class Dubber:
         updated_utterance_metadata=self.utterance_metadata,
     )
     updated_utterance_metadata = self.utterance_metadata.copy()
-    for edited_utterance in edited_utterances:
-      for i, original_utterance in enumerate(updated_utterance_metadata):
-        if (
-            original_utterance["path"] == edited_utterance["path"]
-            and original_utterance["dubbed_path"]
-            != edited_utterance["dubbed_path"]
-        ):
-          updated_utterance_metadata[i] = edited_utterance
+    if not self._run_from_script:
+      for edited_utterance in edited_utterances:
+        for i, original_utterance in enumerate(updated_utterance_metadata):
+          if (
+              original_utterance["path"] == edited_utterance["path"]
+              and original_utterance["dubbed_path"]
+              != edited_utterance["dubbed_path"]
+          ):
+            updated_utterance_metadata[i] = edited_utterance
     self.utterance_metadata = updated_utterance_metadata
 
   def _prompt_for_dubbed_utterances_verification(self) -> None:
@@ -2346,7 +2323,6 @@ class Dubber:
         output_directory=self.output_directory,
         target_language=self.target_language,
         preprocessing_output=dataclasses.asdict(self.preprocessing_output),
-        adjust_speed=self.adjust_speed,
         use_elevenlabs=self.use_elevenlabs,
         elevenlabs_model=self.elevenlabs_model,
         elevenlabs_clone_voices=self.elevenlabs_clone_voices,
@@ -2710,7 +2686,6 @@ class Dubber:
       self,
       *,
       script_with_timestamps: Sequence[Mapping[str, str | float]],
-      assigned_voice: str | Sequence[str],
       google_text_to_speech_parameters: (
           Mapping[str, str | float] | Sequence[Mapping[str, str | float]]
       ) = {"pitch": -5.0, "speed": 1.0, "volume_gain_db": 16.0},
@@ -2725,7 +2700,7 @@ class Dubber:
   ) -> PostprocessingArtifacts:
     """Orchestrates the complete ad dubbing process from a script with timestamps.
 
-    This method takes a script with timestamps, assigns voices, and performs the
+    This method takes a script with timestamps, and performs the
     following steps:
 
     1. Prepares utterance metadata for dubbing based on the script.
@@ -2737,12 +2712,7 @@ class Dubber:
 
     Args:
         script_with_timestamps: A sequence of mappings detailing each
-          utterance's metadata. Each mapping should contain: * 'start', 'end':
-          Utterance start/end times in seconds (float). * 'text': The text
-          content of the utterance. * 'speaker_id': The speaker ID for this
-          utterance. * 'ssml_gender': The SSML gender of this speaker.
-        assigned_voice: The name of the assigned voice(s) for the utterances
-          (either a single string or a sequence of strings).
+          utterance's metadata.
         google_text_to_speech_parameters: Parameters for Google Text-to-Speech
           synthesis.
         elevenlabs_text_to_speech_parameters: Parameters for ElevenLabs
@@ -2766,7 +2736,6 @@ class Dubber:
       self.elevenlabs_clone_voices = False
     self.utterance_metadata = assemble_utterance_metadata_for_dubbing_from_script(
         script_with_timestamps=script_with_timestamps,
-        assigned_voice=assigned_voice,
         use_elevenlabs=self.use_elevenlabs,
         google_text_to_speech_parameters=google_text_to_speech_parameters,
         elevenlabs_text_to_speech_parameters=elevenlabs_text_to_speech_parameters,
@@ -2781,6 +2750,7 @@ class Dubber:
     if self.with_verification:
       self._run_verify_utterance_metadata_script_workflow()
       clear_output(wait=True)
+      print("Please wait...")
     self.run_text_to_speech()
     if self.with_verification:
       self._prompt_for_dubbed_utterances_verification()

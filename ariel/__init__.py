@@ -13,4 +13,4 @@
 # limitations under the License.
 
 """Ariel library for for end-to-end video ad dubbing using AI."""
-__version__ = "0.0.20"
+__version__ = "0.0.21"

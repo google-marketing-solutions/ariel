@@ -196,9 +196,8 @@ class ScriptMetadata:
 
   Attributes:
       script_with_timestamps: A sequence of dictionaries, where each dictionary
-        represents a speech segment and contains the keys "start", "end", and
-        "text".
-      assigned_voice: A sequence of assigned voices for speech segments.
+        represents a speech segment and contains the keys "start", "end",
+        "text", "speaker_id", "ssml_gender", "assigned_voice" and "adjust_speed"
       google_text_to_speech_parameters: A sequence of mappings with Google
         Text-to-Speech parameters ("pitch", "speed", "volume_gain_db"), or None
         if not applicable.
@@ -208,7 +207,6 @@ class ScriptMetadata:
   """
 
   script_with_timestamps: Sequence[Mapping[str, float | str]]
-  assigned_voice: Sequence[str]
   google_text_to_speech_parameters: (
       Sequence[Mapping[str, float | int]] | None
   ) = None
@@ -225,33 +223,36 @@ def create_script_metadata_from_dataframe(df: pd.DataFrame) -> ScriptMetadata:
   """
   script_with_timestamps = [
       {
-          "start": float(start),
-          "end": float(end),
-          "text": str(text),
-          "speaker_id": str(speaker_id),
-          "ssml_gender": str(ssml_gender),
+          "start": start,
+          "end": end,
+          "text": text,
+          "speaker_id": speaker_id,
+          "ssml_gender": ssml_gender,
+          "assigned_voice": assigned_voice,
+          "adjust_speed": adjust_speed,
       }
-      for start, end, text, speaker_id, ssml_gender in zip(
+      for start, end, text, speaker_id, ssml_gender, assigned_voice, adjust_speed in zip(
           df["start"],
           df["end"],
           df["text"],
           df["speaker_id"],
           df["ssml_gender"],
+          df["assigned_voice"],
+          df["adjust_speed"],
       )
   ]
   metadata_kwargs = {
       "script_with_timestamps": script_with_timestamps,
-      "assigned_voice": df["assigned_voice"].tolist(),
   }
   if {"stability", "similarity_boost", "style", "use_speaker_boost"} <= set(
       df.columns
   ):
     metadata_kwargs["elevenlabs_text_to_speech_parameters"] = [
         {
-            "stability": float(stability),
-            "similarity_boost": float(similarity_boost),
-            "style": float(style),
-            "use_speaker_boost": bool(use_speaker_boost),
+            "stability": stability,
+            "similarity_boost": similarity_boost,
+            "style": style,
+            "use_speaker_boost": use_speaker_boost,
         }
         for stability, similarity_boost, style, use_speaker_boost in zip(
             df["stability"],
@@ -263,9 +264,9 @@ def create_script_metadata_from_dataframe(df: pd.DataFrame) -> ScriptMetadata:
   elif {"pitch", "speed", "volume_gain_db"} <= set(df.columns):
     metadata_kwargs["google_text_to_speech_parameters"] = [
         {
-            "pitch": float(pitch),
-            "speed": float(speed),
-            "volume_gain_db": float(volume_gain_db),
+            "pitch": pitch,
+            "speed": speed,
+            "volume_gain_db": volume_gain_db,
         }
         for pitch, speed, volume_gain_db in zip(
             df["pitch"], df["speed"], df["volume_gain_db"]
@@ -319,7 +320,7 @@ def convert_utterance_metadata(
       utterance_metadata[col] = utterance_metadata[col].astype(float)
   for col in _BOOL_COLUMNS:
     if col in utterance_metadata.columns:
-      utterance_metadata[col] = utterance_metadata[col].astype(bool)
+      utterance_metadata[col] = utterance_metadata[col].str.lower() == "true"
   return utterance_metadata
 
 
@@ -327,7 +328,7 @@ def get_folder_id_by_path(path: str) -> str:
   """Returns the Google Drive folder ID for a specified path.
 
   Args:
-    path : The full path of the folder in Google Drive, starting from
+    path: The full path of the folder in Google Drive, starting from
     '/content/drive/My Drive/...'. For example: '/content/drive/My
     Drive/parent_folder/sub_folder'.
 
@@ -512,7 +513,7 @@ def _generate_default_output_folder(advertiser_name: str) -> str:
 
   Args:
       advertiser_name: The name of the advertiser used to create the folder
-      name.
+        name.
 
   Returns:
     A string representing the full path of the output folder, starting with
@@ -546,7 +547,7 @@ def setup_output_folder(
 
   Args:
       advertiser_name: The name of the advertiser, used for generating a default
-      folder name.
+        folder name.
       input_file_google_drive_path: The path of the input file in Google Drive.
       output_folder: An optional specified output folder name. Defaults to None.
       metadata_google_drive_link: A link to a utterance metadata Google Sheet.
@@ -613,21 +614,20 @@ def process_dubbing(
       dubber: The dubbing object responsible for dubbing functionality.
       input_file_google_drive_path: The path of the input file in Google Drive.
       output_folder: The output folder in Google Drive where results will be
-      saved.
+        saved.
       script_google_drive_link: Google Drive link to the script with voice
-      metadata.
+        metadata.
       metadata_google_drive_link: Google Drive link to the utterance metadata.
   """
   if script_google_drive_link:
-    script_with_voice_metadata_df = get_google_sheet_as_dataframe(
-        script_google_drive_link
+    script_with_voice_metadata_df = convert_utterance_metadata(
+        get_google_sheet_as_dataframe(script_google_drive_link)
     )
     script_with_voice_metadata = create_script_metadata_from_dataframe(
         script_with_voice_metadata_df
     )
     _ = dubber.dub_ad_from_script(
         script_with_timestamps=script_with_voice_metadata.script_with_timestamps,
-        assigned_voice=script_with_voice_metadata.assigned_voice,
         google_text_to_speech_parameters=script_with_voice_metadata.google_text_to_speech_parameters,
         elevenlabs_text_to_speech_parameters=script_with_voice_metadata.elevenlabs_text_to_speech_parameters,
     )

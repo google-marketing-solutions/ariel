@@ -776,7 +776,6 @@ class TextToSpeech:
       output_directory: str,
       target_language: str,
       preprocessing_output: Mapping[str, str],
-      adjust_speed: bool = True,
       use_elevenlabs: bool = False,
       elevenlabs_model: str = _DEFAULT_ELEVENLABS_MODEL,
       elevenlabs_clone_voices: bool = False,
@@ -791,7 +790,6 @@ class TextToSpeech:
       output_directory: Directory to save dubbed audio.
       target_language: The target language.
       preprocessing_output: Paths to preprocessed files.
-      adjust_speed: Whether to adjust dubbed audio speed.
       use_elevenlabs: Whether to use ElevenLabs API.
       elevenlabs_model: The ElevenLabs model to use.
       elevenlabs_clone_voices: Whether to clone voices.
@@ -806,7 +804,6 @@ class TextToSpeech:
     self.utterance_metadata = utterance_metadata
     self.output_directory = output_directory
     self.target_language = target_language
-    self.adjust_speed = adjust_speed
     self.use_elevenlabs = use_elevenlabs
     self.elevenlabs_model = elevenlabs_model
     self.elevenlabs_clone_voices = elevenlabs_clone_voices
@@ -955,9 +952,10 @@ class TextToSpeech:
     Returns:
       True if adjustment is needed, False otherwise.
     """
-    condition_one = self.adjust_speed and self.use_elevenlabs
+    condition_one = utterance["adjust_speed"] and self.use_elevenlabs
     condition_two = (
-        self.adjust_speed and _EXCEPTION_VOICE in utterance["assigned_voice"]
+        utterance["adjust_speed"]
+        and _EXCEPTION_VOICE in utterance["assigned_voice"]
     )
     return condition_one or condition_two
 
@@ -974,7 +972,7 @@ class TextToSpeech:
       True if adjustment is needed, False otherwise.
     """
     condition_one = (
-        self.adjust_speed
+        utterance["adjust_speed"]
         and _EXCEPTION_VOICE not in utterance["assigned_voice"]
     )
     return speed != 1.0 and not self.use_elevenlabs and condition_one
@@ -1094,8 +1092,7 @@ class TextToSpeech:
         edited_utterances.append(updated)
     for utterance in edited_utterances:
       dubbed_utterance = self._run_text_to_speech(utterance)
-      if utterance["adjust_speed"]:
-        self._adjust_speed(dubbed_utterance)
+      self._adjust_speed(dubbed_utterance)
     return edited_utterances
 
   def remove_cloned_elevenlabs_voices(self) -> None:

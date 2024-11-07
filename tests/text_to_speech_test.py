@@ -546,8 +546,13 @@ class TestCreateSpeakerDataMapping(absltest.TestCase):
         text_to_speech.SpeakerData(
             speaker_id="speaker1",
             ssml_gender="male",
-            paths=["path/to/audio1.wav", "path/to/audio2.wav"],
-        )
+            paths=["path/to/audio1.wav"],
+        ),
+        text_to_speech.SpeakerData(
+            speaker_id="speaker2",
+            ssml_gender="male",
+            paths=["path/to/audio2.wav"],
+        ),
     ]
     self.assertEqual(
         text_to_speech.create_speaker_data_mapping(utterance_metadata),
@@ -581,12 +586,22 @@ class TestCreateSpeakerDataMapping(absltest.TestCase):
         text_to_speech.SpeakerData(
             speaker_id="speaker1",
             ssml_gender="male",
-            paths=["path/to/audio1.wav", "path/to/audio3.wav"],
+            paths=["path/to/audio1.wav"],
         ),
         text_to_speech.SpeakerData(
             speaker_id="speaker2",
             ssml_gender="female",
-            paths=["path/to/audio2.wav", "path/to/audio4.wav"],
+            paths=["path/to/audio2.wav"],
+        ),
+        text_to_speech.SpeakerData(
+            speaker_id="speaker3",
+            ssml_gender="male",
+            paths=["path/to/audio3.wav"],
+        ),
+        text_to_speech.SpeakerData(
+            speaker_id="speaker4",
+            ssml_gender="female",
+            paths=["path/to/audio4.wav"],
         ),
     ]
     self.assertEqual(
@@ -627,10 +642,9 @@ class TestElevenlabsCloneVoices(absltest.TestCase):
 class TestDubAllUtterances(parameterized.TestCase):
 
   @parameterized.named_parameters(
-      ("not_for_dubbing", False, "original_path", False, False),
-      ("for_dubbing_elevenlabs", True, "dubbed_path.mp3", True, False),
-      ("for_dubbing_google", True, "dubbed_path.mp3", False, False),
-      ("for_dubbing_google_adjust_speed", True, "dubbed_path.mp3", False, True),
+      ("not_for_dubbing", False, "original_path", False),
+      ("for_dubbing_elevenlabs", True, "dubbed_path.mp3", True),
+      ("for_dubbing_google", True, "dubbed_path.mp3", False),
   )
   @patch("ariel.text_to_speech.convert_text_to_speech")
   @patch("ariel.text_to_speech.elevenlabs_convert_text_to_speech")
@@ -641,7 +655,6 @@ class TestDubAllUtterances(parameterized.TestCase):
       for_dubbing_value,
       expected_dubbed_path,
       use_elevenlabs,
-      adjust_speed,
       mock_calculate_target_utterance_speed,
       mock_adjust_audio_speed,
       mock_elevenlabs_convert_text_to_speech,
@@ -665,6 +678,7 @@ class TestDubAllUtterances(parameterized.TestCase):
         "similarity_boost": 1.0,
         "style": 1.0,
         "use_speaker_boost": True,
+        "adjust_speed": True,
     }]
     client = MagicMock()
     preprocessing_output = dict(
@@ -680,7 +694,6 @@ class TestDubAllUtterances(parameterized.TestCase):
         target_language="en-US",
         preprocessing_output=preprocessing_output,
         use_elevenlabs=use_elevenlabs,
-        adjust_speed=adjust_speed,
     )
     mock_convert_text_to_speech.return_value = "dubbed_path.mp3"
     mock_elevenlabs_convert_text_to_speech.return_value = "dubbed_path.mp3"
