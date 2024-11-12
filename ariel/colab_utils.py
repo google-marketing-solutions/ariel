@@ -187,7 +187,9 @@ def get_google_sheet_as_dataframe(sheet_link: str) -> pd.DataFrame:
   spreadsheet = gc.open_by_url(sheet_link)
   worksheet = spreadsheet.sheet1
   rows = worksheet.get_all_values()
-  return pd.DataFrame(rows[1:], columns=rows[0])
+  df = pd.DataFrame(rows[1:], columns=rows[0])
+  df.columns = df.columns.str.replace(r"\s+", "", regex=True)
+  return df
 
 
 @dataclasses.dataclass
