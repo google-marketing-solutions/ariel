@@ -709,7 +709,7 @@ def elevenlabs_run_clone_voices(
         files=speaker_data.paths,
         labels=dict(gender=speaker_data.ssml_gender.lower()),
     )
-    speaker_to_voices_mapping[speaker_data.speaker_id] = voice.name
+    speaker_to_voices_mapping[speaker_data.speaker_id] = voice.voice_id
   return speaker_to_voices_mapping
 
 
