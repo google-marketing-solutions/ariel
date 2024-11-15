@@ -615,7 +615,7 @@ class TestElevenlabsCloneVoices(absltest.TestCase):
   def test_clone_voices_success(self):
     mock_client = MagicMock(spec=ElevenLabs)
     mock_voice = MagicMock(spec=Voice)
-    mock_voice.name = "cloned_voice_name"
+    mock_voice.voice_id = "cloned_voice_name"
     mock_client.clone.return_value = mock_voice
     speaker_data_mapping = [
         text_to_speech.SpeakerData(
