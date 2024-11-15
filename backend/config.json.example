@@ -1,0 +1,24 @@
+{
+  "hugging_face_token": "",
+  "advertiser_name": "Trading 212",
+  "original_language": "en-US",
+  "target_language": "pl-PL",
+  "number_of_speakers": 2,
+  "no_dubbing_phrases": [],
+  "diarization_instructions": "",
+  "translation_instructions": "",
+  "merge_utterances": True,
+  "minimum_merge_threshold": "0.001",
+  "preferred_voices": [],
+  "assigned_voices_override": {},
+  "keep_voice_assignments": True,
+  "adjust_speed": False,
+  "vocals_volume_adjustment": "5.0",
+  "background_volume_adjustment": "0.0",
+  "use_elevenlabs": False,
+  "elevenlabs_token": "",
+  "elevenlabs_clone_voices": False,
+  "elevenlabs_remove_cloned_voices": False
+}
+
+
