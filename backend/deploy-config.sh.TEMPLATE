@@ -1,0 +1,11 @@
+#!/bin/bash
+export GCP_PROJECT_ID=<gcp-project-id>
+export GCP_REGION=<gcp-region>
+export GCS_BUCKET=<gcs-bucket>
+export GCS_LOCATION=<gcs-location>
+export PUBSUB_TOPIC=<pubsub-topic>
+#Use Docker build while developing - don't assume end user has Docker installed
+# export different values in your shell to make it work locally. Defaults are for
+# deployment environment
+export USE_CLOUD_BUILD=<use-cloud-build>
+export CONFIGURE_APIS_AND_ROLES=<configure-apis-and-roles>
