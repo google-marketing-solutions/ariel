@@ -4,5 +4,5 @@ google-cloud-pubsub==2.25.2
 cloudevents==1.11.0
 Flask==3.0.3
 gunicorn==22.0.0
-Werkzeug==3.0.3
+Werkzeug==3.0.6
 gtech-ariel==0.0.22
