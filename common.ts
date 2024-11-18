@@ -288,6 +288,8 @@ export function saveUserConfig(config: Config) {
 
 /**
  * Function to sanitize the user configuration.
+ * @param response The user response from the prompts.
+ * @return The sanitized user configuration.
  */
 export function sanitizeUserConfig(response: PromptsResponse): Config {
 	const gcpRegion = response.gcpRegion || DEFAULT_GCP_REGION;
