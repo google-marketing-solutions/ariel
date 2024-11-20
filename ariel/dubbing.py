@@ -25,7 +25,7 @@ import readline
 import shutil
 import sys
 import time
-from typing import Final, Mapping, Set, Sequence
+from typing import Final, Mapping, Sequence, Set
 from absl import logging
 from ariel import audio_processing
 from ariel import colab_utils
@@ -609,6 +609,7 @@ class Dubber:
       elevenlabs_remove_cloned_voices: bool = False,
       number_of_steps: int = _NUMBER_OF_STEPS,
       with_verification: bool = True,
+      whisper_cache_dir: str | None = None,
   ) -> None:
     """Initializes the Dubber class with various parameters for dubbing configuration.
 
@@ -692,6 +693,8 @@ class Dubber:
         number_of_steps: The total number of steps in the dubbing process.
         with_verification: Whether a user wishes to verify, and optionally edit,
           the utterance metadata in the dubbing process.
+        whisper_cache_dir: If given, Whisper model downloaded from HuggingFace
+          will be stored under this path in the runtime
     """
     self._input_file = input_file
     self.output_directory = output_directory
@@ -742,6 +745,7 @@ class Dubber:
     self._dubbing_from_utterance_metadata = False
     self._voice_allocation_needed = False
     self._voice_properties_added = False
+    self._whisper_cache_dir = whisper_cache_dir
     create_output_directories(output_directory)
 
   @functools.cached_property
@@ -810,6 +814,7 @@ class Dubber:
         model_size_or_path=_DEFAULT_TRANSCRIPTION_MODEL,
         device=self.device,
         compute_type="float16" if self.device == "cuda" else "int8",
+        download_root=self._whisper_cache_dir,
     )
 
   def configure_gemini_model(
