@@ -134,6 +134,34 @@ Ariel leverages a powerful combination of state-of-the-art AI and audio processi
     *   **GCP's Text-To-Speech:** Generates natural-sounding speech in the target language.
     *   **[OPTIONAL] ElevenLabs:** An alternative API to generate speech. It's recommened for the best results. **WARNING:** ElevenLabs is a paid solution and will generate extra costs. See the pricing [here](https://elevenlabs.io/pricing).
 
+## Cloud-based Ariel
+For a more user-friendly experience, we're also providing an Ariel version that
+can be deployed onto Google Cloud Platform with a GUI.
+### Requirements
+In order to use Ariel UI, you need the following:
+1.  **Google Cloud Platform Project** to host the backend. The following components
+    are created during deployment:
+    *   **Cloud Storage Bucket** to store input & output videos, video dubbing artifacts and
+        all other metadata files. This bucket is also used as an interaction point with GUI
+        (files created/removed there are triggering the backend processing).
+    *   **Cloud Run** instance that processes all the steps. This part is implemented as a
+        Python Docker container (which is also built during installation).
+    *   **Pub/Sub Infrastructure** based on EventArc, it notifies the container of new files.
+2.  **AppsScript Project** to host the frontend, an Angular web-app. For this,
+    you need *Google Workspace* access.
+
+### Deployment
+Please make sure you have fulfilled all prerequisites mentioned under [Requirements](#Requirements) first.
+
+1.  Make sure your system has an up-to-date installation of [Node.js and npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
+1.  Install [clasp](https://github.com/google/clasp) by running `npm install @google/clasp -g`, then login via `clasp login`.
+1.  Navigate to the [Apps Script Settings page](https://script.google.com/home/usersettings) and `enable` the Apps Script API.
+1.  Make sure your system has an up-to-date installation of the [gcloud CLI](https://cloud.google.com/sdk/docs/install), then login via `gcloud auth login`.
+1.  Make sure your system has an up-to-date installation of `git` and use it to clone this repository:
+    `git clone https://github.com/google-marketing-solutions/ariel`.
+1.  Navigate to the directory where the source code lives: `cd ariel`.
+1.  Run `npm start`. This will prompt you for configuration values and suggest reasonable defaults.
+
 ## References
 
 *   **DEMUCS:** [https://github.com/facebookresearch/demucs](https://github.com/facebookresearch/demucs)

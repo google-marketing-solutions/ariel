@@ -5,4 +5,4 @@ cloudevents==1.11.0
 Flask==3.0.3
 gunicorn==22.0.0
 Werkzeug==3.0.6
-gtech-ariel==0.0.22
+gtech-ariel==0.0.24

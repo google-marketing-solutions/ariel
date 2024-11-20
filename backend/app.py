@@ -225,8 +225,7 @@ class GcpDubbingProcessor:
     updated_utterance_metadata = self._update_modified_metadata(
         original_metadata, updated_utterance_metadata
     )
-    self.redub_modified_utterances(original_metadata,
-                                   updated_utterance_metadata)
+    self.redub_modified_utterances(original_metadata, updated_utterance_metadata)
 
     self._save_current_utterances()
     logging.info("Removing %s", preview_json_file_path)
@@ -244,7 +243,6 @@ class GcpDubbingProcessor:
       updated_metadata:
 
     Returns:
-
     """
     logging.info("Updating modified metadata")
     edited_metadata = []
@@ -287,8 +285,8 @@ class GcpDubbingProcessor:
         output_directory=self.dubber.output_directory,
     )
     retranscribed_utterance = (
-        self.dubber._run_speech_to_text_on_single_utterance(verified_utterance)  # pylint: disable=protected-access
-    )
+        self.dubber._run_speech_to_text_on_single_utterance(verified_utterance)
+    )  # pylint: disable=protected-access
     return retranscribed_utterance
 
   def redub_modified_utterances(self, original_metadata, updated_metadata):
@@ -363,6 +361,8 @@ class GcpDubbingProcessor:
           self.dubber.elevenlabs_clone_voices
           and self.dubber.elevenlabs_remove_cloned_voices
       ):
+        if self.dubber.text_to_speech is None:
+          self._reinit_text_to_speech()
         self.dubber.text_to_speech.remove_cloned_elevenlabs_voices()
       output_video_file = self.dubber.postprocessing_output.video_file
 
@@ -408,3 +408,6 @@ class GcpDubbingProcessor:
     self.dubber_params["clean_up"] = False
     self.dubber_params["vocals_audio_file"] = None
     self.dubber_params["background_audio_file"] = None
+    self.dubber_params["whisper_cache_dir"] = "%s/.whisper_cache" % (
+        self.local_path
+    )
