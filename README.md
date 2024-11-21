@@ -43,7 +43,10 @@ Ariel is a cutting-edge solution designed to enhance the global reach of digital
 
 ## Language Compatibility
 
-You can dub video ads from and to the following languages:
+You can dub video ads from and to many languages.
+
+<details>
+<summary>Expand to see the full list of supported languages.</summary>
 
 *   Arabic (ar-SA), (ar-EG)
 *   Bengali (bn-BD), (bn-IN)
@@ -90,6 +93,7 @@ You can dub video ads from and to the following languages:
 *   Turkish (tr-TR)
 *   Ukrainian (uk-UA)
 *   Vietnamese (vi-VN)
+</details>
 
 ## Before You Begin
 
@@ -134,9 +138,12 @@ Ariel leverages a powerful combination of state-of-the-art AI and audio processi
     *   **GCP's Text-To-Speech:** Generates natural-sounding speech in the target language.
     *   **[OPTIONAL] ElevenLabs:** An alternative API to generate speech. It's recommened for the best results. **WARNING:** ElevenLabs is a paid solution and will generate extra costs. See the pricing [here](https://elevenlabs.io/pricing).
 
-## Cloud-based Ariel
+## 🆕 Ariel User Interface
 For a more user-friendly experience, we're also providing an Ariel version that
 can be deployed onto Google Cloud Platform with a GUI.
+
+<img src="./ui/src/ui/public/assets/ariel_ui.png" alt="Ariel UI screenshot">
+
 ### Requirements
 In order to use Ariel UI, you need the following:
 1.  **Google Cloud Platform Project** to host the backend. The following components
