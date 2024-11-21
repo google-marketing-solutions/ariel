@@ -28,13 +28,20 @@ _DEFAULT_OUTPUT_FORMAT: Final[str] = ".mp4"
 
 
 def split_audio_video(
-    *, video_file: str, output_directory: str
+    *,
+    video_file: str,
+    output_directory: str,
+    audio_file_override: str | None = None,
 ) -> tuple[str, str]:
   """Splits an audio/video file into separate audio and video files.
 
   Args:
       video_file: The full path to the input video file.
       output_directory: The full path to the output directory.
+      audio_file_override: An optional path to a file with the audio part only.
+        It should be vocals + background audio or just background audio. It will
+        be used instead of the audio track from the input video. Must be an MP3
+        file.
 
   Returns:
     A tuple with a path to a video ad file with no audio and the second path to
@@ -58,8 +65,11 @@ def split_audio_video(
     )
     return video_output_file, audio_output_file
   with VideoFileClip(video_file) as video_clip:
-    audio_clip = video_clip.audio
-    audio_clip.write_audiofile(audio_output_file, verbose=False, logger=None)
+    if audio_file_override:
+      tf.io.gfile.copy(audio_file_override, audio_output_file, overwrite=True)
+    else:
+      audio_clip = video_clip.audio
+      audio_clip.write_audiofile(audio_output_file, verbose=False, logger=None)
     video_clip_without_audio = video_clip.set_audio(None)
     fps = video_clip.fps or _DEFAULT_FPS
     video_clip_without_audio.write_videofile(

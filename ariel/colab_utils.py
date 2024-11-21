@@ -331,8 +331,8 @@ def get_folder_id_by_path(path: str) -> str:
 
   Args:
     path: The full path of the folder in Google Drive, starting from
-    '/content/drive/My Drive/...'. For example: '/content/drive/My
-    Drive/parent_folder/sub_folder'.
+      '/content/drive/My Drive/...'. For example: '/content/drive/My
+      Drive/parent_folder/sub_folder'.
 
   Raises:
     FileNotFoundError: If any part of the specified path does not exist in
@@ -444,6 +444,10 @@ class ColabPaths:
     input_file_google_drive_path: The Google Drive path of the input file.
     input_file_colab_path: The path to the input file in Colab after copying
       from Google Drive.
+    audio_file_colab_path: An optional path to a file with the audio part only.
+      It should be vocals + background audio or just background audio. It will
+      be used instead of the audio track from the input video. Must be an MP3
+      file.
     vocals_file_colab_path: The path to the vocals file in Colab after copying
       from Google Drive, or None if not provided.
     background_file_colab_path: The path to the background file in Colab after
@@ -452,6 +456,7 @@ class ColabPaths:
 
   input_file_google_drive_path: str
   input_file_colab_path: str | None
+  audio_file_colab_path: str | None = None
   vocals_file_colab_path: str | None = None
   background_file_colab_path: str | None = None
 
@@ -459,6 +464,7 @@ class ColabPaths:
 def generate_colab_file_paths(
     *,
     video_google_drive_link: str,
+    audio_google_drive_link: str | None = None,
     vocals_google_drive_link: str | None = None,
     background_google_drive_link: str | None = None,
 ) -> ColabPaths:
@@ -466,6 +472,8 @@ def generate_colab_file_paths(
 
   Args:
       video_google_drive_link: The Google Drive link to the main input file.
+      audio_google_drive_link: The Google Drive link to the audio file, if
+        available. Defaults to None.
       vocals_google_drive_link: The Google Drive link to the vocals file, if
         available. Defaults to None.
       background_google_drive_link: The Google Drive link to the background
@@ -481,6 +489,14 @@ def generate_colab_file_paths(
   input_file_colab_path = copy_file_to_colab(
       source_file_path=input_file_google_drive_path
   )
+  audio_file_colab_path = None
+  if audio_google_drive_link:
+    audio_file_google_drive_path = get_file_path_from_sharable_link(
+        audio_google_drive_link
+    )
+    audio_file_colab_path = copy_file_to_colab(
+        source_file_path=audio_file_google_drive_path
+    )
   vocals_file_colab_path = None
   if vocals_google_drive_link:
     vocals_file_google_drive_path = get_file_path_from_sharable_link(
@@ -500,6 +516,7 @@ def generate_colab_file_paths(
   return ColabPaths(
       input_file_google_drive_path=input_file_google_drive_path,
       input_file_colab_path=input_file_colab_path,
+      audio_file_colab_path=audio_file_colab_path,
       vocals_file_colab_path=vocals_file_colab_path,
       background_file_colab_path=background_file_colab_path,
   )
