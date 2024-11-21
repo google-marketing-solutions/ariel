@@ -587,8 +587,9 @@ class Dubber:
       vocals_volume_adjustment: float = 5.0,
       background_volume_adjustment: float = 0.0,
       voice_separation_rounds: int = 2,
-      vocals_audio_file: str | None,
-      background_audio_file: str | None,
+      audio_file: str | None = None,
+      vocals_audio_file: str | None = None,
+      background_audio_file: str | None = None,
       clean_up: bool = True,
       pyannote_model: str = _DEFAULT_PYANNOTE_MODEL,
       gemini_model_name: str = _DEFAULT_GEMINI_MODEL,
@@ -660,6 +661,10 @@ class Dubber:
         voice_separation_rounds: The number of times the background audio file
           should be processed for voice detection and removal. It helps with the
           old voice artifacts being present in the dubbed ad.
+        audio_file: An optional path to a file with the audio part
+          only. It should be vocals + background audio or just background audio.
+          It will be used instead of the audio track from the input video.
+          Must be an MP3 file.
         vocals_audio_file: An optional path to a file with the speaking part
           only. It will be used instead of AI splitting the entire audio track
           into vocals and background audio files. If this is provided then also
@@ -712,6 +717,7 @@ class Dubber:
     self.vocals_volume_adjustment = vocals_volume_adjustment
     self.background_volume_adjustment = background_volume_adjustment
     self.voice_separation_rounds = voice_separation_rounds
+    self.audio_file = audio_file
     self.vocals_audio_file = vocals_audio_file
     self.background_audio_file = background_audio_file
     self.clean_up = clean_up
@@ -962,7 +968,9 @@ class Dubber:
     """
     if self.is_video:
       video_file, audio_file = video_processing.split_audio_video(
-          video_file=self.input_file, output_directory=self.output_directory
+          video_file=self.input_file,
+          output_directory=self.output_directory,
+          audio_file_override=self.audio_file,
       )
     else:
       video_file = None
@@ -1020,7 +1028,9 @@ class Dubber:
     """
     if self.is_video:
       video_file, audio_file = video_processing.split_audio_video(
-          video_file=self.input_file, output_directory=self.output_directory
+          video_file=self.input_file,
+          output_directory=self.output_directory,
+          audio_file_override=self.audio_file,
       )
     else:
       video_file = None
