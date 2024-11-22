@@ -366,7 +366,7 @@ class GcpDubbingProcessor:
         if self.dubber.text_to_speech is None:
           self._reinit_text_to_speech()
         if bool(
-            self.dubber_params["remove_cloned_voices"]
+            self.dubber_params["elevenlabs_remove_cloned_voices"]
         ) and self.dubber.text_to_speech.cloned_voices is not None:
           self.dubber.text_to_speech.remove_cloned_elevenlabs_voices()
       output_video_file = self.dubber.postprocessing_output.video_file
