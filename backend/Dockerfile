@@ -7,7 +7,7 @@ RUN apt-get update && \
 
 WORKDIR /ariel
 COPY requirements.txt .
-RUN pip install -r ./requirements.txt
+RUN pip install -r ./requirements.txt --require-hashes && pip cache purge
 
 COPY app.py .
 
