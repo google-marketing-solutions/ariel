@@ -90,7 +90,9 @@ def process():
 
 
 def should_process_file(path: str):
-  return any(path.endswith(file_name) for file_name in TRIGGER_FILES)
+  return any(
+      path.endswith(file_name) for file_name in TRIGGER_FILES
+  ) and ".whisper_cache" not in path
 
 
 def process_event(project_id, region, bucket, trigger_file_path):
@@ -408,6 +410,6 @@ class GcpDubbingProcessor:
     self.dubber_params["clean_up"] = False
     self.dubber_params["vocals_audio_file"] = None
     self.dubber_params["background_audio_file"] = None
-    self.dubber_params["whisper_cache_dir"] = "%s/.whisper_cache" % (
+    self.dubber_params["whisper_cache_dir"] = "%s/../.whisper_cache" % (
         self.local_path
     )
