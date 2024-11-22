@@ -287,8 +287,8 @@ class GcpDubbingProcessor:
         output_directory=self.dubber.output_directory,
     )
     retranscribed_utterance = (
-        self.dubber._run_speech_to_text_on_single_utterance(verified_utterance)
-    )  # pylint: disable=protected-access
+        self.dubber._run_speech_to_text_on_single_utterance(verified_utterance)  # pylint: disable=protected-access
+    )
     return retranscribed_utterance
 
   def redub_modified_utterances(self, original_metadata, updated_metadata):
@@ -365,7 +365,10 @@ class GcpDubbingProcessor:
       ):
         if self.dubber.text_to_speech is None:
           self._reinit_text_to_speech()
-        self.dubber.text_to_speech.remove_cloned_elevenlabs_voices()
+        if bool(
+            self.dubber_params["remove_cloned_voices"]
+        ) and self.dubber.text_to_speech.cloned_voices is not None:
+          self.dubber.text_to_speech.remove_cloned_elevenlabs_voices()
       output_video_file = self.dubber.postprocessing_output.video_file
 
       shutil.copyfile(
