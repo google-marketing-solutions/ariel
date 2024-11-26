@@ -1,7 +1,7 @@
 """Ariel backend - main web server for Cloud Run container."""
 
 import base64
-import dataclasses
+import copy
 import json
 import logging
 import os
@@ -10,20 +10,17 @@ import traceback
 from typing import Mapping
 from typing import Sequence
 from ariel import audio_processing
-from ariel import text_to_speech
 from ariel import translation
 from ariel.dubbing import Dubber
 from ariel.dubbing import get_safety_settings
-from ariel.dubbing import PreprocessingArtifacts
+import dill
 import flask
 from google.cloud import logging as cloudlogging
-import google.cloud.storage
 import torch
 
 log_client = cloudlogging.Client()
 log_client.setup_logging()
 
-storage_client = google.cloud.storage.Client()
 if torch.cuda.is_available():
   logging.info("GPU available, using cuda")
 
@@ -90,9 +87,10 @@ def process():
 
 
 def should_process_file(path: str):
-  return any(
-      path.endswith(file_name) for file_name in TRIGGER_FILES
-  ) and ".whisper_cache" not in path
+  return (
+      any(path.endswith(file_name) for file_name in TRIGGER_FILES)
+      and ".whisper_cache" not in path
+  )
 
 
 def process_event(project_id, region, bucket, trigger_file_path):
@@ -152,20 +150,14 @@ class GcpDubbingProcessor:
     self.local_path = local_path
     self.project_id = project_id
     self.region = region
+    self._dubber_structure_path = "%s/dubber_structure.bin" % self.local_path
 
     self.dubber_params = self.read_dubber_params_from_config()
     self.enrich_dubber_params()
-    logging.info("Dubber initial parameters: %s", self.dubber_params)
-    local_output_path = "%s/%s" % (self.local_path, WORKDIR_NAME)
-    self.preprocessing_artifacts = PreprocessingArtifacts(
-        video_file="%s/video_processing/input_video.mp4" % local_output_path,
-        audio_file="%s/video_processing/input_audio.mp3" % local_output_path,
-        audio_vocals_file="%s/audio_processing/vocals.mp3" % local_output_path,
-        audio_background_file="%s/audio_processing/no_vocals.mp3"
-        % local_output_path,
-    )
 
     self.dubber = Dubber(**self.dubber_params)
+    if os.path.isfile(self._dubber_structure_path):
+      self.dubber = self._load_dubber_structure(self.dubber)
     self.dubber.progress_bar = DummyProgressBar()
 
   def run_task(self, task: str):
@@ -194,6 +186,7 @@ class GcpDubbingProcessor:
     self.dubber.run_translation()
     self.dubber.run_configure_text_to_speech()
     self.dubber.run_text_to_speech()
+    self._save_dubber_structure()
     self._save_available_voices()
     self._save_current_utterances()
 
@@ -202,13 +195,43 @@ class GcpDubbingProcessor:
     with open("%s/voices.json" % self.local_path, "w") as f:
       json.dump(available_voices, f)
 
+  def _save_dubber_structure(self):
+    """Saves the dubber structure to a file.
+
+    This method saves the dubber structure to a file so that it can be loaded
+    later. This is useful for restarting the dubber without having to
+    re-initialize all of its components.
+    """
+    dubber_to_save = copy.copy(self.dubber)
+    # Following fields fail to serialise but are cached properties
+    # so will be re-initialized on use
+    dubber_to_save.pyannote_diarization = None
+    dubber_to_save.progress_bar = None
+    dubber_to_save.speech_to_text_model = None
+    dubber_to_save.text_to_speech_client = None
+    dubber_to_save._voice_assigner = None  # pylint: disable=protected-access
+    # This is reconstituted on loading from file
+    dubber_to_save.text_to_speech.client = None
+    logging.info(
+        "Saving dubber structure to %s", self._dubber_structure_path
+    )
+    with open(self._dubber_structure_path, "wb") as f:
+      dill.dump(dubber_to_save, f)
+
+  def _load_dubber_structure(self, empty_dubber: Dubber):
+    with open(self._dubber_structure_path, "rb") as f:
+      new_dubber = dill.load(f)
+      logging.info("Loaded dubber structure %s", new_dubber)
+      new_dubber.text_to_speech_client = empty_dubber.text_to_speech_client
+      new_dubber.text_to_speech.client = empty_dubber.text_to_speech_client
+      return new_dubber
+
   def _render_preview(self):
     """Incrementally renders preview.
 
     Re-syncs status of potentially previously deleted utterances_preview.json
     from GCS, then re-renders preview.
     """
-    self.dubber.preprocessing_output = self.preprocessing_artifacts
     # Re-sync status of potentially previously deleted
     # utterances_preview.json from GCS
     os.listdir(self.local_path)
@@ -227,8 +250,11 @@ class GcpDubbingProcessor:
     updated_utterance_metadata = self._update_modified_metadata(
         original_metadata, updated_utterance_metadata
     )
-    self.redub_modified_utterances(original_metadata, updated_utterance_metadata)
+    self.redub_modified_utterances(
+        original_metadata, updated_utterance_metadata
+    )
 
+    self._save_dubber_structure()
     self._save_current_utterances()
     logging.info("Removing %s", preview_json_file_path)
     os.remove(preview_json_file_path)
@@ -298,7 +324,6 @@ class GcpDubbingProcessor:
       original_metadata:
       updated_metadata:
     """
-    self._reinit_text_to_speech()
     # non-interactive copy of Dubber._verify_and_redub_utterances
     edited_utterances = self.dubber.text_to_speech.dub_edited_utterances(
         original_utterance_metadata=original_metadata,
@@ -308,34 +333,12 @@ class GcpDubbingProcessor:
     for edited_utterance in edited_utterances:
       for i, original_utterance in enumerate(updated_metadata):
         if (
-            original_utterance["path"] == edited_utterance["path"] and
-            original_utterance["dubbed_path"] != edited_utterance["dubbed_path"]
+            original_utterance["path"] == edited_utterance["path"]
+            and original_utterance["dubbed_path"]
+            != edited_utterance["dubbed_path"]
         ):
           updated_metadata[i] = edited_utterance
     self.dubber.utterance_metadata = updated_metadata
-
-  def _reinit_text_to_speech(self):
-    """Re-initializes text_to_speech.
-
-    This is needed because the dub_edited_utterances method uses the
-    text_to_speech.dub_utterance method, which requires the text_to_speech
-    object to be re-initialized.
-    """
-    self.dubber.text_to_speech = text_to_speech.TextToSpeech(
-        client=self.dubber.text_to_speech_client,
-        utterance_metadata=self.dubber.utterance_metadata,
-        output_directory=self.dubber.output_directory,
-        target_language=self.dubber.target_language,
-        preprocessing_output=dataclasses.asdict(
-            self.dubber.preprocessing_output
-        ),
-        use_elevenlabs=self.dubber.use_elevenlabs,
-        elevenlabs_model=self.dubber.elevenlabs_model,
-        elevenlabs_clone_voices=self.dubber.elevenlabs_clone_voices,
-        keep_voice_assignments=self.dubber.keep_voice_assignments,
-        voice_assignments=self.dubber.voice_assignments,
-    )
-    self.dubber.run_configure_text_to_speech()
 
   def _render_dubbed_video(self):
     """Final step of the UI flow.
@@ -344,7 +347,6 @@ class GcpDubbingProcessor:
     """
     with open("%s/%s" % (self.local_path, APPROVED_UTTERANCE_FILE_NAME)) as f:
       self.dubber.utterance_metadata = json.load(f)
-      self.dubber.preprocessing_output = self.preprocessing_artifacts
 
       self.dubber.run_postprocessing()
       self.dubber.run_save_utterance_metadata()
@@ -359,21 +361,11 @@ class GcpDubbingProcessor:
           target_language=self.dubber.target_language,
       )
       self.dubber.postprocessing_output.subtitles = subtitles_path
-      if (
-          self.dubber.elevenlabs_clone_voices
-          and self.dubber.elevenlabs_remove_cloned_voices
-      ):
-        if self.dubber.text_to_speech is None:
-          self._reinit_text_to_speech()
-        if bool(
-            self.dubber_params["elevenlabs_remove_cloned_voices"]
-        ) and self.dubber.text_to_speech.cloned_voices is not None:
-          self.dubber.text_to_speech.remove_cloned_elevenlabs_voices()
       output_video_file = self.dubber.postprocessing_output.video_file
-
       shutil.copyfile(
           output_video_file, f"{self.local_path}/{DUBBED_VIDEO_FILE_NAME}"
       )
+      self._save_dubber_structure()
 
   def _save_current_utterances(self):
     with open(
