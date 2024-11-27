@@ -212,9 +212,7 @@ class GcpDubbingProcessor:
     dubber_to_save._voice_assigner = None  # pylint: disable=protected-access
     # This is reconstituted on loading from file
     dubber_to_save.text_to_speech.client = None
-    logging.info(
-        "Saving dubber structure to %s", self._dubber_structure_path
-    )
+    logging.info("Saving dubber structure to %s", self._dubber_structure_path)
     with open(self._dubber_structure_path, "wb") as f:
       dill.dump(dubber_to_save, f)
 
@@ -232,32 +230,34 @@ class GcpDubbingProcessor:
     Re-syncs status of potentially previously deleted utterances_preview.json
     from GCS, then re-renders preview.
     """
-    # Re-sync status of potentially previously deleted
-    # utterances_preview.json from GCS
-    os.listdir(self.local_path)
-
-    original_utterances_file_path = (
-        f"{self.local_path}/{INITIAL_UTTERANCES_FILE_NAME}"
-    )
-    with open(original_utterances_file_path) as f:
-      original_metadata = json.load(f)
-      self.dubber.utterance_metadata = original_metadata
-
     preview_json_file_path = f"{self.local_path}/{PREVIEW_UTTERANCES_FILE_NAME}"
-    with open(preview_json_file_path) as g:
-      updated_utterance_metadata = json.load(g)
+    try:
+      # Re-sync status of potentially previously deleted
+      # utterances_preview.json from GCS
+      os.listdir(self.local_path)
 
-    updated_utterance_metadata = self._update_modified_metadata(
-        original_metadata, updated_utterance_metadata
-    )
-    self.redub_modified_utterances(
-        original_metadata, updated_utterance_metadata
-    )
+      original_utterances_file_path = (
+          f"{self.local_path}/{INITIAL_UTTERANCES_FILE_NAME}"
+      )
+      with open(original_utterances_file_path) as f:
+        original_metadata = json.load(f)
+        self.dubber.utterance_metadata = original_metadata
 
-    self._save_dubber_structure()
-    self._save_current_utterances()
-    logging.info("Removing %s", preview_json_file_path)
-    os.remove(preview_json_file_path)
+      with open(preview_json_file_path) as g:
+        updated_utterance_metadata = json.load(g)
+
+      updated_utterance_metadata = self._update_modified_metadata(
+          original_metadata, updated_utterance_metadata
+      )
+      self.redub_modified_utterances(
+          original_metadata, updated_utterance_metadata
+      )
+
+      self._save_dubber_structure()
+      self._save_current_utterances()
+    finally:
+      logging.info("Removing %s", preview_json_file_path)
+      os.remove(preview_json_file_path)
 
   def _update_modified_metadata(
       self,
@@ -333,9 +333,8 @@ class GcpDubbingProcessor:
     for edited_utterance in edited_utterances:
       for i, original_utterance in enumerate(updated_metadata):
         if (
-            original_utterance["path"] == edited_utterance["path"]
-            and original_utterance["dubbed_path"]
-            != edited_utterance["dubbed_path"]
+            original_utterance["path"] == edited_utterance["path"] and
+            original_utterance["dubbed_path"] != edited_utterance["dubbed_path"]
         ):
           updated_metadata[i] = edited_utterance
     self.dubber.utterance_metadata = updated_metadata
