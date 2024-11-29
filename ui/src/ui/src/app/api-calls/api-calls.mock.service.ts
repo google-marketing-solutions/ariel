@@ -123,14 +123,12 @@ export class ApiCallsService implements ApiCalls {
     return data;
   }
 
-  hello(): Observable<string> {
-    return new Observable(subscriber => {
-      setTimeout(() => {
-        this.ngZone.run(() => {
-          subscriber.next('Hello Apps Script!');
-          subscriber.complete();
-        });
-      }, 2000);
-    });
+  async getErrorLog(
+    url = 'error.log',
+    retryDelay = 0,
+    maxRetries = 0
+  ): Promise<string> {
+    return `Called ${url} with ${maxRetries} retries and ${retryDelay} delays:
+    Reason: An unexpected error occurred. Please try again later.`;
   }
 }

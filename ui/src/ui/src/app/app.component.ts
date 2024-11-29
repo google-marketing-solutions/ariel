@@ -28,6 +28,7 @@ import {
   MatCheckboxModule,
 } from '@angular/material/checkbox';
 import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
+import { MatDialog } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -38,8 +39,10 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { switchMap, tap } from 'rxjs';
 import { CONFIG } from '../../../config';
 import { ApiCallsService } from './api-calls/api-calls.service';
+import { ErrorDialogComponent } from './error-dialog/error-dialog.component';
 
 interface Dubbing {
   start: number;
@@ -74,7 +77,7 @@ interface Speaker {
 }
 
 /**
- * This the main UI component for Ariel.
+ * This is the main UI component for Ariel.
  * It provides forms and various settings to generate a dubbed video ad.
  */
 @Component({
@@ -118,7 +121,10 @@ export class AppComponent {
   gcsFolder = '';
   editSpeakerList = false;
 
-  constructor(private apiCalls: ApiCallsService) {}
+  constructor(
+    private apiCalls: ApiCallsService,
+    private dialog: MatDialog
+  ) {}
 
   onFileSelected(event: Event) {
     const inputElement = event.target as HTMLInputElement;
@@ -144,6 +150,12 @@ export class AppComponent {
         audio.play();
       });
     }
+  }
+
+  showErrorDialog(message: string) {
+    this.dialog.open(ErrorDialogComponent, {
+      data: { message },
+    });
   }
 
   toggleToDub(dubbing: Dubbing): void {
@@ -227,37 +239,49 @@ export class AppComponent {
         this.gcsFolder,
         'utterances_preview.json'
       )
-      .subscribe(response => {
-        console.log('Preview utterances upload completed!', response);
-        // Wait for backend to finish processing - we wait for
-        // utterances_preview.json to be deleted by the backend.
-        this.apiCalls
-          .checkGcsFileDeletion(
+      .pipe(
+        tap(response => {
+          console.log('Utterances preview upload completed!', response);
+        }),
+        switchMap(() => {
+          return this.apiCalls.checkGcsFileDeletion(
             `${this.gcsFolder}/utterances_preview.json`,
             15000,
             20
-          )
-          .subscribe(response => {
-            console.log('Preview utterances deleted!', response);
-            if (response) {
-              this.apiCalls
-                .getFromGcs(`${this.gcsFolder}/utterances.json`, 15000, 20)
-                .subscribe(response => {
-                  console.log('Updated utterances downloaded!', response);
-                  this.dubbedInstances = JSON.parse(
-                    response
-                  ) as unknown as Dubbing[];
-                  this.translationsFormGroup = this._formBuilder.group({
-                    dubbings: new FormArray([]),
-                  });
-                  this.dubbedInstances.forEach(instance => {
-                    instance.editing = false;
-                    this.createDubbingObjectFormGroup(instance);
-                  });
-                  this.loadingTranslations = false;
-                });
-            }
+          );
+        }),
+        tap(response => {
+          console.log('Utterances preview deleted!', response);
+        }),
+        switchMap(() => {
+          return this.apiCalls.getFromGcs(
+            `${this.gcsFolder}/utterances.json`,
+            15000,
+            4
+          );
+        })
+      )
+      .subscribe({
+        next: response => {
+          console.log('Updated utterances downloaded!', response);
+          this.dubbedInstances = JSON.parse(response) as Dubbing[];
+          this.translationsFormGroup = this._formBuilder.group({
+            dubbings: new FormArray([]),
           });
+          this.dubbedInstances.forEach(instance => {
+            instance.editing = false;
+            this.createDubbingObjectFormGroup(instance);
+          });
+          this.loadingTranslations = false;
+        },
+        error: async error => {
+          this.loadingTranslations = false;
+          console.error('Error in API call:', error);
+          const errorLog = await this.apiCalls.getErrorLog(
+            `${this.gcsFolder}/error.log`
+          );
+          this.showErrorDialog(errorLog);
+        },
       });
   }
 
@@ -387,17 +411,33 @@ export class AppComponent {
         this.gcsFolder,
         'utterances_approved.json'
       )
-      .subscribe(response => {
-        console.log('Approved utterances upload completed!', response);
-        // Download final video.
-        this.apiCalls
-          .downloadBlob(`${this.gcsFolder}/dubbed_video.mp4`, 15000, 20)
-          .subscribe(response => {
-            console.log('Dubbed video generated!', response);
-            this.loadingDubbedVideo = false;
-            this.dubbingCompleted = true;
-            this.dubbedUrl = URL.createObjectURL(response as unknown as Blob);
-          });
+      .pipe(
+        tap(response => {
+          console.log('Approved utterances upload completed!', response);
+        }),
+        switchMap(() => {
+          return this.apiCalls.downloadBlob(
+            `${this.gcsFolder}/dubbed_video.mp4`,
+            15000,
+            8
+          );
+        })
+      )
+      .subscribe({
+        next: response => {
+          console.log('Dubbed video generated!', response);
+          this.loadingDubbedVideo = false;
+          this.dubbingCompleted = true;
+          this.dubbedUrl = URL.createObjectURL(response as unknown as Blob);
+        },
+        error: async error => {
+          this.loadingDubbedVideo = false;
+          console.error('Error in API call:', error);
+          const errorLog = await this.apiCalls.getErrorLog(
+            `${this.gcsFolder}/error.log`
+          );
+          this.showErrorDialog(errorLog);
+        },
       });
   }
 
@@ -434,52 +474,77 @@ export class AppComponent {
       this.gcsFolder = `${this.selectedFile.name}${CONFIG.videoFolderNameSeparator}${Date.now()}`;
       this.apiCalls
         .postToGcs(this.selectedFile!, this.gcsFolder, 'input.mp4')
-        .subscribe(response => {
-          console.log('Video upload completed!', response);
-          const folder = response[0];
-          // 2. If video upload successful, generate utterances.
-          this.apiCalls
-            .postToGcs(configDataFile, folder, 'config.json')
-            .subscribe(data => {
-              console.log('Configuration upload completed!', data);
-              this.apiCalls
-                .getFromGcs(`${this.gcsFolder}/utterances.json`, 15000, 20)
-                .subscribe(response => {
-                  console.log('Utterances generated!', response);
-                  this.dubbedInstances = JSON.parse(
-                    response
-                  ) as unknown as Dubbing[];
-                  this.translationsFormGroup = this._formBuilder.group({
-                    dubbings: new FormArray([]),
-                  });
-                  this.dubbedInstances.forEach(instance => {
-                    this.createDubbingObjectFormGroup(instance);
-                  });
-                  const speakerSet = new Map(
-                    this.dubbedInstances.map(dubbing => [
-                      dubbing.speaker_id,
-                      {
-                        gender: dubbing.ssml_gender,
-                        voice: dubbing.assigned_voice,
-                      },
-                    ])
-                  );
-                  this.speakers = Object.fromEntries(speakerSet);
-                  this.apiCalls
-                    .getFromGcs(`${this.gcsFolder}/voices.json`, 15000, 2)
-                    .subscribe(response => {
-                      const voiceJson = JSON.parse(response);
-                      this.availableVoices = { ...voiceJson };
-                      console.log(
-                        `Available voices: ${JSON.stringify(this.availableVoices)}`
-                      );
-                      this.loadingTranslations = false;
-                    });
-                });
+        .pipe(
+          tap(response => {
+            console.log('Video upload completed!', response);
+          }),
+          switchMap(response => {
+            const folder = response[0];
+            return this.apiCalls.postToGcs(
+              configDataFile,
+              folder,
+              'config.json'
+            );
+          }),
+          tap(data => {
+            console.log('Config upload completed!', data);
+          }),
+          switchMap(() => {
+            return this.apiCalls.getFromGcs(
+              `${this.gcsFolder}/utterances.json`,
+              15000,
+              20
+            );
+          }),
+          tap(response => {
+            console.log('Utterances generated!', response);
+          }),
+          switchMap(response => {
+            this.dubbedInstances = JSON.parse(response) as Dubbing[];
+            this.translationsFormGroup = this._formBuilder.group({
+              dubbings: new FormArray([]),
             });
+            this.dubbedInstances.forEach(instance => {
+              this.createDubbingObjectFormGroup(instance);
+            });
+            const speakerSet = new Map(
+              this.dubbedInstances.map(dubbing => [
+                dubbing.speaker_id,
+                {
+                  gender: dubbing.ssml_gender,
+                  voice: dubbing.assigned_voice,
+                },
+              ])
+            );
+            this.speakers = Object.fromEntries(speakerSet);
+            return this.apiCalls.getFromGcs(
+              `${this.gcsFolder}/voices.json`,
+              15000,
+              2
+            );
+          })
+        )
+        .subscribe({
+          next: response => {
+            const voiceJson = JSON.parse(response);
+            this.availableVoices = { ...voiceJson };
+            console.log(
+              `Available voices: ${JSON.stringify(this.availableVoices)}`
+            );
+            this.loadingTranslations = false;
+          },
+          error: async error => {
+            this.loadingTranslations = false;
+            console.error('Error in API call:', error);
+            const errorLog = await this.apiCalls.getErrorLog(
+              `${this.gcsFolder}/error.log`
+            );
+            this.showErrorDialog(errorLog);
+          },
         });
     } else {
-      // TODO(ehsaanqadir): Config form is invalid. Display error messages.
+      console.error('Invalid configuration form or no file selected.');
+      // TODO(): Config form is invalid. Display error messages.
     }
   }
   isLinear = false;

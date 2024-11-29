@@ -18,6 +18,7 @@ import { Injectable, NgZone } from '@angular/core';
 import {
   catchError,
   filter,
+  firstValueFrom,
   map,
   Observable,
   of,
@@ -25,6 +26,7 @@ import {
   switchMap,
   take,
   takeWhile,
+  throwError,
   timer,
 } from 'rxjs';
 import { CONFIG } from '../../../../config';
@@ -124,12 +126,28 @@ export class ApiCallsService implements ApiCalls {
             (error.status && error.status !== 404) ||
             retryCount >= maxRetries
           ) {
-            throw new Error(`Received an unexpected error: ${error}`);
+            throw new Error(`Received an unexpected error: ${error.message}`);
           }
           return timer(retryDelay);
         },
       })
     );
+  }
+
+  async getErrorLog(
+    url: string,
+    retryDelay = 0,
+    maxRetries = 0
+  ): Promise<string> {
+    try {
+      const errorLog = await firstValueFrom(
+        this.getFromGcs(url, retryDelay, maxRetries)
+      );
+      return errorLog;
+    } catch (error) {
+      console.error('Unable to fetch error log:', error);
+      return 'An unexpected error occurred. Please try again later.';
+    }
   }
 
   checkGcsFileDeletion(
@@ -139,37 +157,50 @@ export class ApiCallsService implements ApiCalls {
   ): Observable<boolean> {
     const gcsUrl = `${CONFIG.cloudStorage.endpointBase}/b/${CONFIG.cloudStorage.bucket}/o/${encodeURIComponent(url)}`;
 
-    let deleted = false;
     return this.getUserAuthToken().pipe(
       // Take only the first value.
       take(1),
       switchMap(authToken => {
+        let retries = 0; // Count the number of retries.
+
         // Create an interval observable.
         return timer(0, retryDelay).pipe(
-          // takeWhile gets the emission number from the timer, which we can
-          // use to check how many times we've retried.
-          takeWhile(tries => tries <= maxRetries && !deleted),
-          // call the httpClient
+          // Use takeWhile to repeat until the max retries are reached or file is deleted.
+          takeWhile(() => retries < maxRetries),
+          // Try fetching the file from GCS.
           switchMap(() =>
-            this.httpClient.get(gcsUrl, {
-              headers: { Authorization: `Bearer ${authToken}` },
-            })
+            this.httpClient
+              .get(gcsUrl, {
+                headers: { Authorization: `Bearer ${authToken}` },
+              })
+              .pipe(
+                map(() => {
+                  retries++;
+                  return false; // If file exists, return false (not deleted).
+                }),
+                catchError(error => {
+                  if (error.status === 404) {
+                    // If file is deleted (404), stop retries.
+                    return of(true); // Return true indicating the file was deleted.
+                  }
+                  // For other errors, rethrow.
+                  throw error;
+                })
+              )
           ),
-          // Success case: the file still exists.
-          map(() => false),
-          // Error case: the file does not exist (404).
+          // Retry until the file is deleted or max retries reached.
           catchError(error => {
-            if (error.status === 404) {
-              deleted = true;
-              return of(deleted);
+            if (retries >= maxRetries) {
+              // If maxRetries reached and file is not deleted, return false.
+              return of(false);
             }
-            throw error;
+            return throwError(() => new Error(error)); // Propagate other errors.
           })
         );
       }),
-      // Only emit when the check returns true.
+      // Only emit when the check returns true (file deleted).
       filter(deleted => deleted),
-      // Only emit the first result.
+      // Only emit the first result (when file is deleted).
       take(1)
     );
   }
