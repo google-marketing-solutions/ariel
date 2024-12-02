@@ -228,7 +228,20 @@ export async function createScriptProject() {
 export function deployUi() {
 	console.log('Deploying the UI Web App...');
 	spawn.sync('npm run deploy-ui', { stdio: 'inherit', shell: true });
+	const res = spawn.sync('cd ui && clasp undeploy -a && clasp deploy', {
+		stdio: 'pipe',
+		shell: true,
+		encoding: 'utf8',
+	});
+	const lastNonEmptyLine = res.output[1]
+		.split('\n')
+		.findLast((line: string) => line.trim().length > 0);
+	let webAppLink = lastNonEmptyLine.match(/- (.*) @.*/);
+	webAppLink = webAppLink?.length
+		? `https://script.google.com/a/macros/google.com/s/${webAppLink[1]}/exec`
+		: 'Could not extract UI Web App link from npm output! Please check the output manually.';
 	console.log();
+	console.log(`IMPORTANT -> UI Web App Link: ${webAppLink}`);
 }
 
 /**
