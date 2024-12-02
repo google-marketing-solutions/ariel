@@ -12,4 +12,4 @@ RUN pip install -r ./requirements.txt --require-hashes && pip cache purge
 COPY app.py .
 
 ENV PORT 8080
-CMD exec gunicorn -b 0.0.0.0:$PORT -t 600 -w 7 app:app
+CMD exec gunicorn -b 0.0.0.0:$PORT -t 600 -w 7 app:app --preload
