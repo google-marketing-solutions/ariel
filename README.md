@@ -154,7 +154,9 @@ In order to use Ariel UI, you need the following:
     *   **Cloud Run** instance that processes all the steps. This part is implemented as a
         Python Docker container (which is also built during installation).
     *   **Pub/Sub Infrastructure** based on EventArc, it notifies the container of new files.
-2.  **AppsScript Project** to host the frontend, an Angular web-app. For this,
+1.  **Cloud Run with GPU Support** is needed to ensure Ariel backend runs swiftly.
+    You can apply for a Quota increase in a supported region using the [link here](https://cloud.google.com/run/docs/configuring/services/gpu#before-you-begin). This could take up to two days, however it is generally much quicker than that.
+1.  **AppsScript Project** to host the frontend, an Angular web-app. For this,
     you need *Google Workspace* access.
 
 ### Deployment
