@@ -53,6 +53,7 @@ if "${CONFIGURE_APIS_AND_ROLES}"; then
 		"roles/run.invoker"
 		"roles/cloudfunctions.invoker"
 		"roles/storage.objectAdmin"
+		"roles/storage.admin"
 		"roles/aiplatform.user"
 		"roles/logging.logWriter"
 		"roles/artifactregistry.createOnPushWriter"
