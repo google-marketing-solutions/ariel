@@ -337,7 +337,7 @@ export class AppComponent {
     use_elevenlabs: [false],
     elevenlabs_token: [''],
     elevenlabs_clone_voices: [false],
-    elevenlabs_remove_cloned_voices: [false],
+    elevenlabs_remove_cloned_voices: [true],
   });
   translationsFormGroup = this._formBuilder.group({
     dubbings: new FormArray([]),
