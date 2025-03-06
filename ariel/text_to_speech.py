@@ -159,9 +159,7 @@ class VoiceAssigner:
         A dictionary mapping voice names to genders (Male, Female, Neutral).
     """
     if isinstance(self.client, texttospeech.TextToSpeechClient):
-      request = texttospeech.ListVoicesRequest(
-          language_code=self.target_language
-      )
+      request = texttospeech.ListVoicesRequest(language_code=self.target_language)
       response = self.client.list_voices(request=request)
       return {
           voice.name: (
@@ -174,10 +172,18 @@ class VoiceAssigner:
           for voice in response.voices
       }
     elif isinstance(self.client, ElevenLabs):
-      return {
-          voice.name: voice.labels["gender"].capitalize()
-          for voice in self.client.voices.get_all().voices
-      }
+      available_voices = {}
+      for voice in self.client.voices.get_all().voices:
+        try:
+          available_voices[voice.name] = voice.labels["gender"].capitalize()
+        except KeyError:
+          logging.info(
+              "ElevenLabs voice %s doesn't have the `gender` property specified."
+              " Assigning `Neutral`.",
+              voice,
+          )
+          available_voices[voice.name] = "Neutral"
+      return available_voices
     else:
       raise ValueError("Unsupported client type.")
 
