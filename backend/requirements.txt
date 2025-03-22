@@ -1029,9 +1029,9 @@ gtech-ariel==0.0.24 \
     --hash=sha256:23a393ee9f4088ef121ff3e282b837cfddb01236c3bc080dbad03510847e5391 \
     --hash=sha256:c1300806825d652b14fb45be3c666f84c5c7c4cb65f355d426a699fad1e11a34
     # via -r requirements.in
-gunicorn==22.0.0 \
-    --hash=sha256:350679f91b24062c86e386e198a15438d53a7a8207235a78ba1b53df4c4378d9 \
-    --hash=sha256:4a0b436239ff76fb33f11c07a16482c521a7e09c1ce3cc293c2330afe01bec63
+gunicorn==23.0.0 \
+    --hash=sha256:ec400d38950de4dfd418cff8328b2c8faed0edb0d517d3394e457c317908ca4d \
+    --hash=sha256:f014447a0101dc57e294f6c18ca6b40227a4c90e9bdb586042628030cba004ec
     # via -r requirements.in
 h11==0.14.0 \
     --hash=sha256:8f19fbbe99e72420ff35c00b27a34cb9937e902a8b810e2c88300c6f0a3b699d \
