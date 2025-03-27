@@ -1151,9 +1151,9 @@ julius==0.2.7 \
     # via
     #   demucs
     #   torch-audiomentations
-keras==3.6.0 \
-    --hash=sha256:405727525a3522ed8f9ec0b46e0667e4c65fcf714a067322c16a00d902ded41d \
-    --hash=sha256:49585e4577f6e86bd890d96dfbcb1890f5bab5967ef831c07fd63f9d86e4bfe9
+keras==3.9.0 \
+    --hash=sha256:71078e833994384f45d5ea192d18f0969a12bd2572a5d15968c755945ad91d1c \
+    --hash=sha256:b5bf04e7c64c3176eda5124d035005bb7a676fb505f42496c7b03a99d5683652
     # via tensorflow
 kiwisolver==1.4.7 \
     --hash=sha256:073a36c8273647592ea332e816e75ef8da5c303236ec0167196793eb1e34657a \
