@@ -3,6 +3,7 @@
 google-cloud-logging==3.10.0
 google-cloud-storage==2.18.2
 google-cloud-pubsub==2.25.2
+googleapis-common-protos==1.69.2
 cloudevents==1.11.0
 Flask==3.0.3
 gunicorn==22.0.0
