@@ -123,6 +123,7 @@ else
 	gcloud beta run deploy ariel-process \
 		--region=$GCP_REGION \
 		--no-allow-unauthenticated \
+                --no-gpu-zonal-redundancy \
 		--image=$DOCKER_IMAGE_TAG \
 		--memory=32Gi \
 		--cpu=8 \
