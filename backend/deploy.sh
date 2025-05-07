@@ -82,6 +82,7 @@ if $USE_CLOUD_BUILD; then
 	gcloud beta run deploy ariel-process \
 		--region=$GCP_REGION \
 		--no-allow-unauthenticated \
+                --no-gpu-zonal-redundancy \
 		--source=. \
 		--memory=32Gi \
 		--cpu=8 \
