@@ -79,9 +79,10 @@ fi
 
 if $USE_CLOUD_BUILD; then
   printf "\nINFO - Using Cloud Build to deploy from source"
-  gcloud beta run deploy ariel-process \
+  gcloud run deploy ariel-process \
     --region=$GCP_REGION \
     --no-allow-unauthenticated \
+    --no-gpu-zonal-redundancy \
     --source=. \
     --memory=32Gi \
     --cpu=8 \
@@ -120,7 +121,7 @@ else
   docker push $DOCKER_IMAGE_TAG
 
   printf "\nINFO - Deploying the 'ariel-process' Cloud Run container...\n"
-  gcloud beta run deploy ariel-process \
+  gcloud run deploy ariel-process \
     --region=$GCP_REGION \
     --no-allow-unauthenticated \
     --no-gpu-zonal-redundancy \
