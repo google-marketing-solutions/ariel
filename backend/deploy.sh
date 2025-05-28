@@ -113,8 +113,8 @@ else
     gcloud auth configure-docker $GCP_REGION-docker.pkg.dev
   fi
 
-  ARTIFACT_POSITORY_NAME=$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$DOCKER_REPO_NAME
-  DOCKER_IMAGE_TAG=$ARTIFACT_POSITORY_NAME/ariel-process:latest
+  ARTIFACT_REPOSITORY_NAME=$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$DOCKER_REPO_NAME
+  DOCKER_IMAGE_TAG=$ARTIFACT_REPOSITORY_NAME/ariel-process:latest
 
   printf "\nINFO Building Docker image for ariel processor\n"
   docker build -t $DOCKER_IMAGE_TAG .
@@ -140,7 +140,18 @@ else
     --add-volume-mount volume=ariel-bucket,mount-path=/tmp/ariel
 fi
 
-printf "\nINFO Setting up triggers from GCS to Ariel processor topic in Cloud Run\n"
+printf "\nINFO - Setting up Pub/Sub topic and triggers from GCS to Ariel processor\n"
+
+# Create Pub/Sub topic if it doesn't exist
+TOPIC_EXISTS=$(gcloud pubsub topics describe $PUBSUB_TOPIC >/dev/null 2>&1 && echo "true" || echo "false")
+if "${TOPIC_EXISTS}"; then
+  printf "\nWARN - Pub/Sub topic '$PUBSUB_TOPIC' already exists. Skipping creation...\n"
+else
+  printf "\nINFO - Creating Pub/Sub topic '$PUBSUB_TOPIC'...\n"
+  gcloud pubsub topics create $PUBSUB_TOPIC
+  test $? -eq 0 || exit
+  printf "\nINFO - Pub/Sub topic '$PUBSUB_TOPIC' created successfully!\n"
+fi
 
 NOTIFICATION_ETAG=$(gcloud storage buckets notifications list gs://$GCS_BUCKET --format='value("Notification Configuration".etag)')
 if [ -z "$NOTIFICATION_ETAG" ]; then
