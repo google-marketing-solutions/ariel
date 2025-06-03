@@ -154,7 +154,7 @@ _CLEAN_UP = flags.DEFINE_bool(
 )
 _GEMINI_MODEL_NAME = flags.DEFINE_string(
     "gemini_model_name",
-    "gemini-1.5-flash",
+    "gemini-2.5-flash",
     "Name of the Gemini model to use.",
 )
 _TEMPERATURE = flags.DEFINE_float(

@@ -113,7 +113,7 @@ You can dub video ads from and to many languages.
     *   **[OPTIONAL] ElevenLabs API:** To access the ElevenLabs API. See [here](https://help.elevenlabs.io/hc/en-us/articles/14599447207697-How-to-authorize-yourself-using-your-xi-api-key).
         *   **Commercial Use:** You are responsible for selecting the right ElevenLabs license if you decide to use the outputs from Ariel in a commercial setting. See the pricing [here](https://elevenlabs.io/pricing). Else, ElevenLabs is free to use.
 *   **Data handling:**
-    *   **Input files:** Ariel can work with both video and audio ads and they need to be in the MP4 or MP3 file formats respectively. See [here](https://ai.google.dev/gemini-api/docs/models/gemini#gemini-1.5-flash) for the limitations on the duration of the ads enforeced by Gemini models.
+    *   **Input files:** Ariel can work with both video and audio ads and they need to be in the MP4 or MP3 file formats respectively. See [here](https://ai.google.dev/gemini-api/docs/models/gemini#gemini-2.5-flash) for the limitations on the duration of the ads enforeced by Gemini models.
     *   **Storage:** Ariel reads, processes and saves all the files in your environment, e.g. Colab. Only on one instance it creates a temporary Google Cloud Storage (GCS) bucket to upload the input file there for the Gemini model to indentify unique speakers. The bucket with all its contents is removed immediately afterwards. You can modify the `gcp_region` argument to choose the best location to perform this operation.
     *   **Voice cloning:** You can clone voices from the input file to make the dubbing sound close to the original if you decide to use ElevenLabs. It's is your responsibility to ensure that you are legally allowed to do so.
 
