@@ -173,3 +173,11 @@ cython_debug/
 .config.json
 node_modules
 dist
+
+# Output files
+*.mp3
+*.mp4
+*.srt
+
+# OS files
+.DS_Store

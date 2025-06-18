@@ -22,7 +22,6 @@ import json
 import os
 import re
 import readline
-import shutil
 import sys
 import time
 from typing import Final, Mapping, Sequence, Set
@@ -1091,7 +1090,7 @@ class Dubber:
       except speech_to_text.GeminiDiarizationError:
         attempt += 1
         logging.warning(
-            f"Diarization attempt {attempt} failed. Will try again."
+            "Diarization attempt %s failed. Will try again.", attempt
         )
         if attempt == _MAX_GEMINI_RETRIES:
           raise RuntimeError("Can't diarize speakers. Try again.")
@@ -1133,7 +1132,7 @@ class Dubber:
       except translation.GeminiTranslationError:
         attempt += 1
         logging.warning(
-            f"Translation attempt {attempt} failed. Will try again."
+            "Translation attempt %s failed. Will try again.", attempt
         )
         if attempt == _MAX_GEMINI_RETRIES:
           raise RuntimeError("Can't translate script. Try again.")
@@ -1282,7 +1281,7 @@ class Dubber:
       except translation.GeminiTranslationError:
         attempt += 1
         logging.warning(
-            f"Translation attempt {attempt} failed. Will try again."
+            "Translation attempt %s failed. Will try again.", attempt
         )
         if attempt == _MAX_GEMINI_RETRIES:
           raise RuntimeError("Can't translate the added utterance. Try again.")
@@ -2456,22 +2455,24 @@ class Dubber:
     self.save_utterance_metadata_output = utterance_metadata_file
 
   def run_clean_directory(self) -> None:
-    """Removes all files and directories from a directory, except for those listed in keep_files."""
-    output_folder = os.path.join(self.output_directory, _OUTPUT)
-    output_files = tf.io.gfile.listdir(output_folder)
-    keep_files = [os.path.join(output_folder, file) for file in output_files]
-    keep_files.append(output_folder)
-    for item in tf.io.gfile.listdir(self.output_directory):
-      item_path = os.path.join(self.output_directory, item)
-      if item in keep_files:
+    """Removes intermediate files and directories, keeping the final output."""
+    final_output_subdir_name = _OUTPUT
+    # item_name is "audio_processing", "video_processing", "output"
+    for item_name in tf.io.gfile.listdir(self.output_directory):
+      if item_name == final_output_subdir_name:
         continue
+      item_full_path = os.path.join(self.output_directory, item_name)
       try:
-        if tf.io.gfile.isdir(item_path):
-          shutil.rmtree(item_path)
+        if tf.io.gfile.isdir(item_full_path):
+          tf.io.gfile.rmtree(item_full_path)
         else:
-          tf.io.gfile.remove(item_path)
+          tf.io.gfile.remove(item_full_path)
+      except tf.errors.NotFoundError:
+        logging.warning(
+            "Item %s not found during cleanup, skipping.", item_full_path
+        )
       except OSError as e:
-        logging.error(f"Error deleting {item_path}: {e}")
+        logging.error("Error deleting %s: %s", item_full_path, e)
     logging.info("Temporary artifacts are now removed.")
 
   def dub_ad(self) -> PostprocessingArtifacts:

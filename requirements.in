@@ -12,5 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Ariel library for for end-to-end video ad dubbing using AI."""
-__version__ = "0.0.28"
+numpy
+moviepy
+absl-py
+demucs
+pyannote.audio
+pydub
+faster-whisper
+google-cloud-texttospeech
+tensorflow
+elevenlabs
+google-api-core
+ipython
+google-cloud-aiplatform
+google-cloud-storage
+pyloudnorm
+google-auth
+google-api-python-client
+gspread
+torch >= 2.6.0
+torchaudio
+ctranslate2
+gspread-dataframe

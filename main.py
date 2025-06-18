@@ -23,7 +23,6 @@ from ariel.dubbing import get_safety_settings
 
 FLAGS = flags.FLAGS
 
-
 _INPUT_FILE = flags.DEFINE_string(
     "input_file",
     None,
@@ -63,7 +62,7 @@ _GCP_PROJECT_ID = flags.DEFINE_string(
 )
 _GCP_REGION = flags.DEFINE_string(
     "gcp_region",
-    "europe_west_2",
+    None,
     "GCP region to use when making API calls and where a temporary"
     " bucket will be created for Gemini to analyze the video / audio ad."
     " The bucket with all its contents will be removed immediately afterwards.",
@@ -73,11 +72,6 @@ _NUMBER_OF_SPEAKERS = flags.DEFINE_integer(
     "number_of_speakers",
     1,
     "Number of speakers in the ad.",
-)
-_GEMINI_TOKEN = flags.DEFINE_string(
-    "gemini_token",
-    None,
-    "Gemini API token.",
 )
 _HUGGING_FACE_TOKEN = flags.DEFINE_string(
     "hugging_face_token",
@@ -146,7 +140,7 @@ _BACKGROUND_VOLUME_ADJUSTMENT = flags.DEFINE_float(
     0.0,
     "By how much the background audio volume should be adjusted.",
 )
-_VOICE_SEPARATION_ROUNDS = flags.DEFINE_float(
+_VOICE_SEPARATION_ROUNDS = flags.DEFINE_integer(
     "voice_separation_rounds",
     2,
     "The number of times the background audio file"
@@ -233,7 +227,6 @@ def main(argv: Sequence[str]) -> None:
       gcp_project_id=_GCP_PROJECT_ID.value,
       gcp_region=_GCP_REGION.value,
       number_of_speakers=_NUMBER_OF_SPEAKERS.value,
-      gemini_token=_GEMINI_TOKEN.value,
       hugging_face_token=_HUGGING_FACE_TOKEN.value,
       no_dubbing_phrases=_NO_DUBBING_PHRASES.value,
       diarization_instructions=_DIARIZATION_INSTRUCTIONS.value,
@@ -241,7 +234,8 @@ def main(argv: Sequence[str]) -> None:
       merge_utterances=_MERGE_UTTERANCES.value,
       minimum_merge_threshold=_MINIMUM_MERGE_THRESHOLD.value,
       preferred_voices=_PREFERRED_VOICES.value,
-      assigned_voices_override=ast.literal_eval(_ASSIGNED_VOICES_OVERRIDE),
+      assigned_voices_override=ast.literal_eval(_ASSIGNED_VOICES_OVERRIDE.value)
+      if _ASSIGNED_VOICES_OVERRIDE.value else None,
       keep_voice_assignments=_KEEP_VOICE_ASSIGNMENTS.value,
       adjust_speed=_ADJUST_SPEED.value,
       vocals_volume_adjustment=_VOCALS_VOLUME_ADJUSTMENT.value,
