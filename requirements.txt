@@ -30,7 +30,7 @@ pyloudnorm == 0.1.1
 google-auth == 2.27.0
 google-api-python-client == 2.149.0
 gspread == 6.0.2
-torch == 2.5.0
+torch == 2.7.1
 torchaudio == 2.5.0
 ctranslate2 == 4.4.0
 gspread-dataframe == 4.0.0
