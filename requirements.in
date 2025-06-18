@@ -12,7 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-numpy
+numpy>=2.0,<2.1
+ml-dtypes>=0.4,<0.5
+tensorflow==2.18.*
+ipython==7.34.0
+jedi>=0.16
+decorator==4.4.2
+pandas>=2.0, <2.3
+scikit-learn<1.7, >=1.2
 moviepy
 absl-py
 demucs
@@ -20,17 +27,16 @@ pyannote.audio
 pydub
 faster-whisper
 google-cloud-texttospeech
-tensorflow
 elevenlabs
 google-api-core
-ipython
 google-cloud-aiplatform
 google-cloud-storage
 pyloudnorm
-google-auth
+google-auth==2.38.0
 google-api-python-client
 gspread
-torch >= 2.6.0
-torchaudio
-ctranslate2
 gspread-dataframe
+ctranslate2
+rich>=12.4.4,<14
+torch>=2.6,<2.7
+torchaudio>=2.6,<2.7
