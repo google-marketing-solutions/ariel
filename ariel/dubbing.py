@@ -815,10 +815,17 @@ class Dubber:
   @functools.cached_property
   def speech_to_text_model(self) -> WhisperModel:
     """Initializes the Whisper speech-to-text model."""
+    device_for_whisper = "cpu"
+    compute_type = "int8"
+    if self.device == "cuda":
+      logging.warning(
+          "A GPU is available, but faster-whisper is being run on CPU to avoid"
+          " potential crashes. This might be slower."
+      )
     return WhisperModel(
         model_size_or_path=_DEFAULT_TRANSCRIPTION_MODEL,
-        device=self.device,
-        compute_type="float16" if self.device == "cuda" else "int8",
+        device=device_for_whisper,
+        compute_type=compute_type,
         download_root=self._whisper_cache_dir,
     )
 
