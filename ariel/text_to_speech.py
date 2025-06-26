@@ -694,6 +694,8 @@ def elevenlabs_run_clone_voices(
       A mapping between speaker IDs to their cloned voices.
   """
   speaker_to_voices_mapping = {}
+  global speaker_mapping
+  speaker_mapping = speaker_data_mapping
   for speaker_data in speaker_data_mapping:
     voice = client.voices.ivc.create(
         name=f"{speaker_data.speaker_id}",
