@@ -1,0 +1,28 @@
+[project]
+name = "ariel"
+version = "2.0.0"
+description = "A tool for dubbing videos."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.118.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.13.3",
+]
+
+[tool.ruff]
+fix = true
+line-length = 80
+preview = true
+indent-width = 2
+target-version = "py313"
+
+[tool.ruff.format]
+preview = true
+docstring-code-format = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
