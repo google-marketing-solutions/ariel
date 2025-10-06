@@ -181,3 +181,6 @@ dist
 
 # OS files
 .DS_Store
+
+# Gemini
+GEMINI.md
