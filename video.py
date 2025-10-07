@@ -57,9 +57,12 @@ class Utterance:
   id: str
   original_text: str
   translated_text: str
+  instructions: str
   speaker: Speaker
-  start_time: float
-  end_time: float
+  original_start_time: float
+  original_end_time: float
+  translated_start_time: float
+  translated_end_time: float
   is_dirty: bool = True
   audio_url: str = ""
 
