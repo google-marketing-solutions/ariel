@@ -10,6 +10,7 @@ dependencies = [
     "google-cloud-storage>=2.19.0",
     "jinja2>=3.1.4",
     "google-genai>=0.5.4",
+    "google-cloud-translate>=3.21.1",
 ]
 
 [dependency-groups]
