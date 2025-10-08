@@ -1,21 +1,23 @@
+import os
 import json
-from fastapi import APIRouter
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part
+from fastapi import APIRouter, HTTPException
+from pydantic import TypeAdapter, ValidationError
+
+from google import genai
+from google.genai import types
+from video import Transcription
 
 router = APIRouter()
 
 
-@router.get("/transcribe")
+@router.get("/transcribe", response_model=Transcription)
 def transcribe_video(
-    gcs_uri: str, project: str, model_name: str = "gemini-1.5-flash"
+    gcs_uri: str,
+    project: str,
+    model_name: str = "gemini-2.5-flash",
+    location='us-central1',
 ):
-    """
-    Transcribes a video from a GCS bucket using the specified Gemini model.
-    """
-    vertexai.init(project=project)
-
-    model = GenerativeModel(model_name)
+    client = genai.Client(vertexai=True, project=project, location=location)
 
     prompt = """
     Provide a transcript of this audio file.
@@ -27,11 +29,19 @@ def transcribe_video(
     Each segment object has 'speaker_id', 'gender', 'transcript', and 'tone' fields.
     """
 
-    video = Part.from_uri(gcs_uri, mime_type="video/mp4")
+    video = types.Part.from_uri(file_uri=gcs_uri, mime_type="video/mp4")
 
-    response = model.generate_content(
-        [video, prompt],
-        generation_config={"response_mime_type": "application/json"},
-    )
+    response = client.models.generate_content(
+        model=model_name,
+        contents=[video, prompt],
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json"))
 
-    return json.loads(response.text)
+    try:
+        response_json = json.loads(response.text)
+        return TypeAdapter(Transcription).validate_python(response_json)
+    except (ValidationError, json.JSONDecodeError) as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to validate the transcription schema: {e}",
+        )
