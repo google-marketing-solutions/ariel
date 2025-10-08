@@ -87,3 +87,30 @@ class Video:
   prompt_enhancements: str
   speakers: list[Speaker]
   utterances: list[Utterance]
+
+
+@dataclass
+class TranscribeSpeaker:
+  """A speaker identified in the video transcription."""
+
+  speaker_id: str
+  name: str
+  gender: str
+
+
+@dataclass
+class TranscribeSegment:
+  """A segment of the transcribed video."""
+
+  speaker_id: str
+  gender: str
+  transcript: str
+  tone: str
+
+
+@dataclass
+class Transcription:
+  """The full transcription response from the video."""
+
+  speakers: list[TranscribeSpeaker]
+  segments: list[TranscribeSegment]
