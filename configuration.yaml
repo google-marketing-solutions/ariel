@@ -1,0 +1,7 @@
+# Ariel Configuration File
+
+# GCP Project ID
+gcp_project_id: enter project id here
+
+#GCS Bucket name
+gcs_bucket_name: enter bucket name here
