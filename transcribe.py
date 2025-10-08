@@ -1,32 +1,28 @@
-import os
+from dataclasses import dataclass
 import json
-from fastapi import APIRouter, HTTPException
-from pydantic import TypeAdapter, ValidationError
-
-from google import genai
+from typing import List
+from pydantic import TypeAdapter
 from google.genai import types
-from video import Transcription
-
-router = APIRouter()
 
 
-@router.get("/transcribe", response_model=Transcription)
+@dataclass
+class TranscribeSegment:
+    speaker_id: str
+    gender: str
+    transcript: str
+    tone: str
+
+
 def transcribe_video(
+    client,
+    model_name,
     gcs_uri: str,
-    project: str,
-    model_name: str = "gemini-2.5-flash",
-    location='us-central1',
-):
-    client = genai.Client(vertexai=True, project=project, location=location)
-
+) -> List[TranscribeSegment]:
     prompt = """
     Provide a transcript of this audio file.
     Identify different speakers and attempt to infer their gender.
-
-    For each segment of the transcript, describe the tone of voice used (e.g., enthusiastic, calm, angry, neutral).
-    Format the output as a JSON object with two lists: speakers and segments.
-    Each speaker object has 'speaker_id', 'name', and 'gender' fields.
-    Each segment object has 'speaker_id', 'gender', 'transcript', and 'tone' fields.
+    For each segment of the transcript, describe the tone of voice used
+    (e.g., enthusiastic, calm, angry, neutral).
     """
 
     video = types.Part.from_uri(file_uri=gcs_uri, mime_type="video/mp4")
@@ -35,13 +31,41 @@ def transcribe_video(
         model=model_name,
         contents=[video, prompt],
         config=types.GenerateContentConfig(
-            response_mime_type="application/json"))
+            response_mime_type="application/json",
+            response_json_schema={
+                "type": "array",
+                "description":
+                "A list of transcribed audio segments, each with speaker and analysis details.",
+                "items": {
+                    "type": "object",
+                    "description":
+                    "Represents a single segment of a transcription with speaker and sentiment analysis.",
+                    "properties": {
+                        "speaker_id": {
+                            "type": "string",
+                            "description": "The identifier for the speaker."
+                        },
+                        "gender": {
+                            "type": "string",
+                            "description":
+                            "The perceived gender of the speaker."
+                        },
+                        "transcript": {
+                            "type": "string",
+                            "description":
+                            "The transcribed text of the segment."
+                        },
+                        "tone": {
+                            "type":
+                            "string",
+                            "description":
+                            "The detected tone of the speech in the segment."
+                        }
+                    },
+                    "required": ["speaker_id", "gender", "transcript", "tone"]
+                }
+            }),
+    )
 
-    try:
-        response_json = json.loads(response.text)
-        return TypeAdapter(Transcription).validate_python(response_json)
-    except (ValidationError, json.JSONDecodeError) as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to validate the transcription schema: {e}",
-        )
+    response_json = json.loads(response.text)
+    return TypeAdapter(List[TranscribeSegment]).validate_python(response_json)

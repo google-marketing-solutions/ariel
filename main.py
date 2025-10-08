@@ -1,14 +1,29 @@
+from typing import List
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from transcribe import router as transcribe_router
+from transcribe import TranscribeSegment, transcribe_video
+from google import genai
 
 app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
-app.include_router(transcribe_router)
 
 
 @app.get("/", response_class=HTMLResponse)
 async def read_item(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/proccess_video", response_model=List[TranscribeSegment])
+def transcribe(
+    gcs_uri: str,
+    project: str,
+    model_name: str = "gemini-2.5-flash",
+    location='us-central1',
+):
+    client = genai.Client(vertexai=True, project=project, location=location)
+    transcription = transcribe_video(client,
+                                     model_name=model_name,
+                                     gcs_uri=gcs_uri)
+    return transcription

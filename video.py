@@ -11,7 +11,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-
 """The dataclasses used in Ariel to track translations."""
 
 from dataclasses import dataclass
@@ -19,7 +18,7 @@ from dataclasses import dataclass
 
 @dataclass
 class Speaker:
-  """A speaker in a video.
+    """A speaker in a video.
 
   This tracks a speaker in a video, with which speaker in the video it
   represents and a Chirp voice that will be used when using text-to-speech.
@@ -31,13 +30,13 @@ class Speaker:
         utterances.
   """
 
-  speaker_number: int
-  voice: str
+    speaker_number: int
+    voice: str
 
 
 @dataclass
 class Utterance:
-  """One spoken utterance from a video.
+    """One spoken utterance from a video.
 
   This is used to represent all of the information about an utterance to be
   translated.
@@ -54,22 +53,22 @@ class Utterance:
     audio_url: a URL pointing to the generated audio for the translation.
   """
 
-  id: str
-  original_text: str
-  translated_text: str
-  instructions: str
-  speaker: Speaker
-  original_start_time: float
-  original_end_time: float
-  translated_start_time: float
-  translated_end_time: float
-  is_dirty: bool = True
-  audio_url: str = ""
+    id: str
+    original_text: str
+    translated_text: str
+    instructions: str
+    speaker: Speaker
+    original_start_time: float
+    original_end_time: float
+    translated_start_time: float
+    translated_end_time: float
+    is_dirty: bool = True
+    audio_url: str = ""
 
 
 @dataclass
 class Video:
-  """Represents a video to be translated.
+    """Represents a video to be translated.
 
   Attributes:
     video_id: a unique id representing a single video and translation.
@@ -81,36 +80,9 @@ class Video:
     utterances: a list of the individual utterances for the video.
   """
 
-  video_id: str
-  original_language: str
-  translate_language: str
-  prompt_enhancements: str
-  speakers: list[Speaker]
-  utterances: list[Utterance]
-
-
-@dataclass
-class TranscribeSpeaker:
-  """A speaker identified in the video transcription."""
-
-  speaker_id: str
-  name: str
-  gender: str
-
-
-@dataclass
-class TranscribeSegment:
-  """A segment of the transcribed video."""
-
-  speaker_id: str
-  gender: str
-  transcript: str
-  tone: str
-
-
-@dataclass
-class Transcription:
-  """The full transcription response from the video."""
-
-  speakers: list[TranscribeSpeaker]
-  segments: list[TranscribeSegment]
+    video_id: str
+    original_language: str
+    translate_language: str
+    prompt_enhancements: str
+    speakers: list[Speaker]
+    utterances: list[Utterance]
