@@ -30,11 +30,12 @@ def transcribe(
 def generate_audio_test(
     api_key: str,
     prompt: str,
+    voice_name: str,
 ):
     client = genai.Client(api_key=api_key)
     audio_data = generate_audio(client,
                                 prompt=prompt,
-                                voice_name='Rasalgethi',
+                                voice_name=voice_name,
                                 model_name="gemini-2.5-flash-preview-tts")
 
     return JSONResponse(content={"audio_data": audio_data})

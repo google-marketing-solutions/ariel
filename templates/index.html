@@ -2,8 +2,147 @@
 <html>
     <head>
         <title>FastAPI App</title>
+        <style>
+            body { font-family: sans-serif; }
+            .container { max-width: 800px; margin: 2em auto; padding: 1em; border: 1px solid #ccc; border-radius: 5px; }
+            .form-group { margin-bottom: 1em; }
+            label { display: block; margin-bottom: 0.5em; }
+            input[type="text"] { width: 100%; padding: 0.5em; box-sizing: border-box; }
+            button { padding: 0.7em 1.2em; cursor: pointer; }
+            audio { width: 100%; margin-top: 1em; }
+        </style>
     </head>
     <body>
-        <h1>Hello, World!</h1>
+        <div class="container">
+            <h1>Text-to-Speech</h1>
+
+            <div class="form-group">
+                <label for="prompt-input">Prompt:</label>
+                <input type="text" id="prompt-input" value="Hello world, this is TTS">
+            </div>
+            <div class="form-group">
+                <label for="api-key-input">API Key:</label>
+                <input type="text" id="api-key-input" value="">
+            </div>
+            <div class="form-group">
+                <label for="voice-name-select">Voice Name:</label>
+                <select id="voice-name-select">
+                    <option value="Achernar">Achernar</option>
+                    <option value="Achird">Achird</option>
+                    <option value="Algenib">Algenib</option>
+                    <option value="Algieba">Algieba</option>
+                    <option value="Alnilam">Alnilam</option>
+                    <option value="Aoede">Aoede</option>
+                    <option value="Autonoe">Autonoe</option>
+                    <option value="Callirrhoe">Callirrhoe</option>
+                    <option value="Charon">Charon</option>
+                    <option value="Despina">Despina</option>
+                    <option value="Enceladus">Enceladus</option>
+                    <option value="Erinome">Erinome</option>
+                    <option value="Fenrir">Fenrir</option>
+                    <option value="Gacrux">Gacrux</option>
+                    <option value="Iapetus">Iapetus</option>
+                    <option value="Kore">Kore</option>
+                    <option value="Laomedeia">Laomedeia</option>
+                    <option value="Leda">Leda</option>
+                    <option value="Orus">Orus</option>
+                    <option value="Pulcherrima">Pulcherrima</option>
+                    <option value="Puck">Puck</option>
+                    <option value="Rasalgethi">Rasalgethi</option>
+                    <option value="Sadachbia">Sadachbia</option>
+                    <option value="Sadaltager">Sadaltager</option>
+                    <option value="Schedar">Schedar</option>
+                    <option value="Sulafat">Sulafat</option>
+                    <option value="Umbriel">Umbriel</option>
+                    <option value="Vindemiatrix">Vindemiatrix</option>
+                    <option value="Zephyr">Zephyr</option>
+                    <option value="Zubenelgenubi">Zubenelgenubi</option>
+                </select>
+            </div>
+            <button id="generate-audio-btn">Generate Audio</button>
+            
+            <audio id="audio-player" controls></audio>
+        </div>
+
+        <script>
+            document.getElementById('generate-audio-btn').addEventListener('click', function() {
+                generateAudio();
+            });
+
+            function playBase64Audio(playerID, base64String, volume) {
+                const binaryString = atob(base64String);
+                const binaryArray = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    binaryArray[i] = binaryString.charCodeAt(i);
+                }
+                const player = document.getElementById(playerID);
+                player.src = URL.createObjectURL(new Blob([binaryArray], { type: 'audio/wav' }));
+                player.volume = volume;
+
+                return new Promise(resolve => {
+                    player.play();
+                    player.onended = resolve;
+                });
+            }
+
+            function generateAudio() {
+                const prompt = document.getElementById('prompt-input').value;
+                const apiKey = document.getElementById('api-key-input').value;
+                const voiceName = document.getElementById('voice-name-select').value;
+
+                const params = new URLSearchParams({
+                    prompt: prompt,
+                    api_key: apiKey,
+                    voice_name: voiceName,
+                });
+
+                const url = `/generate_audio_test?${params.toString()}`;
+                
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        playBase64Audio('audio-player', data.audio_data, 1.0);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error generating audio.');
+                    });
+            }
+
+            function saveValues() {
+                const ids = ['prompt-input', 'api-key-input'];
+                ids.forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        localStorage.setItem(id, element.value);
+                    }
+                });
+            }
+
+            function loadValues() {
+                const ids = ['prompt-input', 'api-key-input'];
+                ids.forEach(id => {
+                    const value = localStorage.getItem(id);
+                    if (value !== null) {
+                        const element = document.getElementById(id);
+                        if (element) {
+                            element.value = value;
+                        }
+                    }
+                });
+            }
+
+            window.onload = loadValues;
+
+            const inputs = document.querySelectorAll('input[type="text"]');
+            inputs.forEach(input => {
+                input.addEventListener('input', saveValues);
+            });
+        </script>
     </body>
 </html>
