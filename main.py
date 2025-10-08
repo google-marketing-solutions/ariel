@@ -1,4 +1,3 @@
-from typing import List
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -15,7 +14,7 @@ async def read_item(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-@app.get("/proccess_video", response_model=List[TranscribeSegment])
+@app.get("/transcribe", response_model=list[TranscribeSegment])
 def transcribe(
     gcs_uri: str,
     project: str,
@@ -23,7 +22,4 @@ def transcribe(
     location='us-central1',
 ):
     client = genai.Client(vertexai=True, project=project, location=location)
-    transcription = transcribe_video(client,
-                                     model_name=model_name,
-                                     gcs_uri=gcs_uri)
-    return transcription
+    return transcribe_video(client, model_name=model_name, gcs_uri=gcs_uri)
