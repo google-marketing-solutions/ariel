@@ -18,7 +18,7 @@ async def read_item(request: Request):
 def transcribe(
     gcs_uri: str,
     project: str,
-    model_name: str = "gemini-2.5-flash",
+    model_name: str = "gemini-2.5-pro",
     location='us-central1',
 ):
     client = genai.Client(vertexai=True, project=project, location=location)

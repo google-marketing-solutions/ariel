@@ -44,6 +44,7 @@ google-api-core==2.25.2
     #   google-cloud-core
     #   google-cloud-resource-manager
     #   google-cloud-storage
+    #   google-cloud-translate
 google-auth==2.41.1
     # via
     #   google-api-core
@@ -52,6 +53,7 @@ google-auth==2.41.1
     #   google-cloud-core
     #   google-cloud-resource-manager
     #   google-cloud-storage
+    #   google-cloud-translate
     #   google-genai
 google-cloud-aiplatform==1.119.0
     # via ariel (pyproject.toml)
@@ -61,12 +63,15 @@ google-cloud-core==2.4.3
     # via
     #   google-cloud-bigquery
     #   google-cloud-storage
+    #   google-cloud-translate
 google-cloud-resource-manager==1.14.2
     # via google-cloud-aiplatform
 google-cloud-storage==2.19.0
     # via
     #   ariel (pyproject.toml)
     #   google-cloud-aiplatform
+google-cloud-translate==3.21.1
+    # via ariel (pyproject.toml)
 google-crc32c==1.7.1
     # via
     #   google-cloud-storage
@@ -85,7 +90,9 @@ googleapis-common-protos==1.70.0
     #   grpc-google-iam-v1
     #   grpcio-status
 grpc-google-iam-v1==0.14.2
-    # via google-cloud-resource-manager
+    # via
+    #   google-cloud-resource-manager
+    #   google-cloud-translate
 grpcio==1.75.1
     # via
     #   google-api-core
@@ -134,11 +141,13 @@ proto-plus==1.26.1
     #   google-api-core
     #   google-cloud-aiplatform
     #   google-cloud-resource-manager
+    #   google-cloud-translate
 protobuf==6.32.1
     # via
     #   google-api-core
     #   google-cloud-aiplatform
     #   google-cloud-resource-manager
+    #   google-cloud-translate
     #   googleapis-common-protos
     #   grpc-google-iam-v1
     #   grpcio-status
