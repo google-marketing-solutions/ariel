@@ -22,7 +22,7 @@ class ArielConfig(NamedTuple):
   gemini_model: str
 
 
-def get_config(config_path: str) -> ArielConfig:
+def get_config(config_path: str="configuration.yaml") -> ArielConfig:
   with open(config_path) as config_file:
     config = yaml.safe_load(config_file)
     return ArielConfig(
