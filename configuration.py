@@ -19,6 +19,7 @@ import yaml
 class ArielConfig(NamedTuple):
   gcp_project_id: str
   gcs_bucket_name: str
+  gemini_model: str
 
 
 def get_config(config_path: str) -> ArielConfig:
@@ -27,4 +28,5 @@ def get_config(config_path: str) -> ArielConfig:
     return ArielConfig(
       gcp_project_id=config["gcp_project_id"],
       gcs_bucket_name=config["gcs_bucket_name"],
+      gemini_model=config["gemini_model"]
     )

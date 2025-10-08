@@ -5,3 +5,6 @@ gcp_project_id: enter project id here
 
 #GCS Bucket name
 gcs_bucket_name: enter bucket name here
+
+# Gemini Model for transcription
+gemini_model: "gemini-2.5-flash"
