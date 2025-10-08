@@ -42,11 +42,33 @@ def upload_video_to_gcs(file_object, mime_type, bucket_name) -> str:
 
   return dest_path
 
+def get_url_for_path(bucket_name: str, path: str) -> str:
+  """Returns a URL that can be used to fetch the files stored in GCS.
+
+  Args:
+    bucket_name: the name of the GCS bucket the files is stored in.
+    path: the path to the file the URL will point to.
+
+  Returns:
+    A URL that points to the file requested. The URL is valid for 24 hours.
+  """
+  storage_client = storage.Client()
+  bucket = storage_client.bucket(bucket_name)
+  blob = bucket.blob(path)
+
+  url = blob.generate_signed_url(version="v4", expiration=(60*60*24), method="GET")
+
+  return url
+
 
 if __name__ == "__main__":
+  test_bucket = "ariel-v2-test-bucket"
   with open("cloud_storage.py", "rb") as in_file:
     mime_type = "text/x-python"
     save_path = upload_video_to_gcs(
-      in_file, "text/x-python", "ariel-v2-test-bucket"
+      in_file, "text/x-python", test_bucket
     )
     print(f"The file was saved to {save_path}")
+    return_url = get_url_for_path(test_bucket, save_path)
+    print(f"You can get the file at {return_url}")
+
