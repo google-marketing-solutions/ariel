@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     originalLanguage.addEventListener('change', validateStartProcessing);
     translationLanguage.addEventListener('change', validateStartProcessing);
 
-    fetch('languages.json')
+    fetch('static/languages.json')
         .then(response => response.json())
         .then(data => {
             const defaultOption = new Option('Please select...', '', true, true);
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Speaker Management ---
     addSpeakerBtn.addEventListener('click', () => speakerModal.show());
 
-    fetch('voices.json')
+    fetch('static/voices.json')
         .then(response => response.json())
         .then(data => {
             voices = data.voices; // Correctly access the array
@@ -453,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderVideoSettingsEditor(videoData) {
         const originalContent = videoSettingsContent.innerHTML;
 
-        fetch('languages.json')
+        fetch('static/languages.json')
             .then(response => response.json())
             .then(languages => {
                 const gaLanguages = languages.filter(lang => lang.readiness === 'GA');
