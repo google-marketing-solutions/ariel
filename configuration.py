@@ -12,23 +12,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from typing import NamedTuple
+from types import SimpleNamespace
 import yaml
 
 
-class ArielConfig(NamedTuple):
-  gcp_project_id: str
-  gcp_project_location: str
-  gcs_bucket_name: str
-  gemini_model: str
-
-
-def get_config(config_path: str="configuration.yaml") -> ArielConfig:
+def get_config(config_path: str = "configuration.yaml") -> SimpleNamespace:
   with open(config_path) as config_file:
     config = yaml.safe_load(config_file)
-    return ArielConfig(
-      gcp_project_id=config["gcp_project_id"],
-      gcp_project_location=config["gcp_project_location"],
-      gcs_bucket_name=config["gcs_bucket_name"],
-      gemini_model=config["gemini_model"]
-    )
+    return SimpleNamespace(**config)
