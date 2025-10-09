@@ -819,6 +819,11 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <textarea id="translated-text-area" class="form-control" rows="3">${utterance.translated_text}</textarea>
 
+            <div class="mb-3">
+                <label class="form-label">Translation instructions</label>
+                <textarea id="gemini-prompt-input" rows="2" class="form-control" placeholder="Translation instructions for Gemini..."></textarea>
+            </div>
+
             <div class="mt-3">
                 <label class="form-label">Voice Intonation Instructions</label>
                 <textarea id="intonation-instructions-area" class="form-control" rows="2" placeholder="e.g., speak faster, with a happy tone">${utterance.instructions || ''}</textarea>
@@ -851,10 +856,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <select id="speaker-select" class="form-select">
                     ${allSpeakers.map(s => `<option value="${s.voice}" ${s.voice === utterance.speaker.voice ? 'selected' : ''}>${s.voice}</option>`).join('')}
                 </select>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Gemini Prompt</label>
-                <input id="gemini-prompt-input" type="text" class="form-control" placeholder="Enter prompt for Gemini...">
             </div>
             <button id="regenerate-translation-btn" class="btn btn-primary">Regenerate Translation</button>
             <button id="regenerate-dubbing-btn" class="btn btn-success">Regenerate Dubbing</button>
