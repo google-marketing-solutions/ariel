@@ -33,9 +33,36 @@
         width: 100%;
         margin-top: 1em;
       }
+      .card {
+        border: 1px solid #eee;
+        border-radius: 5px;
+        padding: 1em;
+        margin-top: 1em;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+      }
+      .card p {
+        margin: 0.5em 0;
+      }
+      .card button {
+        margin-top: 0.5em;
+      }
     </style>
   </head>
   <body>
+    <div class="container">
+      <h1>Video Transcription</h1>
+      <div class="form-group">
+        <label for="gcs-url-input">GCS URL:</label>
+        <input type="text" id="gcs-url-input" value="" />
+      </div>
+      <div class="form-group">
+        <label for="project-input">Project:</label>
+        <input type="text" id="project-input" value="" />
+      </div>
+      <button id="transcribe-btn">Transcribe</button>
+      <div id="transcription-result"></div>
+    </div>
+
     <div class="container">
       <h1>Text-to-Speech</h1>
 
@@ -91,7 +118,14 @@
       document
         .getElementById('generate-audio-btn')
         .addEventListener('click', function () {
-          generateAudio();
+          const prompt = document.getElementById('prompt-input').value;
+          generateAndPlayAudio('audio-player', prompt);
+        });
+
+      document
+        .getElementById('transcribe-btn')
+        .addEventListener('click', function () {
+          transcribeVideo();
         });
 
       function playBase64Audio(playerID, base64String, volume) {
@@ -101,6 +135,10 @@
           binaryArray[i] = binaryString.charCodeAt(i);
         }
         const player = document.getElementById(playerID);
+        if (!player) {
+          console.error('Audio player not found:', playerID);
+          return;
+        }
         player.src = URL.createObjectURL(
           new Blob([binaryArray], { type: 'audio/wav' })
         );
@@ -112,10 +150,14 @@
         });
       }
 
-      function generateAudio() {
-        const prompt = document.getElementById('prompt-input').value;
+      function generateAndPlayAudio(playerID, prompt) {
         const apiKey = document.getElementById('api-key-input').value;
         const voiceName = document.getElementById('voice-name-select').value;
+
+        if (!apiKey) {
+          alert('Please enter an API Key.');
+          return;
+        }
 
         const params = new URLSearchParams({
           prompt: prompt,
@@ -133,7 +175,7 @@
             return response.json();
           })
           .then(data => {
-            playBase64Audio('audio-player', data.audio_data, 1.0);
+            playBase64Audio(playerID, data.audio_data, 1.0);
           })
           .catch(error => {
             console.error('Error:', error);
@@ -141,8 +183,71 @@
           });
       }
 
+      function transcribeVideo() {
+        const gcsUrl = document.getElementById('gcs-url-input').value;
+        const project = document.getElementById('project-input').value;
+        const resultDiv = document.getElementById('transcription-result');
+        resultDiv.innerHTML = 'Transcribing...';
+
+        const params = new URLSearchParams({
+          gcs_uri: gcsUrl,
+          project: project,
+        });
+
+        const url = `/transcribe?${params.toString()}`;
+
+        fetch(url)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return response.json();
+          })
+          .then(data => {
+            resultDiv.innerHTML = ''; // Clear the 'Transcribing...' message
+            data.forEach((segment, index) => {
+              const card = document.createElement('div');
+              card.className = 'card';
+              const audioPlayerId = `segment-audio-${index}`;
+              const transcriptId = `segment-transcript-${index}`;
+
+              card.innerHTML = `
+                <p><strong>Speaker:</strong> ${segment.speaker_id} (${
+                segment.gender
+              })</p>
+                <p><strong>Time:</strong> ${segment.start_time.toFixed(
+                  2
+                )}s - ${segment.end_time.toFixed(2)}s</p>
+                <textarea id="${transcriptId}" rows="3" style="width: 100%;">Say with ${
+                segment.tone
+              } tonality: "${segment.transcript}"</textarea>
+                <button>Generate Audio</button>
+                <audio id="${audioPlayerId}" controls style="display: block;"></audio>
+              `;
+
+              card.querySelector('button').addEventListener('click', () => {
+                const transcriptInput = document.getElementById(transcriptId);
+                const editedTranscript = transcriptInput.value;
+                generateAndPlayAudio(audioPlayerId, editedTranscript);
+              });
+
+              resultDiv.appendChild(card);
+            });
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            resultDiv.innerHTML = 'Error during transcription.';
+            alert('Error during transcription.');
+          });
+      }
+
       function saveValues() {
-        const ids = ['prompt-input', 'api-key-input'];
+        const ids = [
+          'prompt-input',
+          'api-key-input',
+          'gcs-url-input',
+          'project-input',
+        ];
         ids.forEach(id => {
           const element = document.getElementById(id);
           if (element) {
@@ -152,7 +257,12 @@
       }
 
       function loadValues() {
-        const ids = ['prompt-input', 'api-key-input'];
+        const ids = [
+          'prompt-input',
+          'api-key-input',
+          'gcs-url-input',
+          'project-input',
+        ];
         ids.forEach(id => {
           const value = localStorage.getItem(id);
           if (value !== null) {
