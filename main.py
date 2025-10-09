@@ -1,5 +1,7 @@
+from typing import Annotated
+from cloud_storage import upload_video_to_gcs
 from configuration import get_config
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Form, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -8,8 +10,10 @@ from transcribe import TranscribeSegment, transcribe_video
 from translate import translate_text
 from google import genai
 
-app = FastAPI()
+from models import Video
 
+app = FastAPI()
+app.mount("/", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 config = get_config()
@@ -19,6 +23,27 @@ config = get_config()
 async def read_item(request: Request):
   return templates.TemplateResponse("index.html", {"request": request})
 
+@app.post("/process_video")
+async def process_video(
+        video: UploadFile,
+        original_language: Annotated[str, Form()],
+        translate_language: Annotated[str, Form()],
+        prompt_enhancements: Annotated[str, Form()],
+        speakers: Annotated[str, Form()],
+) -> Video:
+  video_name = video.filename or "video.mp4"
+  gcs_path = upload_video_to_gcs(video_name, video.file, config.gcs_bucket_name)
+  video_gcs_uri = f"gcs://{config.gcs_bucket_name}/{gcs_path}"
+
+  genai_client = genai.Client(vertexai=True, project=config.gcp_project_id, location=config.gcp_project_location)
+  transcriptions = transcribe_video(client=genai_client, model_name=config.gemini_model, gcs_uri=video_gcs_uri)
+  
+    
+    
+
+##############################
+## TESTING END POINTS BELOW ##
+##############################
 
 @app.get("/test", response_class=HTMLResponse)
 async def read_item_test(request: Request):
@@ -49,6 +74,3 @@ def generate_audio_test(
   )
 
   return JSONResponse(content={"audio_data": audio_data})
-
-
-app.mount("/", StaticFiles(directory="static"), name="static")

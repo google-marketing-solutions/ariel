@@ -15,7 +15,14 @@
 from google import genai
 import configuration
 
-def translate_text(genai_client: genai.Client, original_lang: str, target_lang: str, text: str, instructions: str="") -> str:
+
+def translate_text(
+  genai_client: genai.Client,
+  original_lang: str,
+  target_lang: str,
+  text: str,
+  instructions: str = "",
+) -> str:
   """Translates text from the original to the target language.
 
   Uses Google Gemini to translate the text. Gemini was chosen to be able to

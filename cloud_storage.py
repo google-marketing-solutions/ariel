@@ -14,12 +14,13 @@
 
 from datetime import datetime
 import mimetypes
+from tabnanny import filename_only
 import typing
 import uuid
 from google.cloud import storage
 
 
-def upload_video_to_gcs(video_file: typing.BinaryIO, mime_type: str, bucket_name: str) -> str:
+def upload_video_to_gcs(video_name: str, video_file: typing.BinaryIO, bucket_name: str) -> str:
   """Uploads a video to a Google Cloud Storage bucket, creating a new folder.
 
   This is used for the initial upload of a video. A new, unique path is created
@@ -34,9 +35,9 @@ def upload_video_to_gcs(video_file: typing.BinaryIO, mime_type: str, bucket_name
   Returns: The path to the uploaded file in GCS.
   """
 
-  extension = mimetypes.guess_extension(mime_type)
-  dir_name = datetime.now().isoformat() + str(uuid.uuid4())
-  dest_path = f"{dir_name}/{dir_name}{extension}"
+  mime_type = mimetypes.guess_file_type(video_name)[0] or "video/mp4"
+  dir_name = f"{datetime.now().isoformat()}-{str(uuid.uuid4())}-{video_name}"
+  dest_path = f"{dir_name}/{dir_name}"
 
   storage_client = storage.Client()
   bucket = storage_client.bucket(bucket_name)

@@ -13,6 +13,7 @@ dependencies = [
     "moviepy>=2.2.1",
     "demucs>=4.0.1",
     "soundfile>=0.13.1",
+    "python-multipart>=0.0.20",
 ]
 
 [dependency-groups]

@@ -42,6 +42,7 @@ dependencies = [
     { name = "google-genai" },
     { name = "jinja2" },
     { name = "moviepy" },
+    { name = "python-multipart" },
     { name = "soundfile" },
 ]
 
@@ -60,6 +61,7 @@ requires-dist = [
     { name = "google-genai", specifier = ">=0.5.4" },
     { name = "jinja2", specifier = ">=3.1.4" },
     { name = "moviepy", specifier = ">=2.2.1" },
+    { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "soundfile", specifier = ">=0.13.1" },
 ]
 
