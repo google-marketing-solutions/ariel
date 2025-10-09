@@ -1,14 +1,17 @@
+from configuration import get_config
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from generate_audio import generate_audio
 from transcribe import TranscribeSegment, transcribe_video
+from translate import translate_text
 from google import genai
 
 app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
 
+config = get_config()
 
 @app.get("/", response_class=HTMLResponse)
 async def read_item(request: Request):

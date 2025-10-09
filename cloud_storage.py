@@ -14,17 +14,22 @@
 
 from datetime import datetime
 import mimetypes
+import typing
 import uuid
 from google.cloud import storage
 
 
-def upload_video_to_gcs(file_object, mime_type, bucket_name) -> str:
-  """Uploads a file to a Google Cloud Storage bucket.
+def upload_video_to_gcs(video_file: typing.BinaryIO, mime_type: str, bucket_name: str) -> str:
+  """Uploads a video to a Google Cloud Storage bucket, creating a new folder.
+
+  This is used for the initial upload of a video. A new, unique path is created
+  to upload it to, ensuring multiuple users don't end up using the same video.
 
   Args:
       file_object: A file-like object to upload.
-      bucket_name: The name of the Google Cloud Storage bucket.
-      destination_blob_name: The name of the blob (file) in the bucket.
+      mime_type: the mime-type of the video (e.g. "video/mp4")
+      bucket_name: The name of the Google Cloud Storage bucket to store the video
+          in.
 
   Returns: The path to the uploaded file in GCS.
   """
@@ -37,10 +42,27 @@ def upload_video_to_gcs(file_object, mime_type, bucket_name) -> str:
   bucket = storage_client.bucket(bucket_name)
   blob = bucket.blob(dest_path)
 
-  blob.upload_from_file(file_object, content_type=mime_type)
+  blob.upload_from_file(video_file, content_type=mime_type)
   print(f"Uploaded {dest_path} to GCS.")
 
   return dest_path
+
+def upload_file_to_gcs(target_path: str, file_object: typing.BinaryIO, bucket_name: str, mime_type: str="") -> None:
+  """Uploads a file to GCS.
+
+  Args:
+    target_path: the path to save the file to, including the file name.
+    file_object: the binary file-like object to store.
+    bucket_name: the name of the GCS bucket to use.
+    mime_type: the file's mime-type. If not provided, it is guessed using the target path.
+  """
+  if not mime_type:
+    mime_type = mimetypes.guess_file_type(target_path)[0] or "application/octet-stream"
+
+  storage_client = storage.Client()
+  bucket = storage_client.bucket(bucket_name)
+  blob = bucket.blob(target_path)
+  blob.upload_from_file(file_object, content_type=mime_type)
 
 def get_url_for_path(bucket_name: str, path: str) -> str:
   """Returns a URL that can be used to fetch the files stored in GCS.

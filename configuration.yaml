@@ -3,6 +3,9 @@
 # GCP Project ID
 gcp_project_id: enter project id here
 
+# GCP Project Location
+gcp_project_location: enter project location here
+
 #GCS Bucket name
 gcs_bucket_name: enter bucket name here
 
