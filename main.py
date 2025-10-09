@@ -15,6 +15,11 @@ async def read_item(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
+@app.get("/test", response_class=HTMLResponse)
+async def read_item(request: Request):
+    return templates.TemplateResponse("test.html", {"request": request})
+
+
 @app.get("/transcribe", response_model=list[TranscribeSegment])
 def transcribe(
     gcs_uri: str,
