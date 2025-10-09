@@ -10,6 +10,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const geminiInstructions = document.getElementById('gemini-instructions');
     const startProcessingBtn = document.getElementById('start-processing-btn');
 
+    const geminiModelToggle = document.getElementById('gemini-model-toggle');
+    const geminiModelLabel = document.getElementById('gemini-model-label');
+
+    geminiModelToggle.addEventListener('change', () => {
+      if (geminiModelToggle.checked) {
+        geminiModelLabel.textContent = 'Pro';
+      } else {
+        geminiModelLabel.textContent = 'Flash';
+      }
+    });
+
     // Speakers
     const addSpeakerBtn = document.getElementById('add-speaker-btn');
     const speakerList = document.getElementById('speaker-list');
