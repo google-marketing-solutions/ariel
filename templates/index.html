@@ -1,148 +1,233 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>FastAPI App</title>
-        <style>
-            body { font-family: sans-serif; }
-            .container { max-width: 800px; margin: 2em auto; padding: 1em; border: 1px solid #ccc; border-radius: 5px; }
-            .form-group { margin-bottom: 1em; }
-            label { display: block; margin-bottom: 0.5em; }
-            input[type="text"] { width: 100%; padding: 0.5em; box-sizing: border-box; }
-            button { padding: 0.7em 1.2em; cursor: pointer; }
-            audio { width: 100%; margin-top: 1em; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>Text-to-Speech</h1>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ariel v2.0 AI Voiceover Studio</title>
+    <link rel="icon" href="data:,">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-            <div class="form-group">
-                <label for="prompt-input">Prompt:</label>
-                <input type="text" id="prompt-input" value="Hello world, this is TTS">
+    <header class="top-header">
+        <div class="logo">
+            <i class="bi bi-soundwave"></i>
+            <h1>Ariel v2.0 AI Voiceover Studio</h1>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <h2>New Dubbing Job</h2>
+
+        <div id="video-placeholder" class="video-placeholder">
+            <div id="video-drop-zone" class="video-drop-zone">
+                <i class="bi bi-film"></i>
+                <p>Drag & Drop video file here</p>
+                <div class="d-flex justify-content-center">
+                    <button id="select-video-computer" class="btn btn-primary">Select Video from Computer</button>
+                </div>
+                <input type="file" id="video-input" accept="video/*" class="d-none">
             </div>
-            <div class="form-group">
-                <label for="api-key-input">API Key:</label>
-                <input type="text" id="api-key-input" value="">
-            </div>
-            <div class="form-group">
-                <label for="voice-name-select">Voice Name:</label>
-                <select id="voice-name-select">
-                    <option value="Achernar">Achernar</option>
-                    <option value="Achird">Achird</option>
-                    <option value="Algenib">Algenib</option>
-                    <option value="Algieba">Algieba</option>
-                    <option value="Alnilam">Alnilam</option>
-                    <option value="Aoede">Aoede</option>
-                    <option value="Autonoe">Autonoe</option>
-                    <option value="Callirrhoe">Callirrhoe</option>
-                    <option value="Charon">Charon</option>
-                    <option value="Despina">Despina</option>
-                    <option value="Enceladus">Enceladus</option>
-                    <option value="Erinome">Erinome</option>
-                    <option value="Fenrir">Fenrir</option>
-                    <option value="Gacrux">Gacrux</option>
-                    <option value="Iapetus">Iapetus</option>
-                    <option value="Kore">Kore</option>
-                    <option value="Laomedeia">Laomedeia</option>
-                    <option value="Leda">Leda</option>
-                    <option value="Orus">Orus</option>
-                    <option value="Pulcherrima">Pulcherrima</option>
-                    <option value="Puck">Puck</option>
-                    <option value="Rasalgethi">Rasalgethi</option>
-                    <option value="Sadachbia">Sadachbia</option>
-                    <option value="Sadaltager">Sadaltager</option>
-                    <option value="Schedar">Schedar</option>
-                    <option value="Sulafat">Sulafat</option>
-                    <option value="Umbriel">Umbriel</option>
-                    <option value="Vindemiatrix">Vindemiatrix</option>
-                    <option value="Zephyr">Zephyr</option>
-                    <option value="Zubenelgenubi">Zubenelgenubi</option>
-                </select>
-            </div>
-            <button id="generate-audio-btn">Generate Audio</button>
-            
-            <audio id="audio-player" controls></audio>
+            <video id="video-preview" controls></video>
         </div>
 
-        <script>
-            document.getElementById('generate-audio-btn').addEventListener('click', function() {
-                generateAudio();
-            });
+        <div class="dubbing-settings">
+            <div class="settings-left">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="speakers-section">
+                            <h5>Speakers</h5>
+                            <div id="speaker-list" class="speaker-list"></div>
+                            <button id="add-speaker-btn" class="btn btn-outline-primary mt-2"><i class="bi bi-plus-circle"></i> Add Speaker</button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="language-section">
+                            <div class="mb-3">
+                                                            <label for="original-language" class="form-label">Original Language
+                                                                <a href="https://cloud.google.com/text-to-speech/docs/chirp3-hd#language_availability" target="_blank">
+                                                                    <i class="bi bi-question-circle-fill"></i>
+                                                                </a>
+                                                            </label>
+                                                            <select id="original-language" class="form-select"></select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="language-section">
+                                                        <div class="mb-3">
+                                                                                        <label for="target-language" class="form-label">Translation Language
+                                                                                            <a href="https://cloud.google.com/text-to-speech/docs/chirp3-hd#language_availability" target="_blank">
+                                                                                                <i class="bi bi-question-circle-fill"></i>
+                                                                                            </a>
+                                                                                        </label>
+                                                                                        <select id="target-language" class="form-select"></select>                                                        </div>
+                                                    </div>                    </div>
+                </div>
+                <div class="gemini-instructions-section mt-3">
+                    <label for="gemini-instructions" class="form-label">Gemini Instructions</label>
+                    <textarea id="gemini-instructions" class="form-control" rows="4" placeholder="e.g., No dubbing phrases, company name, special instructions..."></textarea>
+                </div>
+            </div>
+            <div class="settings-right">
+                <h6>Gemini Model</h6>
+                <div class="d-flex align-items-center">
+                  <span>Flash</span>
+                  <div class="form-check form-switch mx-2">
+                    <input class="form-check-input" type="checkbox" role="switch" id="gemini-model-toggle" checked>
+                  </div>
+                  <span>PRO</span>
+                </div>
+            </div>
+        </div>
 
-            function playBase64Audio(playerID, base64String, volume) {
-                const binaryString = atob(base64String);
-                const binaryArray = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    binaryArray[i] = binaryString.charCodeAt(i);
-                }
-                const player = document.getElementById(playerID);
-                player.src = URL.createObjectURL(new Blob([binaryArray], { type: 'audio/wav' }));
-                player.volume = volume;
+        <div class="start-processing-section">
+            <button id="start-processing-btn" class="btn btn-success btn-lg" disabled>Start Processing</button>
+        </div>
+    </main>
 
-                return new Promise(resolve => {
-                    player.play();
-                    player.onended = resolve;
-                });
-            }
+    <div id="results-view" style="display: none;">
+        <div class="row">
+            <div class="col-6" style="max-width: 50vw;">
+                <div id="video-player-container" class="mt-3">
+                     <video id="results-video-preview" class="results-video" controls></video>
+                </div>
+            </div>
+            <div class="col-6" style="max-width: 50vw;">
+                <div id="video-settings-view" class="video-settings-view card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title">Video Settings</h5>
+                            <button id="edit-video-settings-btn" class="btn btn-sm btn-outline-primary">Edit</button>
+                        </div>
+                        <div id="video-settings-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="timeline" class="timeline-container">
+            <div class="timeline-row" id="original-utterances-timeline"></div>
+            <div class="timeline-row" id="translated-utterances-timeline"></div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-5" style="max-width: 40vw;">
+                <div id="utterances-list" class="utterances-list"></div>
+            </div>
+            <div class="col-7">
+                <div id="utterance-editor" class="utterance-editor card" style="display: none;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title">Edit Utterance</h5>
+                            <button type="button" class="btn-close btn-close-white" id="close-utterance-editor"></button>
+                        </div>
+                        <div id="utterance-editor-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            function generateAudio() {
-                const prompt = document.getElementById('prompt-input').value;
-                const apiKey = document.getElementById('api-key-input').value;
-                const voiceName = document.getElementById('voice-name-select').value;
+    <!-- Speaker Selection Modal -->
+    <div class="modal fade" id="speaker-modal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Select Speaker Voice</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="speaker-name-input" class="form-label">Speaker Name</label>
+                        <input type="text" id="speaker-name-input" class="form-control" placeholder="e.g., Narrator">
+                    </div>
+                    <input type="text" id="voice-search" class="form-control mb-3" placeholder="Search voices...">
+                    <div class="d-flex justify-content-center mb-3">
+                        <div class="btn-group" role="group">
+                            <input type="radio" class="btn-check" name="gender-filter" id="gender-all" value="all" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="gender-all">All</label>
 
-                const params = new URLSearchParams({
-                    prompt: prompt,
-                    api_key: apiKey,
-                    voice_name: voiceName,
-                });
+                            <input type="radio" class="btn-check" name="gender-filter" id="gender-male" value="Male" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="gender-male">Male</label>
 
-                const url = `/generate_audio_test?${params.toString()}`;
-                
-                fetch(url)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        playBase64Audio('audio-player', data.audio_data, 1.0);
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Error generating audio.');
-                    });
-            }
+                            <input type="radio" class="btn-check" name="gender-filter" id="gender-female" value="Female" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="gender-female">Female</label>
+                        </div>
+                    </div>
+                    <div id="voice-list" class="voice-list-modal">
+                        <!-- Voice items will be added here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="add-voice-btn" class="btn btn-primary">Add Voice</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            function saveValues() {
-                const ids = ['prompt-input', 'api-key-input'];
-                ids.forEach(id => {
-                    const element = document.getElementById(id);
-                    if (element) {
-                        localStorage.setItem(id, element.value);
-                    }
-                });
-            }
+    <!-- Edit Speaker Voice Modal -->
+    <div class="modal fade" id="edit-speaker-voice-modal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Speaker Voice</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="edit-voice-search" class="form-control mb-3" placeholder="Search voices...">
+                    <div class="d-flex justify-content-center mb-3">
+                        <div class="btn-group" role="group">
+                            <input type="radio" class="btn-check" name="edit-gender-filter" id="edit-gender-all" value="all" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="edit-gender-all">All</label>
 
-            function loadValues() {
-                const ids = ['prompt-input', 'api-key-input'];
-                ids.forEach(id => {
-                    const value = localStorage.getItem(id);
-                    if (value !== null) {
-                        const element = document.getElementById(id);
-                        if (element) {
-                            element.value = value;
-                        }
-                    }
-                });
-            }
+                            <input type="radio" class="btn-check" name="edit-gender-filter" id="edit-gender-male" value="Male" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="edit-gender-male">Male</label>
 
-            window.onload = loadValues;
+                            <input type="radio" class="btn-check" name="edit-gender-filter" id="edit-gender-female" value="Female" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="edit-gender-female">Female</label>
+                        </div>
+                    </div>
+                    <div id="edit-voice-list" class="voice-list-modal">
+                        <!-- Voice items will be added here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="save-voice-btn" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            const inputs = document.querySelectorAll('input[type="text"]');
-            inputs.forEach(input => {
-                input.addEventListener('input', saveValues);
-            });
-        </script>
-    </body>
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="confirmation-modal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Unsaved Changes</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>You have unsaved changes. Are you sure you want to close?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="confirm-close-btn" class="btn btn-danger">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="thinking-popup" class="thinking-popup" style="display: none;">
+        <div class="thinking-popup-content">
+            <p>Thinking<span class="dots">...</span></p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+    <script src="be_script.js"></script>
+</body>
 </html>

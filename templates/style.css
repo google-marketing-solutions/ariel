@@ -1,0 +1,377 @@
+:root {
+    --primary-bg-color: #1a1a1a;
+    --secondary-bg-color: #2a2a2a;
+    --tertiary-bg-color: #3a3a3a;
+    --primary-text-color: #ffffff;
+    --secondary-text-color: #b0b0b0;
+    --accent-color: #007bff;
+    --sans-serif-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+    background-color: var(--primary-bg-color);
+    color: var(--primary-text-color);
+    font-family: var(--sans-serif-font);
+    margin: 0;
+}
+
+.top-header {
+    background-color: var(--secondary-bg-color);
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--tertiary-bg-color);
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+}
+
+.logo .bi {
+    font-size: 2rem;
+    margin-right: 1rem;
+    color: var(--accent-color);
+}
+
+.logo h1 {
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.main-content {
+    padding: 2rem;
+}
+
+.main-content h2 {
+    margin-bottom: 1.5rem;
+}
+
+.video-placeholder {
+    background-color: var(--secondary-bg-color);
+    border: 2px dashed var(--tertiary-bg-color);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.video-drop-zone .bi {
+    font-size: 3rem;
+    color: var(--secondary-text-color);
+    margin-bottom: 1rem;
+}
+
+.dubbing-settings {
+    display: flex;
+    gap: 2rem;
+    background-color: var(--secondary-bg-color);
+    padding: 2rem;
+    border-radius: 8px;
+}
+
+.settings-left {
+    flex: 3;
+}
+
+.settings-right {
+    flex: 1;
+    text-align: right;
+}
+
+.speakers-section, .language-section, 
+
+.gemini-instructions-section {
+    margin-bottom: 2rem;
+}
+
+.speaker-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.speaker-card {
+    background-color: var(--tertiary-bg-color);
+    padding: 1rem;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.speaker-card .bi {
+    margin-right: 0.5rem;
+}
+
+.speaker-card .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.additional-settings-menu {
+    background-color: var(--tertiary-bg-color);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+.start-processing-section {
+    text-align: right;
+    margin-top: 2rem;
+}
+
+/* Modal Styling */
+.modal-content {
+    background-color: var(--secondary-bg-color);
+    color: var(--primary-text-color);
+}
+
+.voice-list-modal {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.voice-list-modal .list-group-item {
+    background-color: var(--tertiary-bg-color);
+    color: var(--primary-text-color);
+    border: 1px solid var(--primary-bg-color);
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.voice-list-modal::-webkit-scrollbar {
+    width: 8px;
+}
+
+.voice-list-modal::-webkit-scrollbar-track {
+    background: var(--primary-bg-color);
+}
+
+.voice-list-modal::-webkit-scrollbar-thumb {
+    background: var(--tertiary-bg-color);
+    border-radius: 4px;
+}
+
+.voice-list-modal::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-text-color);
+}
+
+.voice-list-modal .list-group-item.active {
+    background-color: transparent;
+    border: 1px solid var(--accent-color);
+}
+
+/* Form elements dark theme */
+select, option{
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+.form-control, .form-select {
+    background-color: var(--tertiary-bg-color);
+    color: var(--primary-text-color);
+    border-color: var(--primary-bg-color);
+    border-radius: 8px;
+    transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+}
+
+.form-select optgroup {
+    font-weight: bold;
+    color: var(--accent-color);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--tertiary-bg-color);
+    color: var(--primary-text-color);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+}
+
+/* Style for dropdown options - may not work in all browsers */
+.form-select option {
+    
+    background-color: var(--tertiary-bg-color);
+    color: var(--primary-text-color);
+}
+
+.form-check-input:checked {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+/* Thinking Popup */
+.thinking-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1060; /* Higher than modal */
+}
+
+.thinking-popup-content {
+    background-color: var(--secondary-bg-color);
+    padding: 2rem 3rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.thinking-popup-content .dots span {
+    opacity: 0;
+    animation: blink 1.4s infinite;
+}
+
+.thinking-popup-content .dots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.thinking-popup-content .dots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes blink {
+    0% { opacity: 0; }
+    50% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* Results View */
+#results-view {
+    padding: 2rem;
+}
+
+.video-settings-view {
+    background-color: var(--secondary-bg-color);
+    color: var(--primary-text-color);
+}
+
+.utterances-list {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.utterance-card {
+    background-color: var(--secondary-bg-color);
+    color: var(--primary-text-color);
+    padding: 1rem 10px 1rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.utterance-card-content p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.utterance-editor {
+    background-color: var(--secondary-bg-color);
+    color: var(--primary-text-color);
+}
+
+.timeline-container {
+    width: 100%;
+    padding: 20px 10px;
+    background-color: var(--secondary-bg-color);
+    border-radius: 8px;
+    margin-top: 2rem;
+    position: relative;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.timeline-row {
+    position: relative;
+    margin-bottom: 5px;
+}
+
+.utterance-block {
+    position: absolute;
+    height: 100%;
+    background-color: var(--accent-color);
+    border-radius: 4px;
+    color: white;
+    padding: 5px;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    min-height: 10px;
+}
+
+.utterance-block.original {
+    background-color: var(--tertiary-bg-color);
+    cursor: default;
+}
+
+.utterance-block.overlap {
+    background: repeating-linear-gradient(
+        45deg,
+        rgba(255, 0, 0, 0.2),
+        rgba(255, 0, 0, 0.2) 10px,
+        rgba(255, 0, 0, 0.3) 10px,
+        rgba(255, 0, 0, 0.3) 20px
+    );
+    z-index: 1;
+}
+
+.utterance-card-content.removed,
+.utterance-card-content.muted {
+    opacity: 0.5;
+}
+
+.utterance-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+/* Responsiveness Hint */
+@media (max-width: 768px) {
+    .dubbing-settings {
+        flex-direction: column;
+    }
+}
+
+#video-preview {
+    max-height: 250px;
+    width: auto;
+    object-fit: contain;
+    display: none;
+}
+
+#video-player-container {
+    max-height: 250px;
+}
+
+.results-video {
+    max-height: 250px;
+    width: auto;
+    object-fit: contain;
+}
+
+.video-placeholder.video-selected {
+    width: auto;
+    display: flex;
+    justify-content: center;
+    max-height: 250px;
+}
