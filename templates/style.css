@@ -274,6 +274,10 @@ select, option{
     font-size: 0.9rem;
 }
 
+.utterance-content-wrapper {
+    position: relative;
+}
+
 .utterance-editor {
     background-color: var(--secondary-bg-color);
     color: var(--primary-text-color);
