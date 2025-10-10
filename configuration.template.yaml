@@ -12,6 +12,9 @@ GCS_BUCKET_NAME: "enter bucket name here"
 # Gemini Model for transcription
 GEMINI_MODEL: "gemini-2.5-flash"
 
+# Gemini Model for TTS
+GEMINI_TTS_MODEL: "gemini-2.5-flash-preview-tts"
+
 # Default audio format
 AUDIO_FORMAT: "mp3"
 
