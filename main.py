@@ -1,4 +1,9 @@
-from typing import Annotated, List
+import base64
+import json
+import os
+import shutil
+import uuid
+from typing import Annotated
 from cloud_storage import upload_video_to_gcs
 from configuration import get_config
 from fastapi import FastAPI, Request, Form, UploadFile
@@ -10,7 +15,7 @@ from transcribe import TranscribeSegment, transcribe_video, match_voice
 from translate import translate_text
 from google import genai
 
-from models import Video, Speaker, Utterance
+from models import Video, Utterance, Speaker
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -21,8 +26,7 @@ config = get_config()
 
 @app.get("/", response_class=HTMLResponse)
 async def read_item(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
-
+  return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.post("/process")
@@ -49,10 +53,9 @@ async def process_video(
   # )
 
   speaker_list = json.loads(speakers)
-  ### DEBUG
-  print(speaker_list)
-  ### DEBUG
-  speaker_map = {s["id"]: s for s in speaker_list}
+  speaker_list = [Speaker(speaker_id=s["id"], voice=s["voice"]) for s in speaker_list]
+  speaker_map = {s.speaker_id: s for s in speaker_list}
+  
 
   utterances: list[Utterance] = []
   for i, t in enumerate(transcriptions):
@@ -62,10 +65,12 @@ async def process_video(
     translated_text = translate_text(
       genai_client, original_language, translate_language, t.transcript, t.tone
     )
+    # Needed until we have an allow-listed project for Gemini TTS
+    audio_client =  genai.Client(api_key=config.gemini_api_key)
     generated_audio, audio_duration = generate_audio(
-      genai_client, translated_text, speaker_map[t.speaker_id]["voice"]
+      audio_client, translated_text, speaker.voice
     )
-    local_audio_path = os.path.join(local_dir)
+    local_audio_path = os.path.join(local_dir, f"audio_{i}.wav")
     save_audio_file(generated_audio, local_audio_path)
     translated_end_time = t.start_time + (audio_duration / 1000)
 
@@ -93,15 +98,15 @@ async def process_video(
     utterances=utterances,
   )
 
+  return to_return
+
 
 def save_video(video: UploadFile) -> tuple[str, str]:
   video_name = video.filename or "video.mp4"
   gcs_path = upload_video_to_gcs(video_name, video.file, config.gcs_bucket_name)
   # save the file locally
   local_dir = f"static/temp/{os.path.dirname(gcs_path)}"
-  os.makedirs(
-    name=local_dir, exist_ok=True
-  )
+  os.makedirs(name=local_dir, exist_ok=True)
   local_path = f"static/temp/{gcs_path}"
   with open(local_path, "wb") as local_file:
     shutil.copyfileobj(video.file, local_file)
@@ -123,7 +128,7 @@ def save_audio_file(audio: str, path: str) -> None:
 
 @app.get("/test", response_class=HTMLResponse)
 async def read_item_test(request: Request):
-    return templates.TemplateResponse("test.html", {"request": request})
+  return templates.TemplateResponse("test.html", {"request": request})
 
 
 @app.get("/transcribe", response_model=list[TranscribeSegment])
@@ -154,15 +159,17 @@ def generate_audio_test(
 
 
 @app.post("/match_voice")
-def match_voice_endpoint(segments: List[TranscribeSegment]):
+def match_voice_endpoint(segments: list[TranscribeSegment]):
   # Initialize the genai client
-  client = genai.Client(vertexai=True,
-                        project=config.gcp_project_id,
-                        location=config.gcp_project_location)
+  client = genai.Client(
+    vertexai=True,
+    project=config.gcp_project_id,
+    location=config.gcp_project_location,
+  )
 
   # Match voices for all speakers
-  voice_map = match_voice(client,
-                          model_name=config.gemini_model,
-                          segments=segments)
+  voice_map = match_voice(
+    client, model_name=config.gemini_model, segments=segments
+  )
 
   return voice_map
