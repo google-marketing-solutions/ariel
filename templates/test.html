@@ -55,10 +55,6 @@
         <label for="gcs-url-input">GCS URL:</label>
         <input type="text" id="gcs-url-input" value="" />
       </div>
-      <div class="form-group">
-        <label for="project-input">Project:</label>
-        <input type="text" id="project-input" value="" />
-      </div>
       <button id="transcribe-btn">Transcribe</button>
       <div id="transcription-result"></div>
     </div>
@@ -308,13 +304,11 @@
 
       function transcribeVideo() {
         const gcsUrl = document.getElementById('gcs-url-input').value;
-        const project = document.getElementById('project-input').value;
         const resultDiv = document.getElementById('transcription-result');
         resultDiv.innerHTML = 'Transcribing...';
 
         const params = new URLSearchParams({
           gcs_uri: gcsUrl,
-          project: project,
         });
 
         const url = `/transcribe?${params.toString()}`;
@@ -331,7 +325,7 @@
       }
 
       function saveValues() {
-        const ids = ['prompt-input', 'gcs-url-input', 'project-input'];
+        const ids = ['prompt-input', 'gcs-url-input'];
         ids.forEach(id => {
           const element = document.getElementById(id);
           if (element) {
@@ -341,7 +335,7 @@
       }
 
       function loadValues() {
-        const ids = ['prompt-input', 'gcs-url-input', 'project-input'];
+        const ids = ['prompt-input', 'gcs-url-input'];
         ids.forEach(id => {
           const value = localStorage.getItem(id);
           if (value !== null) {

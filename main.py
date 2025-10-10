@@ -56,12 +56,10 @@ async def read_item_test(request: Request):
 
 
 @app.get("/transcribe", response_model=list[TranscribeSegment])
-def transcribe(
-    gcs_uri: str,
-    project: str,
-    location='us-central1',
-):
-    client = genai.Client(vertexai=True, project=project, location=location)
+def transcribe(gcs_uri: str):
+    client = genai.Client(vertexai=True,
+                          project=config.gcp_project_id,
+                          location=config.gcp_project_location)
     return transcribe_video(client,
                             model_name=config.gemini_model,
                             gcs_uri=gcs_uri)
