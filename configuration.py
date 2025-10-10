@@ -12,11 +12,35 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from types import SimpleNamespace
-import yaml
+import os
+from dataclasses import dataclass
+from typing import Optional
 
 
-def get_config(config_path: str = "configuration.yaml") -> SimpleNamespace:
-  with open(config_path) as config_file:
-    config = yaml.safe_load(config_file)
-    return SimpleNamespace(**config)
+@dataclass
+class Config:
+    gcp_project_id: Optional[str]
+    gcp_project_location: Optional[str]
+    gcs_bucket_name: Optional[str]
+    gemini_model: str
+    audio_format: str
+    video_format: str
+    gemini_api_key: Optional[str]
+    gemini_tts_model: str
+
+
+def get_config() -> Config:
+    """
+  Reads configuration from environment variables and returns a Config object.
+  """
+    return Config(
+        gcp_project_id=os.environ.get('GCP_PROJECT_ID'),
+        gcp_project_location=os.environ.get('GCP_PROJECT_LOCATION'),
+        gcs_bucket_name=os.environ.get('GCS_BUCKET_NAME'),
+        gemini_model=os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash'),
+        audio_format=os.environ.get('AUDIO_FORMAT', 'mp3'),
+        video_format=os.environ.get('VIDEO_FORMAT', 'mp4'),
+        gemini_api_key=os.environ.get('GEMINI_API_KEY'),
+        gemini_tts_model=os.environ.get('GEMINI_TTS_MODEL',
+                                        'gemini-2.5-flash-preview-tts'),
+    )
