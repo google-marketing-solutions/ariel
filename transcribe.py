@@ -3,6 +3,7 @@ import json
 from typing import List, Dict
 from pydantic import TypeAdapter
 from google.genai import types
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 VOICE_OPTIONS = {
     'Zephyr': {
@@ -185,46 +186,49 @@ def transcribe_video(
 
     video = types.Part.from_uri(file_uri=gcs_uri, mime_type="video/mp4")
 
-    response = client.models.generate_content(
-        model=model_name,
-        contents=[video, prompt],
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_json_schema={
-                "type": "array",
-                "items": {
-                    "type":
-                    "object",
-                    "properties": {
-                        "speaker_id": {
-                            "type": "string"
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
+    def call_gemini():
+        return client.models.generate_content(
+            model=model_name,
+            contents=[video, prompt],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_json_schema={
+                    "type": "array",
+                    "items": {
+                        "type":
+                        "object",
+                        "properties": {
+                            "speaker_id": {
+                                "type": "string"
+                            },
+                            "gender": {
+                                "type": "string"
+                            },
+                            "transcript": {
+                                "type": "string"
+                            },
+                            "tone": {
+                                "type": "string"
+                            },
+                            "start_time": {
+                                "type": "number",
+                                "format": "float"
+                            },
+                            "end_time": {
+                                "type": "number",
+                                "format": "float"
+                            }
                         },
-                        "gender": {
-                            "type": "string"
-                        },
-                        "transcript": {
-                            "type": "string"
-                        },
-                        "tone": {
-                            "type": "string"
-                        },
-                        "start_time": {
-                            "type": "number",
-                            "format": "float"
-                        },
-                        "end_time": {
-                            "type": "number",
-                            "format": "float"
-                        }
-                    },
-                    "required": [
-                        "speaker_id", "gender", "transcript", "tone",
-                        "start_time", "end_time"
-                    ]
-                }
-            }),
-    )
+                        "required": [
+                            "speaker_id", "gender", "transcript", "tone",
+                            "start_time", "end_time"
+                        ]
+                    }
+                }),
+        )
 
+    response = call_gemini()
     response_json = json.loads(response.text)
     return TypeAdapter(List[TranscribeSegment]).validate_python(response_json)
 
