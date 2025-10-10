@@ -185,3 +185,6 @@ dist
 
 # Gemini
 GEMINI.md
+
+# Credentials
+configuration.yaml
