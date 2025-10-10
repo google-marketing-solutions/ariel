@@ -1,19 +1,22 @@
 # Ariel Configuration File
 
 # GCP Project ID
-gcp_project_id: enter project id here
+GCP_PROJECT_ID: "enter project id here"
 
 # GCP Project Location
-gcp_project_location: enter project location here
+GCP_PROJECT_LOCATION: "enter project location here"
 
 #GCS Bucket name
-gcs_bucket_name: enter bucket name here
+GCS_BUCKET_NAME: "enter bucket name here"
 
 # Gemini Model for transcription
-gemini_model: "gemini-2.5-flash"
+GEMINI_MODEL: "gemini-2.5-flash"
 
 # Default audio format
-audio_format: "mp3"
+AUDIO_FORMAT: "mp3"
 
 # Default video format
-video_format: "mp4"
+VIDEO_FORMAT: "mp4"
+
+# Gemini API Key
+GEMINI_API_KEY: "your gemini api key here"
