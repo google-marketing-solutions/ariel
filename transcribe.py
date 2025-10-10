@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import json
-from typing import List, Dict
 from pydantic import TypeAdapter
 from google.genai import types
 from tenacity import retry, stop_after_attempt, wait_fixed
@@ -173,7 +172,7 @@ def transcribe_video(
     client,
     model_name,
     gcs_uri: str,
-) -> List[TranscribeSegment]:
+) -> list[TranscribeSegment]:
     prompt = """
     Provide a transcript of this audio file.
     Identify different speakers and attempt to infer their gender.
@@ -182,6 +181,9 @@ def transcribe_video(
     Provide the start and end timestamps in seconds.
     **An utterance should be a distinct segment of speech, typically a sentence
     or a complete phrase, separated by a noticeable pause.**
+
+    When assigning speaker_id, use the format "speaker_x", where x is number of
+    the speaker in the order they are first heard in the video, starting at 1.
     """
 
     video = types.Part.from_uri(file_uri=gcs_uri, mime_type="video/mp4")
@@ -230,14 +232,14 @@ def transcribe_video(
 
     response = call_gemini()
     response_json = json.loads(response.text)
-    return TypeAdapter(List[TranscribeSegment]).validate_python(response_json)
+    return TypeAdapter(list[TranscribeSegment]).validate_python(response_json)
 
 
 def match_voice(
     client,
     model_name: str,
-    segments: List[TranscribeSegment],
-) -> Dict[str, str]:
+    segments: list[TranscribeSegment],
+) -> dict[str, str]:
     """
     Matches speakers to voices from VOICE_OPTIONS using a generative model.
 

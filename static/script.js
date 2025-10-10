@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const customName = speakerNameInput.value.trim();
 
         const speaker = {
-            id: Date.now(),
+            id: `speaker_${speakers.length + 1}`,
             name: customName || `Speaker ${speakers.length + 1}`,
             voice: voiceData.name,
             gender: voiceData.gender

@@ -230,7 +230,7 @@ urllib3==2.5.0
     #   requests
     #   sentry-sdk
 uvicorn==0.37.0
-    # via
+    # viaxb
     #   fastapi
     #   fastapi-cli
     #   fastapi-cloud-cli
