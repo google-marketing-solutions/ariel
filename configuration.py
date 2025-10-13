@@ -19,13 +19,13 @@ from typing import Optional
 
 @dataclass
 class Config:
-    gcp_project_id: Optional[str]
-    gcp_project_location: Optional[str]
-    gcs_bucket_name: Optional[str]
+    gcp_project_id: str
+    gcp_project_location: str
+    gcs_bucket_name: str
     gemini_model: str
     audio_format: str
     video_format: str
-    gemini_api_key: Optional[str]
+    gemini_api_key: str
     gemini_tts_model: str
 
 

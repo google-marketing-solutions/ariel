@@ -3,13 +3,14 @@ import io
 import re
 import wave
 from google.genai import types
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 
 def pcm_to_wav_base64(
     pcm_data: bytes,
     sample_rate: int,
     bit_depth: int,
-) -> str:
+) -> tuple[str, int]:
     """Converts raw PCM audio data to a base64 encoded WAV string."""
     with io.BytesIO() as wav_file:
         with wave.open(wav_file, 'wb') as wf:
@@ -17,13 +18,17 @@ def pcm_to_wav_base64(
             wf.setsampwidth(bit_depth // 8)
             wf.setframerate(sample_rate)
             wf.writeframes(pcm_data)
+
+            num_frames = wf.getnframes()
+            
         wav_bytes = wav_file.getvalue()
 
     base64_wav = base64.b64encode(wav_bytes).decode('utf-8')
-    return base64_wav
+    duration = (num_frames / sample_rate) * 1000
+    return base64_wav, duration
 
 
-def _process_audio_part(audio_part) -> str:
+def _process_audio_part(audio_part) -> tuple[str, int]:
     """Processes the audio part, extracts metadata, and converts to base64 WAV."""
     # Parse the mime_type string "audio/L16;codec=pcm;rate=24000"
     mime_type = audio_part.inline_data.mime_type
@@ -44,17 +49,21 @@ def generate_audio(
     prompt: str,
     voice_name: str,
     model_name: str = 'gemini-2.5-pro-preview-tts',
-):
+) -> tuple[str, int]:
     voice_config = types.VoiceConfig(
         prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name))
 
-    response = client.models.generate_content(
-        model=model_name,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_modalities=["AUDIO"],
-            speech_config=types.SpeechConfig(voice_config=voice_config),
-        ))
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
+    def call_gemini():
+        return client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_modalities=["AUDIO"],
+                speech_config=types.SpeechConfig(voice_config=voice_config),
+            ))
+
+    response = call_gemini()
 
     audio_part = response.candidates[0].content.parts[0]
     return _process_audio_part(audio_part)

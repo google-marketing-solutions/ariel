@@ -28,7 +28,7 @@ class Speaker(BaseModel):
         utterances.
   """
 
-    speaker_number: int
+    speaker_id: str
     voice: str
 
 

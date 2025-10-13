@@ -4,7 +4,7 @@ import subprocess
 from moviepy import VideoFileClip
 
 
-def separate_audio_from_video(video_file_path: str, output_local_path: str):
+def separate_audio_from_video(video_file_path: str, output_local_path: str) -> tuple[str, str]:
   """Separates the music and vocals from the input video file.
 
   Args:
@@ -49,6 +49,6 @@ def separate_audio_from_video(video_file_path: str, output_local_path: str):
     return vocals_path, background_path
   else:
     raise RuntimeError(
-        'Audio separation failed. Could not find output files in the expected'
+        'Audio separation failed. Could not find output files in the expected' +
         f' path: {vocals_path}'
     )
