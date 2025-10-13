@@ -368,12 +368,16 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('prompt_enhancements', geminiInstructions.value);
 
         // 4. Speakers
-        const speakersToPost = speakers.map(s => ({ id: s.id, voice: s.voice }));
+        const speakersToPost = speakers.map((s, index) => ({
+            id: `SPEAKER_${(index + 1).toString().padStart(2, '0')}`,
+            name: s.name,
+            voice: s.voice
+        }));
         formData.append('speakers', JSON.stringify(speakersToPost));
 
         try {
             // Replace '/process' with your actual backend endpoint
-            const response = await fetch('/process', {
+            const response = await fetch('/process_video', {
                 method: 'POST',
                 body: formData
             });
@@ -641,160 +645,168 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderTimeline(videoData, videoDuration) {
         const timelineContainer = document.getElementById('timeline');
-        const originalTimeline = document.getElementById('original-utterances-timeline');
-        const translatedTimeline = document.getElementById('translated-utterances-timeline');
-        const timelineWidth = timelineContainer.offsetWidth;
+        const timelineMarkersContainer = document.getElementById('timeline-markers');
+        const originalSpeakerLabelsContainer = document.getElementById('original-speaker-labels');
+        const originalUtterancesTracksContainer = document.getElementById('original-utterances-tracks');
+        const translatedSpeakerLabelsContainer = document.getElementById('translated-speaker-labels');
+        const translatedUtterancesTracksContainer = document.getElementById('translated-utterances-tracks');
+
+        // Clear previous content
+        timelineMarkersContainer.innerHTML = '';
+        originalSpeakerLabelsContainer.innerHTML = '';
+        originalUtterancesTracksContainer.innerHTML = '';
+        translatedSpeakerLabelsContainer.innerHTML = '';
+        translatedUtterancesTracksContainer.innerHTML = '';
+
+        const timelineWidth = timelineContainer.offsetWidth - 150; // Subtract label column width
         const scale = timelineWidth / videoDuration;
 
-        originalTimeline.innerHTML = '';
-        translatedTimeline.innerHTML = '';
+        // Identify unique speakers and their names
+        const uniqueSpeakers = {};
+        videoData.utterances.forEach(u => {
+            if (!uniqueSpeakers[u.speaker.id]) {
+                uniqueSpeakers[u.speaker.id] = u.speaker.name;
+            }
+        });
+        const speakerIds = Object.keys(uniqueSpeakers);
 
-        originalTimeline.style.height = `${rowHeight}px`;
+        // Create speaker rows and labels
+        speakerIds.forEach(speakerId => {
+            const speakerName = uniqueSpeakers[speakerId];
 
-        // Render original utterances in one row
+            // Original section
+            const originalLabel = document.createElement('div');
+            originalLabel.classList.add('speaker-label');
+            originalLabel.textContent = speakerName;
+            originalSpeakerLabelsContainer.appendChild(originalLabel);
+
+            const originalTrack = document.createElement('div');
+            originalTrack.classList.add('speaker-timeline-row');
+            originalTrack.id = `original-speaker-track-${speakerId}`;
+            originalUtterancesTracksContainer.appendChild(originalTrack);
+
+            // Translated section
+            const translatedLabel = document.createElement('div');
+            translatedLabel.classList.add('speaker-label');
+            translatedLabel.textContent = speakerName;
+            translatedSpeakerLabelsContainer.appendChild(translatedLabel);
+
+            const translatedTrack = document.createElement('div');
+            translatedTrack.classList.add('speaker-timeline-row');
+            translatedTrack.id = `translated-speaker-track-${speakerId}`;
+            translatedUtterancesTracksContainer.appendChild(translatedTrack);
+        });
+
+        // Add timeline markers
+        // Render original utterances
         videoData.utterances.forEach((utterance, index) => {
-            const originalBlock = document.createElement('div');
-            originalBlock.className = 'utterance-block original';
-            originalBlock.style.left = `${utterance.original_start_time * scale}px`;
-            originalBlock.style.width = `${(utterance.original_end_time - utterance.original_start_time) * scale}px`;
-            originalBlock.textContent = `U: ${index + 1}`;
-            originalTimeline.appendChild(originalBlock);
-
-            // Check for overlaps with subsequent utterances
-            for (let i = index + 1; i < videoData.utterances.length; i++) {
-                const other = videoData.utterances[i];
-                
-                const overlap_start = Math.max(utterance.original_start_time, other.original_start_time);
-                const overlap_end = Math.min(utterance.original_end_time, other.original_end_time);
-
-                if (overlap_start < overlap_end) {
-                    // There is an overlap
-                    const overlapBlock = document.createElement('div');
-                    overlapBlock.className = 'utterance-block overlap';
-                    overlapBlock.style.left = `${overlap_start * scale}px`;
-                    overlapBlock.style.width = `${(overlap_end - overlap_start) * scale}px`;
-                    originalTimeline.appendChild(overlapBlock);
-                }
+            const originalTrack = document.getElementById(`original-speaker-track-${utterance.speaker.id}`);
+            if (originalTrack) {
+                const originalBlock = document.createElement('div');
+                originalBlock.className = 'utterance-block original';
+                originalBlock.style.left = `${utterance.original_start_time * scale}px`;
+                originalBlock.style.width = `${(utterance.original_end_time - utterance.original_start_time) * scale}px`;
+                originalBlock.textContent = `U: ${index + 1}`;
+                originalTrack.appendChild(originalBlock);
             }
         });
 
-        // Render translated utterances in separate rows
+        // Render translated utterances
         videoData.utterances.forEach((utterance, index) => {
-            const translatedRow = document.createElement('div');
-            translatedRow.className = 'timeline-row';
-            translatedRow.style.height = `${rowHeight}px`;
+            const translatedTrack = document.getElementById(`translated-speaker-track-${utterance.speaker.id}`);
+            if (translatedTrack) {
+                const translatedBlock = document.createElement('div');
+                translatedBlock.className = 'utterance-block';
+                translatedBlock.style.left = `${utterance.translated_start_time * scale}px`;
+                translatedBlock.style.width = `${(utterance.translated_end_time - utterance.translated_start_time) * scale}px`;
+                translatedBlock.textContent = `U: ${index + 1}`;
+                translatedBlock.dataset.utteranceId = utterance.id;
 
-            const translatedBlock = document.createElement('div');
-            translatedBlock.className = 'utterance-block';
-            translatedBlock.style.left = `${utterance.translated_start_time * scale}px`;
-            translatedBlock.style.width = `${(utterance.translated_end_time - utterance.translated_start_time) * scale}px`;
-            translatedBlock.textContent = `U: ${index + 1}`;
-            translatedBlock.dataset.utteranceId = utterance.id;
-            
-            translatedBlock.addEventListener('dblclick', () => {
-                editUtterance(utterance, videoData.speakers, videoData.utterances, index);
-            });
+                translatedBlock.addEventListener('dblclick', () => {
+                    editUtterance(utterance, videoData.speakers, videoData.utterances, index);
+                });
 
-            // Drag and drop
-            translatedBlock.addEventListener('mousedown', (e) => {
-                let initialX = e.clientX;
-                let initialLeft = translatedBlock.offsetLeft;
-                const blockWidth = translatedBlock.offsetWidth;
+                // Drag and drop functionality (adapted from previous implementation)
+                translatedBlock.addEventListener('mousedown', (e) => {
+                    let initialX = e.clientX;
+                    let initialLeft = translatedBlock.offsetLeft;
+                    const blockWidth = translatedBlock.offsetWidth;
 
-                function handleMouseMove(e) {
-                    const dx = e.clientX - initialX;
-                    let newLeft = initialLeft + dx;
+                    function handleMouseMove(e) {
+                        const dx = e.clientX - initialX;
+                        let newLeft = initialLeft + dx;
 
-                    // Constrain movement
-                    if (newLeft < 0) {
-                        newLeft = 0;
-                    }
-                    if (newLeft + blockWidth > timelineWidth) {
-                        newLeft = timelineWidth - blockWidth;
-                    }
+                        // Constrain movement
+                        if (newLeft < 0) {
+                            newLeft = 0;
+                        }
+                        if (newLeft + blockWidth > timelineWidth) {
+                            newLeft = timelineWidth - blockWidth;
+                        }
 
-                    translatedBlock.style.left = `${newLeft}px`;
+                        translatedBlock.style.left = `${newLeft}px`;
 
-                    const newStartTime = newLeft / scale;
-                    const utteranceDuration = utterance.translated_end_time - utterance.translated_start_time;
-                    const newEndTime = newStartTime + utteranceDuration;
+                        const newStartTime = newLeft / scale;
+                        const utteranceDuration = utterance.translated_end_time - utterance.translated_start_time;
+                        const newEndTime = newStartTime + utteranceDuration;
 
-                    // Temporarily update the dragged utterance times
-                    const originalStartTime = utterance.translated_start_time;
-                    const originalEndTime = utterance.translated_end_time;
-                    utterance.translated_start_time = newStartTime;
-                    utterance.translated_end_time = newEndTime;
+                        // Temporarily update the dragged utterance times
+                        const originalStartTime = utterance.translated_start_time;
+                        const originalEndTime = utterance.translated_end_time;
+                        utterance.translated_start_time = newStartTime;
+                        utterance.translated_end_time = newEndTime;
 
-                    // Update editor if open
-                    if (utteranceEditor.style.display === 'block') {
-                        const editedUtteranceId = utteranceEditor.dataset.utteranceId;
-                        const editedUtterance = videoData.utterances.find(u => u.id === editedUtteranceId);
+                        // Update editor if open
+                        if (utteranceEditor.style.display === 'block') {
+                            const editedUtteranceId = utteranceEditor.dataset.utteranceId;
+                            const editedUtterance = videoData.utterances.find(u => u.id === editedUtteranceId);
 
-                        if (editedUtterance) {
-                            // Update input fields if dragging the same utterance
-                            if (editedUtteranceId === utterance.id) {
-                                utteranceEditorContent.querySelector('#translated-start-time-input').value = newStartTime.toFixed(2);
-                                utteranceEditorContent.querySelector('#translated-end-time-input').value = newEndTime.toFixed(2);
-                            }
+                            if (editedUtterance) {
+                                // Update input fields if dragging the same utterance
+                                if (editedUtteranceId === utterance.id) {
+                                    utteranceEditorContent.querySelector('#translated-start-time-input').value = newStartTime.toFixed(2);
+                                    utteranceEditorContent.querySelector('#translated-end-time-input').value = newEndTime.toFixed(2);
+                                }
 
-                            const overlapMessages = checkOverlap(editedUtterance, videoData.utterances);
-                            const warningBox = utteranceEditorContent.querySelector('#translated-overlap-warning');
-                            if (overlapMessages.length > 0) {
-                                warningBox.innerHTML = overlapMessages.join('<br>');
-                                warningBox.style.display = 'block';
-                            } else {
-                                warningBox.style.display = 'none';
+                                const overlapMessages = checkOverlap(editedUtterance, videoData.utterances);
+                                const warningBox = utteranceEditorContent.querySelector('#translated-overlap-warning');
+                                if (overlapMessages.length > 0) {
+                                    warningBox.innerHTML = overlapMessages.join('<br>');
+                                    warningBox.style.display = 'block';
+                                } else {
+                                    warningBox.style.display = 'none';
+                                }
                             }
                         }
+
+                        // Restore the original times
+                        utterance.translated_start_time = originalStartTime;
+                        utterance.translated_end_time = originalEndTime;
                     }
-                    
-                    // Restore the original times
-                    utterance.translated_start_time = originalStartTime;
-                    utterance.translated_end_time = originalEndTime;
-                }
 
-                function handleMouseUp(e) {
-                    document.removeEventListener('mousemove', handleMouseMove);
-                    document.removeEventListener('mouseup', handleMouseUp);
+                    function handleMouseUp(e) {
+                        document.removeEventListener('mousemove', handleMouseMove);
+                        document.removeEventListener('mouseup', handleMouseUp);
 
-                    const newLeft = translatedBlock.offsetLeft;
-                    const newStartTime = parseFloat((newLeft / scale).toFixed(2));
-                    const utteranceDuration = utterance.translated_end_time - utterance.translated_start_time;
-                    const newEndTime = parseFloat((newStartTime + utteranceDuration).toFixed(2));
+                        const newLeft = translatedBlock.offsetLeft;
+                        const newStartTime = parseFloat((newLeft / scale).toFixed(2));
+                        const utteranceDuration = utterance.translated_end_time - utterance.translated_start_time;
+                        const newEndTime = parseFloat((newStartTime + utteranceDuration).toFixed(2));
 
-                    // Update the utterance data
-                    utterance.translated_start_time = newStartTime;
-                    utterance.translated_end_time = newEndTime;
+                        // Update the utterance data
+                        utterance.translated_start_time = newStartTime;
+                        utterance.translated_end_time = newEndTime;
 
-                    // Re-render the timeline
-                    renderTimeline(videoData, videoDuration);
-                }
+                        // Re-render the timeline
+                        renderTimeline(videoData, videoDuration);
+                    }
 
-                document.addEventListener('mousemove', handleMouseMove);
-                document.addEventListener('mouseup', handleMouseUp);
-            });
+                    document.addEventListener('mousemove', handleMouseMove);
+                    document.addEventListener('mouseup', handleMouseUp);
+                });
 
-            translatedRow.appendChild(translatedBlock);
-
-            // Check for overlaps with other translated utterances
-            for (let i = 0; i < videoData.utterances.length; i++) {
-                if (i === index) continue;
-
-                const other = videoData.utterances[i];
-                
-                const overlap_start = Math.max(utterance.translated_start_time, other.translated_start_time);
-                const overlap_end = Math.min(utterance.translated_end_time, other.translated_end_time);
-
-                if (overlap_start < overlap_end) {
-                    const overlapBlock = document.createElement('div');
-                    overlapBlock.className = 'utterance-block overlap';
-                    overlapBlock.style.left = `${overlap_start * scale}px`;
-                    overlapBlock.style.width = `${(overlap_end - overlap_start) * scale}px`;
-                    translatedRow.appendChild(overlapBlock);
-                }
+                translatedTrack.appendChild(translatedBlock);
             }
-            
-            translatedTimeline.appendChild(translatedRow);
         });
     }
 

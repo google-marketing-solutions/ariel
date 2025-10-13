@@ -8,7 +8,7 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
     console.log('Service Worker intercepted a fetch request:', event.request.url, 'with method:', event.request.method);
-    if (event.request.url.endsWith('/process') && event.request.method === 'POST') {
+    if (event.request.url.endsWith('/process_video') && event.request.method === 'POST') {
         console.log('Intercepting POST request to /process');
         const mockResponse = {
             "video_id": "12345",

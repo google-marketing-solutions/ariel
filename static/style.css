@@ -34,6 +34,13 @@ body {
     color: var(--accent-color);
 }
 
+.logo-img {
+    width: 40px;
+    height: 40px;
+    margin-right: 1rem;
+    object-fit: contain;
+}
+
 .logo h1 {
     font-size: 1.5rem;
     margin: 0;
@@ -294,14 +301,97 @@ select, option{
     overflow-y: auto;
 }
 
-.timeline-row {
+/* Timeline Redesign */
+.timeline-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 20px 10px; /* Keep existing padding */
+    background-color: var(--secondary-bg-color); /* Keep existing background */
+    border-radius: 8px; /* Keep existing border-radius */
+    margin-top: 2rem; /* Keep existing margin-top */
     position: relative;
+    max-height: 500px;
+    overflow-y: auto; /* Keep existing overflow */
+}
+
+.timeline-header {
+    display: flex;
+    width: 100%;
+    border-bottom: 1px solid var(--tertiary-bg-color);
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+.timeline-label-column {
+    width: 150px; /* Fixed width for labels */
+    flex-shrink: 0;
+    padding-right: 10px;
+    font-weight: bold;
+    color: var(--primary-text-color);
+}
+
+.timeline-marker-column {
+    flex-grow: 1;
+    position: relative;
+    height: 20px; /* Height for markers */
+}
+
+.timeline-marker {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-left: 1px dashed var(--secondary-text-color);
+    font-size: 0.7rem;
+    color: var(--secondary-text-color);
+    padding-left: 3px;
+}
+
+.timeline-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.timeline-original-section,
+.timeline-translated-section {
+    display: flex;
+    width: 100%;
+    margin-bottom: 15px; /* Space between original and translated sections */
+}
+
+.timeline-tracks-column {
+    flex-grow: 1;
+    position: relative;
+}
+
+.speaker-timeline-row {
+    position: relative;
+    min-height: 40px; /* Height for each speaker's row */
+    border-bottom: 1px dotted var(--tertiary-bg-color);
     margin-bottom: 5px;
 }
 
+.speaker-timeline-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.speaker-label {
+    height: 40px; /* Match speaker-timeline-row height */
+    display: flex;
+    align-items: center;
+    padding-left: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Existing utterance-block styles will apply within speaker-timeline-row */
 .utterance-block {
     position: absolute;
-    height: 100%;
+    height: 80%; /* Adjust height to fit within the row */
+    top: 10%; /* Center vertically */
     background-color: var(--accent-color);
     border-radius: 4px;
     color: white;
@@ -312,6 +402,9 @@ select, option{
     text-overflow: ellipsis;
     cursor: pointer;
     min-height: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .utterance-block.original {
