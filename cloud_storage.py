@@ -35,7 +35,7 @@ def upload_video_to_gcs(video_name: str, video_file: typing.BinaryIO, bucket_nam
   Returns: The path to the uploaded file in GCS.
   """
 
-  mime_type = mimetypes.guess_file_type(video_name)[0] or "video/mp4"
+  mime_type = mimetypes.guess_type(video_name)[0] or "video/mp4"
   dir_name = f"{datetime.now().isoformat()}-{str(uuid.uuid4())}-{video_name}"
   dest_path = f"{dir_name}/{dir_name}"
 

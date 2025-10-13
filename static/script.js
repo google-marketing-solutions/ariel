@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 4. Speakers
         const speakersToPost = speakers.map((s, index) => ({
-            id: `SPEAKER_${(index + 1).toString().padStart(2, '0')}`,
+            id: `speaker_${(index + 1).toString()}`,
             name: s.name,
             voice: s.voice
         }));
@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Replace '/process' with your actual backend endpoint
-            const response = await fetch('/process_video', {
+            const response = await fetch('/process', {
                 method: 'POST',
                 body: formData
             });
