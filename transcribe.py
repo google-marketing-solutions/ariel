@@ -172,10 +172,12 @@ def transcribe_video(
     client,
     model_name,
     gcs_uri: str,
+    num_speakers: int,
 ) -> list[TranscribeSegment]:
-    prompt = """
+    prompt = f"""
     Provide a transcript of this audio file.
     Identify different speakers and attempt to infer their gender.
+    There are {num_speakers} speakers.
     For each utterance of the transcript, describe the tone of voice used
     (e.g., enthusiastic, calm, angry, neutral).
     Provide the start and end timestamps in seconds.
@@ -185,6 +187,10 @@ def transcribe_video(
     When assigning speaker_id, use the format "speaker_x", where x is number of
     the speaker in the order they are first heard in the video, starting at 1.
     """
+
+    ### DEBUG
+    print(f"### DEBUG ### WE SAID THERE ARE {num_speakers} SPEAKERS.")
+    ### DEBUG
 
     video = types.Part.from_uri(file_uri=gcs_uri, mime_type="video/mp4")
 

@@ -58,7 +58,7 @@ def upload_file_to_gcs(target_path: str, file_object: typing.BinaryIO, bucket_na
     mime_type: the file's mime-type. If not provided, it is guessed using the target path.
   """
   if not mime_type:
-    mime_type = mimetypes.guess_file_type(target_path)[0] or "application/octet-stream"
+    mime_type = mimetypes.guess_type(target_path)[0] or "application/octet-stream"
 
   storage_client = storage.Client()
   bucket = storage_client.bucket(bucket_name)
