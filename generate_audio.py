@@ -10,7 +10,7 @@ def pcm_to_wav_base64(
     pcm_data: bytes,
     sample_rate: int,
     bit_depth: int,
-) -> tuple[str, int]:
+) -> tuple[str, float]:
     """Converts raw PCM audio data to a base64 encoded WAV string."""
     with io.BytesIO() as wav_file:
         with wave.open(wav_file, 'wb') as wf:
@@ -28,7 +28,7 @@ def pcm_to_wav_base64(
     return base64_wav, duration
 
 
-def _process_audio_part(audio_part) -> tuple[str, int]:
+def _process_audio_part(audio_part) -> tuple[str, float]:
     """Processes the audio part, extracts metadata, and converts to base64 WAV."""
     # Parse the mime_type string "audio/L16;codec=pcm;rate=24000"
     mime_type = audio_part.inline_data.mime_type
@@ -49,7 +49,7 @@ def generate_audio(
     prompt: str,
     voice_name: str,
     model_name: str = 'gemini-2.5-pro-preview-tts',
-) -> tuple[str, int]:
+) -> tuple[str, float]:
     voice_config = types.VoiceConfig(
         prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name))
 
@@ -65,5 +65,8 @@ def generate_audio(
 
     response = call_gemini()
 
-    audio_part = response.candidates[0].content.parts[0]
-    return _process_audio_part(audio_part)
+    if response.candidates[0].content.parts:
+        audio_part = response.candidates[0].content.parts[0]
+        return _process_audio_part(audio_part)
+
+    return "", 0.0

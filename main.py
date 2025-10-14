@@ -14,6 +14,7 @@ from generate_audio import generate_audio
 from transcribe import TranscribeSegment, transcribe_video, match_voice
 from translate import translate_text
 from google import genai
+from preprocess import separate_audio_from_video
 
 from models import Video, Utterance, Speaker
 
@@ -57,9 +58,9 @@ async def process_video(
   )
 
   local_dir = os.path.dirname(local_video_path)
-  # original_vocal_path, background_sound_path = separate_audio_from_video(
-  #   local_video_path, local_dir
-  # )
+  original_vocal_path, background_sound_path = separate_audio_from_video(
+    local_video_path, local_dir
+  )
 
   utterances: list[Utterance] = []
   for i, t in enumerate(transcriptions):
@@ -72,10 +73,14 @@ async def process_video(
     # Needed until we have an allow-listed project for Gemini TTS
     audio_client = genai.Client(api_key=config.gemini_api_key)
     generated_audio, audio_duration = generate_audio(
-      audio_client, translated_text, speaker.voice, model_name=config.gemini_tts_model
+      audio_client,
+      translated_text,
+      speaker.voice,
+      model_name=config.gemini_tts_model,
     )
-    local_audio_path = os.path.join(local_dir, f"audio_{i}.wav")
-    save_audio_file(generated_audio, local_audio_path)
+    if audio_duration > 0.0:
+      local_audio_path = os.path.join(local_dir, f"audio_{i}.wav")
+      save_audio_file(generated_audio, local_audio_path)
     translated_end_time = t.start_time + (audio_duration / 1000)
 
     u = Utterance(
@@ -109,6 +114,7 @@ def save_video(video: UploadFile) -> tuple[str, str]:
   video_name = video.filename or "video.mp4"
   gcs_path = upload_video_to_gcs(video_name, video.file, config.gcs_bucket_name)
   # save the file locally
+  video.file.seek(0)
   local_dir = f"static/temp/{os.path.dirname(gcs_path)}"
   os.makedirs(name=local_dir, exist_ok=True)
   local_path = f"static/temp/{gcs_path}"
