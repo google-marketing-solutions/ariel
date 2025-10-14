@@ -238,9 +238,6 @@ def transcribe_video(
 
     response = call_gemini()
     response_json = json.loads(response.text)
-    ### DEBUG
-    print(f"### DEBUG ### THIS IS GEMINI'S RESPONSE: {response_json}")
-    ### DEBUG
     return TypeAdapter(list[TranscribeSegment]).validate_python(response_json)
 
 

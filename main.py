@@ -51,7 +51,7 @@ async def process_video(
 
   transcriptions = transcribe_video(
     client=genai_client,
-    model_name=config.gemini_model,
+    model_name=config.gemini_tts_model,
     gcs_uri=gcs_video_uri,
     num_speakers=len(speaker_list),
   )
@@ -60,7 +60,6 @@ async def process_video(
   # original_vocal_path, background_sound_path = separate_audio_from_video(
   #   local_video_path, local_dir
   # )
-
 
   utterances: list[Utterance] = []
   for i, t in enumerate(transcriptions):
