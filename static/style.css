@@ -230,25 +230,6 @@ select, option{
     text-align: center;
 }
 
-.thinking-popup-content .dots span {
-    opacity: 0;
-    animation: blink 1.4s infinite;
-}
-
-.thinking-popup-content .dots span:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.thinking-popup-content .dots span:nth-child(3) {
-    animation-delay: 0.4s;
-}
-
-@keyframes blink {
-    0% { opacity: 0; }
-    50% { opacity: 1; }
-    100% { opacity: 0; }
-}
-
 /* Results View */
 #results-view {
     padding: 2rem;
@@ -329,6 +310,8 @@ select, option{
     padding-right: 10px;
     font-weight: bold;
     color: var(--primary-text-color);
+    display: flex;
+    flex-direction: column;
 }
 
 .timeline-marker-column {
@@ -363,6 +346,8 @@ select, option{
 .timeline-tracks-column {
     flex-grow: 1;
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 .speaker-timeline-row {
@@ -385,6 +370,7 @@ select, option{
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex-shrink: 0;
 }
 
 /* Existing utterance-block styles will apply within speaker-timeline-row */
@@ -471,4 +457,14 @@ select, option{
     display: flex;
     justify-content: center;
     max-height: 250px;
+}
+
+@keyframes grayscale-cycle {
+    0% { filter: grayscale(0%); }
+    50% { filter: grayscale(100%); }
+    100% { filter: grayscale(0%); }
+}
+
+.ariel-logo-animated {
+    animation: grayscale-cycle 5s infinite ease-in-out;
 }
