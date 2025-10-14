@@ -187,11 +187,6 @@ def transcribe_video(
     When assigning speaker_id, use the format "speaker_x", where x is number of
     the speaker in the order they are first heard in the video, starting at 1.
     """
-
-    ### DEBUG
-    print(f"### DEBUG ### WE SAID THERE ARE {num_speakers} SPEAKERS.")
-    ### DEBUG
-
     video = types.Part.from_uri(file_uri=gcs_uri, mime_type="video/mp4")
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
