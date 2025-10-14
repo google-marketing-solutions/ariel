@@ -43,8 +43,17 @@ async def process_video(
     project=config.gcp_project_id,
     location=config.gcp_project_location,
   )
+  speaker_list = json.loads(speakers)
+  speaker_list = [
+    Speaker(speaker_id=s["id"], voice=s["voice"]) for s in speaker_list
+  ]
+  speaker_map = {s.speaker_id: s for s in speaker_list}
+
   transcriptions = transcribe_video(
-    client=genai_client, model_name=config.gemini_model, gcs_uri=gcs_video_uri
+    client=genai_client,
+    model_name=config.gemini_model,
+    gcs_uri=gcs_video_uri,
+    num_speakers=len(speaker_list),
   )
 
   local_dir = os.path.dirname(local_video_path)
@@ -52,10 +61,6 @@ async def process_video(
   #   local_video_path, local_dir
   # )
 
-  speaker_list = json.loads(speakers)
-  speaker_list = [Speaker(speaker_id=s["id"], voice=s["voice"]) for s in speaker_list]
-  speaker_map = {s.speaker_id: s for s in speaker_list}
-  
 
   utterances: list[Utterance] = []
   for i, t in enumerate(transcriptions):
@@ -66,7 +71,7 @@ async def process_video(
       genai_client, original_language, translate_language, t.transcript, t.tone
     )
     # Needed until we have an allow-listed project for Gemini TTS
-    audio_client =  genai.Client(api_key=config.gemini_api_key)
+    audio_client = genai.Client(api_key=config.gemini_api_key)
     generated_audio, audio_duration = generate_audio(
       audio_client, translated_text, speaker.voice
     )
@@ -133,12 +138,14 @@ async def read_item_test(request: Request):
 
 @app.get("/transcribe", response_model=list[TranscribeSegment])
 def transcribe(gcs_uri: str):
-    client = genai.Client(vertexai=True,
-                          project=config.gcp_project_id,
-                          location=config.gcp_project_location)
-    return transcribe_video(client,
-                            model_name=config.gemini_model,
-                            gcs_uri=gcs_uri)
+  client = genai.Client(
+    vertexai=True,
+    project=config.gcp_project_id,
+    location=config.gcp_project_location,
+  )
+  return transcribe_video(
+    client, model_name=config.gemini_model, gcs_uri=gcs_uri
+  )
 
 
 @app.get("/generate_audio_test")
