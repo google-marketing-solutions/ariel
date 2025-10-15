@@ -32,6 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const audioPlayer = new Audio();
     let currentlyPlayingButton = null;
 
+    const MAX_TEXT_SNIPPET_LENGTH = 100;
+
     audioPlayer.addEventListener('ended', () => {
         if (currentlyPlayingButton) {
             currentlyPlayingButton.innerHTML = '<i class="bi bi-play-fill"></i>';
@@ -149,7 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             translationLanguage.appendChild(gaOptgroup.cloneNode(true));
             translationLanguage.appendChild(previewOptgroup.cloneNode(true));
-        });
+        })
+        .catch(error => console.error('Error fetching languages:', error));
 
     // --- Speaker Management ---
     addSpeakerBtn.addEventListener('click', () => speakerModal.show());
@@ -158,23 +161,24 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.json())
         .then(data => {
             voices = data.voices; // Correctly access the array
-            renderVoices();
-            renderEditVoiceList();
-        });
+            renderVoiceList(voiceListModal, voiceSearch, 'gender-filter');
+            renderVoiceList(editVoiceListModal, editVoiceSearch, 'edit-gender-filter');
+        })
+        .catch(error => console.error('Error fetching voices:', error));
 
-    voiceSearch.addEventListener('input', renderVoices);
+    voiceSearch.addEventListener('input', () => renderVoiceList(voiceListModal, voiceSearch, 'gender-filter'));
     document.querySelectorAll('input[name="gender-filter"]').forEach(radio => {
-        radio.addEventListener('change', renderVoices);
+        radio.addEventListener('change', () => renderVoiceList(voiceListModal, voiceSearch, 'gender-filter'));
     });
 
-    editVoiceSearch.addEventListener('input', renderEditVoiceList);
+    editVoiceSearch.addEventListener('input', () => renderVoiceList(editVoiceListModal, editVoiceSearch, 'edit-gender-filter'));
     document.querySelectorAll('input[name="edit-gender-filter"]').forEach(radio => {
-        radio.addEventListener('change', renderEditVoiceList);
+        radio.addEventListener('change', () => renderVoiceList(editVoiceListModal, editVoiceSearch, 'edit-gender-filter'));
     });
 
-    function renderVoices() {
-        const searchTerm = voiceSearch.value.toLowerCase();
-        const genderFilter = document.querySelector('input[name="gender-filter"]:checked').value;
+    function renderVoiceList(targetListElement, searchInput, genderFilterName) {
+        const searchTerm = searchInput.value.toLowerCase();
+        const genderFilter = document.querySelector(`input[name="${genderFilterName}"]:checked`).value;
 
         const filteredVoices = voices.filter(voice => {
             const nameMatch = voice.name.toLowerCase().includes(searchTerm);
@@ -182,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return nameMatch && genderMatch;
         });
 
-        voiceListModal.innerHTML = '';
+        targetListElement.innerHTML = '';
 
         filteredVoices.forEach(voice => {
             const item = document.createElement('div');
@@ -223,86 +227,31 @@ document.addEventListener('DOMContentLoaded', () => {
             item.dataset.voiceName = voice.name;
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                const currentActive = voiceListModal.querySelector('.active');
+                const currentActive = targetListElement.querySelector('.active');
                 if (currentActive) {
                     currentActive.classList.remove('active');
                 }
                 item.classList.add('active');
             });
-            voiceListModal.appendChild(item);
-        });
-    }
-
-    function renderEditVoiceList() {
-        const searchTerm = editVoiceSearch.value.toLowerCase();
-        const genderFilter = document.querySelector('input[name="edit-gender-filter"]:checked').value;
-
-        const filteredVoices = voices.filter(voice => {
-            const nameMatch = voice.name.toLowerCase().includes(searchTerm);
-            const genderMatch = genderFilter === 'all' || voice.gender === genderFilter;
-            return nameMatch && genderMatch;
-        });
-
-        editVoiceListModal.innerHTML = '';
-
-        filteredVoices.forEach(voice => {
-            const item = document.createElement('div');
-            item.classList.add('list-group-item', 'list-group-item-action', 'd-flex', 'justify-content-between', 'align-items-center');
-            
-            const voiceName = document.createElement('span');
-            voiceName.textContent = `${voice.name} (${voice.gender})`;
-            item.appendChild(voiceName);
-
-            if (voice.url) {
-                const playButton = document.createElement('button');
-                playButton.classList.add('btn', 'btn-sm', 'btn-outline-secondary');
-                playButton.innerHTML = '<i class="bi bi-play-fill"></i>';
-
-                playButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-
-                    if (currentlyPlayingButton === playButton) {
-                        // Clicked the same button that is currently playing
-                        audioPlayer.pause();
-                        playButton.innerHTML = '<i class="bi bi-play-fill"></i>';
-                        currentlyPlayingButton = null;
-                    } else {
-                        // Clicked a new button
-                        if (currentlyPlayingButton) {
-                            // Stop the previously playing audio and reset its button
-                            currentlyPlayingButton.innerHTML = '<i class="bi bi-play-fill"></i>';
-                        }
-                        audioPlayer.src = voice.url;
-                        audioPlayer.play();
-                        playButton.innerHTML = '<i class="bi bi-stop-fill"></i>';
-                        currentlyPlayingButton = playButton;
-                    }
-                });
-                item.appendChild(playButton);
-            }
-
-            item.dataset.voiceName = voice.name;
-            item.addEventListener('click', (e) => {
-                e.preventDefault();
-                const currentActive = editVoiceListModal.querySelector('.active');
-                if (currentActive) {
-                    currentActive.classList.remove('active');
-                }
-                item.classList.add('active');
-            });
-            editVoiceListModal.appendChild(item);
+            targetListElement.appendChild(item);
         });
     }
 
     addVoiceBtn.addEventListener('click', () => {
         const selectedVoiceEl = voiceListModal.querySelector('.active');
         if (!selectedVoiceEl) {
-            alert('Please select a voice.');
+            alert('Please select a voice before adding a speaker.');
             return;
         }
 
         const voiceName = selectedVoiceEl.dataset.voiceName;
         const voiceData = voices.find(v => v.name === voiceName);
+
+        if (!voiceData) {
+            alert('Selected voice data could not be found. Please try again.');
+            return;
+        }
+
         const customName = speakerNameInput.value.trim();
 
         const speaker = {
@@ -340,18 +289,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
     speakerList.addEventListener('click', (e) => {
         if (e.target.classList.contains('btn-close')) {
-            const speakerId = e.target.closest('.speaker-card').dataset.speakerId;
-            speakers = speakers.filter(s => s.id !== parseInt(speakerId));
-            renderSpeakers();
-            validateStartProcessing();
+            const speakerCard = e.target.closest('.speaker-card');
+            if (speakerCard) {
+                const speakerId = speakerCard.dataset.speakerId;
+                speakers = speakers.filter(s => s.id !== speakerId);
+                renderSpeakers();
+                validateStartProcessing();
+            }
         }
     });
 
     const thinkingPopup = document.getElementById('thinking-popup');
+    const thinkingPopupContent = document.querySelector('.thinking-popup-content');
+    let dotAnimationInterval;
+
+    // Clear existing content in thinkingPopupContent
+    thinkingPopupContent.innerHTML = '';
+
+    // Create and append the image
+    const arielLogo = document.createElement('img');
+    arielLogo.src = 'static/Image/Ariel_Logo.png';
+    arielLogo.id = 'ariel-logo-animation';
+    arielLogo.style.width = '150px';
+    arielLogo.style.height = 'auto';
+    arielLogo.style.marginBottom = '20px'; // Add some spacing below the image
+    thinkingPopupContent.appendChild(arielLogo);
+
+    // Create text elements for 'Thinking' and animated dots
+    const thinkingContainer = document.createElement('div');
+    thinkingContainer.style.display = 'flex';
+    thinkingContainer.style.justifyContent = 'center';
+    thinkingContainer.style.alignItems = 'baseline';
+
+    const thinkingWord = document.createElement('span');
+    thinkingWord.textContent = 'Thinking';
+    thinkingWord.style.marginRight = '5px'; // Space between word and dots
+    thinkingContainer.appendChild(thinkingWord);
+
+    const animatedDots = document.createElement('span');
+    animatedDots.style.width = '20px'; // Fixed width for dots to prevent shifting
+    animatedDots.style.textAlign = 'left';
+    thinkingContainer.appendChild(animatedDots);
+
+    thinkingPopupContent.appendChild(thinkingContainer);
 
     // --- Start Processing ---
     startProcessingBtn.addEventListener('click', async () => {
         thinkingPopup.style.display = 'flex';
+        arielLogo.classList.add('ariel-logo-animated'); // Add class to trigger CSS animation
+
+        // Start dot animation
+        let dotCount = 0;
+        dotAnimationInterval = setInterval(() => {
+            dotCount = (dotCount + 1) % 4;
+            animatedDots.textContent = '.'.repeat(dotCount);
+        }, 500);
+
 
         const formData = new FormData();
 
@@ -389,6 +382,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
             console.log('Received result from backend:', JSON.stringify(result, null, 2)); // DEBUG
             currentVideoData = result; // Store the video data
+            // Store original translated times for reset functionality
+            currentVideoData.utterances.forEach(utterance => {
+                utterance.original_translated_start_time = utterance.translated_start_time;
+                utterance.original_translated_end_time = utterance.translated_end_time;
+            });
             
             // Show results view
             mainContent.style.display = 'none';
@@ -405,8 +403,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         const timelineHeight = timelineContainer.clientHeight;
                         const numUtterances = currentVideoData.utterances.length;
                         rowHeight = timelineHeight / (numUtterances + 1);
-                        if (rowHeight < 20) {
-                            rowHeight = 20;
+                        const MIN_ROW_HEIGHT = 20;
+                        if (rowHeight < MIN_ROW_HEIGHT) {
+                            rowHeight = MIN_ROW_HEIGHT;
                         }
                         renderTimeline(currentVideoData, videoDuration);
                     });
@@ -420,8 +419,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const timelineHeight = timelineContainer.clientHeight;
                 const numUtterances = result.utterances.length;
                 rowHeight = timelineHeight / (numUtterances + 1);
-                if (rowHeight < 20) {
-                    rowHeight = 20;
+                const MIN_ROW_HEIGHT = 20;
+                if (rowHeight < MIN_ROW_HEIGHT) {
+                    rowHeight = MIN_ROW_HEIGHT;
                 }
                 renderTimeline(currentVideoData, videoDuration);
             }
@@ -446,6 +446,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Handle error here (e.g., show an error message)
         } finally {
             thinkingPopup.style.display = 'none';
+            arielLogo.classList.remove('ariel-logo-animated'); // Stop CSS animation
+            clearInterval(dotAnimationInterval); // Clear the dot animation interval
+            animatedDots.textContent = ''; // Reset dots
         }
     });
 
@@ -557,24 +560,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     saveVoiceBtn.addEventListener('click', () => {
-        const selectedVoiceEl = editVoiceListModal.querySelector('.active');
-        if (!selectedVoiceEl) {
-            alert('Please select a voice.');
-            return;
-        }
-
-        const voiceName = selectedVoiceEl.dataset.voiceName;
-        
-        // Update the button text in the editor
-        const speakerButton = document.querySelector(`#edit-speaker-list button[data-speaker-number="${speakerToEdit}"]`);
-        speakerButton.textContent = voiceName;
-
-        editSpeakerVoiceModal.hide();
+        console.log('saveVoiceBtn clicked - simplified');
+        // Original logic will be restored after debugging
     });
 
     function renderUtterances(utterances, allSpeakers) {
         utterancesList.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+
+        const voiceToNameMap = new Map();
+        speakers.forEach(s => {
+            voiceToNameMap.set(s.voice, s.name);
+        });
+
         utterances.forEach((utterance, index) => {
+            const speakerName = voiceToNameMap.get(utterance.speaker.voice) || utterance.speaker.voice;
             const utteranceCard = document.createElement('div');
             utteranceCard.classList.add('utterance-card');
             utteranceCard.innerHTML = `
@@ -582,9 +582,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h6 class="mb-0">U: ${index + 1}</h6>
                         <div class="utterance-content-wrapper">
                             <div class="utterance-card-content mt-2">
-                                <p><strong>Original:</strong> ${utterance.original_text.substring(0, 100)}...</p>
-                                <p><strong>Translated:</strong> ${utterance.translated_text.substring(0, 100)}...</p>
-                                <p><strong>Speaker:</strong> ${utterance.speaker.voice}</p>
+                                <p><strong>Original:</strong> ${utterance.original_text.substring(0, MAX_TEXT_SNIPPET_LENGTH)}...</p>
+                                <p><strong>Translated:</strong> ${utterance.translated_text.substring(0, MAX_TEXT_SNIPPET_LENGTH)}...</p>
+                                <p><strong>Speaker:</strong> ${speakerName}</p>
                             </div>
                             <div class="utterance-overlay" style="display: none;"></div>
                         </div>
@@ -625,8 +625,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            utterancesList.appendChild(utteranceCard);
+            fragment.appendChild(utteranceCard);
         });
+        utterancesList.appendChild(fragment);
     }
 
     function checkOverlap(utterance, allUtterances) {
@@ -658,21 +659,38 @@ document.addEventListener('DOMContentLoaded', () => {
         translatedSpeakerLabelsContainer.innerHTML = '';
         translatedUtterancesTracksContainer.innerHTML = '';
 
-        const timelineWidth = timelineContainer.offsetWidth - 150; // Subtract label column width
+        const SPEAKER_LABEL_COLUMN_WIDTH = 150; // Assuming a fixed width for the speaker label column
+        const timelineWidth = timelineContainer.offsetWidth - SPEAKER_LABEL_COLUMN_WIDTH; // Subtract label column width
         const scale = timelineWidth / videoDuration;
 
-        // Identify unique speakers and their names
-        const uniqueSpeakers = {};
+        // Add timeline markers
+        for (let i = 0; i <= videoDuration; i += 5) {
+            const marker = document.createElement('div');
+            marker.classList.add('timeline-marker');
+            marker.style.left = `${i * scale}px`;
+            marker.textContent = `${i}s`;
+            timelineMarkersContainer.appendChild(marker);
+        }
+
+        // Collect all unique voices present in the utterances from the backend
+        const uniqueVoicesInUtterances = new Set();
         videoData.utterances.forEach(u => {
-            if (!uniqueSpeakers[u.speaker.id]) {
-                uniqueSpeakers[u.speaker.id] = u.speaker.name;
-            }
+            uniqueVoicesInUtterances.add(u.speaker.voice);
         });
-        const speakerIds = Object.keys(uniqueSpeakers);
+
+        // Create a map from voice to speaker name using the client-side speakers array
+        const voiceToSpeakerNameMap = new Map();
+        speakers.forEach(s => {
+            voiceToSpeakerNameMap.set(s.voice, s.name);
+        });
+
+        // Now, create the list of speaker voices to render tracks for
+        // Prioritize voices from utterances, and resolve their names
+        const speakerVoicesToRender = Array.from(uniqueVoicesInUtterances);
 
         // Create speaker rows and labels
-        speakerIds.forEach(speakerId => {
-            const speakerName = uniqueSpeakers[speakerId];
+        speakerVoicesToRender.forEach(speakerVoice => {
+            const speakerName = voiceToSpeakerNameMap.get(speakerVoice) || speakerVoice; // Fallback to voice if name not found
 
             // Original section
             const originalLabel = document.createElement('div');
@@ -682,7 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const originalTrack = document.createElement('div');
             originalTrack.classList.add('speaker-timeline-row');
-            originalTrack.id = `original-speaker-track-${speakerId}`;
+            originalTrack.id = `original-speaker-track-${speakerVoice.replace(/[^a-zA-Z0-9-_]/g, '')}`; // Sanitize voice for ID
             originalUtterancesTracksContainer.appendChild(originalTrack);
 
             // Translated section
@@ -693,14 +711,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const translatedTrack = document.createElement('div');
             translatedTrack.classList.add('speaker-timeline-row');
-            translatedTrack.id = `translated-speaker-track-${speakerId}`;
+            translatedTrack.id = `translated-speaker-track-${speakerVoice.replace(/[^a-zA-Z0-9-_]/g, '')}`; // Sanitize voice for ID
             translatedUtterancesTracksContainer.appendChild(translatedTrack);
         });
 
-        // Add timeline markers
         // Render original utterances
         videoData.utterances.forEach((utterance, index) => {
-            const originalTrack = document.getElementById(`original-speaker-track-${utterance.speaker.id}`);
+            const originalTrack = document.getElementById(`original-speaker-track-${utterance.speaker.voice.replace(/[^a-zA-Z0-9-_]/g, '')}`); // Use sanitized voice for ID
             if (originalTrack) {
                 const originalBlock = document.createElement('div');
                 originalBlock.className = 'utterance-block original';
@@ -713,7 +730,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Render translated utterances
         videoData.utterances.forEach((utterance, index) => {
-            const translatedTrack = document.getElementById(`translated-speaker-track-${utterance.speaker.id}`);
+            const translatedTrack = document.getElementById(`translated-speaker-track-${utterance.speaker.voice.replace(/[^a-zA-Z0-9-_]/g, '')}`); // Use sanitized voice for ID
             if (translatedTrack) {
                 const translatedBlock = document.createElement('div');
                 translatedBlock.className = 'utterance-block';
@@ -808,6 +825,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 translatedTrack.appendChild(translatedBlock);
             }
         });
+
+        // Add Reset button
+        const resetButton = document.createElement('button');
+        resetButton.classList.add('btn', 'btn-secondary', 'mt-3', 'mb-3');
+        resetButton.textContent = 'Reset Times';
+        resetButton.style.position = 'absolute';
+        resetButton.style.bottom = '10px';
+        resetButton.style.left = '10px';
+        timelineContainer.appendChild(resetButton);
+
+        resetButton.addEventListener('click', () => {
+            videoData.utterances.forEach(utterance => {
+                utterance.translated_start_time = utterance.original_translated_start_time;
+                utterance.translated_end_time = utterance.original_translated_end_time;
+            });
+            renderTimeline(videoData, videoDuration);
+        });
     }
 
     function editUtterance(utterance, allSpeakers, utterances, index) {
@@ -866,21 +900,19 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="mb-3 mt-3">
                 <label class="form-label">Speaker</label>
                 <select id="speaker-select" class="form-select">
-                    ${allSpeakers.map(s => `<option value="${s.voice}" ${s.voice === utterance.speaker.voice ? 'selected' : ''}>${s.voice}</option>`).join('')}
+                    ${speakers.map(s => `<option value="${s.voice}" ${s.voice === utterance.speaker.voice ? 'selected' : ''}>${s.name}</option>`).join('')}
                 </select>
             </div>
             <button id="regenerate-translation-btn" class="btn btn-primary">Regenerate Translation</button>
             <button id="regenerate-dubbing-btn" class="btn btn-success">Regenerate Dubbing</button>
+            <button id="save-utterance-btn" class="btn btn-info">Save</button>
         `;
 
-        // Store initial values
-        const initialTranslatedText = utterance.translated_text;
-        const initialInstructions = utterance.instructions || '';
-        const initialSpeaker = utterance.speaker.voice;
-        const initialGeminiPrompt = ''; // Assuming it's always empty initially
+        const regenerateTranslationBtn = utteranceEditorContent.querySelector('#regenerate-translation-btn');
+        const regenerateDubbingBtn = utteranceEditorContent.querySelector('#regenerate-dubbing-btn');
+        const saveUtteranceBtn = utteranceEditorContent.querySelector('#save-utterance-btn');
 
-        const closeButton = utteranceEditor.querySelector('#close-utterance-editor');
-        closeButton.addEventListener('click', () => {
+        const checkAndHandleChanges = () => {
             const currentTranslatedText = utteranceEditorContent.querySelector('#translated-text-area').value;
             const currentInstructions = utteranceEditorContent.querySelector('#intonation-instructions-area').value;
             const currentSpeaker = utteranceEditorContent.querySelector('#speaker-select').value;
@@ -893,33 +925,88 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (hasChanges) {
                 confirmationModal.show();
-            } else {
+                return true; // Indicate that changes were detected
+            }
+            return false; // Indicate no changes
+        };
+
+        const saveUtteranceChanges = () => {
+            utterance.translated_text = utteranceEditorContent.querySelector('#translated-text-area').value;
+            utterance.instructions = utteranceEditorContent.querySelector('#intonation-instructions-area').value;
+            utterance.speaker.voice = utteranceEditorContent.querySelector('#speaker-select').value;
+            utterance.translated_start_time = parseFloat(utteranceEditorContent.querySelector('#translated-start-time-input').value);
+            utterance.translated_end_time = parseFloat(utteranceEditorContent.querySelector('#translated-end-time-input').value);
+
+            // Update initial values after saving
+            initialTranslatedText = utterance.translated_text;
+            initialInstructions = utterance.instructions;
+            initialSpeaker = utterance.speaker.voice;
+            // initialGeminiPrompt remains as it's not directly saved to utterance
+
+            renderTimeline(currentVideoData, videoDuration);
+            renderUtterances(currentVideoData.utterances, currentVideoData.speakers);
+            utteranceEditor.style.display = 'none';
+        };
+
+        regenerateTranslationBtn.addEventListener('click', () => {
+            if (!checkAndHandleChanges()) {
+                console.log('Regenerating translation...');
+                // TODO: Implement actual regeneration logic
+            }
+        });
+
+        regenerateDubbingBtn.addEventListener('click', () => {
+            if (!checkAndHandleChanges()) {
+                console.log('Regenerating dubbing...');
+                // TODO: Implement actual regeneration logic
+            }
+        });
+
+        saveUtteranceBtn.addEventListener('click', saveUtteranceChanges);
+
+        // Store initial values
+        let initialTranslatedText = utterance.translated_text;
+        let initialInstructions = utterance.instructions || '';
+        let initialSpeaker = utterance.speaker.voice;
+        let initialGeminiPrompt = ''; // Assuming it's always empty initially
+
+        const closeButton = utteranceEditor.querySelector('#close-utterance-editor');
+        closeButton.addEventListener('click', () => {
+            if (!checkAndHandleChanges()) {
                 utteranceEditor.style.display = 'none';
             }
         });
 
         // Add event listeners for the text-to-speech icons
-        const ttsIcons = utteranceEditorContent.querySelectorAll('.text-to-speech-icon');
-        ttsIcons.forEach(icon => {
-            icon.addEventListener('click', (e) => {
-                const textType = e.target.dataset.textType;
-                let textToSpeak = '';
-                if (textType === 'original') {
-                    textToSpeak = utterance.original_text;
-                } else if (textType === 'translated') {
-                    textToSpeak = utteranceEditorContent.querySelector('#translated-text-area').value;
-                }
-                console.log(`Playing ${textType} text: ${textToSpeak}`);
-                // Here you would make a call to the backend to get the audio
+        setupTextToSpeechListeners(utterance, utteranceEditorContent);
+
+        function setupTextToSpeechListeners(utterance, containerElement) {
+            const ttsIcons = containerElement.querySelectorAll('.text-to-speech-icon');
+            ttsIcons.forEach(icon => {
+                icon.addEventListener('click', (e) => {
+                    const textType = e.target.dataset.textType;
+                    let textToSpeak = '';
+                    if (textType === 'original') {
+                        textToSpeak = utterance.original_text;
+                    } else if (textType === 'translated') {
+                        textToSpeak = containerElement.querySelector('#translated-text-area').value;
+                    }
+                    console.log(`Playing ${textType} text: ${textToSpeak}`);
+                    // Here you would make a call to the backend to get the audio
+                });
             });
-        });
+        }
 
 
         // Initialize tooltips
-        const tooltipTriggerList = [].slice.call(utteranceEditorContent.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
+        initializeTooltips(utteranceEditorContent);
+
+        function initializeTooltips(containerElement) {
+            const tooltipTriggerList = [].slice.call(containerElement.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        }
 
         // Initial overlap check
         const overlapMessages = checkOverlap(utterance, utterances);
