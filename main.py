@@ -4,7 +4,7 @@ import os
 import shutil
 import uuid
 from typing import Annotated
-from cloud_storage import upload_video_to_gcs
+from cloud_storage import get_url_for_path, upload_file_to_gcs, upload_video_to_gcs
 from configuration import get_config
 from fastapi import FastAPI, Request, Form, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -14,7 +14,7 @@ from generate_audio import generate_audio
 from transcribe import TranscribeSegment, transcribe_video, match_voice
 from translate import translate_text
 from google import genai
-from preprocess import separate_audio_from_video
+from process import separate_audio_from_video, merge_background_and_vocals, combine_video_and_audio
 
 from models import Video, Utterance, Speaker
 
@@ -58,10 +58,7 @@ async def process_video(
   )
 
   local_dir = os.path.dirname(local_video_path)
-  original_vocal_path, background_sound_path = separate_audio_from_video(
-    local_video_path, local_dir
-  )
-
+ 
   utterances: list[Utterance] = []
   for i, t in enumerate(transcriptions):
     uid = str(uuid.uuid4())
@@ -108,6 +105,31 @@ async def process_video(
   )
 
   return to_return
+
+@app.post("/generate_video")
+def generate_video(video_data: Video) -> str:
+  """Generates the final, translated video.
+
+  Args:
+    video_data: the Video object representing the final video.
+  """
+  local_dir = f"static/temp/{video_data.video_id}"
+  local_video_path = f"{local_dir}/{video_data.video_id}"
+  _, background_sound_path = separate_audio_from_video(
+    local_video_path, local_dir
+  )
+  merged_audio_path = merge_background_and_vocals(
+    background_audio_file=background_sound_path,
+    dubbed_vocals_metadata=video_data.utterances,
+    output_directory=local_dir,
+    target_language=video_data.translate_language,
+  )
+  combined_video_path = f"{local_dir}/{video_data.video_id}.{video_data.translate_language}.mp4"
+  combine_video_and_audio(local_video_path, merged_audio_path, combined_video_path)
+  with open(combined_video_path, "rb") as video_file:
+    gcs_path = f"{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
+    upload_file_to_gcs(gcs_path, video_file, config.gcs_bucket_name, "video/mp4")
+    return get_url_for_path(config.gcs_bucket_name, gcs_path)
 
 
 def save_video(video: UploadFile) -> tuple[str, str]:

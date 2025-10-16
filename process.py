@@ -1,11 +1,9 @@
 import os
 import subprocess
 
-import configuration
-
 from moviepy import AudioFileClip, VideoFileClip
 from pydub import AudioSegment
-from typing import Mapping, Sequence
+from models import Utterance
 
 
 def separate_audio_from_video(video_file_path: str, output_local_path: str):
@@ -31,20 +29,22 @@ def separate_audio_from_video(video_file_path: str, output_local_path: str):
   original_audio_extension = "wav"
   video = VideoFileClip(video_file_path)
   audio = video.audio
-  original_audio_path = f"{output_local_path}/{original_audio_name}.{original_audio_extension}"
+  original_audio_path = (
+    f"{output_local_path}/{original_audio_name}.{original_audio_extension}"
+  )
   if not audio:
     raise RuntimeError(f"Could not extract audio from {video_file_path}")
-  audio.write_audiofile(original_audio_path, codec='pcm_s16le')
+  audio.write_audiofile(original_audio_path, codec="pcm_s16le")
 
   command = (
-      f"python3 -m demucs --two-stems=vocals -n htdemucs --out {output_local_path}"
-      f" {original_audio_path}"
+    f"python3 -m demucs --two-stems=vocals -n htdemucs --out {output_local_path}"
+    f" {original_audio_path}"
   )
   subprocess.run(command, shell=True, check=True)
 
   # base_filename = os.path.splitext(os.path.basename(original_audio_path))[0]
   base_htdemucs_path = os.path.join(
-      output_local_path, "htdemucs", original_audio_name
+    output_local_path, "htdemucs", original_audio_name
   )
   vocals_path = os.path.join(base_htdemucs_path, "vocals.wav")
   background_path = os.path.join(base_htdemucs_path, "no_vocals.wav")
@@ -55,22 +55,21 @@ def separate_audio_from_video(video_file_path: str, output_local_path: str):
     return vocals_path, background_path
   else:
     raise RuntimeError(
-        'Audio separation failed. Could not find output files in the expected'
-        f' path: {vocals_path}'
+      "Audio separation failed. Could not find output files in the expected"
+      f" path: {vocals_path}"
     )
 
 
 def merge_background_and_vocals(
-    *,
-    background_audio_file: str,
-    dubbed_vocals_metadata: Sequence[Mapping[str, str | float]],
-    output_directory: str,
-    target_language: str,
-    vocals_volume_adjustment: float = 0.0,
-    background_volume_adjustment: float = 0.0,
-    output_subdirectory: str = "output",
-    dubbed_audio_filename: str = "dubbed_audio",
-    output_format: str = ".mp3",
+  *,
+  background_audio_file: str,
+  dubbed_vocals_metadata: list[Utterance],
+  output_directory: str,
+  target_language: str,
+  vocals_volume_adjustment: float = 0.0,
+  background_volume_adjustment: float = 0.0,
+  dubbed_audio_filename: str = "dubbed_audio",
+  output_format: str = "mp3",
 ) -> str:
   """Mixes background music and vocals tracks, normalizes the volume, and exports the result.
 
@@ -104,19 +103,18 @@ def merge_background_and_vocals(
 
   # Overlay each vocal chunk at its start time
   for utterance in dubbed_vocals_metadata:
-    vocal_chunk = AudioSegment.from_file(utterance["path"])
-    start_time_ms = int(utterance["start"] * 1000)
+    vocal_chunk = AudioSegment.from_file(utterance.audio_url)
+    start_time_ms = int(utterance.translated_start_time * 1000)
     combined_vocals = combined_vocals.overlay(
-        vocal_chunk, position=start_time_ms
+      vocal_chunk, position=start_time_ms
     )
 
   combined_vocals += vocals_volume_adjustment
   mixed_audio = background_audio.overlay(combined_vocals)
   target_language_suffix = "_" + target_language.replace("-", "_").lower()
   dubbed_audio_file = os.path.join(
-      output_directory,
-      output_subdirectory,
-      dubbed_audio_filename + target_language_suffix + "." + output_format,
+    output_directory,
+    dubbed_audio_filename + target_language_suffix + "." + output_format,
   )
   mixed_audio.normalize()
   mixed_audio.export(dubbed_audio_file, format=output_format)
@@ -124,9 +122,9 @@ def merge_background_and_vocals(
 
 
 def combine_video_and_audio(
-    video_file_path: str,
-    audio_file_path: str,
-    output_file_path: str,
+  video_file_path: str,
+  audio_file_path: str,
+  output_file_path: str,
 ):
   """Combines a video file with an audio file to create the final video.
 
@@ -143,7 +141,7 @@ def combine_video_and_audio(
 
   # Write the final video file
   final_clip.write_videofile(
-      output_file_path, codec="libx264", audio_codec="aac"
+    output_file_path, codec="libx264", audio_codec="aac"
   )
 
   # Close the clips to free up resources

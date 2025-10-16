@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const utteranceEditor = document.getElementById('utterance-editor');
     const utteranceEditorContent = document.getElementById('utterance-editor-content');
     const editVideoSettingsBtn = document.getElementById('edit-video-settings-btn');
+    const generateVideoBtn = document.getElementById('generate-video-btn');
 
     // Modals
     const confirmationModal = new bootstrap.Modal(document.getElementById('confirmation-modal'));
@@ -1022,5 +1023,24 @@ document.addEventListener('DOMContentLoaded', () => {
     confirmCloseBtn.addEventListener('click', () => {
         utteranceEditor.style.display = 'none';
         confirmationModal.hide();
+    });
+
+    generateVideoBtn.addEventListener('click', () => {
+        fetch('/generate_video', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(currentVideoData)
+        })
+        .then(response => response.json())
+        .then(result => {
+            console.log("Got the following from the backend:");
+            console.log(result.video_url);
+            window.location.href = result.video_url;
+        })
+        .catch(error => {
+            console.error('Error generating video:', error);
+        });
     });
 });
