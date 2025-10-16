@@ -65,8 +65,8 @@ def generate_audio(
 
     response = call_gemini()
 
-    if response.candidates[0].content.parts:
-        audio_part = response.candidates[0].content.parts[0]
+    if part := response.candidates[0].content.parts:
+        audio_part = part[0]
         return _process_audio_part(audio_part)
 
     return "", 0.0
