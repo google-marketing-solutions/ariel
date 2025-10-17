@@ -434,6 +434,7 @@ speakerModal._element.addEventListener('hidden.bs.modal', () => {
             // Show results view
             mainContent.style.display = 'none';
             resultsView.style.display = 'block';
+            resetButton.style.display = 'block'; // Show the Reset button
             timelineControlsContainer.style.display = 'block'; // Show the timeline controls
 
             // Set video preview
@@ -809,6 +810,12 @@ speakerModal._element.addEventListener('hidden.bs.modal', () => {
                     translatedBlock.classList.add('overlap');
                 }
 
+                // Check for initial overlaps and apply class
+                const initialOverlapMessages = checkOverlap(utterance, videoData.utterances);
+                if (initialOverlapMessages.length > 0) {
+                    translatedBlock.classList.add('overlap');
+                }
+
                 translatedBlock.addEventListener('dblclick', () => {
                     editUtterance(utterance, videoData.speakers, videoData.utterances, index);
                 });
@@ -913,6 +920,25 @@ speakerModal._element.addEventListener('hidden.bs.modal', () => {
 
                 translatedTrack.appendChild(translatedBlock);
             }
+        });
+
+        // Create timeline footer and Reset button
+        const timelineFooter = document.createElement('div');
+        timelineFooter.classList.add('timeline-footer', 'mt-3');
+
+        const resetButton = document.createElement('button');
+        resetButton.classList.add('btn', 'btn-secondary');
+        resetButton.textContent = 'Reset Times';
+        timelineFooter.appendChild(resetButton);
+
+        timelineContainer.appendChild(timelineFooter);
+
+        resetButton.addEventListener('click', () => {
+            videoData.utterances.forEach(utterance => {
+                utterance.translated_start_time = utterance.original_translated_start_time;
+                utterance.translated_end_time = utterance.original_translated_end_time;
+            });
+            renderTimeline(videoData, videoDuration);
         });
     }
 
