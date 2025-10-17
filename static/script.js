@@ -993,7 +993,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         textToSpeak = containerElement.querySelector('#translated-text-area').value;
                     }
                     console.log(`Playing ${textType} text: ${textToSpeak}`);
-                    // Here you would make a call to the backend to get the audio
+                    const audio = new Audio(utterance.audio_url);
+                    audio.play();
+                    audio.currentTime = 0;
                 });
             });
         }

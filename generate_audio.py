@@ -1,5 +1,6 @@
 import base64
 import io
+import logging
 import re
 import wave
 from google.genai import types
@@ -65,8 +66,11 @@ def generate_audio(
 
     response = call_gemini()
 
-    if part := response.candidates[0].content.parts:
-        audio_part = part[0]
+    # Gemini sometimes just fails to return the object we're expecting.
+    if response.candidates[0] and response.candidates[0].content and response.candidates[0].content.parts:
+        audio_part = response.candidates[0].content.parts[0]
         return _process_audio_part(audio_part)
+    else:
+        logging.error(f"Generating Audio failed with the following response from Gemini: {response}")
 
     return "", 0.0
