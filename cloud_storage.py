@@ -13,8 +13,8 @@
 # under the License.
 
 from datetime import datetime
+import logging
 import mimetypes
-from tabnanny import filename_only
 import typing
 import uuid
 from google.cloud import storage
@@ -45,7 +45,7 @@ def upload_video_to_gcs(video_name: str, video_file: typing.BinaryIO, bucket_nam
   blob = bucket.blob(dest_path)
 
   blob.upload_from_file(video_file, content_type=mime_type)
-  print(f"Uploaded {dest_path} to GCS.")
+  logging.info(f"Initial GCS upload of video to {dest_path}.")
 
   return dest_path
 
@@ -65,6 +65,8 @@ def upload_file_to_gcs(target_path: str, file_object: typing.BinaryIO, bucket_na
   bucket = storage_client.bucket(bucket_name)
   blob = bucket.blob(target_path)
   blob.upload_from_file(file_object, content_type=mime_type)
+  logging.info(f"Uploaded file {target_path} to GCS.")
+  
 
 def get_url_for_path(bucket_name: str, path: str) -> str:
   """Returns a URL that can be used to fetch the files stored in GCS.
@@ -83,16 +85,4 @@ def get_url_for_path(bucket_name: str, path: str) -> str:
   url = blob.generate_signed_url(version="v4", expiration=(60*60*24), method="GET")
 
   return url
-
-
-if __name__ == "__main__":
-  test_bucket = "ariel-v2-test-bucket"
-  with open("cloud_storage.py", "rb") as in_file:
-    mime_type = "text/x-python"
-    save_path = upload_video_to_gcs(
-      in_file, "text/x-python", test_bucket
-    )
-    print(f"The file was saved to {save_path}")
-    return_url = get_url_for_path(test_bucket, save_path)
-    print(f"You can get the file at {return_url}")
 

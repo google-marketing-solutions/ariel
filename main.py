@@ -1,5 +1,7 @@
 import base64
+import google.cloud.logging
 import json
+import logging
 import os
 import shutil
 import uuid
@@ -24,6 +26,8 @@ templates = Jinja2Templates(directory="templates")
 
 config = get_config()
 
+logging_client = google.cloud.logging.Client()
+logging_client.setup_logging()
 
 @app.get("/", response_class=HTMLResponse)
 async def read_item(request: Request):
@@ -38,6 +42,7 @@ async def process_video(
   prompt_enhancements: Annotated[str, Form()],
   speakers: Annotated[str, Form()],
 ) -> Video:
+  logging.info(f"Starting Process Video for {video.filename}")
   local_video_path, gcs_video_uri = save_video(video)
   genai_client = genai.Client(
     vertexai=True,
@@ -50,6 +55,7 @@ async def process_video(
   ]
   speaker_map = {s.speaker_id: s for s in speaker_list}
 
+  logging.info(f"Transcribing {video.filename}")
   transcriptions = transcribe_video(
     client=genai_client,
     model_name=config.gemini_model,
@@ -60,6 +66,7 @@ async def process_video(
   local_dir = os.path.dirname(local_video_path)
  
   utterances: list[Utterance] = []
+  logging.info(f"Starting to translate utterances and generate audio for {video.filename}")
   for i, t in enumerate(transcriptions):
     uid = str(uuid.uuid4())
     speaker = speaker_map[t.speaker_id]
@@ -104,6 +111,7 @@ async def process_video(
     utterances=utterances,
   )
 
+  logging.info(f"Completed processing {video.filename}")
   return to_return
 
 @app.post("/generate_video")
@@ -113,11 +121,14 @@ def generate_video(video_data: Video) -> str:
   Args:
     video_data: the Video object representing the final video.
   """
+  logging.info(f"Generating final video for {video_data.video_id}")
   local_dir = f"static/temp/{video_data.video_id}"
   local_video_path = f"{local_dir}/{video_data.video_id}"
+  logging.info(f"Separating background for {video_data.video_id}")
   _, background_sound_path = separate_audio_from_video(
     local_video_path, local_dir
   )
+  logging.info(f"Merging background and vocals for {video_data.video_id}")
   merged_audio_path = merge_background_and_vocals(
     background_audio_file=background_sound_path,
     dubbed_vocals_metadata=video_data.utterances,
@@ -129,7 +140,7 @@ def generate_video(video_data: Video) -> str:
   with open(combined_video_path, "rb") as video_file:
     gcs_path = f"{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
     upload_file_to_gcs(gcs_path, video_file, config.gcs_bucket_name, "video/mp4")
-    return get_url_for_path(config.gcs_bucket_name, gcs_path)
+  return get_url_for_path(config.gcs_bucket_name, gcs_path)
 
 
 def save_video(video: UploadFile) -> tuple[str, str]:

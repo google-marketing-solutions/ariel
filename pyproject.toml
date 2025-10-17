@@ -17,6 +17,7 @@ dependencies = [
     "pydub>=0.25.1",
     "tenacity>=8.4.1",
     "audioop-lts>=0.2.2",
+    "google-cloud-logging>=3.12.1",
 ]
 
 [dependency-groups]
