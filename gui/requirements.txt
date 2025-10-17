@@ -1,0 +1,28 @@
+# requirements.txt
+
+# FastAPI and web server
+fastapi[standard]==0.116.1
+uvicorn==0.35.0
+
+python-multipart==0.0.20
+
+# Google AI and Cloud
+google-genai==1.40.0
+google-cloud-storage==3.4.0
+google-api-python-client==2.184.0
+google-genai===1.40.0
+google-cloud-texttospeech==2.31.0
+google-cloud-logging==3.12.1
+
+# Notebook dependencies
+moviepy==1.0.3
+demucs==4.0.1
+pandas==2.3.3
+numpy==2.3.3
+
+# For Demucs audio separation
+torch==2.8.0
+torchaudio==2.8.0
+ffmpeg==1.4
+sox==1.5.0
+#hypercorn==0.17.3

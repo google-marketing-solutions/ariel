@@ -1,0 +1,2508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dubble: Your AI Video Dubbing Service</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 2rem; background-color: #f8f9fa; }
+        .container { max-width: 1024px; margin: auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; }
+        h1, h2 { color: #4285F4; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 0.5rem; margin-top: 2rem;}
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+        .form-group { display: flex; flex-direction: column; }
+        label { font-weight: bold; margin-bottom: 0.5rem; color: #555; }
+        input, select, textarea { padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; width: 100%; box-sizing: border-box; }
+        textarea { min-height: 80px; }
+        .full-width { grid-column: 1 / -1; }
+        button { background-color: #34A853; color: white; padding: 1rem; border: none; border-radius: 5px; font-size: 1.1rem; cursor: pointer; width: 100%; margin-top: 1.5rem; transition: background-color 0.3s; }
+        button:hover { background-color: #2c8a42; }
+        #btn-mode-voiceover { background-color: #4285F4; }
+        #btn-mode-voiceover:hover { background-color: #357ae8; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .status { margin-top: 1.5rem; padding: 1rem; border-radius: 4px; text-align: center; font-weight: bold; display: none; }
+        .status.success { background-color: #d4edda; color: #155724; }
+        .status.error { background-color: #f8d7da; color: #721c24; }
+        .status.info { background-color: #d1ecf1; color: #0c5460; }
+        #review-section { display: none; margin-top: 2rem; border-top: 2px solid #eee; padding-top: 1rem; }
+        .review-controls { display: flex; gap: 1rem; }
+        #btn-regenerate { background-color: #fbbc05; } #btn-regenerate:hover { background-color: #e6a800; }
+        #btn-approve { background-color: #4285F4; } #btn-approve:hover { background-color: #357ae8; }
+        #btn-clean-outputs {
+            top: 2rem;
+            right: 2rem;
+            background-color: #EA4335;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #btn-clean-outputs:hover {
+            background-color: #d0382b;
+        }
+        .collapsible {
+            background-color: #f1f1f1;
+            color: #444;
+            cursor: pointer;
+            padding: 1rem;
+            width: 100%;
+            border: 1px solid #ccc;
+            text-align: left;
+            outline: none;
+            font-size: 1rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .collapsible:hover {
+            background-color: #e2e2e2;
+        }
+        .collapsible-content {
+            padding: 1.5rem;
+            border: 1px solid #ccc;
+            border-top: none;
+            display: none;
+            overflow: hidden;
+            border-radius: 0 0 5px 5px;
+            margin-bottom: 1.5rem;
+        }
+        .video-container {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+        .throbber-overlay {
+            display: none; /* Hidden by default */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 1500;
+            border-radius: 8px; /* Match parent */
+        }
+        .throbber {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #4285F4;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .timeline-container {
+            width: 100%;
+            background-color: #eee;
+            border-radius: 5px;
+            position: relative;
+            overflow-x: hidden;
+            overflow-y: auto;
+            margin-bottom: 1.5rem;
+            padding: 10px 0;
+        }
+        #timeline {
+            width: 100%;
+            position: relative;
+        }
+        .utterance-pill {
+            position: absolute;
+            height: 24px; /* Reduced height */
+            background-color: rgba(66, 133, 244, 0.8);
+            color: white;
+            border-radius: 4px; /* Sharper corners */
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* Changed */
+            font-size: 0.8rem;
+            cursor: grab;
+            overflow: visible; /* Allow pseudo-elements to show */
+            white-space: nowrap;
+            padding: 0 15px; /* Adjusted */
+            box-sizing: border-box;
+            border: 1px solid #357ae8;
+        }
+        .utterance-pill .icons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .utterance-pill .play-icon {
+            width: 16px;
+            height: 16px;
+            background-color: white;
+            -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>') no-repeat center;
+            mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>') no-repeat center;
+            cursor: pointer;
+        }
+        .utterance-pill .delete-icon {
+            width: 16px;
+            height: 16px;
+            background-color: #EA4335;
+            -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>') no-repeat center;
+            mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>') no-repeat center;
+            cursor: pointer;
+        }
+        .utterance-pill .play-icon:hover {
+            background-color: #fbbc05;
+        }
+        .utterance-pill .delete-icon:hover {
+            background-color: #d0382b;
+        }
+        .utterance-pill:active {
+            cursor: grabbing;
+        }
+        .utterance-pill::before,
+        .utterance-pill::after {
+            content: attr(data-time);
+            position: absolute;
+            top: -20px;
+            font-size: 0.7rem;
+            color: #333;
+        }
+        .utterance-pill::before {
+            left: 0;
+            content: attr(data-start-time);
+            transform: translateX(-50%);
+        }
+        .utterance-pill::after {
+            right: 0;
+            content: attr(data-end-time);
+            transform: translateX(50%);
+        }
+        .utterance-pill .handle {
+            position: absolute;
+            top: -8px; /* Position above the pill */
+            width: 2px;
+            height: 40px; /* Bar height */
+            background-color: #EA4335;
+        }
+        .utterance-pill .handle.start {
+            left: 0;
+        }
+        .utterance-pill .handle.end {
+            right: 0;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 2rem;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 700px;
+            border-radius: 8px;
+            position: relative;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .modal-buttons button {
+            width: auto;
+            padding: 0.75rem 1.5rem;
+        }
+        #btn-clone-utterance { background-color: #34A853; }
+        #btn-clone-utterance:hover { background-color: #2c8a42; }
+        #btn-regenerate-utterance { background-color: #fbbc05; }
+        #btn-regenerate-utterance:hover { background-color: #e6a800; }
+        #btn-save-utterance { background-color: #4285F4; }
+        #btn-save-utterance:hover { background-color: #357ae8; }
+        .utterance-pill .edit-icon {
+            width: 16px;
+            height: 16px;
+            background-color: white;
+            -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>') no-repeat center;
+            mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>') no-repeat center;
+            cursor: pointer;
+        }
+        #btn-apply-to-others { background-color: #fbbc05; } #btn-apply-to-others:hover { background-color: #e6a800; }
+        #btn-start-apply { background-color: #34A853; } #btn-start-apply:hover { background-color: #2c8a42; }
+        #btn-cancel-apply { background-color: #EA4335; } #btn-cancel-apply:hover { background-color: #d0382b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Dubble: AI Video Dubbing</h1>
+        <div class="form-grid">
+            <button id="btn-clean-outputs">Clean All Generated Files</button>
+        </div>
+
+        <div id="mode-selection-section">
+            <h2>Choose your workflow</h2>
+            <div class="form-grid">
+                <button id="btn-mode-dub" type="button">Dub an existing video</button>
+                <button id="btn-mode-voiceover" type="button">Add voice over to a mute video</button>
+            </div>
+        </div>
+
+        <div id="setup-section" style="display: none;">
+            <h2>1. Initial Configuration</h2>
+            <form id="setup-form">
+                <div class="form-grid">
+                    
+                    <div class="form-group">
+                        <label for="brand_name">Brand Name</label>
+                        <input type="text" id="brand_name" name="brand_name" placeholder="e.g., 'MyBrand'">
+                    </div>
+                    <div class="form-group dub-only">
+                        <label for="original_language">Original Language</label>
+                        <input type="text" id="original_language" name="original_language" value="es-ES">
+                    </div>
+                    <div class="form-group dub-only">
+                        <label for="target_language">Target Language</label>
+                        <input type="text" id="target_language" name="target_language" value="en-US">
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="video_file">Upload Video File</label>
+                        <input type="file" id="video_file" name="video_file" accept="video/*" required>
+                    </div>
+                    
+                </div>
+                <button type="button" class="collapsible">Advanced Configuration</button>
+                <div class="collapsible-content">
+                    <div class="form-group full-width dub-only">
+                            <label for="script">Manual TTS Script</label>
+                            <textarea id="script" name="script"></textarea>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="gcp_project">Google Cloud Project</label>
+                            <input type="text" id="gcp_project" name="gcp_project" value="XXXXXXXXXXX" placeholder="Enter your project here">
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="gcp_project_location">Google Cloud Project</label>
+                            <input type="text" id="gcp_project_location" name="gcp_project_location" value="us-central1" placeholder="Enter your location here">
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        
+                        <!-- Models -->
+                        <div class="form-group">
+                            <label for="analysis_model">Analysis Model</label>
+                            <input type="text" id="analysis_model" name="analysis_model" value="gemini-2.5-pro">
+                        </div>
+                        <div class="form-group">
+                            <label for="embedding_model">Embedding Model</label>
+                            <input type="text" id="embedding_model" name="embedding_model" value="gemini-embedding-001">
+                        </div>
+                        <div class="form-group">
+                            <label for="tts_model">TTS Model</label>
+                            <input type="text" id="tts_model" name="tts_model" value="gemini-2.5-pro-preview-tts">
+                        </div>
+                        
+                        <!-- Temperature Controls -->
+                        <div class="form-group">
+                            <label for="analysis_temperature_num">Analysis Temperature</label>
+                            <input type="number" id="analysis_temperature_num" name="analysis_temperature" value="0.2" step="0.1" min="0" max="1">
+                            <input type="range" id="analysis_temperature_range" value="0.2" step="0.1" min="0" max="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="translation_temperature_num">Translation Temperature</label>
+                            <input type="number" id="translation_temperature_num" name="translation_temperature" value="0.4" step="0.1" min="0" max="1">
+                            <input type="range" id="translation_temperature_range" value="0.4" step="0.1" min="0" max="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="tts_temperature_num">TTS Temperature</label>
+                            <input type="number" id="tts_temperature_num" name="tts_temperature" value="1.0" step="0.1" min="0" max="2">
+                            <input type="range" id="tts_temperature_range" value="1.0" step="0.1" min="0" max="2">
+                        </div>
+
+                        <!-- Speed Cap Control -->
+                        <div class="form-group">
+                            <label for="max_speed_up_ratio_num">Max Speed-Up Ratio</label>
+                            <input type="number" id="max_speed_up_ratio_num" name="max_speed_up_ratio" value="1.2" step="0.1" min="1.0" max="3.0">
+                            <input type="range" id="max_speed_up_ratio_range" value="1.2" step="0.1" min="1.0" max="3.0">
+                        </div>
+                        <div class="form-group">
+                            <label for="feature_speed_up_enable">Enable Speed-Up</label>
+                            <input type="checkbox" id="feature_speed_up_enable" name="feature_speed_up_enable" checked style="width: auto;">
+                        </div>
+
+                        <!-- Translation Refinement -->
+                        <div class="form-group">
+                            <label for="max_refinement_attempts_num">Max Refinement Attempts</label>
+                            <input type="number" id="max_refinement_attempts_num" name="max_refinement_attempts" value="0" min="0" max="10">
+                            <input type="range" id="max_refinement_attempts_range" value="0" min="0" max="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="feature_refinement_enable">Enable Refinement</label>
+                            <input type="checkbox" id="feature_refinement_enable" name="feature_refinement_enable" style="width: auto;">
+                        </div>
+
+                        <!-- Other -->
+                        <div class="form-group">
+                            <label for="max_concurrent_threads_num">Max Concurrent Threads</label>
+                            <input type="number" id="max_concurrent_threads_num" name="max_concurrent_threads" value="1" min="1" max="10">
+                            <input type="range" id="max_concurrent_threads_range" value="1" min="1" max="10">
+                        </div>
+                         <div class="form-group">
+                            <label for="prompt_edit">Enable Prompt Editing</label>
+                            <input type="checkbox" id="prompt_edit" name="prompt_edit" checked style="width: auto;">
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="prompt_diarization">Diarization Prompt</label>
+                            <textarea id="prompt_diarization" name="prompt_diarization">{{ default_prompts.diarization }}</textarea>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="prompt_translation">Translation Prompt</label>
+                            <textarea id="prompt_translation" name="prompt_translation">{{ default_prompts.translation }}</textarea>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="prompt_translation_refinement">Translation Refinement Prompt</label>
+                            <textarea id="prompt_translation_refinement" name="prompt_translation_refinement">{{ default_prompts.translation_refinement }}</textarea>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="tts_prompt_template_adv">TTS Prompt Template (Advanced)</label>
+                            <textarea id="tts_prompt_template_adv" name="tts_prompt_template">{{ default_prompts.tts_prompt_template }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" id="btn-start">Start Analysis</button>
+            </form>
+        </div>
+
+        <div id="review-section">
+            <div class="throbber-overlay">
+                <div class="throbber"></div>
+            </div>
+            <h2 id="review-heading">2. Review & Generate Speech</h2>
+            <p id="review-progress"></p>
+            <form id="review-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Start</label>
+                        <textarea id="start"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>End</label>
+                        <textarea id="end"></textarea>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Source Language</label>
+                        <input id="source-language"></input>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Language</label>
+                        <input id="target-language"></input>
+                    </div>
+                    
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Original Text</label>
+                        <textarea id="original-text"></textarea>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <button id="translate-button">Translate</button>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Translated Text</label>
+                        <textarea id="translated-text"></textarea>
+                    </div>
+                </div>
+                 <div class="form-grid">
+                    <div class="form-group">
+                        <label for="voice-name">Voice</label>
+                        <select id="voice-name" name="voice_name"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="sync-mode">Sync Mode</label>
+                        <select id="sync-mode" name="sync_mode"></select>
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        <label for="tone">Tone</label>
+                        <input type="text" id="tone" name="tone">
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        <label for="pitch">Pitch</label>
+                        <input type="text" id="pitch" name="pitch">
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        <label for="gender">Gender</label>
+                        <input type="text" id="gender" name="gender">
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        <label for="age">Age</label>
+                        <input type="text" id="age" name="age">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="vocal-style-prompt">Vocal Style Prompt</label>
+                        <input type="text" id="vocal-style-prompt" name="vocal_style_prompt">
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        <label for="special-instructions">Special Instructions</label>
+                        <input type="text" id="special-instructions" name="special_instructions">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="tts-prompt">TTS Prompt</label>
+                        <textarea id="tts-prompt" name="tts_prompt"></textarea>
+                    </div>
+                </div>
+            </form>
+            <audio id="audio-player" controls style="width: 100%; margin-top: 1rem; display: none;">
+       
+            </audio>
+            <div class="review-controls">
+                <button id="btn-start-over" style="background-color: #EA4335;">Start Over</button>
+                <button id="btn-regenerate">Generate Speech</button>
+                <button id="btn-approve" disabled>Approve & Next</button>
+            </div>
+        </div>
+
+        <div id="timeline-section" style="display: none; margin-top: 2rem;">
+            <h2>3. Fine-tune Timing & Assemble</h2>
+            <div class="video-container">
+                <div class="throbber-overlay">
+                    <div class="throbber"></div>
+                </div>
+                <video id="source-video-player" width="100%" controls></video>
+            </div>
+            <div class="timeline-container">
+                <div id="timeline"></div>
+            </div>
+            <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="background_music_volume_range">Background Music Volume: <span id="background_music_volume_display">50%</span></label>
+                                        <input type="range" id="background_music_volume_range" name="background_music_volume" value="50" step="1" min="0" max="200">
+                                    </div>                    <div class="form-group">
+                        <label for="speech_volume_range">Speech Volume: <span id="speech_volume_display">100%</span></label>
+                        <input type="range" id="speech_volume_range" name="speech_volume" value="100" step="1" min="0" max="200">
+                    </div>
+            </div>
+            <div class="form-grid">
+                <button type="button" id="btn-assemble-final">Assemble Final Video</button>
+                <button type="button" id="btn-apply-to-others">Apply to Other Videos</button>
+            </div>
+            <button type="button" id="btn-start-over-long" style="background-color: #EA4335;">Start Over</button>
+        </div>
+        
+        <div id="status-message" class="status"></div>
+    </div>
+
+    <!-- Utterance Edit Modal -->
+    <div id="edit-utterance-modal" class="modal">
+        <div class="modal-content">
+            <div class="throbber-overlay" id="modal-throbber-overlay">
+                <div class="throbber"></div>
+            </div>
+            <span class="close-button">&times;</span>
+            <h2>Edit Utterance</h2>
+            <div id="modal-status-message" class="status"></div>
+            <form id="edit-utterance-form">
+                <input type="hidden" id="edit-utterance-index">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Start</label>
+                        <input type="text" id="edit-start" />
+                    </div>
+                    <div class="form-group">
+                        <label>End</label>
+                        <input type="text" id="edit-end" />
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Source Language</label>
+                        <input id="edit-source-language"></input>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Language</label>
+                        <input id="edit-target-language"></input>
+                    </div>
+                    
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Original Text</label>
+                        <textarea id="edit-original-text"></textarea>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <button id="edit-translate-button">Translate</button>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Translated Text</label>
+                        <textarea id="edit-translated-text"></textarea>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="edit-voice-name">Voice</label>
+                        <select id="edit-voice-name" name="voice_name"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-sync-mode">Sync Mode</label>
+                        <select id="edit-sync-mode" name="sync_mode"></select>
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        <label for="edit-tone">Tone</label>
+                        <input type="text" id="edit-tone" name="tone">
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        <label for="edit-pitch">Pitch</label>
+                        <input type="text" id="edit-pitch" name="pitch">
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        <label for="edit-gender">Gender</label>
+                        <input type="text" id="edit-gender" name="gender">
+                    </div>
+                    <div class="form-group" style="display: none;">
+                        <label for="edit-age">Age</label>
+                        <input type="text" id="edit-age" name="age">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="edit-vocal-style-prompt">Vocal Style Prompt</label>
+                        <input type="text" id="edit-vocal-style-prompt" name="vocal_style_prompt">
+                    </div>
+                    
+                    <div class="form-group" style="display: none;">
+                        <label for="edit-special-instructions">Special Instructions</label>
+                        <input type="text" id="edit-special-instructions" name="special_instructions">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="edit-tts-prompt">TTS Prompt</label>
+                        <textarea id="edit-tts-prompt" name="tts_prompt"></textarea>
+                    </div>
+                </div>
+            </form>
+            <audio id="edit-audio-player" controls style="width: 100%; margin-top: 1rem; display: none;"></audio>
+            <div class="modal-buttons">
+                <button id="btn-clone-utterance">Clone</button>
+                <button id="btn-regenerate-utterance">Generate Speech</button>
+                <button id="btn-save-utterance">Save & Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Utterance Validation Warning Modal -->
+    <div id="utterance-warning-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Warning</h2>
+            <p id="utterance-warning-message"></p>
+            <div class="modal-buttons" style="justify-content: center;">
+                <button id="btn-close-utterance-warning-modal">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Apply to Other Videos Modal -->
+    <div id="apply-to-others-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="close-apply-modal-top">&times;</span>
+            <div id="apply-input-section">
+                <h2>Apply to Other Videos</h2>
+                <p>Enter a list of video URLs (one per line) to apply the same utterances to.</p>
+                <div id="apply-modal-status" class="status" style="display: none;"></div>
+                <textarea id="video-urls" style="height: 150px;"></textarea>
+                <div class="modal-buttons">
+                    <button id="btn-cancel-apply">Cancel</button>
+                    <button id="btn-start-apply">Start</button>
+                </div>
+            </div>
+            <div id="apply-progress-section" style="display: none; text-align: center;">
+                <h2>Applying Utterances to Videos</h2>
+                <p id="bulk-progress-message">Processing video <span id="current-video-count">0</span> of <span id="total-video-count">0</span></p>
+                <div style="position: relative; height: 80px; display: flex; align-items: center; justify-content: center;">
+                    <div class="throbber"></div>
+                </div>
+                <div class="modal-buttons" style="justify-content: center;">
+                    <button id="btn-close-apply-modal-after-process" style="display: none;">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assembly Modal -->
+    <div id="assembly-modal" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <h2>Assembling Video...</h2>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    document.querySelector('.collapsible').addEventListener('click', function() {
+
+        this.classList.toggle('active');
+
+        const content = this.nextElementSibling;
+
+        if (content.style.display === 'block') {
+
+            content.style.display = 'none';
+
+        } else {
+
+            content.style.display = 'block';
+
+        }
+
+    });
+
+    // --- SLIDER SYNCHRONIZATION ---
+
+    function setupSlider(numId, rangeId) {
+
+        const numInput = document.getElementById(numId);
+
+        const rangeInput = document.getElementById(rangeId);
+
+        if (numInput && rangeInput) {
+
+            numInput.addEventListener(
+
+                'input', () => rangeInput.value = numInput.value);
+
+            rangeInput.addEventListener(
+
+                'input', () => numInput.value = rangeInput.value);
+
+        }
+
+    }
+
+    setupSlider('analysis_temperature_num', 'analysis_temperature_range');
+
+    setupSlider('translation_temperature_num', 'translation_temperature_range');
+
+    setupSlider('tts_temperature_num', 'tts_temperature_range');
+
+    setupSlider('max_speed_up_ratio_num', 'max_speed_up_ratio_range');
+
+    setupSlider('max_refinement_attempts_num', 'max_refinement_attempts_range');
+
+    setupSlider('max_concurrent_threads_num', 'max_concurrent_threads_range');
+
+    function setupVolumeSlider(rangeId, displayId) {
+        const rangeInput = document.getElementById(rangeId);
+        const displaySpan = document.getElementById(displayId);
+
+        if (rangeInput && displaySpan) {
+            rangeInput.addEventListener(
+                'input', () => displaySpan.textContent = `${rangeInput.value}%`);
+        }
+    }
+
+    setupVolumeSlider('background_music_volume_range', 'background_music_volume_display');
+
+    setupVolumeSlider('speech_volume_range', 'speech_volume_display');
+
+    // --- STATE MANAGEMENT ---
+
+    let currentWorkflow = 'dub';
+
+    let JOB_ID = null;
+
+    let TOTAL_UTTERANCES = 0;
+
+    let CURRENT_INDEX = 0;
+
+    let UTTERANCES_DATA = [];
+
+    // --- DOM ELEMENTS ---
+
+    const modeSelectionSection = document.getElementById('mode-selection-section');
+
+    const btnModeDub = document.getElementById('btn-mode-dub');
+
+    const btnModeVoiceover = document.getElementById('btn-mode-voiceover');
+
+    const setupForm = document.getElementById('setup-form');
+
+    const statusMessage = document.getElementById('status-message');
+
+    const setupSection = document.getElementById('setup-section');
+
+    const reviewSection = document.getElementById('review-section');
+
+    const reviewHeading = document.getElementById('review-heading');
+
+    const reviewProgress = document.getElementById('review-progress');
+
+    const sourceLanguage = document.getElementById('source-language');
+
+    const targetLanguage = document.getElementById('target-language');
+
+    const originalText = document.getElementById('original-text');
+
+    const translatedText = document.getElementById('translated-text');
+
+    const voiceSelect = document.getElementById('voice-name');
+
+    const vocalStylePromptInput = document.getElementById('vocal-style-prompt');
+
+    const specialInstructionsInput =
+
+        document.getElementById('special-instructions');
+
+    const ttsPromptTextarea = document.getElementById('tts-prompt');
+
+    const audioPlayer = document.getElementById('audio-player');
+
+    const btnRegenerate = document.getElementById('btn-regenerate');
+
+    const btnApprove = document.getElementById('btn-approve');
+
+    const btnStart = document.getElementById('btn-start');
+
+    const btnStartOver = document.getElementById('btn-start-over');
+
+    const btnStartOverLong = document.getElementById('btn-start-over-long');
+
+    const btnCleanOutputs = document.getElementById('btn-clean-outputs');
+
+    const btnAssembleFinal = document.getElementById('btn-assemble-final');
+    const btnApplyToOthers = document.getElementById('btn-apply-to-others');
+
+    // --- MODAL DOM ELEMENTS ---
+    const applyToOthersModal = document.getElementById('apply-to-others-modal');
+    const closeApplyModalTop = document.getElementById('close-apply-modal-top');
+    const applyInputSection = document.getElementById('apply-input-section');
+    const applyProgressSection = document.getElementById('apply-progress-section');
+    const btnCancelApply = document.getElementById('btn-cancel-apply');
+    const btnStartApply = document.getElementById('btn-start-apply');
+    const currentVideoCountSpan = document.getElementById('current-video-count');
+    const totalVideoCountSpan = document.getElementById('total-video-count');
+    const btnCloseApplyModalAfterProcess = document.getElementById('btn-close-apply-modal-after-process');
+
+    const utteranceWarningModal = document.getElementById('utterance-warning-modal');
+    const utteranceWarningMessage = document.getElementById('utterance-warning-message');
+    const btnCloseUtteranceWarningModal = document.getElementById('btn-close-utterance-warning-modal');
+
+    const editModal = document.getElementById('edit-utterance-modal');
+
+    const btnCloseModal = editModal.querySelector('.close-button');
+
+    const btnSaveUtterance = document.getElementById('btn-save-utterance');
+
+    const btnRegenerateUtterance =
+
+        document.getElementById('btn-regenerate-utterance');
+
+    const btnCloneUtterance = document.getElementById('btn-clone-utterance');
+    const btnTranslate = document.getElementById('translate-button');
+    const btnEditTranslate = document.getElementById('edit-translate-button');
+
+    // --- EVENT LISTENERS ---
+
+    btnModeDub.addEventListener('click', () => {
+
+        currentWorkflow = 'dub';
+
+        modeSelectionSection.style.display = 'none';
+
+        setupSection.style.display = 'block';
+
+        document.querySelectorAll('.dub-only').forEach(el => el.style.display = 'flex');
+
+    });
+
+    btnModeVoiceover.addEventListener('click', () => {
+
+        currentWorkflow = 'voiceover';
+
+        modeSelectionSection.style.display = 'none';
+
+        setupSection.style.display = 'block';
+
+        document.querySelectorAll('.dub-only').forEach(el => el.style.display = 'none');
+
+    });
+
+    setupForm.addEventListener('submit', handleStartProcess);
+
+    btnRegenerate.addEventListener('click', handleGenerateSpeech);
+
+    btnApprove.addEventListener('click', handleApproveSpeech);
+
+    btnStartOver.addEventListener('click', handleStartOver);
+
+    btnStartOverLong.addEventListener('click', handleStartOver);
+
+    btnCleanOutputs.addEventListener('click', handleCleanOutputs);
+
+    btnAssembleFinal.addEventListener('click', handleFinalAssembly);
+
+    btnTranslate.addEventListener('click', handleTranslate);
+
+    btnEditTranslate.addEventListener('click', handleModalTranslate);
+
+        // --- MODAL EVENT LISTENERS ---
+
+    btnCloseModal.addEventListener('click', closeEditModal);
+
+    btnSaveUtterance.addEventListener('click', handleSaveUtterance);
+
+    btnRegenerateUtterance.addEventListener('click', handleModalGenerateSpeech);
+
+    btnCloneUtterance.addEventListener('click', handleCloneUtterance);
+
+    btnApplyToOthers.addEventListener('click', () => {
+        if (!checkAllUtterancesHaveAudio()) {
+            utteranceWarningMessage.textContent = 'Please generate speech for all utterances before applying to other videos.';
+            utteranceWarningModal.style.display = 'block';
+            return;
+        }
+        applyToOthersModal.style.display = 'block';
+        applyInputSection.style.display = 'block';
+        applyProgressSection.style.display = 'none';
+        btnCloseApplyModalAfterProcess.style.display = 'none';
+        document.getElementById('video-urls').value = ''; // Clear previous input
+        if (document.getElementById('apply-modal-status')) {
+            document.getElementById('apply-modal-status').style.display = 'none';
+        }
+    });
+
+    closeApplyModalTop.addEventListener('click', () => applyToOthersModal.style.display = 'none');
+    btnCancelApply.addEventListener('click', () => applyToOthersModal.style.display = 'none');
+    btnStartApply.addEventListener('click', handleStartApplyToOthers);
+    btnCloseApplyModalAfterProcess.addEventListener('click', () => applyToOthersModal.style.display = 'none');
+    btnCloseUtteranceWarningModal.addEventListener('click', () => utteranceWarningModal.style.display = 'none');
+
+    async function handleStartApplyToOthers() {
+        const videoUrls = document.getElementById('video-urls').value.trim().split('\n').filter(url => url.trim() !== '');
+        const applyModalStatus = document.getElementById('apply-modal-status');
+        if (videoUrls.length === 0) {
+            applyModalStatus.className = 'status error';
+            applyModalStatus.textContent = 'Please enter at least one video URL.';
+            applyModalStatus.style.display = 'block';
+            return;
+        }
+
+        applyInputSection.style.display = 'none';
+        applyProgressSection.style.display = 'block';
+        totalVideoCountSpan.textContent = videoUrls.length;
+
+        let successes = [];
+        let failures = [];
+
+        for (let i = 0; i < videoUrls.length; i++) {
+            const videoUrl = videoUrls[i];
+            currentVideoCountSpan.textContent = i + 1;
+            document.getElementById('bulk-progress-message').innerHTML = `Processing video ${i + 1} of ${videoUrls.length}: <strong>${videoUrl}</strong>`;
+
+            const formData = new FormData();
+            formData.append('job_id', JOB_ID);
+            formData.append('video_url', videoUrl);
+            formData.append('music_volume', document.getElementById('background_music_volume_range').value);
+            formData.append('speech_volume', document.getElementById('speech_volume_range').value);
+
+            try {
+                const response = await fetch('/apply-to-single-video', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.detail);
+                successes.push({ original: videoUrl, dubbed: result.dubbed_url });
+            } catch (error) {
+                failures.push({ original: videoUrl, error: error.message });
+            }
+        }
+
+        // Hide throbber and show summary
+        applyProgressSection.querySelector('.throbber').style.display = 'none';
+        let summaryHtml = '<h3>Processing Complete</h3>';
+        summaryHtml += `<p>${successes.length} of ${videoUrls.length} videos processed successfully.</p>`;
+
+        if (successes.length > 0) {
+            summaryHtml += '<h4>Successful:</h4><ul>';
+            successes.forEach(s => {
+                summaryHtml += `<li><a href="${s.original}" target="_blank">Original</a> -> Dubbed </li>`;
+            });
+            summaryHtml += '</ul>';
+        }
+
+        if (failures.length > 0) {
+            summaryHtml += '<h4>Failed:</h4><ul>';
+            failures.forEach(f => {
+                summaryHtml += `<li><a href="${f.original}" target="_blank">${f.original}</a> - Error: ${f.error}</li>`;
+            });
+            summaryHtml += '</ul>';
+        }
+
+        document.getElementById('bulk-progress-message').innerHTML = summaryHtml;
+        btnCloseApplyModalAfterProcess.style.display = 'block';
+        showStatus('success', 'Bulk processing finished.');
+    }
+
+    function showModalStatus(type, message) {
+        const modalStatus = document.getElementById('modal-status-message');
+        modalStatus.className = `status ${type}`;
+        modalStatus.innerHTML = message;
+        modalStatus.style.display = 'block';
+    }
+
+    async function handleModalGenerateSpeech() {
+
+        event.preventDefault();
+        const index = parseInt(document.getElementById('edit-utterance-index').value, 10);
+        showModalStatus('info', `Generating speech for utterance ${index + 1}...`);
+
+        btnRegenerateUtterance.disabled = true;
+        const modalThrobber = document.getElementById('modal-throbber-overlay');
+        modalThrobber.style.display = 'flex';
+        
+        const utterance = UTTERANCES_DATA[index];
+        utterance.start = parseFloat(document.getElementById('edit-start').value);
+        utterance.end = parseFloat(document.getElementById('edit-end').value);
+        utterance.original_text =
+            document.getElementById('edit-original-text').value;
+        utterance.translated_text =
+            document.getElementById('edit-translated-text').value;
+        utterance.voice_name = document.getElementById('edit-voice-name').value;
+        utterance.sync_mode = document.getElementById('edit-sync-mode').value;
+        utterance.tone = document.getElementById('edit-tone').value;
+        utterance.pitch = document.getElementById('edit-pitch').value;
+        utterance.gender = document.getElementById('edit-gender').value;
+        utterance.age = document.getElementById('edit-age').value;
+        utterance.vocal_style_prompt =
+            document.getElementById('edit-vocal-style-prompt').value;
+        utterance.special_instructions =
+            document.getElementById('edit-special-instructions').value;
+        utterance.tts_prompt = document.getElementById('edit-tts-prompt').value;
+
+        // Also save the newly generated audio if it exists
+        const editAudioPlayer = document.getElementById('edit-audio-player');
+        if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
+            utterance.audio_url = editAudioPlayer.src;
+        }
+
+        btnSaveUtterance.disabled = true;
+
+        btnCloneUtterance.disabled = true;
+
+        const formData = new FormData();
+
+        formData.append('job_id', JOB_ID);
+
+        formData.append('index', index);
+
+        formData.append('utterance', JSON.stringify(utterance));
+
+
+        try {
+
+            const response =
+
+                await fetch('/generate-speech', {
+
+                    method: 'POST',
+
+                    body: formData
+
+                });
+
+            const result = await response.json();
+
+            if (!response.ok) throw new Error(result.detail);
+
+            const editAudioPlayer = document.getElementById('edit-audio-player');
+
+            editAudioPlayer.src = result.audio_url;
+
+            editAudioPlayer.load();
+
+            editAudioPlayer.style.display = 'block';
+
+            // Also update the main data array so it persists if the user saves
+            if (result.audio_url) {
+                UTTERANCES_DATA[index].translated_text = result.translated_text
+                document.getElementById('edit-translated-text').value = result.translated_text;
+                UTTERANCES_DATA[index].audio_url = result.audio_url;
+            }
+
+
+            showModalStatus(
+
+                'success', 'Speech generated. You can save or continue editing.');
+
+        } catch (error) {
+
+            showModalStatus('error', `Generation failed: ${error.message}`);
+
+        } finally {
+
+            modalThrobber.style.display = 'none';
+
+            btnRegenerateUtterance.disabled = false;
+
+            btnSaveUtterance.disabled = false;
+
+            btnCloneUtterance.disabled = false;
+
+        }
+
+    }
+
+    async function handleTranslate(event) {
+        event.preventDefault();
+        showStatus('info', `Translating utterance ${CURRENT_INDEX + 1}...`);
+
+        btnTranslate.disabled = true;
+        const throbber = document.querySelector('#review-section .throbber-overlay');
+        throbber.style.display = 'flex';
+
+        const utterance = UTTERANCES_DATA[CURRENT_INDEX];
+        utterance.start = parseFloat(document.getElementById('start').value);
+        utterance.end = parseFloat(document.getElementById('end').value);
+        utterance.original_text =
+            document.getElementById('original-text').value;
+        utterance.translated_text =
+            document.getElementById('translated-text').value;
+        utterance.voice_name = document.getElementById('voice-name').value;
+        utterance.sync_mode = document.getElementById('sync-mode').value;
+        utterance.tone = document.getElementById('tone').value;
+        utterance.pitch = document.getElementById('pitch').value;
+        utterance.gender = document.getElementById('gender').value;
+        utterance.age = document.getElementById('age').value;
+        utterance.vocal_style_prompt =
+            document.getElementById('vocal-style-prompt').value;
+        utterance.special_instructions =
+            document.getElementById('special-instructions').value;
+        utterance.tts_prompt = document.getElementById('tts-prompt').value;
+
+        // Also save the newly generated audio if it exists
+        const editAudioPlayer = document.getElementById('audio-player');
+        if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
+            utterance.audio_url = editAudioPlayer.src;
+        }
+
+        const formData = new FormData();
+        formData.append('job_id', JOB_ID);
+        formData.append('index', CURRENT_INDEX);
+        formData.append('utterance', JSON.stringify(utterance));
+ 
+        try {
+            const response = await fetch('/translate-utterance', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.detail);
+
+            UTTERANCES_DATA[CURRENT_INDEX].source_language = result.source_language;
+            UTTERANCES_DATA[CURRENT_INDEX].target_language = result.target_language;
+            UTTERANCES_DATA[CURRENT_INDEX].translated_text = result.translated_text;
+            UTTERANCES_DATA[CURRENT_INDEX].original_text = result.original_text;
+            document.getElementById('original-text').value = result.original_text;
+            document.getElementById('translated-text').value = result.translated_text;
+            document.getElementById('source-language').value = result.source_language;
+            document.getElementById('target-language').value = result.target_language;
+            showStatus('success', 'Translation complete.');
+        } catch (error) {
+            showStatus('error', `Translation failed: ${error.message}`);
+        } finally {
+            btnTranslate.disabled = false;
+            throbber.style.display = 'none';
+        }
+    }
+
+    async function handleModalTranslate(event) {
+        event.preventDefault();
+        const index = parseInt(document.getElementById('edit-utterance-index').value, 10);
+        showModalStatus('info', `Translating utterance ${index + 1}...`);
+        btnEditTranslate.disabled = true;
+        const modalThrobber = document.getElementById('modal-throbber-overlay');
+        modalThrobber.style.display = 'flex';
+
+        const utterance = UTTERANCES_DATA[index];
+        utterance.start = parseFloat(document.getElementById('edit-start').value);
+        utterance.end = parseFloat(document.getElementById('edit-end').value);
+        utterance.original_text =
+            document.getElementById('edit-original-text').value;
+        utterance.translated_text =
+            document.getElementById('edit-translated-text').value;
+        utterance.voice_name = document.getElementById('edit-voice-name').value;
+        utterance.sync_mode = document.getElementById('edit-sync-mode').value;
+        utterance.tone = document.getElementById('edit-tone').value;
+        utterance.pitch = document.getElementById('edit-pitch').value;
+        utterance.gender = document.getElementById('edit-gender').value;
+        utterance.age = document.getElementById('edit-age').value;
+        utterance.vocal_style_prompt =
+            document.getElementById('edit-vocal-style-prompt').value;
+        utterance.special_instructions =
+            document.getElementById('edit-special-instructions').value;
+        utterance.tts_prompt = document.getElementById('edit-tts-prompt').value;
+
+        // Also save the newly generated audio if it exists
+        const editAudioPlayer = document.getElementById('edit-audio-player');
+        if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
+            utterance.audio_url = editAudioPlayer.src;
+        }
+
+
+        const formData = new FormData();
+        formData.append('job_id', JOB_ID);
+        formData.append('index', index);
+        formData.append('utterance', JSON.stringify(utterance));
+
+        try {
+            const response = await fetch('/translate-utterance', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.detail);
+
+            UTTERANCES_DATA[index].source_language = result.source_language;
+            UTTERANCES_DATA[index].target_language = result.target_language;
+            UTTERANCES_DATA[index].original_text = result.original_text;
+            UTTERANCES_DATA[index].translated_text = result.translated_text;
+            document.getElementById('edit-translated-text').value = result.translated_text;
+            document.getElementById('edit-original-text').value = result.original_text;
+            document.getElementById('edit-source-language').value = result.source_language;
+            document.getElementById('edit-target-language').value = result.target_language;
+            showModalStatus('success', 'Translation complete.');
+        } catch (error) {
+            showModalStatus('error', `Translation failed: ${error.message}`);
+        } finally {
+            btnEditTranslate.disabled = false;
+            modalThrobber.style.display = 'none';
+        }
+    }
+
+    // --- HANDLER FUNCTIONS ---
+
+    async function handleCleanOutputs() {
+
+        if (!confirm(
+
+                'Are you sure you want to delete all generated outputs? This action cannot be undone.')) {
+
+            return;
+
+        }
+
+        showStatus('info', 'Cleaning outputs directory...');
+
+        try {
+
+            const response = await fetch('/clean-outputs', {
+
+                method: 'POST'
+
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) throw new Error(result.detail);
+
+            showStatus('success', 'Outputs directory has been cleaned.');
+
+        } catch (error) {
+
+            showStatus('error', `Error: ${error.message}`);
+
+        }
+
+    }
+
+    function handleStartOver() {
+
+        // Reset state variables
+
+        JOB_ID = null;
+
+        TOTAL_UTTERANCES = 0;
+
+        CURRENT_INDEX = 0;
+
+        UTTERANCES_DATA = [];
+
+        // Reset UI elements
+
+        modeSelectionSection.style.display = 'block';
+
+        setupSection.style.display = 'none';
+
+        reviewSection.style.display = 'none';
+
+        document.getElementById('timeline-section').style.display = 'none';
+
+        showStatus('info', 'Ready!');
+
+        statusMessage.style.display = 'none';
+        document.getElementById('modal-status-message').style.display = 'none';
+        document.getElementById('apply-modal-status').style.display = 'none';
+        document.getElementById('bulk-progress-message').innerHTML = '';
+        utteranceWarningModal.style.display = 'none';
+        applyToOthersModal.style.display = 'none';
+        assemblyModal.style.display = 'none';
+
+        btnCleanOutputs.style.display = 'block';
+
+        // Reset the form
+
+        setupForm.reset();
+
+        btnStart.disabled = false;
+
+    }
+
+    async function handleStartProcess(event) {
+
+        event.preventDefault();
+
+        showStatus(
+
+            'info', 'Uploading and analyzing video... This may take a moment. ⏳');
+
+        btnStart.disabled = true;
+
+        const formData = new FormData(setupForm);
+
+        formData.append('workflow', currentWorkflow);
+
+        // Add prompt text area values
+
+        
+
+        formData.append('script', document.getElementById('script').value);
+
+        formData.append(
+
+            'prompt_diarization',
+
+            document.getElementById('prompt_diarization').value);
+
+        formData.append(
+
+            'prompt_translation',
+
+            document.getElementById('prompt_translation').value);
+
+        formData.append(
+
+            'prompt_translation_refinement',
+
+            document.getElementById('prompt_translation_refinement').value);
+
+        formData.append(
+
+            'tts_prompt_template',
+
+            document.getElementById('tts_prompt_template_adv').value);
+
+        // Handle checkboxes for boolean values
+
+        formData.append(
+
+            'feature_speed_up_enable',
+
+            document.getElementById('feature_speed_up_enable').checked);
+
+        formData.append(
+
+            'feature_refinement_enable',
+
+            document.getElementById('feature_refinement_enable').checked);
+
+        formData.append(
+
+            'prompt_edit', document.getElementById('prompt_edit').checked);
+
+        formData.append('workflow', currentWorkflow);
+
+        try {
+
+            const response =
+
+                await fetch('/start-process', {
+
+                    method: 'POST',
+
+                    body: formData
+
+                });
+
+            const result = await response.json();
+
+            if (!response.ok) throw new Error(result.detail);
+
+            JOB_ID = result.job_id;
+
+            UTTERANCES_DATA = result.utterances;
+
+            TOTAL_UTTERANCES = UTTERANCES_DATA.length;
+
+            // Populate voice options
+
+            voiceSelect.innerHTML = '';
+
+            result.voice_options.forEach(voice => {
+
+                const option = document.createElement('option');
+
+                option.value = voice;
+
+                option.textContent = voice;
+
+                voiceSelect.appendChild(option);
+
+            });
+
+            // Populate sync mode options
+
+            const syncModeSelect = document.getElementById('sync-mode');
+
+            syncModeSelect.innerHTML = '';
+
+            result.sync_modes.forEach(mode => {
+
+                const option = document.createElement('option');
+
+                option.value = mode;
+
+                option.textContent = mode;
+
+                syncModeSelect.appendChild(option);
+
+            });
+
+            setupSection.style.display = 'none';
+
+            btnCleanOutputs.style.display = 'none';
+/*
+            if (currentWorkflow === 'dub') {
+
+                showStatus(
+
+                    'success',
+
+                    `Analysis complete! Found ${TOTAL_UTTERANCES} utterances to dub.`);
+
+                reviewSection.style.display = 'block';
+
+                loadUtterance(0);
+
+            } else { // voiceover workflow
+*/
+                showStatus(
+
+                    'success',
+
+                    `Video processed. You can now add utterances to the timeline.`);
+
+                const sourceVideoPlayer = document.getElementById('source-video-player');
+
+                sourceVideoPlayer.src = result.video_url;
+                
+                showTimelineEditor();
+
+//           }
+
+        } catch (error) {
+
+            showStatus('error', `Error: ${error.message}`);
+
+            btnStart.disabled = false;
+
+        }
+
+    };
+
+    function loadUtterance(index) {
+
+        if (index >= TOTAL_UTTERANCES) {
+
+            handleInitialAssembly();
+
+            showTimelineEditor();
+
+            return;
+
+        }
+
+        CURRENT_INDEX = index;
+
+        const utterance = UTTERANCES_DATA[index];
+
+        reviewProgress.textContent =
+
+            `Reviewing Utterance ${index + 1} of ${TOTAL_UTTERANCES} (Time: ${
+
+            utterance.start.toFixed(2)}s - ${utterance.end.toFixed(2)}s)`;
+
+        document.getElementById('start').value = utterance.start.toFixed(2);
+
+        document.getElementById('end').value = utterance.end.toFixed(2);
+
+        document.getElementById('source-language').value = utterance.source_language;
+
+        document.getElementById('target-language').value = utterance.target_language;
+
+        document.getElementById('original-text').value = utterance.original_text;
+
+        document.getElementById('translated-text').value =
+
+            utterance.translated_text;
+
+        voiceSelect.value = utterance.voice_name;
+
+        document.getElementById('sync-mode').value = utterance.sync_mode;
+
+        document.getElementById('tone').value = utterance.tone;
+
+        document.getElementById('pitch').value = utterance.pitch;
+
+        document.getElementById('gender').value = utterance.gender;
+
+        document.getElementById('age').value = utterance.age;
+
+        vocalStylePromptInput.value = utterance.vocal_style_prompt;
+
+        specialInstructionsInput.value = utterance.special_instructions;
+
+        ttsPromptTextarea.value = utterance.tts_prompt;
+
+        audioPlayer.style.display = 'none';
+
+        audioPlayer.src = '';
+
+        btnApprove.disabled = true;
+
+    }
+
+    async function handleGenerateSpeech(event) {
+
+        showStatus(
+
+            'info', `Generating speech for utterance ${CURRENT_INDEX + 1}...`);
+
+        btnRegenerate.disabled = true;
+
+        btnApprove.disabled = true;
+        const throbber = document.querySelector('#review-section .throbber-overlay');
+        throbber.style.display = 'flex';
+
+        
+
+        const utterance = {};
+        utterance.start = parseFloat(document.getElementById('start').value);
+        utterance.end = parseFloat(document.getElementById('end').value);
+        utterance.original_text =
+            document.getElementById('original-text').value;
+        utterance.translated_text =
+            document.getElementById('translated-text').value;
+        utterance.voice_name = document.getElementById('voice-name').value;
+        utterance.sync_mode = document.getElementById('sync-mode').value;
+        utterance.tone = document.getElementById('tone').value;
+        utterance.pitch = document.getElementById('pitch').value;
+        utterance.gender = document.getElementById('gender').value;
+        utterance.age = document.getElementById('age').value;
+        utterance.vocal_style_prompt =
+            document.getElementById('vocal-style-prompt').value;
+        utterance.special_instructions =
+            document.getElementById('special-instructions').value;
+        utterance.tts_prompt = document.getElementById('tts-prompt').value;
+
+        // Also save the newly generated audio if it exists
+        const editAudioPlayer = document.getElementById('audio-player');
+        if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
+            utterance.audio_url = editAudioPlayer.src;
+        }
+
+        const formData = new FormData();
+
+        formData.append('job_id', JOB_ID);
+
+        formData.append('index', CURRENT_INDEX);
+
+        formData.append('utterance', JSON.stringify(utterance));
+
+        try {
+
+            const response =
+
+                await fetch('/generate-speech', {
+
+                    method: 'POST',
+
+                    body: formData
+
+                });
+
+            const result = await response.json();
+
+            if (!response.ok) throw new Error(result.detail);
+
+            if (result.utterance) {
+                UTTERANCES_DATA[CURRENT_INDEX] = result.utterance;
+                document.getElementById('translated-text').value = result.utterance.translated_text;
+            }
+
+            audioPlayer.src = result.audio_url;
+
+            audioPlayer.load();
+
+            audioPlayer.style.display = 'block';
+
+            showStatus('success', 'Speech generated. Please review.');
+
+            btnApprove.disabled = false;
+
+        } catch (error) {
+
+            showStatus('error', `Generation failed: ${error.message}`);
+
+        } finally {
+
+            btnRegenerate.disabled = false;
+            throbber.style.display = 'none';
+
+        }
+
+    }
+
+    async function handleApproveSpeech() {
+
+        showStatus('info', `Approving utterance ${CURRENT_INDEX + 1}...`);
+
+        btnApprove.disabled = true;
+
+        const formData = new FormData();
+
+        formData.append('job_id', JOB_ID);
+
+        formData.append('index', CURRENT_INDEX);
+
+        formData.append(
+
+            'audio_path', audioPlayer.src.split('/').pop()); // Send filename
+
+        try {
+
+            const response =
+
+                await fetch('/approve-speech', {
+
+                    method: 'POST',
+
+                    body: formData
+
+                });
+
+            if (!response.ok) {
+
+                const result = await response.json();
+
+                throw new Error(result.detail);
+
+            }
+
+            UTTERANCES_DATA[CURRENT_INDEX].audio_url = audioPlayer.src;
+
+            showStatus('success', `Utterance ${CURRENT_INDEX + 1} approved`);
+
+            CURRENT_INDEX++;
+
+            loadUtterance(CURRENT_INDEX);
+
+        } catch (error) {
+
+            showStatus('error', `Approval failed: ${error.message}`);
+
+            btnApprove.disabled = false;
+
+        }
+
+    }
+
+    function renderTimeline() {
+
+        const sourceVideoPlayer = document.getElementById('source-video-player');
+
+        const videoDuration = sourceVideoPlayer.duration;
+
+        const timeline = document.getElementById('timeline');
+
+        const timelineContainer = document.querySelector('.timeline-container');
+
+        timeline.innerHTML = ''; // Clear previous pills
+
+        if (isNaN(videoDuration)) return;
+
+        const trackHeight = 60; // px per track, increased for spacing
+
+        const timelineHeight =
+
+            UTTERANCES_DATA.length * trackHeight + 20; // +20 for padding
+
+        timeline.style.height = `${timelineHeight}px`;
+
+        timelineContainer.style.height = `${
+
+        Math.min(timelineHeight, 300)}px`; // Set container height with a max
+        
+        UTTERANCES_DATA.forEach((utterance, index) => {
+
+            const pill = document.createElement('div');
+
+            pill.className = 'utterance-pill';
+
+            pill.dataset.index = index;
+
+            const pillContent = document.createElement('span');
+
+            pillContent.textContent = `Utterance ${index + 1}`;
+
+            const playIcon = document.createElement('div');
+
+            playIcon.className = 'play-icon';
+
+            const editIcon = document.createElement('div');
+
+            editIcon.className = 'edit-icon';
+
+            const deleteIcon = document.createElement('div');
+
+            deleteIcon.className = 'delete-icon';
+
+            const iconsContainer = document.createElement('div');
+
+            iconsContainer.className = 'icons';
+
+            iconsContainer.appendChild(playIcon);
+
+            iconsContainer.appendChild(editIcon);
+
+            iconsContainer.appendChild(deleteIcon);
+
+            pill.appendChild(pillContent);
+
+            pill.appendChild(iconsContainer);
+
+            playIcon.addEventListener('click', (e) => {
+
+                e.stopPropagation();
+
+                const utteranceIndex = parseInt(pill.dataset.index, 10);
+
+                const utteranceToPlay = UTTERANCES_DATA[utteranceIndex];
+
+                if (utteranceToPlay && utteranceToPlay.audio_url) {
+
+                    const timelineAudio = new Audio(utteranceToPlay.audio_url);
+
+                    document.getElementById('source-video-player').pause();
+
+                    timelineAudio.play();
+
+                } else {
+
+                    showStatus(
+
+                        'info',
+
+                        `No audio generated for Utterance ${utteranceIndex + 1} yet.`);
+
+                }
+
+            });
+
+            editIcon.addEventListener('click', (e) => {
+
+                e.stopPropagation();
+
+                const utteranceIndex = parseInt(pill.dataset.index, 10);
+
+                openEditModal(utteranceIndex);
+
+            });
+
+            deleteIcon.addEventListener('click', (e) => {
+
+                e.stopPropagation();
+
+                const utteranceIndex = parseInt(pill.dataset.index, 10);
+
+                if (confirm(`Are you sure you want to remove Utterance ${
+
+                utteranceIndex + 1}? This cannot be undone.`)) {
+
+                    removeUtterance(utteranceIndex);
+
+                    UTTERANCES_DATA.splice(utteranceIndex, 1);
+
+                    renderTimeline(); // Re-render the timeline
+
+                }
+
+            });
+
+            const updatePillData = (start, end) => {
+
+                pill.dataset.startTime = start.toFixed(2) + 's';
+
+                pill.dataset.endTime = end.toFixed(2) + 's';
+
+            };
+
+            const startHandle = document.createElement('div');
+
+            startHandle.className = 'handle start';
+
+            pill.appendChild(startHandle);
+
+            const endHandle = document.createElement('div');
+
+            endHandle.className = 'handle end';
+
+            pill.appendChild(endHandle);
+
+            const duration = utterance.end - utterance.start;
+
+            const left = (utterance.start / videoDuration) * 100;
+
+            const width = (duration / videoDuration) * 100;
+
+            pill.style.left = `${left}%`;
+
+            pill.style.width = `${width}%`;
+
+            pill.style.top =
+
+                `${index * trackHeight + 20}px`; // +20 to push down from top
+
+            updatePillData(utterance.start, utterance.end);
+
+            timeline.appendChild(pill);
+
+            // Drag and drop functionality
+
+            let isDragging = false;
+
+            let initialX;
+
+            let initialLeftPercent;
+
+            pill.addEventListener('mousedown', (e) => {
+
+                if (e.target.classList.contains('play-icon') ||
+
+                    e.target.classList.contains('delete-icon'))
+
+                    return;
+
+                e.preventDefault();
+
+                isDragging = true;
+
+                initialX = e.clientX;
+
+                initialLeftPercent = parseFloat(pill.style.left);
+
+                pill.style.cursor = 'grabbing';
+
+                pill.style.zIndex = 1000; // Bring to front
+
+                document.body.style.cursor = 'grabbing';
+
+                const timelineWidth = timeline.offsetWidth;
+
+                const onMouseMove = (moveEvent) => {
+
+                    if (!isDragging) return;
+
+                    const dx = moveEvent.clientX - initialX;
+
+                    const dPercent = (dx / timelineWidth) * 100;
+
+                    let newLeftPercent = initialLeftPercent + dPercent;
+
+                    const pillWidthPercent = parseFloat(pill.style.width);
+
+                    newLeftPercent =
+
+                        Math.max(0, Math.min(newLeftPercent, 100 - pillWidthPercent));
+
+                    pill.style.left = `${newLeftPercent}%`;
+
+                    // Update data attributes for live display
+
+                    const newStartTime = (newLeftPercent / 100) * videoDuration;
+
+                    const originalDuration =
+
+                        UTTERANCES_DATA[index].end - UTTERANCES_DATA[index].start;
+
+                    updatePillData(newStartTime, newStartTime + originalDuration);
+
+                };
+
+                const onMouseUp = () => {
+
+                    if (!isDragging) return;
+
+                    isDragging = false;
+
+                    pill.style.cursor = 'grab';
+
+                    pill.style.zIndex = 'auto';
+
+                    document.body.style.cursor = 'default';
+
+                    document.removeEventListener('mousemove', onMouseMove);
+
+                    document.removeEventListener('mouseup', onMouseUp);
+
+                    // Update utterance data
+
+                    const newLeftPercent = parseFloat(pill.style.left);
+
+                    const newStartTime = (newLeftPercent / 100) * videoDuration;
+
+                    const originalDuration =
+
+                        UTTERANCES_DATA[index].end - UTTERANCES_DATA[index].start;
+
+                    UTTERANCES_DATA[index].start = newStartTime;
+
+                    UTTERANCES_DATA[index].end = newStartTime + originalDuration;
+
+                    updatePillData(
+
+                        UTTERANCES_DATA[index].start, UTTERANCES_DATA[index].end);
+
+                    console.log(`Utterance ${index + 1} new start time: ${
+
+              newStartTime.toFixed(2)}s`);
+
+                };
+
+                document.addEventListener('mousemove', onMouseMove);
+
+                document.addEventListener('mouseup', onMouseUp);
+
+            });
+
+        });
+
+    }
+
+    function showTimelineEditor() {
+
+        reviewSection.style.display = 'none';
+
+        const timelineSection = document.getElementById('timeline-section');
+
+        timelineSection.style.display = 'block';
+
+        const sourceVideoPlayer = document.getElementById('source-video-player');
+
+        sourceVideoPlayer.onloadedmetadata = () => {
+
+            renderTimeline();
+
+        };
+
+    }
+
+    function updateUtterancesFromPills() {
+
+        const pills = document.querySelectorAll('.utterance-pill');
+
+        const videoDuration =
+
+            document.getElementById('source-video-player').duration;
+
+        if (isNaN(videoDuration)) return;
+
+        pills.forEach(pill => {
+
+            const index = parseInt(pill.dataset.index, 10);
+
+            if (isNaN(index) || !UTTERANCES_DATA[index]) return;
+
+            const leftPercent = parseFloat(pill.style.left);
+
+            const newStartTime = (leftPercent / 100) * videoDuration;
+
+            // Keep the original duration of the utterance
+
+            const originalDuration =
+
+                UTTERANCES_DATA[index].end - UTTERANCES_DATA[index].start;
+
+            UTTERANCES_DATA[index].start = newStartTime;
+
+            UTTERANCES_DATA[index].end = newStartTime + originalDuration;
+
+        });
+
+    }
+
+    async function handleInitialAssembly() {
+
+        showStatus('info', 'Assembling the video... This may take some time. 🎬');
+
+        btnAssembleFinal.disabled = true;
+
+        const assemblyModal = document.getElementById('assembly-modal');
+                assemblyModal.style.display = 'block';
+                const formData = new FormData();
+                formData.append('job_id', JOB_ID);
+                formData.append('updated_utterances', JSON.stringify(UTTERANCES_DATA));
+                formData.append('background_music_volume', document.getElementById('background_music_volume_range').value);
+                formData.append('speech_volume', document.getElementById('speech_volume_range').value);
+
+        try {
+
+            const response =
+
+                await fetch('/assemble-video', {
+
+                    method: 'POST',
+
+                    body: formData
+
+                });
+
+            const result = await response.json();
+
+            if (!response.ok) throw new Error(result.detail);
+
+            const sourceVideoPlayer = document.getElementById('source-video-player');
+
+            sourceVideoPlayer.src = result.video_url;
+
+            showStatus(
+
+                'success',
+
+                `✅ Success! Your dubbed video is ready below. You can also <a href="${
+
+              result.video_url}" download>download it here</a>.`);
+
+        } catch (error) {
+
+            showStatus('error', `Assembly failed: ${error.message}`);
+
+        } finally {
+
+            btnAssembleFinal.disabled = false;
+
+            assemblyModal.style.display = 'none';
+
+        }
+
+    }
+
+    async function handleFinalAssembly() {
+        if (!checkAllUtterancesHaveAudio()) {
+            utteranceWarningMessage.textContent = 'Please generate speech for all utterances before assembling the final video.';
+            utteranceWarningModal.style.display = 'block';
+            return;
+        }
+
+        showStatus(
+            'info', 'Assembling the final video... This may take some time. 🎬');
+
+        btnAssembleFinal.disabled = true;
+
+        const assemblyModal = document.getElementById('assembly-modal');
+        assemblyModal.style.display = 'block';
+
+        updateUtterancesFromPills(); // Update data from DOM just before sending
+
+        const formData = new FormData();
+
+        formData.append('job_id', JOB_ID);
+
+        formData.append('updated_utterances', JSON.stringify(UTTERANCES_DATA));
+        formData.append('music_volume', document.getElementById('background_music_volume_range').value);
+        formData.append('speech_volume', document.getElementById('speech_volume_range').value);
+
+        try {
+
+            const response =
+
+                await fetch('/assemble-video', {
+
+                    method: 'POST',
+
+                    body: formData
+
+                });
+
+            const result = await response.json();
+
+            if (!response.ok) throw new Error(result.detail);
+
+            const videoContainer =
+
+                document.getElementById('source-video-player').parentNode;
+
+            videoContainer.innerHTML =
+
+                ''; // Easiest way to clear the old video element and its state
+
+            const sourceVideoPlayer = document.createElement('video');
+
+            sourceVideoPlayer.id = 'source-video-player';
+
+            sourceVideoPlayer.style.width = '100%';
+
+            sourceVideoPlayer.controls = true;
+
+            sourceVideoPlayer.src = '';
+
+            videoContainer.appendChild(sourceVideoPlayer);
+
+            // Re-attach the metadata listener to re-render the timeline when the new
+
+            // video loads
+
+            sourceVideoPlayer.onloadedmetadata = () => {
+
+                renderTimeline();
+
+            };
+
+            setTimeout(() => {
+
+                sourceVideoPlayer.src = `${result.video_url}?t=${new Date().getTime()}`;
+
+                sourceVideoPlayer.load();
+
+            }, 500);
+
+            showStatus(
+
+                'success',
+
+                `✅ Success! Your dubbed video is ready below. You can also <a href="${
+
+              result.video_url}" download>download it here</a>.`);
+
+        } catch (error) {
+
+            showStatus('error', `Assembly failed: ${error.message}`);
+
+        } finally {
+
+            btnAssembleFinal.disabled = false;
+
+            assemblyModal.style.display = 'none';
+
+        }
+
+    }
+
+    async function removeUtterance(utterance_id) {
+
+        const formData = new FormData();
+
+        formData.append('job_id', JOB_ID);
+
+        formData.append('utterance_id', utterance_id);
+
+        try {
+
+            const response =
+
+                await fetch('/remove-utterance', {
+
+                    method: 'POST',
+
+                    body: formData
+
+                });
+
+            const result = await response.json();
+
+            if (!response.ok) throw new Error(result.detail);
+
+            showStatus('success', `✅ Success! Utterance Removed.`);
+
+        } catch (error) {
+
+            showStatus('error', `Remove utterance failed: ${error.message}`);
+
+                } finally {
+
+                    bulkProgressModal.style.display = 'none';
+
+                }
+
+    }
+
+    // --- MODAL FUNCTIONS ---
+
+    function openEditModal(index) {
+
+        const utterance = UTTERANCES_DATA[index];
+
+        if (!utterance) return;
+
+        document.getElementById('modal-status-message').style.display = 'none'; // Clear previous status
+        document.getElementById('modal-status-message').innerHTML = '';
+
+        document.getElementById('edit-utterance-index').value = index;
+
+        document.getElementById('edit-start').value = utterance.start.toFixed(2);
+
+        document.getElementById('edit-source-language').value =
+
+            utterance.source_language;
+
+        document.getElementById('edit-target-language').value =
+
+            utterance.target_language;
+
+        document.getElementById('edit-end').value = utterance.end.toFixed(2);
+        
+        
+        document.getElementById('edit-original-text').value =
+
+            utterance.original_text;
+
+        document.getElementById('edit-translated-text').value =
+
+            utterance.translated_text;
+
+        const editVoiceSelect = document.getElementById('edit-voice-name');
+
+        editVoiceSelect.innerHTML = voiceSelect.innerHTML; // Copy options
+
+        editVoiceSelect.value = utterance.voice_name;
+
+        const editSyncModeSelect = document.getElementById('edit-sync-mode');
+
+        editSyncModeSelect.innerHTML =
+
+            document.getElementById('sync-mode').innerHTML; // Copy options
+
+        editSyncModeSelect.value = utterance.sync_mode;
+
+        document.getElementById('edit-tone').value = utterance.tone;
+
+        document.getElementById('edit-pitch').value = utterance.pitch;
+
+        document.getElementById('edit-gender').value = utterance.gender;
+
+        document.getElementById('edit-age').value = utterance.age;
+
+        document.getElementById('edit-vocal-style-prompt').value =
+
+            utterance.vocal_style_prompt;
+
+        document.getElementById('edit-special-instructions').value =
+
+            utterance.special_instructions;
+
+        document.getElementById('edit-tts-prompt').value = utterance.tts_prompt;
+
+        const editAudioPlayer = document.getElementById('edit-audio-player');
+
+        if (utterance.audio_url) {
+
+            editAudioPlayer.src = utterance.audio_url;
+
+            editAudioPlayer.style.display = 'block';
+
+        } else {
+
+            editAudioPlayer.style.display = 'none';
+
+            editAudioPlayer.src = '';
+
+        }
+
+        editModal.style.display = 'block';
+
+    }
+
+    function closeEditModal() {
+
+        editModal.style.display = 'none';
+
+    }
+
+    async function handleSaveUtterance() {
+        const index =
+            parseInt(document.getElementById('edit-utterance-index').value, 10);
+        if (isNaN(index) || !UTTERANCES_DATA[index]) return;
+
+        const utterance = UTTERANCES_DATA[index];
+        utterance.start = parseFloat(document.getElementById('edit-start').value);
+        utterance.end = parseFloat(document.getElementById('edit-end').value);
+        utterance.original_text =
+            document.getElementById('edit-original-text').value;
+        utterance.translated_text =
+            document.getElementById('edit-translated-text').value;
+        utterance.voice_name = document.getElementById('edit-voice-name').value;
+        utterance.sync_mode = document.getElementById('edit-sync-mode').value;
+        utterance.tone = document.getElementById('edit-tone').value;
+        utterance.pitch = document.getElementById('edit-pitch').value;
+        utterance.gender = document.getElementById('edit-gender').value;
+        utterance.age = document.getElementById('edit-age').value;
+        utterance.vocal_style_prompt =
+            document.getElementById('edit-vocal-style-prompt').value;
+        utterance.special_instructions =
+            document.getElementById('edit-special-instructions').value;
+        utterance.tts_prompt = document.getElementById('edit-tts-prompt').value;
+
+        // Also save the newly generated audio if it exists
+        const editAudioPlayer = document.getElementById('edit-audio-player');
+        if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
+            utterance.audio_url = editAudioPlayer.src;
+        }
+
+        const formData = new FormData();
+
+        formData.append('job_id', JOB_ID);
+
+        formData.append('index', index);
+        
+        formData.append('utterance', JSON.stringify(utterance));
+
+        try {
+
+            const response =
+
+                await fetch('/update-utterance', {
+
+                    method: 'POST',
+
+                    body: formData
+
+                });
+
+            const result = await response.json();
+
+            if (!response.ok) throw new Error(result.detail);
+
+            showStatus(
+
+            'success',
+
+            `Utterance ${
+
+            index + 1} Saved.`);
+
+
+        } catch (error) {
+
+            showStatus('error', `Clone utterance failed: ${error.message}`);
+
+        } finally {}
+
+
+
+        showStatus('success', `Utterance ${index + 1} updated.`);
+        renderTimeline();
+        closeEditModal();
+    }
+/*
+    function handleCloneUtterance() {
+        const index =
+            parseInt(document.getElementById('edit-utterance-index').value, 10);
+        if (isNaN(index) || !UTTERANCES_DATA[index]) return;
+
+        // Deep copy the utterance from the form fields to capture any edits
+        const clonedUtterance = {
+            start: parseFloat(document.getElementById('edit-start').value),
+            end: parseFloat(document.getElementById('edit-end').value),
+            original_text: document.getElementById('edit-original-text').value,
+            translated_text: document.getElementById('edit-translated-text').value,
+            voice_name: document.getElementById('edit-voice-name').value,
+            sync_mode: document.getElementById('edit-sync-mode').value,
+            tone: document.getElementById('edit-tone').value,
+            pitch: document.getElementById('edit-pitch').value,
+            gender: document.getElementById('edit-gender').value,
+            age: document.getElementById('edit-age').value,
+            vocal_style_prompt: document.getElementById('edit-vocal-style-prompt').value,
+            special_instructions: document.getElementById('edit-special-instructions').value,
+            tts_prompt: document.getElementById('edit-tts-prompt').value,
+            audio_url: null // Cloned utterance needs new audio
+        };
+
+        // Modify it slightly to avoid exact overlap
+        const shift = 0.1;
+        clonedUtterance.start += shift;
+        clonedUtterance.end += shift;
+
+
+        // Insert the new utterance into the array right after the original one
+        UTTERANCES_DATA.splice(index + 1, 0, clonedUtterance);
+        TOTAL_UTTERANCES = UTTERANCES_DATA.length;
+
+
+        showStatus('success', `Utterance ${index + 1} cloned. New utterance is at position ${index + 2}.`);
+        renderTimeline();
+        closeEditModal();
+    }
+
+*/
+    async function handleCloneUtterance() {
+
+        const index =
+
+            parseInt(document.getElementById('edit-utterance-index').value, 10);
+
+        if (isNaN(index) || !UTTERANCES_DATA[index]) return;
+
+        const originalUtterance = UTTERANCES_DATA[index];
+        
+
+        // Deep copy using JSON stringify/parse
+        const newIndex = index + 1;
+        const newUtterance = JSON.parse(JSON.stringify(originalUtterance));
+
+        // Shift the new utterance slightly to avoid perfect overlap
+
+        const shift = 0.1;
+
+        newUtterance.start = originalUtterance.end;
+
+        newUtterance.end = originalUtterance.end +
+
+            (originalUtterance.end - originalUtterance.start);
+
+        newUtterance.audio_url = null; // Cloned utterance needs new audio
+
+        
+
+        const formData = new FormData();
+
+        formData.append('job_id', JOB_ID);
+
+        formData.append('index', index);
+        
+        formData.append('utterance', JSON.stringify(originalUtterance));
+
+
+        try {
+
+            const response_update =
+
+                await fetch('/update-utterance', {
+
+                    method: 'POST',
+
+                    body: formData
+
+                });
+
+            formData.set('index', newIndex);
+            formData.append('utterance', JSON.stringify(newUtterance));
+
+            const result_update = await response_update.json();
+        
+            try {
+
+                const response_add =
+
+                    await fetch('/add-utterance', {
+
+                        method: 'POST',
+
+                        body: formData
+
+                    });
+
+                const result_add = await response_add.json();
+                
+
+                if (!response_add.ok) throw new Error(result_add.detail);
+
+                UTTERANCES_DATA.splice(newIndex, 0, newUtterance);
+
+                showStatus(
+
+                'success',
+
+                `Utterance ${
+
+                index + 1} cloned. A new utterance has been added to the timeline.`);
+
+
+            } catch (error) {
+
+                showStatus('error', `Clone utterance failed: ${error.message}`);
+
+            } 
+        }
+        catch (error) {
+
+        }    
+        finally {}
+
+        
+        renderTimeline();
+
+        closeEditModal();
+
+    }
+
+    function showStatus(type, message) {
+
+        statusMessage.style.display = 'block';
+
+        statusMessage.className = `status ${type}`;
+
+        statusMessage.innerHTML = message;
+
+    }
+
+    function checkAllUtterancesHaveAudio() {
+        for (const utterance of UTTERANCES_DATA) {
+            if (!utterance.audio_url) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+});
+
+</script>
+</body>
+</html>
