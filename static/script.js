@@ -13,11 +13,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const geminiModelToggle = document.getElementById('gemini-model-toggle');
     const geminiModelLabel = document.getElementById('gemini-model-label');
 
+    const adjustSpeedToggle = document.getElementById('adjust-speed-toggle');
+    const adjustSpeedLabel = document.getElementById('adjust-speed-label');
+
     geminiModelToggle.addEventListener('change', () => {
       if (geminiModelToggle.checked) {
         geminiModelLabel.textContent = 'Pro';
       } else {
         geminiModelLabel.textContent = 'Flash';
+      }
+    });
+
+    adjustSpeedToggle.addEventListener('change', () => {
+      if (adjustSpeedToggle.checked) {
+        adjustSpeedLabel.textContent = 'Yes';
+      } else {
+        adjustSpeedLabel.textContent = 'No';
       }
     });
 
@@ -55,6 +66,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modals
     const confirmationModal = new bootstrap.Modal(document.getElementById('confirmation-modal'));
     const confirmCloseBtn = document.getElementById('confirm-close-btn');
+
+    // Create timeline controls container and Reset button once
+    const timelineControlsContainer = document.createElement('div');
+    timelineControlsContainer.classList.add('timeline-controls', 'mt-3');
+    timelineControlsContainer.style.display = 'none'; // Initially hidden
+
+    const resetButton = document.createElement('button');
+    resetButton.classList.add('btn', 'btn-secondary');
+    resetButton.textContent = 'Reset Times';
+    timelineControlsContainer.appendChild(resetButton);
+
+    resultsView.appendChild(timelineControlsContainer);
+
+    resetButton.addEventListener('click', () => {
+        currentVideoData.utterances.forEach(utterance => {
+            utterance.translated_start_time = utterance.original_translated_start_time;
+            utterance.translated_end_time = utterance.original_translated_end_time;
+        });
+        renderTimeline(currentVideoData, videoDuration);
+    });
 
     const editSpeakerVoiceModal = new bootstrap.Modal(document.getElementById('edit-speaker-voice-modal'));
     const editVoiceSearch = document.getElementById('edit-voice-search');
@@ -264,10 +295,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         speakers.push(speaker);
         renderSpeakers();
-        speakerNameInput.value = ''; // Clear the input
-        speakerModal.hide();
-        validateStartProcessing();
-    });
+    speakerNameInput.value = ''; // Clear the input
+    speakerModal.hide();
+    validateStartProcessing();
+});
+
+speakerModal._element.addEventListener('hidden.bs.modal', () => {
+    audioPlayer.pause();
+    if (currentlyPlayingButton) {
+        currentlyPlayingButton.innerHTML = '<i class="bi bi-play-fill"></i>';
+        currentlyPlayingButton = null;
+    }
+});
 
     function renderSpeakers() {
         speakerList.innerHTML = '';
@@ -361,7 +400,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3. Prompt Enhancements
         formData.append('prompt_enhancements', geminiInstructions.value);
 
-        // 4. Speakers
+        // 4. Adjust Speed Toggle
+        formData.append('adjust_speed', adjustSpeedToggle.checked);
+
+        // 5. Speakers
         const speakersToPost = speakers.map((s, index) => ({
             id: `speaker_${(index + 1).toString()}`,
             name: s.name,
@@ -392,6 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Show results view
             mainContent.style.display = 'none';
             resultsView.style.display = 'block';
+            timelineControlsContainer.style.display = 'block'; // Show the timeline controls
 
             // Set video preview
             if (videoInput.files[0]) {
@@ -586,8 +629,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <p><strong>Original:</strong> ${utterance.original_text.substring(0, MAX_TEXT_SNIPPET_LENGTH)}...</p>
                                 <p><strong>Translated:</strong> ${utterance.translated_text.substring(0, MAX_TEXT_SNIPPET_LENGTH)}...</p>
                                 <p><strong>Speaker:</strong> ${speakerName}</p>
+                                <div class="utterance-overlay" style="display: none;"></div>
                             </div>
-                            <div class="utterance-overlay" style="display: none;"></div>
                         </div>
                     </div>
                     <div class="d-flex flex-column">
@@ -607,23 +650,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
             removeBtn.addEventListener('click', () => {
                 content.classList.toggle('removed');
+                utterance.removed = content.classList.contains('removed'); // Update utterance state
                 if (content.classList.contains('removed')) {
                     overlay.textContent = 'No audio will be generated';
                     overlay.style.display = 'flex';
                 } else {
                     overlay.style.display = 'none';
                 }
+                renderTimeline(currentVideoData, videoDuration); // Re-render timeline
             });
 
             const muteBtn = utteranceCard.querySelector('.mute-utterance-btn');
             muteBtn.addEventListener('click', () => {
                 content.classList.toggle('muted');
-                if (content.classList.contains('muted')) {
+                utterance.muted = content.classList.contains('muted'); // Update utterance state
+
+                if (utterance.muted) {
+                    // Store current translated times before muting
+                    utterance.user_translated_start_time = utterance.translated_start_time;
+                    utterance.user_translated_end_time = utterance.translated_end_time;
+                    // Match original times
+                    utterance.translated_start_time = utterance.original_start_time;
+                    utterance.translated_end_time = utterance.original_end_time;
                     overlay.textContent = 'Original audio will be used';
                     overlay.style.display = 'flex';
                 } else {
+                    // Restore user-modified translated times if available, otherwise original translated times
+                    utterance.translated_start_time = utterance.user_translated_start_time !== undefined ? utterance.user_translated_start_time : utterance.original_translated_start_time;
+                    utterance.translated_end_time = utterance.user_translated_end_time !== undefined ? utterance.user_translated_end_time : utterance.original_translated_end_time;
                     overlay.style.display = 'none';
                 }
+                renderTimeline(currentVideoData, videoDuration); // Re-render timeline
             });
 
             fragment.appendChild(utteranceCard);
@@ -735,10 +792,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (translatedTrack) {
                 const translatedBlock = document.createElement('div');
                 translatedBlock.className = 'utterance-block';
+                if (utterance.muted) {
+                    translatedBlock.classList.add('muted');
+                }
+                if (utterance.removed) {
+                    translatedBlock.classList.add('removed');
+                }
                 translatedBlock.style.left = `${utterance.translated_start_time * scale}px`;
                 translatedBlock.style.width = `${(utterance.translated_end_time - utterance.translated_start_time) * scale}px`;
                 translatedBlock.textContent = `U: ${index + 1}`;
                 translatedBlock.dataset.utteranceId = utterance.id;
+
+                // Check for initial overlaps and apply class
+                const initialOverlapMessages = checkOverlap(utterance, videoData.utterances);
+                if (initialOverlapMessages.length > 0) {
+                    translatedBlock.classList.add('overlap');
+                }
 
                 translatedBlock.addEventListener('dblclick', () => {
                     editUtterance(utterance, videoData.speakers, videoData.utterances, index);
@@ -797,9 +866,28 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
 
-                        // Restore the original times
-                        utterance.translated_start_time = originalStartTime;
-                        utterance.translated_end_time = originalEndTime;
+                        // Update editor if open
+                        if (utteranceEditor.style.display === 'block') {
+                            const editedUtteranceId = utteranceEditor.dataset.utteranceId;
+                            const editedUtterance = videoData.utterances.find(u => u.id === editedUtteranceId);
+
+                            if (editedUtterance) {
+                                // Update input fields if dragging the same utterance
+                                if (editedUtteranceId === utterance.id) {
+                                    utteranceEditorContent.querySelector('#translated-start-time-input').value = newStartTime.toFixed(2);
+                                    utteranceEditorContent.querySelector('#translated-end-time-input').value = newEndTime.toFixed(2);
+                                }
+
+                                const overlapMessages = checkOverlap(editedUtterance, videoData.utterances);
+                                const warningBox = utteranceEditorContent.querySelector('#translated-overlap-warning');
+                                if (overlapMessages.length > 0) {
+                                    warningBox.innerHTML = overlapMessages.join('<br>');
+                                    warningBox.style.display = 'block';
+                                } else {
+                                    warningBox.style.display = 'none';
+                                }
+                            }
+                        }
                     }
 
                     function handleMouseUp(e) {
@@ -826,23 +914,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 translatedTrack.appendChild(translatedBlock);
             }
         });
-
-        // Add Reset button
-        const resetButton = document.createElement('button');
-        resetButton.classList.add('btn', 'btn-secondary', 'mt-3', 'mb-3');
-        resetButton.textContent = 'Reset Times';
-        resetButton.style.position = 'absolute';
-        resetButton.style.bottom = '10px';
-        resetButton.style.left = '10px';
-        timelineContainer.appendChild(resetButton);
-
-        resetButton.addEventListener('click', () => {
-            videoData.utterances.forEach(utterance => {
-                utterance.translated_start_time = utterance.original_translated_start_time;
-                utterance.translated_end_time = utterance.original_translated_end_time;
-            });
-            renderTimeline(videoData, videoDuration);
-        });
     }
 
     function editUtterance(utterance, allSpeakers, utterances, index) {
@@ -855,16 +926,19 @@ document.addEventListener('DOMContentLoaded', () => {
         utteranceEditor.dataset.utteranceId = utterance.id;
         utteranceEditorContent.innerHTML = `
             <div class="d-flex justify-content-between align-items-center mb-1">
-                <label class="form-label mb-0">Original Text <i class="bi bi-volume-up-fill text-to-speech-icon me-2 fs-5" data-text-type="original"></i></label>
+                <label class="form-label mb-0">Original Text</label>
                 <span class="badge bg-secondary">${originalDuration}s</span>
             </div>
             <textarea id="original-text-area" class="form-control" rows="3" readonly>${utterance.original_text}</textarea>
 
             <div class="d-flex justify-content-between align-items-center mt-3 mb-1">
-                <label class="form-label mb-0">Translated Text <i class="bi bi-volume-up-fill text-to-speech-icon me-2 fs-5" data-text-type="translated"></i></label>
+                <label class="form-label mb-0">Translated Text</label>
                 <span class="badge bg-secondary">${translatedDuration}s</span>
             </div>
-            <textarea id="translated-text-area" class="form-control" rows="3">${utterance.translated_text}</textarea>
+            <div class="d-flex align-items-center">
+                <textarea id="translated-text-area" class="form-control" rows="3">${utterance.translated_text}</textarea>
+                <button class="btn btn-sm btn-outline-secondary ms-2 text-to-speech-icon" data-text-type="translated"><i class="bi bi-volume-up-fill"></i></button>
+            </div>
 
             <div class="mb-3">
                 <label class="form-label">Translation instructions</label>
