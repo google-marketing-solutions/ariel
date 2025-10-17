@@ -950,10 +950,29 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         regenerateTranslationBtn.addEventListener('click', () => {
-            if (!checkAndHandleChanges()) {
+          //  if (!checkAndHandleChanges()) {
                 console.log('Regenerating translation...');
                 // TODO: Implement actual regeneration logic
-            }
+                const reply = fetch('/regenerate_translation',{
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        video: currentVideoData,
+                        utterance: index,
+                        instructions: document.querySelector('#gemini-prompt-input').value
+                    })
+                })
+                      .then(response => response.json())
+                      .then(result => {
+                          utterance.translated_text = result.translated_text;
+                          utteranceEditorContent.querySelector('#translated-text-area').value = result.translated_text;
+                          utterance.translated_end_time = utterance.translated_start_time + result.duration;
+                          utteranceEditorContent.querySelector('#translated-end-time-input').value = utterance.translated_start_time + result.duration;
+                          utterance.audio_url = result.audio_url;
+                      })
+           // }
         });
 
         regenerateDubbingBtn.addEventListener('click', () => {
