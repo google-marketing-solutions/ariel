@@ -260,6 +260,10 @@
             background-color: #ccc;
             cursor: not-allowed;
         }
+        #btn-apply-to-others:disabled:hover {
+            background-color: #ccc; /* Keep the disabled color on hover */
+            cursor: not-allowed;
+        }
         #btn-apply-to-others { background-color: #fbbc05; } #btn-apply-to-others:hover { background-color: #e6a800; }
         #btn-start-apply { background-color: #34A853; } #btn-start-apply:hover { background-color: #2c8a42; }
         #btn-cancel-apply { background-color: #EA4335; } #btn-cancel-apply:hover { background-color: #d0382b; }
@@ -268,7 +272,7 @@
 <body>
     <div class="container">
         <h1>🤖 Dubble: AI Video Dubbing</h1>
-        <div class="form-grid">
+        <div class="form-grid" id="clean-outputs-button-container">
             <button id="btn-clean-outputs">Clean All Generated Files</button>
         </div>
 
@@ -316,7 +320,7 @@
                     <div class="form-grid">
                         <div class="form-group full-width">
                             <label for="gcp_project">Google Cloud Project</label>
-                            <input type="text" id="gcp_project" name="gcp_project" value="XXXXXXX" placeholder="Enter your project here">
+                            <input type="text" id="gcp_project" name="gcp_project" value="XXXXX" placeholder="Enter your project here">
                         </div>
                         <div class="form-group full-width">
                             <label for="gcp_project_location">Google Cloud Project</label>
@@ -853,11 +857,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     btnModeDub.addEventListener('click', () => {
 
-        currentWorkflow = 'dub';
+                modeSelectionSection.style.display = 'none';
 
-        modeSelectionSection.style.display = 'none';
+                document.getElementById('clean-outputs-button-container').style.display = 'none';
 
-        setupSection.style.display = 'block';
+                setupSection.style.display = 'block';
         document.getElementById('setup-throbber-overlay').style.display = 'none';
         btnStart.disabled = false; // Ensure Start Analysis button is enabled
 
@@ -870,7 +874,7 @@ document.addEventListener('DOMContentLoaded', function() {
         currentWorkflow = 'voiceover';
 
         modeSelectionSection.style.display = 'none';
-
+        document.getElementById('clean-outputs-button-container').style.display = 'none';
         setupSection.style.display = 'block';
         document.getElementById('setup-throbber-overlay').style.display = 'none';
         btnStart.disabled = false; // Ensure Start Analysis button is enabled
@@ -1292,6 +1296,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset UI elements
 
         modeSelectionSection.style.display = 'block';
+        document.getElementById('clean-outputs-button-container').style.display = 'block';
 
         setupSection.style.display = 'none';
 
@@ -1312,8 +1317,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('setup-throbber-overlay').style.display = 'none'; // Hide setup throbber
         statusMessage.innerHTML = ''; // Clear status message content
         statusMessage.style.display = 'none'; // Hide status message
-
-        btnCleanOutputs.style.display = 'block';
 
         // Reset the form
 
@@ -1450,8 +1453,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             setupSection.style.display = 'none';
-
-            btnCleanOutputs.style.display = 'none';
 
             /*
             if (currentWorkflow === 'dub') {
