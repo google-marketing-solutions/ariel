@@ -80,7 +80,8 @@ async def start_process(
     target_language: str = Form(...),
     gcp_project: str = Form(...),
     gcp_project_location: str = Form(...),
-    video_file: UploadFile = File(...),
+    video_file: UploadFile = File(None),
+    gcs_path: str = Form(None),
     brand_name: str = Form(...),
     # Advanced Models
     analysis_model: str = Form(...),
@@ -113,9 +114,17 @@ async def start_process(
     
     os.makedirs(job_dir, exist_ok=True)
 
-    file_path = os.path.join(UPLOADS_DIR, f"{job_id}_{video_file.filename}")
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(video_file.file, buffer)
+    file_path = None
+    if video_file and video_file.filename:
+        file_path = os.path.join(UPLOADS_DIR, f"{job_id}_{video_file.filename}")
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(video_file.file, buffer)
+    elif gcs_path:
+        file_path = os.path.join(UPLOADS_DIR, f"{job_id}_{gcs_path.split("/")[-1]}")
+        file_path = dubble_logic.download_from_gcs(gcs_url=gcs_path, file_path=file_path)
+    
+    if not file_path:
+        raise HTTPException(status_code=400, detail="No video file or GCS path provided.")
 
     config_params = {
         "gcp_project": gcp_project,

@@ -304,13 +304,23 @@
                         <label for="target_language">Target Language</label>
                         <input type="text" id="target_language" name="target_language" value="en-US">
                     </div>
-                    
-                    <div class="form-group full-width">
-                        <label for="video_file">Upload Video File</label>
-                        <input type="file" id="video_file" name="video_file" accept="video/*" required>
-                    </div>
-                    
                 </div>
+                <div class="form-group full-width">
+                    <span style="margin-top: 1em;"></span>
+                    <div style="display: flex; align-items: flex-end; gap: 1rem;">
+                        <div style="flex: 1;">
+                            <label for="video_file" style="margin-bottom: 0.5rem;">Upload Video File (max. 32Mb)</label>
+                            <input type="file" id="video_file" name="video_file" accept="video/*">
+                        </div>
+                        <span style="margin-bottom: 0.75rem;">or</span>
+                        <div style="flex: 1;">
+                            <label for="gcs_path" style="margin-bottom: 0.5rem;">Google Cloud Storage Path</label>
+                            <input type="text" id="gcs_path" name="gcs_path" placeholder="gs://your-bucket/your-video.mp4">
+                        </div>
+                    </div>
+                </div>
+                    
+                
                 <button type="button" class="collapsible">Advanced Configuration</button>
                 <div class="collapsible-content">
                     <div class="form-group full-width dub-only">
@@ -679,7 +689,8 @@
 
     
 
-        <!-- Fine-tune Instructions Modal -->    <div id="fine-tune-instructions-modal" class="modal">        <div class="modal-content">            <span class="close-button" id="close-fine-tune-instructions-modal">&times;</span>            <h2>Instructions</h2>            <p>Now generate the speech for all your utterances and the Assemble Video button will be enabled. When a utterance has speech generated, its play button turns green.</p>            <div class="modal-buttons" style="justify-content: center;">                <button id="btn-close-fine-tune-instructions-modal">Close</button>            </div>        </div>    </div>
+        <!-- Fine-tune Instructions Modal -->    
+         <div id="fine-tune-instructions-modal" class="modal">        <div class="modal-content">            <span class="close-button" id="close-fine-tune-instructions-modal">&times;</span>            <h2>Instructions</h2>            <p>Now generate the speech for all your utterances and the Assemble Video button will be enabled. When a utterance has speech generated, its play button turns green.</p>            <div class="modal-buttons" style="justify-content: center;">                <button id="btn-close-fine-tune-instructions-modal">Close</button>            </div>        </div>    </div>
 
     
 
@@ -852,6 +863,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnCloneUtterance = document.getElementById('btn-clone-utterance');
     const btnTranslate = document.getElementById('translate-button');
     const btnEditTranslate = document.getElementById('edit-translate-button');
+
+    const videoFileInput = document.getElementById('video_file');
+    const gcsPathInput = document.getElementById('gcs_path');
+
+    videoFileInput.addEventListener('input', () => {
+        if (videoFileInput.value) {
+            gcsPathInput.value = '';
+        }
+    });
+
+    gcsPathInput.addEventListener('input', () => {
+        if (gcsPathInput.value) {
+            videoFileInput.value = '';
+        }
+    });
 
     // --- EVENT LISTENERS ---
 
@@ -1286,7 +1312,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset state variables
 
         JOB_ID = null;
-
+        currentWorkflow = 'dub';
         TOTAL_UTTERANCES = 0;
 
         CURRENT_INDEX = 0;
@@ -1346,9 +1372,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         formData.append('workflow', currentWorkflow);
 
-        // Add prompt text area values
-
-        
+        // Add GCS path if provided
+        if (gcsPathInput.value) {
+            formData.append('gcs_path', gcsPathInput.value);
+        }
 
         formData.append('script', document.getElementById('script').value);
 

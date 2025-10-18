@@ -22,7 +22,9 @@ logger = logging.getLogger('uvicorn.error')
 logger.setLevel(logging.DEBUG)
 
 
-def download_from_gcs(gcs_url: str, destination_directory: str) -> str:
+def download_from_gcs(gcs_url: str,
+                      destination_directory: str | None = None,
+                      file_path: str | None = None) -> str:
     """Downloads a file from a GCS URL to a local directory."""
     try:
         storage_client = storage.Client()
@@ -30,9 +32,14 @@ def download_from_gcs(gcs_url: str, destination_directory: str) -> str:
         bucket = storage_client.bucket(bucket_name)
         blob = bucket.blob(blob_name)
 
-        # Create a unique filename to avoid collisions
-        unique_filename = f"{uuid.uuid4()}_{blob_name.split('/')[-1]}"
-        destination_path = os.path.join(destination_directory, unique_filename)
+        destination_path = None
+        
+        if file_path:
+            destination_path = file_path
+        else:
+            # Create a unique filename to avoid collisions
+            unique_filename = f"{uuid.uuid4()}_{blob_name.split('/')[-1]}"
+            destination_path = os.path.join(destination_directory, unique_filename)
 
         blob.download_to_filename(destination_path)
         logger.info(f"Downloaded {gcs_url} to {destination_path}")
