@@ -53,14 +53,12 @@ def separate_audio_from_video(config: DubbleConfig) -> DubbleConfig:
   audio = video.audio
   original_audio_path = f"{config.output_local_path}/{original_audio_name}.{original_audio_extension}"
   audio.write_audiofile(original_audio_path, codec='pcm_s16le')
-  print("Finished demucs") 
   command = (
       f"python3 -m demucs --two-stems=vocals -n htdemucs --out {config.output_local_path}"
       f" {original_audio_path}"
   )
   subprocess.run(command, shell=True, check=True)
 
-  print("Finished demucs")  
   base_htdemucs_path = os.path.join(config.output_local_path, "htdemucs", original_audio_name)
   vocals_path = os.path.join(base_htdemucs_path, "vocals.wav")
   background_path = os.path.join(base_htdemucs_path, "no_vocals.wav")

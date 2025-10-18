@@ -194,9 +194,6 @@ async def generate_speech(
  
     state = JOB_STATE[job_id]
 
-    # Adding a new utterance when cloning an existing one
-    print(state["utterances"])
-
     utterance = json.loads(utterance)
     try:
         new_translated_text = dubble_logic.translate_utterance(utterance, state["config"])
@@ -268,7 +265,6 @@ async def approve_speech(
         raise HTTPException(status_code=404, detail="Approved audio file not found.")
 
     state["approved_audio"][index] = full_audio_path
-    print(f"Job {job_id}: Approved audio for index {index}")
     return JSONResponse({"status": "approved"})
 
 @app.post("/add-utterance")
@@ -279,16 +275,11 @@ async def add_utterance(job_id: str = Form(...), index = Form(...), utterance: s
     
     state = JOB_STATE[job_id]
     
-    print(f"BEFORE ADD state {state}")
-    print(f"BEFORE ADD utterances length = {len(state["utterances"])}")
-    print(f"BEFORE ADD utterances at index  = {index}")
-
+ 
     if int(index) + 1 > len(state["utterances"]):
         state["utterances"].append(json.loads(utterance))
     else:
         state["utterances"].insert(int(index), json.loads(utterance))
-
-    print(f"AFTER ADD utterances length = {len(state["utterances"])}")
 
     return JSONResponse({
         "status": "OK"
@@ -302,18 +293,11 @@ async def update_utterance(job_id: str = Form(...), index = Form(...), utterance
     
     state = JOB_STATE[job_id]
 
-    print(f"BEFORE UPDATE state {state}")
-    print(f"BEFORE UPDATE utterances length = {len(state["utterances"])}")
-    print(f"BEFORE UPDATE utterances at index  = {index}")
-
-
     if int(index) + 1 > len(state["utterances"]):
         state["utterances"].append(json.loads(utterance))
     else:
         state["utterances"][int(index)] = json.loads(utterance)
     
-    print(f"AFTER UPDATE utterances length = {len(state["utterances"])}")
-
     return JSONResponse({
     "status": "OK"
     })
@@ -345,16 +329,13 @@ async def assemble_video(job_id: str = Form(...),
     
     try:
         updated_utterances = json.loads(updated_utterances)
-        
-        print(updated_utterances)
+
         state = JOB_STATE[job_id]
         approved_audio = state["approved_audio"]
         config = state["config"]
         utterances = state["utterances"]
         config.music_volume = float(music_volume) / 100
         config.speech_volume = float(speech_volume) / 100
-        print(config)
-        print(approved_audio)
 
         #if None in approved_audio:
         #    raise HTTPException(status_code=400, detail="Not all utterances have approved audio.")
@@ -385,7 +366,6 @@ async def assemble_video(job_id: str = Form(...),
 @app.get("/download/{filename}")
 def download(filename: str):
     path = f"uploads/{filename}"
-    print(path)
     headers = {"Cache-Control": "no-cache"} 
     return FileResponse(path=path, filename=filename, headers=headers) # provide filename, media_type is optional
 

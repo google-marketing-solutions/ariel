@@ -214,7 +214,6 @@ class DubbleLLM(GenAIInvoker):
 
         with open(file_path, 'rb') as f:
             audio_bytes = f.read()
-        print(f"file_path {file_path} and mime_type {mime_type}")
 
         prompt = config.prompt_library['diarization'].format(
             BRAND_NAME=config.brand_name, ORIGINAL_LANGUAGE=config.original_language
@@ -465,36 +464,11 @@ class DubbleLLM(GenAIInvoker):
       DubbingError: if the model returns no candidates
     """
     try:
-        print("#################")
-        print(f"TTS utterance.translated_text = {utterance.translated_text}")
-        print(f"TTS prompt = {prompt}")
-        print("#################")
-        
-        #custom_pronunciation_params = []
-        #
-        #for pronunciation in utterance.special_instructions.split("\n"):
-        #    try:
-        #        tokens = pronunciation.split("=")
-        #        if len(tokens) == 2 and tokens[0] and tokens[1]:
-        #            pronunciation_param = texttospeech.CustomPronunciationParams(
-        #                phrase=tokens[0].strip(),
-        #                pronunciation=tokens[1].strip(),
-        #                phonetic_encoding=texttospeech.CustomPronunciationParams.PhoneticEncoding.PHONETIC_ENCODING_IPA,
-        #            )
-        #            custom_pronunciation_params.append(pronunciation_param)
-        #    except Exception as e:
-        #        print(f"Skipping invalid pronunciation rule: {pronunciation}. Error: {e}")
-        #        pass 
-#
-        #custom_pronunciations_container = texttospeech.CustomPronunciations(
-        #     pronunciations=custom_pronunciation_params
-        # )
-
-
+ 
         synthesis_input = texttospeech.SynthesisInput(
             text=utterance.translated_text,
             prompt=prompt,
-         #   custom_pronunciations=custom_pronunciations_container 
+         #   custom_pronunciations=custom_pronunciations_container
         )
         
         voice = texttospeech.VoiceSelectionParams(language_code=config.target_language,

@@ -134,12 +134,19 @@
             gap: 8px;
         }
         .utterance-pill .play-icon {
-            width: 16px;
-            height: 16px;
-            background-color: white;
+            width: 20px;
+            height: 20px;
+            background-color: #ccc; /* Default gray */
             -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>') no-repeat center;
             mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>') no-repeat center;
             cursor: pointer;
+        }
+        .utterance-pill .play-icon.play-icon-generated {
+            background-color: #00FF00; /* Bright green when audio is generated */
+        }
+        .utterance-pill .play-icon.play-icon-disabled {
+            background-color: #ccc; /* Gray when no audio */
+            cursor: not-allowed;
         }
         .utterance-pill .delete-icon {
             width: 16px;
@@ -149,8 +156,8 @@
             mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>') no-repeat center;
             cursor: pointer;
         }
-        .utterance-pill .play-icon:hover {
-            background-color: #fbbc05;
+        .utterance-pill .play-icon.play-icon-generated:hover {
+            background-color: #00CC00; /* Darker bright green on hover */
         }
         .utterance-pill .delete-icon:hover {
             background-color: #d0382b;
@@ -249,6 +256,10 @@
             mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>') no-repeat center;
             cursor: pointer;
         }
+        #btn-apply-to-others:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
         #btn-apply-to-others { background-color: #fbbc05; } #btn-apply-to-others:hover { background-color: #e6a800; }
         #btn-start-apply { background-color: #34A853; } #btn-start-apply:hover { background-color: #2c8a42; }
         #btn-cancel-apply { background-color: #EA4335; } #btn-cancel-apply:hover { background-color: #d0382b; }
@@ -270,7 +281,10 @@
         </div>
 
         <div id="setup-section" style="display: none;">
-            <h2>1. Initial Configuration</h2>
+            <div class="throbber-overlay" id="setup-throbber-overlay">
+                <div class="throbber"></div>
+            </div>
+            <h2>Initial Configuration</h2>
             <form id="setup-form">
                 <div class="form-grid">
                     
@@ -302,7 +316,7 @@
                     <div class="form-grid">
                         <div class="form-group full-width">
                             <label for="gcp_project">Google Cloud Project</label>
-                            <input type="text" id="gcp_project" name="gcp_project" value="XXXXXXXXXXX" placeholder="Enter your project here">
+                            <input type="text" id="gcp_project" name="gcp_project" value="XXXXXXX" placeholder="Enter your project here">
                         </div>
                         <div class="form-group full-width">
                             <label for="gcp_project_location">Google Cloud Project</label>
@@ -400,7 +414,7 @@
             <div class="throbber-overlay">
                 <div class="throbber"></div>
             </div>
-            <h2 id="review-heading">2. Review & Generate Speech</h2>
+            <h2 id="review-heading">Review & Generate Speech</h2>
             <p id="review-progress"></p>
             <form id="review-form">
                 <div class="form-grid">
@@ -491,7 +505,7 @@
         </div>
 
         <div id="timeline-section" style="display: none; margin-top: 2rem;">
-            <h2>3. Fine-tune Timing & Assemble</h2>
+            <h2>Fine-tune Timing & Assemble</h2>
             <div class="video-container">
                 <div class="throbber-overlay">
                     <div class="throbber"></div>
@@ -511,8 +525,8 @@
                     </div>
             </div>
             <div class="form-grid">
-                <button type="button" id="btn-assemble-final">Assemble Final Video</button>
-                <button type="button" id="btn-apply-to-others">Apply to Other Videos</button>
+                <button type="button" id="btn-assemble-final" disabled>Assemble Video</button>
+                <button type="button" id="btn-apply-to-others" disabled>Apply to Other Videos</button>
             </div>
             <button type="button" id="btn-start-over-long" style="background-color: #EA4335;">Start Over</button>
         </div>
@@ -657,12 +671,15 @@
         </div>
     </div>
 
-    <!-- Assembly Modal -->
-    <div id="assembly-modal" class="modal">
-        <div class="modal-content" style="text-align: center;">
-            <h2>Assembling Video...</h2>
+        <!-- Assembly Modal -->    <div id="assembly-modal" class="modal">        <div class="modal-content" style="text-align: center;">            <h2>Assembling Video...</h2>        </div>    </div>
 
-<script>
+    
+
+        <!-- Fine-tune Instructions Modal -->    <div id="fine-tune-instructions-modal" class="modal">        <div class="modal-content">            <span class="close-button" id="close-fine-tune-instructions-modal">&times;</span>            <h2>Instructions</h2>            <p>Now generate the speech for all your utterances and the Assemble Video button will be enabled. When a utterance has speech generated, its play button turns green.</p>            <div class="modal-buttons" style="justify-content: center;">                <button id="btn-close-fine-tune-instructions-modal">Close</button>            </div>        </div>    </div>
+
+    
+
+    <script>
 
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -799,6 +816,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnAssembleFinal = document.getElementById('btn-assemble-final');
     const btnApplyToOthers = document.getElementById('btn-apply-to-others');
 
+    // --- NEW MODAL DOM ELEMENTS ---
+    const fineTuneInstructionsModal = document.getElementById('fine-tune-instructions-modal');
+    const btnCloseFineTuneInstructionsModal = document.getElementById('btn-close-fine-tune-instructions-modal');
+
     // --- MODAL DOM ELEMENTS ---
     const applyToOthersModal = document.getElementById('apply-to-others-modal');
     const closeApplyModalTop = document.getElementById('close-apply-modal-top');
@@ -837,6 +858,8 @@ document.addEventListener('DOMContentLoaded', function() {
         modeSelectionSection.style.display = 'none';
 
         setupSection.style.display = 'block';
+        document.getElementById('setup-throbber-overlay').style.display = 'none';
+        btnStart.disabled = false; // Ensure Start Analysis button is enabled
 
         document.querySelectorAll('.dub-only').forEach(el => el.style.display = 'flex');
 
@@ -849,6 +872,8 @@ document.addEventListener('DOMContentLoaded', function() {
         modeSelectionSection.style.display = 'none';
 
         setupSection.style.display = 'block';
+        document.getElementById('setup-throbber-overlay').style.display = 'none';
+        btnStart.disabled = false; // Ensure Start Analysis button is enabled
 
         document.querySelectorAll('.dub-only').forEach(el => el.style.display = 'none');
 
@@ -903,6 +928,10 @@ document.addEventListener('DOMContentLoaded', function() {
     btnStartApply.addEventListener('click', handleStartApplyToOthers);
     btnCloseApplyModalAfterProcess.addEventListener('click', () => applyToOthersModal.style.display = 'none');
     btnCloseUtteranceWarningModal.addEventListener('click', () => utteranceWarningModal.style.display = 'none');
+
+    // --- NEW MODAL EVENT LISTENERS ---
+    btnCloseFineTuneInstructionsModal.addEventListener('click', () => fineTuneInstructionsModal.style.display = 'none');
+    fineTuneInstructionsModal.querySelector('.close-button').addEventListener('click', () => fineTuneInstructionsModal.style.display = 'none');
 
     async function handleStartApplyToOthers() {
         const videoUrls = document.getElementById('video-urls').value.trim().split('\n').filter(url => url.trim() !== '');
@@ -1061,6 +1090,11 @@ document.addEventListener('DOMContentLoaded', function() {
             showModalStatus(
 
                 'success', 'Speech generated. You can save or continue editing.');
+
+            // Re-evaluate button states after speech generation
+            const allUtterancesHaveAudio = checkAllUtterancesHaveAudio();
+            document.getElementById('btn-assemble-final').disabled = !allUtterancesHaveAudio;
+            document.getElementById('btn-apply-to-others').disabled = !allUtterancesHaveAudio;
 
         } catch (error) {
 
@@ -1274,14 +1308,22 @@ document.addEventListener('DOMContentLoaded', function() {
         utteranceWarningModal.style.display = 'none';
         applyToOthersModal.style.display = 'none';
         assemblyModal.style.display = 'none';
+        fineTuneInstructionsModal.style.display = 'none'; // Hide new modal
+        document.getElementById('setup-throbber-overlay').style.display = 'none'; // Hide setup throbber
+        statusMessage.innerHTML = ''; // Clear status message content
+        statusMessage.style.display = 'none'; // Hide status message
 
         btnCleanOutputs.style.display = 'block';
 
         // Reset the form
 
         setupForm.reset();
+        document.getElementById('original_language').value = 'es-ES'; // Reset to default
+        document.getElementById('target_language').value = 'en-US'; // Reset to default
+        document.getElementById('video_file').value = ''; // Clear file input
 
         btnStart.disabled = false;
+        renderTimeline(); // Ensure timeline and button states are reset
 
     }
 
@@ -1294,6 +1336,8 @@ document.addEventListener('DOMContentLoaded', function() {
             'info', 'Uploading and analyzing video... This may take a moment. ⏳');
 
         btnStart.disabled = true;
+        const setupThrobber = document.getElementById('setup-throbber-overlay');
+        setupThrobber.style.display = 'flex';
 
         const formData = new FormData(setupForm);
 
@@ -1408,7 +1452,8 @@ document.addEventListener('DOMContentLoaded', function() {
             setupSection.style.display = 'none';
 
             btnCleanOutputs.style.display = 'none';
-/*
+
+            /*
             if (currentWorkflow === 'dub') {
 
                 showStatus(
@@ -1422,7 +1467,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadUtterance(0);
 
             } else { // voiceover workflow
-*/
+
                 showStatus(
 
                     'success',
@@ -1435,13 +1480,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 showTimelineEditor();
 
-//           }
+           }
+            */
+            showStatus(
+
+                    'success',
+
+                    `Video processed. You can now add utterances to the timeline.`);
+
+            const sourceVideoPlayer = document.getElementById('source-video-player');
+
+            sourceVideoPlayer.src = result.video_url;
+            
+            showTimelineEditor();
+            fineTuneInstructionsModal.style.display = 'block'; // Show the new modal
 
         } catch (error) {
 
             showStatus('error', `Error: ${error.message}`);
 
             btnStart.disabled = false;
+            setupThrobber.style.display = 'none';
 
         }
 
@@ -1644,6 +1703,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             loadUtterance(CURRENT_INDEX);
 
+            // Re-evaluate button states after approval
+            const allUtterancesHaveAudio = checkAllUtterancesHaveAudio();
+            document.getElementById('btn-assemble-final').disabled = !allUtterancesHaveAudio;
+            document.getElementById('btn-apply-to-others').disabled = !allUtterancesHaveAudio;
+
         } catch (error) {
 
             showStatus('error', `Approval failed: ${error.message}`);
@@ -1679,6 +1743,11 @@ document.addEventListener('DOMContentLoaded', function() {
         timelineContainer.style.height = `${
 
         Math.min(timelineHeight, 300)}px`; // Set container height with a max
+
+        // Enable/disable assemble and apply buttons based on audio generation status
+        const allUtterancesHaveAudio = checkAllUtterancesHaveAudio();
+        document.getElementById('btn-assemble-final').disabled = !allUtterancesHaveAudio;
+        document.getElementById('btn-apply-to-others').disabled = !allUtterancesHaveAudio;
         
         UTTERANCES_DATA.forEach((utterance, index) => {
 
@@ -1695,6 +1764,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const playIcon = document.createElement('div');
 
             playIcon.className = 'play-icon';
+
+            if (utterance.audio_url) {
+                playIcon.classList.add('play-icon-generated');
+            } else {
+                playIcon.classList.add('play-icon-disabled');
+            }
 
             const editIcon = document.createElement('div');
 
@@ -1735,7 +1810,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     timelineAudio.play();
 
                 } else {
-
+                    // If no audio, do nothing and prevent default click behavior
+                    e.preventDefault();
                     showStatus(
 
                         'info',
@@ -1772,7 +1848,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     renderTimeline(); // Re-render the timeline
 
+                    checkAllUtterancesHaveAudio();
+
                 }
+
+                
 
             });
 
@@ -1979,6 +2059,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function handleInitialAssembly() {
+        const allUtterancesHaveAudio = checkAllUtterancesHaveAudio();
+        if (!allUtterancesHaveAudio) {
+            document.getElementById('btn-assemble-final').disabled = true;
+            document.getElementById('btn-apply-to-others').disabled = true;
+            showStatus('info', 'No audio generated for any utterance. Assemble and Apply buttons remain disabled.');
+            return;
+        }
 
         showStatus('info', 'Assembling the video... This may take some time. 🎬');
 
@@ -2038,6 +2125,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!checkAllUtterancesHaveAudio()) {
             utteranceWarningMessage.textContent = 'Please generate speech for all utterances before assembling the final video.';
             utteranceWarningModal.style.display = 'block';
+            btnAssembleFinal.disabled = true;
+            btnApplyToOthers.disabled = true;
             return;
         }
 
@@ -2165,11 +2254,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             showStatus('error', `Remove utterance failed: ${error.message}`);
 
-                } finally {
+        } finally {
 
-                    bulkProgressModal.style.display = 'none';
+            
 
-                }
+        }
 
     }
 
@@ -2259,11 +2348,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     }
 
-    function closeEditModal() {
+        function closeEditModal() {
 
-        editModal.style.display = 'none';
+            editModal.style.display = 'none';
 
-    }
+            renderTimeline(); // Re-render the timeline to update play button states
+
+        }
 
     async function handleSaveUtterance() {
         const index =
@@ -2326,61 +2417,21 @@ document.addEventListener('DOMContentLoaded', function() {
             `Utterance ${
 
             index + 1} Saved.`);
-
+            showModalStatus('success', 'Utterance saved.');
+            closeEditModal();
+            renderTimeline(); // Re-render to update pill data and button states
 
         } catch (error) {
 
             showStatus('error', `Clone utterance failed: ${error.message}`);
 
-        } finally {}
-
-
-
-        showStatus('success', `Utterance ${index + 1} updated.`);
-        renderTimeline();
-        closeEditModal();
-    }
-/*
-    function handleCloneUtterance() {
-        const index =
-            parseInt(document.getElementById('edit-utterance-index').value, 10);
-        if (isNaN(index) || !UTTERANCES_DATA[index]) return;
-
-        // Deep copy the utterance from the form fields to capture any edits
-        const clonedUtterance = {
-            start: parseFloat(document.getElementById('edit-start').value),
-            end: parseFloat(document.getElementById('edit-end').value),
-            original_text: document.getElementById('edit-original-text').value,
-            translated_text: document.getElementById('edit-translated-text').value,
-            voice_name: document.getElementById('edit-voice-name').value,
-            sync_mode: document.getElementById('edit-sync-mode').value,
-            tone: document.getElementById('edit-tone').value,
-            pitch: document.getElementById('edit-pitch').value,
-            gender: document.getElementById('edit-gender').value,
-            age: document.getElementById('edit-age').value,
-            vocal_style_prompt: document.getElementById('edit-vocal-style-prompt').value,
-            special_instructions: document.getElementById('edit-special-instructions').value,
-            tts_prompt: document.getElementById('edit-tts-prompt').value,
-            audio_url: null // Cloned utterance needs new audio
-        };
-
-        // Modify it slightly to avoid exact overlap
-        const shift = 0.1;
-        clonedUtterance.start += shift;
-        clonedUtterance.end += shift;
-
-
-        // Insert the new utterance into the array right after the original one
-        UTTERANCES_DATA.splice(index + 1, 0, clonedUtterance);
-        TOTAL_UTTERANCES = UTTERANCES_DATA.length;
-
-
-        showStatus('success', `Utterance ${index + 1} cloned. New utterance is at position ${index + 2}.`);
-        renderTimeline();
-        closeEditModal();
+        } finally {
+             // Re-evaluate button states after saving
+             checkAllUtterancesHaveAudio();
+        }
+        
     }
 
-*/
     async function handleCloneUtterance() {
 
         const index =

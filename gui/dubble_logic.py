@@ -87,7 +87,6 @@ def diarize(config: DubbleConfig):
     if not config.script:
         llm = DubbleLLM(config)
         dubbing_data = llm.diarization(config)
-        print(dubbing_data)
         dubbing_data = llm.translate_utterances(dubbing_data, config)
         voice_selector = VoiceSelector(config)
         dubbing_data = voice_selector.find_best_voices(dubbing_data, config)
@@ -176,7 +175,6 @@ def assemble_final_video(utterances: list, config: DubbleConfig):
     Assembles the final video with the new audio track using updated timings.
     """
     from urllib.parse import urlparse
-    print(utterances)
     timed_vocal_clips = []
     
     for utterance in utterances:
