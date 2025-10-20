@@ -1222,6 +1222,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('edit-original-text').value;
         utterance.translated_text =
             document.getElementById('edit-translated-text').value;
+        utterance.source_language = document.getElementById('edit-source-language').value;
+        utterance.target_language = document.getElementById('edit-target-language').value;
         utterance.voice_name = document.getElementById('edit-voice-name').value;
         utterance.sync_mode = document.getElementById('edit-sync-mode').value;
         utterance.tone = document.getElementById('edit-tone').value;
