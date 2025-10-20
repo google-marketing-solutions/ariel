@@ -103,6 +103,7 @@ def merge_background_and_vocals(
 
   # Overlay each vocal chunk at its start time
   for utterance in dubbed_vocals_metadata:
+    if not utterance.audio_url: continue
     vocal_chunk = AudioSegment.from_file(utterance.audio_url)
     start_time_ms = int(utterance.translated_start_time * 1000)
     combined_vocals = combined_vocals.overlay(
