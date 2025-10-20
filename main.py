@@ -146,6 +146,7 @@ def generate_video(video_data: Video) -> str:
 def save_video(video: UploadFile) -> tuple[str, str]:
   video_name = video.filename or "video.mp4"
   video_name = video_name.replace(" ", "_")
+  print(f"#### DEBUG #### The GCS bucket is {config.gcs_bucket_name}")
   gcs_path = upload_video_to_gcs(video_name, video.file, config.gcs_bucket_name)
   # save the file locally
   video.file.seek(0)
