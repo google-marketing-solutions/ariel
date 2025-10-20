@@ -4,10 +4,11 @@ import { renderTimeline } from './timeline.js';
 
 const MAX_TEXT_SNIPPET_LENGTH = 100;
 
-export function renderUtterances(utterances, allSpeakers, speakers, currentVideoData, videoDuration) {
+export function renderUtterances(currentVideoData, speakers, videoDuration) {
     const utterancesList = document.getElementById('utterances-list');
     utterancesList.innerHTML = '';
     const fragment = document.createDocumentFragment();
+    const utterances = currentVideoData.utterances;
 
     const voiceToNameMap = new Map();
     speakers.forEach(s => {
@@ -37,54 +38,65 @@ export function renderUtterances(utterances, allSpeakers, speakers, currentVideo
                 </div>
         `;
 
-        utteranceCard.querySelector('.edit-utterance-btn').addEventListener('click', () => {
-            editUtterance(utterance, allSpeakers, utterances, index, speakers, currentVideoData, videoDuration);
-        });
-
-        const removeBtn = utteranceCard.querySelector('.remove-utterance-btn');
         const content = utteranceCard.querySelector('.utterance-card-content');
         const overlay = utteranceCard.querySelector('.utterance-overlay');
 
+        // Set initial visual state based on flags
+        if (utterance.removed) {
+            content.classList.add('removed');
+            overlay.textContent = 'No audio will be generated';
+            overlay.style.display = 'flex';
+        }
+        if (utterance.muted) {
+            content.classList.add('muted');
+            overlay.textContent = 'Original audio will be used';
+            overlay.style.display = 'flex';
+        }
+
+        // --- BUTTON LISTENERS ---
+
+        const removeBtn = utteranceCard.querySelector('.remove-utterance-btn');
         removeBtn.addEventListener('click', () => {
-            content.classList.toggle('removed');
-            utterance.removed = content.classList.contains('removed'); // Update utterance state
-            if (content.classList.contains('removed')) {
-                overlay.textContent = 'No audio will be generated';
-                overlay.style.display = 'flex';
-            } else {
-                overlay.style.display = 'none';
+            utterance.removed = !utterance.removed;
+            // Ensure mute is cancelled if remove is activated
+            if (utterance.removed && utterance.muted) {
+                utterance.muted = false;
             }
-            renderTimeline(currentVideoData, videoDuration, speakers); // Re-render timeline
+            renderUtterances(currentVideoData, speakers, videoDuration);
+            renderTimeline(currentVideoData, videoDuration, speakers);
         });
 
         const muteBtn = utteranceCard.querySelector('.mute-utterance-btn');
         muteBtn.addEventListener('click', () => {
-            content.classList.toggle('muted');
-            utterance.muted = content.classList.contains('muted'); // Update utterance state
+            utterance.muted = !utterance.muted;
+            // Ensure remove is cancelled if mute is activated
+            if (utterance.muted && utterance.removed) {
+                utterance.removed = false;
+            }
 
             if (utterance.muted) {
-                // If we haven't stored the pre-mute times yet, store them now.
-                if (utterance.pre_mute_start_time === undefined) {
-                    utterance.pre_mute_start_time = utterance.translated_start_time;
-                    utterance.pre_mute_end_time = utterance.translated_end_time;
-                }
-
-                // Match original times
                 utterance.translated_start_time = utterance.original_start_time;
                 utterance.translated_end_time = utterance.original_end_time;
-
-                overlay.textContent = 'Original audio will be used';
-                overlay.style.display = 'flex';
             } else {
-                // Restore to the pre-mute times if they exist
-                if (utterance.pre_mute_start_time !== undefined) {
-                    utterance.translated_start_time = utterance.pre_mute_start_time;
-                    utterance.translated_end_time = utterance.pre_mute_end_time;
-                }
-
-                overlay.style.display = 'none';
+                utterance.translated_start_time = utterance.initial_translated_start_time;
+                utterance.translated_end_time = utterance.initial_translated_end_time;
             }
-            renderTimeline(currentVideoData, videoDuration, speakers); // Re-render timeline
+            renderUtterances(currentVideoData, speakers, videoDuration);
+            renderTimeline(currentVideoData, videoDuration, speakers);
+        });
+
+        const editBtn = utteranceCard.querySelector('.edit-utterance-btn');
+        editBtn.addEventListener('click', () => {
+            // Cancel mute/remove state before editing
+            if (utterance.muted || utterance.removed) {
+                utterance.muted = false;
+                utterance.removed = false;
+                utterance.translated_start_time = utterance.initial_translated_start_time;
+                utterance.translated_end_time = utterance.initial_translated_end_time;
+                renderUtterances(currentVideoData, speakers, videoDuration);
+                renderTimeline(currentVideoData, videoDuration, speakers);
+            }
+            editUtterance(utterance, index, currentVideoData, speakers, videoDuration);
         });
 
         fragment.appendChild(utteranceCard);
@@ -92,7 +104,7 @@ export function renderUtterances(utterances, allSpeakers, speakers, currentVideo
     utterancesList.appendChild(fragment);
 }
 
-export function editUtterance(utterance, allSpeakers, utterances, index, speakers, currentVideoData, videoDuration) {
+export function editUtterance(utterance, index, currentVideoData, speakers, videoDuration) {
     const utteranceEditor = document.getElementById('utterance-editor');
     const utteranceEditorContent = document.getElementById('utterance-editor-content');
     const confirmationModal = new bootstrap.Modal(document.getElementById('confirmation-modal'));
@@ -199,8 +211,10 @@ export function editUtterance(utterance, allSpeakers, utterances, index, speaker
         // initialGeminiPrompt remains as it's not directly saved to utterance
 
         renderTimeline(currentVideoData, videoDuration, speakers);
-        renderUtterances(currentVideoData.utterances, currentVideoData.speakers, speakers, currentVideoData, videoDuration);
+        renderUtterances(currentVideoData, speakers, videoDuration);
         utteranceEditor.style.display = 'none';
+        // Notify the app that the timeline has changed
+        document.dispatchEvent(new CustomEvent('timeline-changed'));
     };
 
     regenerateTranslationBtn.addEventListener('click', () => {

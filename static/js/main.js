@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsVideoPreview = document.getElementById('results-video-preview');
     const editVideoSettingsBtn = document.getElementById('edit-video-settings-btn');
     const generateVideoBtn = document.getElementById('generate-video-btn');
+    const resetTimelineBtn = document.getElementById('reset-timeline-btn');
 
     // Modals
     const speakerModal = new bootstrap.Modal(document.getElementById('speaker-modal'));
@@ -230,8 +231,9 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Received result from backend:', JSON.stringify(result, null, 2)); // DEBUG
             currentVideoData = result;
             currentVideoData.utterances.forEach(utterance => {
-                utterance.original_translated_start_time = utterance.translated_start_time;
-                utterance.original_translated_end_time = utterance.translated_end_time;
+                // Store the initial translated times for future reverts.
+                utterance.initial_translated_start_time = utterance.translated_start_time;
+                utterance.initial_translated_end_time = utterance.translated_end_time;
             });
 
             mainContent.style.display = 'none';
@@ -245,6 +247,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     resultsVideoPreview.addEventListener('loadedmetadata', () => {
                         videoDuration = resultsVideoPreview.duration;
                         renderTimeline(currentVideoData, videoDuration, speakers);
+                        // Render utterances only AFTER video duration is known
+                        renderUtterances(currentVideoData, speakers, videoDuration);
                     });
                 };
                 reader.readAsDataURL(videoInput.files[0]);
@@ -265,8 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${speakers.map(s => `<li><strong>${s.name}:</strong> ${s.voice}</li>`).join('')}
                 </ul>
             `;
-
-            renderUtterances(result.utterances, result.speakers, speakers, currentVideoData, videoDuration);
 
         } catch (error) {
             console.error('Error during processing:', error);
@@ -294,5 +296,31 @@ document.addEventListener('DOMContentLoaded', () => {
     confirmCloseBtn.addEventListener('click', () => {
         document.getElementById('utterance-editor').style.display = 'none';
         bootstrap.Modal.getInstance(document.getElementById('confirmation-modal')).hide();
+    });
+
+    // --- Reset Button Logic ---
+    function updateResetButtonVisibility() {
+        if (!currentVideoData) return;
+
+        const hasChanges = currentVideoData.utterances.some(u => 
+            u.translated_start_time !== u.initial_translated_start_time || 
+            u.translated_end_time !== u.initial_translated_end_time
+        );
+
+        resetTimelineBtn.style.display = hasChanges ? 'inline-block' : 'none';
+    }
+
+    document.addEventListener('timeline-changed', updateResetButtonVisibility);
+
+    resetTimelineBtn.addEventListener('click', () => {
+        if (!currentVideoData) return;
+
+        currentVideoData.utterances.forEach(utterance => {
+            utterance.translated_start_time = utterance.initial_translated_start_time;
+            utterance.translated_end_time = utterance.initial_translated_end_time;
+        });
+
+        renderTimeline(currentVideoData, videoDuration, speakers);
+        updateResetButtonVisibility(); // This will hide the button
     });
 });

@@ -118,16 +118,12 @@ export function renderTimeline(videoData, videoDuration, speakers) {
             }
             if (utterance.removed) {
                 translatedBlock.classList.add('removed');
-            }
-            translatedBlock.style.left = `${utterance.translated_start_time * scale}px`;
-            translatedBlock.style.width = `${(utterance.translated_end_time - utterance.translated_start_time) * scale}px`;
-            translatedBlock.textContent = `U: ${index + 1}`;
-            translatedBlock.dataset.utteranceId = utterance.id;
-
-            // Check for initial overlaps and apply class
-            const initialOverlapMessages = checkOverlap(utterance, videoData.utterances);
-            if (initialOverlapMessages.length > 0) {
-                translatedBlock.classList.add('overlap');
+            } else {
+                // Only check for overlap if the utterance is not removed
+                const initialOverlapMessages = checkOverlap(utterance, videoData.utterances);
+                if (initialOverlapMessages.length > 0) {
+                    translatedBlock.classList.add('overlap');
+                }
             }
 
             translatedBlock.addEventListener('dblclick', () => {
@@ -202,6 +198,8 @@ export function renderTimeline(videoData, videoDuration, speakers) {
 
                     // Re-render the timeline
                     renderTimeline(videoData, videoDuration, speakers);
+                    // Notify the app that the timeline has changed
+                    document.dispatchEvent(new CustomEvent('timeline-changed'));
                 }
 
                 document.addEventListener('mousemove', handleMouseMove);
