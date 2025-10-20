@@ -58,6 +58,7 @@ gcloud beta run deploy $SERVICE_NAME \
   --service-account "${SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com" \
   --no-allow-unauthenticated \
   --project=$PROJECT_ID \
+  --port=8080 \
   --iap
 
 #For every user to authorize to use the application, the following commands must be executed
