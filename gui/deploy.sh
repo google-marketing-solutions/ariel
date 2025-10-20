@@ -8,7 +8,7 @@ SERVICE_ACCOUNT="dubble-sa"
 # --- User Access ---
 # Add the email of the user or group you want to grant access to.
 # You can also use group:group@example.com or serviceAccount:sa@project.iam.gserviceaccount.com
-MEMBER_TO_GRANT_ACCESS="user:my-user@my-domain.com"
+MEMBER_TO_GRANT_ACCESS="my-user@my-domain.com"
 
 echo "Setting region..."
 gcloud config set run/region $REGION
@@ -50,7 +50,7 @@ sed -i "s/\$PROJECT_ID/$PROJECT_ID/g" templates/index.html
 sed -i "s/\$REGION/$REGION/g" templates/index.html
 
 echo "Deploying Cloud Run service..."
-gcloud run deploy $SERVICE_NAME \
+gcloud beta run deploy $SERVICE_NAME \
   --source . \
   --cpu 8 \
   --memory 32Gi \
