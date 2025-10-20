@@ -88,16 +88,14 @@ class TranslateRequest(BaseModel):
   """Used to request a new text translation.
 
   Attributes:
-    original_lang: the language of the original text
-    target_lang: the language to translate to
-    text: the text to translate
+    video: the video being processed
+    utterance: the index of the utterance to retranslate
     instructions: additional instructions to guide the translation (defaults to
         empty)
   """
 
-  original_lang: str
-  target_lang: str
-  text: str
+  video: Video
+  utterance: int
   instructions: str = ""
 
 
@@ -110,3 +108,4 @@ class TranslateResponse(BaseModel):
 
   translated_text: str
   audio_url: str
+  duration: float
