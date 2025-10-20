@@ -212,13 +212,13 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
 
         renderTimeline(currentVideoData, videoDuration, speakers);
         renderUtterances(currentVideoData, speakers, videoDuration);
-        utteranceEditor.style.display = 'none';
         // Notify the app that the timeline has changed
         document.dispatchEvent(new CustomEvent('timeline-changed'));
     };
 
     regenerateTranslationBtn.addEventListener('click', () => {
         console.log('Regenerating translation...');
+        saveUtteranceChanges();
         regenerateTranslation(currentVideoData, index, document.querySelector('#gemini-prompt-input').value)
             .then(result => {
                 utterance.translated_text = result.translated_text;
@@ -231,6 +231,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
 
     regenerateDubbingBtn.addEventListener('click', () => {
         console.log('Regenerating dubbing...');
+        saveUtteranceChanges();
         regenerateDubbing(currentVideoData, index, document.querySelector('#intonation-instructions-area').value)
             .then((result => {
                 utterance.translated_end_time = utterance.translated_start_time + result.duration;

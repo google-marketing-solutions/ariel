@@ -102,6 +102,8 @@ async def process_video(
     if audio_duration > 0.0:
       local_audio_path = os.path.join(local_dir, f"audio_{i}.wav")
       save_audio_file(generated_audio, local_audio_path)
+    else:
+      local_audio_path = ""
     translated_end_time = t.start_time + (audio_duration / 1000)
 
     u = Utterance(
