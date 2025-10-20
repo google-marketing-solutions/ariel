@@ -21,7 +21,7 @@ This document provides instructions on how to deploy the Dubble GUI to Google Cl
     -   `SERVICE_NAME`: The name you want to give your Cloud Run service.
     -   `REGION`: The Google Cloud region where you want to deploy the service (e.g., `us-central1`).
     -   `SERVICE_ACCOUNT`: The name for the new service account that will be created.
-    -   `MEMBER_TO_GRANT_ACCESS`: The email of the user you want to grant access to (e.g., `user:example@google.com`).
+    -   `MEMBER_TO_GRANT_ACCESS`: The email of the user you want to grant access to (e.g., `example@google.com`).
 
 2.  **Run the deployment script:**
 
