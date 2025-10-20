@@ -214,8 +214,15 @@ def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
   """
   audio_client  = genai.Client(api_key=config.gemini_api_key)
   utterance = req.video.utterances[req.utterance]
+  prompt = f"""Generate audio for the TEXT following the INSTRUCTIONS.
+  ## Instructions
+  {req.instructions}
+
+  ## TEXT
+  {utterance.translated_text}
+  """
   audio_data, duration = generate_audio(
-    audio_client, utterance.translated_text, utterance.speaker.voice
+    audio_client, prompt, utterance.speaker.voice
   )
   new_path = utterance.audio_url + str(uuid.uuid1()) + ".wav" # cache busting
   save_audio_file(audio_data, new_path)

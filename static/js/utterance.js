@@ -1,5 +1,5 @@
 import { showToast } from './utils.js';
-import { regenerateTranslation } from './api.js';
+import { regenerateDubbing, regenerateTranslation } from './api.js';
 import { renderTimeline } from './timeline.js';
 
 const MAX_TEXT_SNIPPET_LENGTH = 100;
@@ -230,10 +230,14 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
     });
 
     regenerateDubbingBtn.addEventListener('click', () => {
-        if (!checkAndHandleChanges()) {
-            console.log('Regenerating dubbing...');
-            // TODO: Implement actual regeneration logic
-        }
+        console.log('Regenerating dubbing...');
+        regenerateDubbing(currentVideoData, index, document.querySelector('#intonation-instructions-area').value)
+            .then((result => {
+                utterance.translated_end_time = utterance.translated_start_time + result.duration;
+                utterance.translated_end_time = utterance.translated_start_time + result.duration;
+                utteranceEditorContent.querySelector('#translated-end-time-input').value = utterance.translated_start_time + result.duration;
+                utterance.audio_url = result.audio_url;
+            }))
     });
 
     saveUtteranceBtn.addEventListener('click', saveUtteranceChanges);

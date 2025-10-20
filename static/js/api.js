@@ -60,6 +60,20 @@ export function regenerateTranslation(videoData, utteranceIndex, instructions) {
     }).then(response => response.json());
 }
 
+export function regenerateDubbing(videoData, utteranceIndex, instructions) {
+    return fetch('/regenerate_dubbing', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            video: videoData,
+            utterance: utteranceIndex,
+            instructions: instructions
+        })
+    }).then(response => response.json());
+}
+
 export function generateVideo(videoData) {
     return fetch('/generate_video', {
         method: 'POST',
