@@ -84,7 +84,7 @@ class Video(BaseModel):
     utterances: list[Utterance]
 
   
-class TranslateRequest(BaseModel):
+class RegenerateRequest(BaseModel):
   """Used to request a new text translation.
 
   Attributes:
@@ -99,7 +99,7 @@ class TranslateRequest(BaseModel):
   instructions: str = ""
 
 
-class TranslateResponse(BaseModel):
+class RegenerateResponse(BaseModel):
   """Used to respond to a translation request.
 
   Attributes:

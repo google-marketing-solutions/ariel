@@ -27,11 +27,11 @@ from process import (
 )
 
 from models import (
-  TranslateRequest,
+  RegenerateRequest,
   Video,
   Utterance,
   Speaker,
-  TranslateResponse,
+  RegenerateResponse,
 )
 
 app = FastAPI()
@@ -168,15 +168,15 @@ def generate_video(video_data: Video) -> str:
 
 
 @app.post("/regenerate_translation")
-def regenerate_translation(req: TranslateRequest) -> TranslateResponse:
+def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
   """Regenerates the translation for a given utterance.
 
   Args:
-    req: The translation request object with the video, utterance index, and
+    req: The request object with the video, utterance index, and
         additional instructions.
 
   Returns:
-    A translation response with the new translation, updated audio file path,
+    A response with the new translation, updated audio file path,
     and the duration of the audio.
   """
   genai_client = genai.Client(
@@ -198,8 +198,29 @@ def regenerate_translation(req: TranslateRequest) -> TranslateResponse:
   )
   new_path = utterance.audio_url + str(uuid.uuid1()) + ".wav" # cache busting
   save_audio_file(audio_data, new_path)
-  return TranslateResponse(
+  return RegenerateResponse(
     translated_text=new_translation, audio_url=new_path, duration=duration
+  )
+
+@app.post("/regenerate_dubbing")
+def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
+  """Regenerates the dubbing for a given utterance.
+
+  Args:
+    req: The request with the video, utterance index, and additional instructions.
+
+  Returns:
+    A response with the new path to the dubbed audio.
+  """
+  audio_client  = genai.Client(api_key=config.gemini_api_key)
+  utterance = req.video.utterances[req.utterance]
+  audio_data, duration = generate_audio(
+    audio_client, utterance.translated_text, utterance.speaker.voice
+  )
+  new_path = utterance.audio_url + str(uuid.uuid1()) + ".wav" # cache busting
+  save_audio_file(audio_data, new_path)
+  return RegenerateResponse(
+    translated_text=utterance.translated_text, audio_url=new_path, duration=duration
   )
 
 
