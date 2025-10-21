@@ -1,4 +1,5 @@
 import { showToast } from './utils.js';
+import { appState } from './state.js';
 
 let currentlyPlayingButton = null;
 const audioPlayer = new Audio();
@@ -71,7 +72,7 @@ export function renderVoiceList(targetListElement, searchInput, genderFilterName
     });
 }
 
-export function addVoice(voices, speakers, renderSpeakers, validateStartProcessing, editingSpeakerId) {
+export function addVoice(voices, speakers, renderSpeakers, validateStartProcessing) {
     const voiceListModal = document.getElementById('voice-list');
     const speakerNameInput = document.getElementById('speaker-name-input');
     const speakerModal = bootstrap.Modal.getInstance(document.getElementById('speaker-modal'));
@@ -90,13 +91,13 @@ export function addVoice(voices, speakers, renderSpeakers, validateStartProcessi
         return;
     }
 
-    if (editingSpeakerId) {
+    if (appState.editingSpeakerId) {
         // Edit existing speaker
-        const speakerToEdit = speakers.find(s => s.id === editingSpeakerId);
+        const speakerToEdit = speakers.find(s => s.id === appState.editingSpeakerId);
         if (speakerToEdit) {
-            speakerToEdit.voice = voiceData.name;
+            speakerToEdit.voice = voiceData.name; // Store voice name
+            speakerToEdit.voiceName = voiceData.name; // Store voice name for display
             speakerToEdit.gender = voiceData.gender;
-            // Optionally update name if the input is used for editing too
             const customName = speakerNameInput.value.trim();
             if (customName) {
                 speakerToEdit.name = customName;
@@ -108,16 +109,24 @@ export function addVoice(voices, speakers, renderSpeakers, validateStartProcessi
         const speaker = {
             id: `speaker_${speakers.length + 1}`,
             name: customName || `Speaker ${speakers.length + 1}`,
-            voice: voiceData.name,
+            voice: voiceData.name, // Store voice name
+            voiceName: voiceData.name, // Store voice name for display
             gender: voiceData.gender
         };
         speakers.push(speaker);
     }
 
-    renderSpeakers();
-    speakerNameInput.value = ''; // Clear the input
+    // Reset state and UI
+    appState.editingSpeakerId = null;
+    speakerNameInput.value = '';
     speakerModal.hide();
     validateStartProcessing();
+    if (appState.isEditingVideoSettings) {
+        // Do nothing here, main.js's hidden.bs.modal listener will call renderVideoSettingsEditor()
+        // This prevents double rendering and ensures the editor is refreshed correctly.
+    } else {
+        renderSpeakers(); // Only re-render the initial speaker list if not in editor mode
+    }
 }
 
 export function handleSpeakerModalClose() {

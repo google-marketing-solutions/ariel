@@ -93,3 +93,25 @@ export function updateVideoSettings(updatedVideoData) {
         body: JSON.stringify(updatedVideoData)
     }).then(response => response.json());
 }
+
+// --- Regeneration Wrappers ---
+
+export function runRegenerateTranslation(currentVideoData, utterance, index, instructions) {
+    console.log('Regenerating translation for utterance:', index);
+    return regenerateTranslation(currentVideoData, index, instructions)
+        .then(result => {
+            utterance.translated_text = result.translated_text;
+            utterance.translated_end_time = utterance.translated_start_time + result.duration;
+            utterance.audio_url = result.audio_url;
+            return utterance; // Return the updated utterance
+        });
+}
+
+export function runRegenerateDubbing(currentVideoData, utterance, index, instructions) {
+    console.log('Regenerating dubbing for utterance:', index);
+    return regenerateDubbing(currentVideoData, index, instructions)
+        .then(result => {
+            utterance.audio_url = result.audio_url;
+            return utterance; // Return the updated utterance
+        });
+}

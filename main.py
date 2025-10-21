@@ -56,6 +56,7 @@ async def process_video(
   original_language: Annotated[str, Form()],
   translate_language: Annotated[str, Form()],
   prompt_enhancements: Annotated[str, Form()],
+  adjust_speed: Annotated[bool, Form()],
   speakers: Annotated[str, Form()],
 ) -> Video:
   logging.info(f"Starting Process Video for {video.filename}")
