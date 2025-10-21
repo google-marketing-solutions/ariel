@@ -169,9 +169,6 @@ def generate_video(video_data: Video) -> str:
     )
   #return get_url_for_path(config.gcs_bucket_name, gcs_path)
   to_return = {"video_url": f"/{combined_video_path}"}
-  ### DEBUG
-  print(f"##### DEBUG #### Returning this path: {combined_video_path}")
-  ### DEBUG
   return json.dumps(to_return)
 
 
