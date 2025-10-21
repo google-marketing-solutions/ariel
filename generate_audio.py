@@ -4,6 +4,7 @@ import logging
 import re
 import wave
 from google.genai import types
+from google.cloud import texttospeech
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 
@@ -49,28 +50,34 @@ def generate_audio(
     client,
     prompt: str,
     voice_name: str,
-    model_name: str = 'gemini-2.5-pro-preview-tts',
+    model_name: str = 'gemini-2.5-pro-tts',
 ) -> tuple[str, float]:
-    voice_config = types.VoiceConfig(
-        prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name))
+    # voice_config = types.VoiceConfig(
+    #     prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name))
 
-    @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
-    def call_gemini():
-        return client.models.generate_content(
-            model=model_name,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=["AUDIO"],
-                speech_config=types.SpeechConfig(voice_config=voice_config),
-            ))
+    # @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
+    # def call_gemini():
+    #     return client.models.generate_content(
+    #         model=model_name,
+    #         contents=prompt,
+    #         config=types.GenerateContentConfig(
+    #             response_modalities=["AUDIO"],
+    #             speech_config=types.SpeechConfig(voice_config=voice_config),
+    #         ))
 
-    response = call_gemini()
+    # response = call_gemini()
 
-    # Gemini sometimes just fails to return the object we're expecting.
-    if response.candidates[0] and response.candidates[0].content and response.candidates[0].content.parts:
-        audio_part = response.candidates[0].content.parts[0]
-        return _process_audio_part(audio_part)
-    else:
-        logging.error(f"Generating Audio failed with the following response from Gemini: {response}")
+    # # Gemini sometimes just fails to return the object we're expecting.
+    # if response.candidates[0] and response.candidates[0].content and response.candidates[0].content.parts:
+    #     audio_part = response.candidates[0].content.parts[0]
+    #     return _process_audio_part(audio_part)
+    # else:
+    #     logging.error(f"Generating Audio failed with the following response from Gemini: {response}")
 
-    return "", 0.0
+    # return "", 0.0
+    client = texttospeech.TextToSpeechClient()
+    synth_input = texttospeech.SynthesisInput(text=prompt, prompt="as quickly as possible")
+    voice = texttospeech.VoiceSelectionParams(language_code="de-DE", name=voice_name, model_name=model_name)
+    audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
+    response = client.synthesize_speech(input=synth_input, voice=voice, audio_config=audio_config)
+    return response.audio_content
