@@ -116,6 +116,7 @@ export function renderTimeline(videoData, videoDuration, speakers) {
             if (utterance.muted) {
                 translatedBlock.classList.add('muted');
             }
+
             if (utterance.removed) {
                 translatedBlock.classList.add('removed');
             } else {
@@ -125,6 +126,11 @@ export function renderTimeline(videoData, videoDuration, speakers) {
                     translatedBlock.classList.add('overlap');
                 }
             }
+
+            translatedBlock.style.left = `${utterance.translated_start_time * scale}px`;
+            translatedBlock.style.width = `${(utterance.translated_end_time - utterance.translated_start_time) * scale}px`;
+            translatedBlock.textContent = `U: ${index + 1}`;
+            translatedBlock.dataset.utteranceId = utterance.id;
 
             translatedBlock.addEventListener('dblclick', () => {
                 editUtterance(utterance, videoData.speakers, videoData.utterances, index, speakers);

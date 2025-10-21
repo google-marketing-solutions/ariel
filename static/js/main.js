@@ -105,11 +105,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     <strong>${speaker.name}:</strong>
                     <span>${speaker.voice}</span>
                 </div>
-                <button class="btn-close"></button>
+                <div class="d-flex">
+                    <button class="btn btn-sm btn-outline-secondary edit-speaker-btn me-2" data-speaker-id="${speaker.id}"><i class="bi bi-pencil"></i></button>
+                    <button class="btn-close"></button>
+                </div>
             `;
             speakerList.appendChild(speakerCard);
         });
     }
+    let editingSpeakerId = null;
 
     // --- Initializations ---
     fetchLanguages(originalLanguage, translationLanguage).catch(error => console.error('Error fetching languages:', error));
@@ -175,7 +179,14 @@ document.addEventListener('DOMContentLoaded', () => {
     translationLanguage.addEventListener('change', validateStartProcessing);
 
     addSpeakerBtn.addEventListener('click', () => speakerModal.show());
-    document.getElementById('speaker-modal').addEventListener('hidden.bs.modal', handleSpeakerModalClose);
+    document.getElementById('speaker-modal').addEventListener('hidden.bs.modal', () => {
+        // Reset modal to its default "add" state when closed
+        editingSpeakerId = null;
+        const speakerModalEl = document.getElementById('speaker-modal');
+        speakerModalEl.querySelector('.modal-title').textContent = 'Select Speaker Voice';
+        speakerModalEl.querySelector('#add-voice-btn').textContent = 'Add Voice';
+        handleSpeakerModalClose();
+    });
 
     voiceSearch.addEventListener('input', () => renderVoiceList(voiceListModal, voiceSearch, 'gender-filter', voices));
     document.querySelectorAll('input[name="gender-filter"]').forEach(radio => {
@@ -187,9 +198,24 @@ document.addEventListener('DOMContentLoaded', () => {
         radio.addEventListener('change', () => renderVoiceList(editVoiceListModal, editVoiceSearch, 'edit-gender-filter', voices));
     });
 
-    addVoiceBtn.addEventListener('click', () => addVoice(voices, speakers, renderSpeakers, validateStartProcessing));
+    addVoiceBtn.addEventListener('click', () => addVoice(voices, speakers, renderSpeakers, validateStartProcessing, editingSpeakerId));
 
     speakerList.addEventListener('click', (e) => {
+        const editBtn = e.target.closest('.edit-speaker-btn');
+        if (editBtn) {
+            editingSpeakerId = editBtn.dataset.speakerId;
+            const speakerToEdit = speakers.find(s => s.id === editingSpeakerId);
+            if (!speakerToEdit) return;
+
+            const speakerModalEl = document.getElementById('speaker-modal');
+            speakerModalEl.querySelector('.modal-title').textContent = 'Edit Speaker Voice';
+            speakerModalEl.querySelector('#add-voice-btn').textContent = 'Save Changes';
+            speakerModalEl.querySelector('#speaker-name-input').value = speakerToEdit.name;
+            
+            speakerModal.show();
+            return;
+        }
+
         if (e.target.classList.contains('btn-close')) {
             const speakerCard = e.target.closest('.speaker-card');
             if (speakerCard) {
@@ -256,6 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const lastUtterance = result.utterances[result.utterances.length - 1];
                 videoDuration = lastUtterance.original_end_time;
                 renderTimeline(currentVideoData, videoDuration, speakers);
+                renderUtterances(currentVideoData, speakers, videoDuration);
             }
 
             const originalLanguageName = originalLanguage.options[originalLanguage.selectedIndex].text;

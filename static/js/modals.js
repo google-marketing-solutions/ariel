@@ -71,14 +71,14 @@ export function renderVoiceList(targetListElement, searchInput, genderFilterName
     });
 }
 
-export function addVoice(voices, speakers, renderSpeakers, validateStartProcessing) {
+export function addVoice(voices, speakers, renderSpeakers, validateStartProcessing, editingSpeakerId) {
     const voiceListModal = document.getElementById('voice-list');
     const speakerNameInput = document.getElementById('speaker-name-input');
     const speakerModal = bootstrap.Modal.getInstance(document.getElementById('speaker-modal'));
 
     const selectedVoiceEl = voiceListModal.querySelector('.active');
     if (!selectedVoiceEl) {
-        showToast('Please select a voice before adding a speaker.');
+        showToast('Please select a voice.', 'error');
         return;
     }
 
@@ -86,20 +86,34 @@ export function addVoice(voices, speakers, renderSpeakers, validateStartProcessi
     const voiceData = voices.find(v => v.name === voiceName);
 
     if (!voiceData) {
-        showToast('Selected voice data could not be found. Please try again.');
+        showToast('Selected voice data could not be found. Please try again.', 'error');
         return;
     }
 
-    const customName = speakerNameInput.value.trim();
+    if (editingSpeakerId) {
+        // Edit existing speaker
+        const speakerToEdit = speakers.find(s => s.id === editingSpeakerId);
+        if (speakerToEdit) {
+            speakerToEdit.voice = voiceData.name;
+            speakerToEdit.gender = voiceData.gender;
+            // Optionally update name if the input is used for editing too
+            const customName = speakerNameInput.value.trim();
+            if (customName) {
+                speakerToEdit.name = customName;
+            }
+        }
+    } else {
+        // Add new speaker
+        const customName = speakerNameInput.value.trim();
+        const speaker = {
+            id: `speaker_${speakers.length + 1}`,
+            name: customName || `Speaker ${speakers.length + 1}`,
+            voice: voiceData.name,
+            gender: voiceData.gender
+        };
+        speakers.push(speaker);
+    }
 
-    const speaker = {
-        id: `speaker_${speakers.length + 1}`,
-        name: customName || `Speaker ${speakers.length + 1}`,
-        voice: voiceData.name,
-        gender: voiceData.gender
-    };
-
-    speakers.push(speaker);
     renderSpeakers();
     speakerNameInput.value = ''; // Clear the input
     speakerModal.hide();
