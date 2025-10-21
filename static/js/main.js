@@ -10,7 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'speaker-modal-template',
         'edit-speaker-voice-modal-template',
         'confirmation-modal-template',
-        'thinking-popup-template'
+        'thinking-popup-template',
+        'completed-video-template'
     ];
     templates.forEach(id => {
         const template = document.getElementById(id);
@@ -312,8 +313,11 @@ document.addEventListener('DOMContentLoaded', () => {
         generateVideo(currentVideoData)
             .then(result => {
                 console.log("Got the following from the backend:");
-                console.log(result.video_url);
-                window.location.href = result.video_url;
+                console.log(result);
+                const resp = JSON.parse(result);
+                const completedVideoModal = new bootstrap.Modal(document.getElementById('completed-video-modal'));
+                document.querySelector('#completed-video-video').src = resp.video_url;
+                completedVideoModal.show();
             })
             .catch(error => {
                 console.error('Error generating video:', error);

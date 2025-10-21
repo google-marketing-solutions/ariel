@@ -25,7 +25,7 @@ def pcm_to_wav_base64(
         wav_bytes = wav_file.getvalue()
 
     base64_wav = base64.b64encode(wav_bytes).decode('utf-8')
-    duration = (num_frames / sample_rate) * 1000
+    duration = (num_frames / sample_rate)
     return base64_wav, duration
 
 
