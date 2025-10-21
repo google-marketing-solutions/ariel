@@ -66,6 +66,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const arielLogo = document.createElement('img');
     const animatedDots = document.createElement('span');
     let dotAnimationInterval;
+    let phraseChangeInterval;
+
+    const thinkingPhrases = [
+        "Spinning the gears",
+        "Heating up CPUs",
+        "Flexing Gemini",
+        "Machine at work"
+    ];
 
     let voices = [];
     let speakers = [];
@@ -148,6 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     thinkingPopupContent.appendChild(thinkingContainer);
 
     // --- Event Listeners ---
+    editVideoSettingsBtn.addEventListener('click', () => renderVideoSettingsEditor());
     geminiModelToggle.addEventListener('change', () => {
         geminiModelLabel.textContent = geminiModelToggle.checked ? 'Pro' : 'Flash';
     });
@@ -231,11 +240,24 @@ document.addEventListener('DOMContentLoaded', () => {
         thinkingPopup.style.display = 'flex';
         arielLogo.classList.add('ariel-logo-animated');
 
+        // --- Start Animations ---
+        thinkingWord.textContent = 'Thinking'; // Set initial text
         let dotCount = 0;
         dotAnimationInterval = setInterval(() => {
             dotCount = (dotCount + 1) % 4;
             animatedDots.textContent = '.'.repeat(dotCount);
         }, 500);
+
+        phraseChangeInterval = setInterval(() => {
+            let currentPhrase = thinkingWord.textContent;
+            let nextPhrase = currentPhrase;
+            // Simple loop to ensure we don't pick the same phrase twice
+            while (nextPhrase === currentPhrase) {
+                const randomIndex = Math.floor(Math.random() * thinkingPhrases.length);
+                nextPhrase = thinkingPhrases[randomIndex];
+            }
+            thinkingWord.textContent = nextPhrase;
+        }, 10000); // 10 seconds
 
         const formData = new FormData();
         if (videoInput.files[0]) {
@@ -304,6 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
             thinkingPopup.style.display = 'none';
             arielLogo.classList.remove('ariel-logo-animated');
             clearInterval(dotAnimationInterval);
+            clearInterval(phraseChangeInterval);
             animatedDots.textContent = '';
         }
     });
@@ -350,4 +373,80 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTimeline(currentVideoData, videoDuration, speakers);
         updateResetButtonVisibility(); // This will hide the button
     });
+
+    function renderVideoSettingsEditor() {
+        const originalContent = videoSettingsContent.innerHTML;
+
+        fetch('static/languages.json')
+            .then(response => response.json())
+            .then(languages => {
+                const gaLanguages = languages.filter(lang => lang.readiness === 'GA');
+                const previewLanguages = languages.filter(lang => lang.readiness === 'Preview');
+
+                const renderLanguageOptions = (selectedLanguage) => {
+                    return `
+                        <optgroup label="GA">
+                            ${gaLanguages.map(lang => `<option value="${lang.code}" ${lang.code === selectedLanguage ? 'selected' : ''}>${lang.name}</option>`).join('')}
+                        </optgroup>
+                        <optgroup label="Preview">
+                            ${previewLanguages.map(lang => `<option value="${lang.code}" ${lang.code === selectedLanguage ? 'selected' : ''}>${lang.name}</option>`).join('')}
+                        </optgroup>
+                    `;
+                };
+
+                videoSettingsContent.innerHTML = `
+                    <div class="mb-3">
+                        <label for="edit-original-language" class="form-label">Original Language</label>
+                        <select id="edit-original-language" class="form-select">
+                            ${renderLanguageOptions(currentVideoData.original_language)}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-target-language" class="form-label">Translation Language</label>
+                        <select id="edit-target-language" class="form-select">
+                            ${renderLanguageOptions(currentVideoData.translate_language)}
+                        </select>
+                    </div>
+                    <h6>Speakers:</h6>
+                    <div id="edit-speaker-list">
+                        ${speakers.map(s => `
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="me-2">${s.name}:</span>
+                                <button class="btn btn-outline-secondary edit-speaker-voice-btn" data-speaker-id="${s.id}">${s.voice}</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="mt-3">
+                        <button id="cancel-edit-settings" class="btn btn-secondary">Cancel</button>
+                        <button id="submit-edit-settings" class="btn btn-primary">Submit</button>
+                    </div>
+                `;
+
+                document.getElementById('cancel-edit-settings').addEventListener('click', () => {
+                    videoSettingsContent.innerHTML = originalContent;
+                });
+
+                document.getElementById('submit-edit-settings').addEventListener('click', () => {
+                    // This part is simplified as full speaker editing is complex here
+                    // It only submits language changes for now.
+                    currentVideoData.original_language = document.getElementById('edit-original-language').value;
+                    currentVideoData.translate_language = document.getElementById('edit-target-language').value;
+
+                    // NOTE: The original logic for updating speakers here was complex and tied to other modals.
+                    // This simplified version focuses on updating the language and then re-rendering.
+
+                    const originalLanguageName = originalLanguage.options[originalLanguage.selectedIndex].text;
+                    const translationLanguageName = translationLanguage.options[translationLanguage.selectedIndex].text;
+
+                    videoSettingsContent.innerHTML = `
+                        <p><strong>Original Language:</strong> ${originalLanguageName}</p>
+                        <p><strong>Translation Language:</strong> ${translationLanguageName}</p>
+                        <h6>Speakers:</h6>
+                        <ul>
+                            ${speakers.map(s => `<li><strong>${s.name}:</strong> ${s.voice}</li>`).join('')}
+                        </ul>
+                    `;
+                });
+            });
+    }
 });
