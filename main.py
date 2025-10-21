@@ -93,20 +93,17 @@ async def process_video(
     translated_text = translate_text(
       genai_client, original_language, translate_language, t.transcript, t.tone
     )
-    # Needed until we have an allow-listed project for Gemini TTS
-    audio_client = genai.Client(api_key=config.gemini_api_key)
-    generated_audio, audio_duration = generate_audio(
-      audio_client,
+
+    local_audio_path = os.path.join(local_dir, f"audio_{i}.mp3")
+    audio_duration = generate_audio(
       translated_text,
+      t.tone,
+      translate_language,
       speaker.voice,
+      local_audio_path,
       model_name=config.gemini_tts_model,
     )
-    if audio_duration > 0.0:
-      local_audio_path = os.path.join(local_dir, f"audio_{i}.wav")
-      save_audio_file(generated_audio, local_audio_path)
-    else:
-      local_audio_path = ""
-    translated_end_time = t.start_time + (audio_duration / 1000)
+    translated_end_time = t.start_time + audio_duration
 
     u = Utterance(
       id=uid,

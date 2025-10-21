@@ -19,6 +19,7 @@ dependencies = [
     "audioop-lts>=0.2.2",
     "google-cloud-logging>=3.12.1",
     "torchcodec>=0.8.0",
+    "google-cloud-texttospeech>=2.32.0",
 ]
 
 [dependency-groups]
