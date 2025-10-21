@@ -42,5 +42,5 @@ def get_config() -> Config:
         video_format=os.environ.get('VIDEO_FORMAT', 'mp4'),
         gemini_api_key=os.environ.get('GEMINI_API_KEY'),
         gemini_tts_model=os.environ.get('GEMINI_TTS_MODEL',
-                                        'gemini-2.5-flash-preview-tts'),
+                                        'gemini-2.5-pro-tts'),
     )
