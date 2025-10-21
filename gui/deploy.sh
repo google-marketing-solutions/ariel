@@ -45,6 +45,10 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
   --role="roles/aiplatform.user"
 
+echo "Granting Vertex AI user access to solution service account..."
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:${SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/aiplatform.user"
 
 echo "Replacing placeholder variables in templates/index.html..."
 sed -i "s/\$PROJECT_ID/$PROJECT_ID/g" templates/index.html
