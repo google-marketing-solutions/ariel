@@ -20,7 +20,8 @@ gcloud services enable \
     cloudbuild.googleapis.com \
     iap.googleapis.com \
     run.googleapis.com \
-    iam.googleapis.com
+    iam.googleapis.com \
+    generativelanguage.googleapis.com
 
 echo "Creating IAP SA..."
 gcloud beta services identity create \
