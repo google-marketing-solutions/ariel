@@ -114,6 +114,8 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
     const initialTranslatedText = utterance.translated_text;
     const initialInstructions = utterance.instructions || '';
     const initialSpeaker = utterance.speaker.voice;
+    const initialTranslatedStartTime = utterance.translated_start_time;
+    const initialTranslatedEndTime = utterance.translated_end_time;
 
     console.log('Editing utterance:', JSON.stringify(utterance, null, 2)); // DEBUG
 
@@ -235,6 +237,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
                     return runRegenerateDubbing(currentVideoData, utterance, index, dubbingInstructions);
                 }).then(() => {
                     saveUtteranceChanges();
+                    document.activeElement.blur(); // Remove focus from the button
                     confirmationModal.hide();
                     cleanup();
                 });
@@ -242,6 +245,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
 
             const noHandler = () => {
                 saveUtteranceChanges();
+                document.activeElement.blur(); // Remove focus from the button
                 confirmationModal.hide();
                 cleanup();
             };
@@ -331,4 +335,76 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
     setupTextToSpeechListeners(utterance, utteranceEditorContent);
 
     // ... other listeners like close, TTS, etc. ...
+
+    const closeEditorBtn = utteranceEditor.querySelector('.btn-close'); // Get the existing 'x' button
+    closeEditorBtn.addEventListener('click', () => {
+        const currentOriginalText = document.getElementById('original-text-area').value;
+        const currentTranslatedText = document.getElementById('translated-text-area').value;
+        const currentInstructions = document.getElementById('intonation-instructions-area').value;
+        const currentSpeaker = document.getElementById('speaker-select').value;
+        const currentTranslatedStartTime = parseFloat(document.getElementById('translated-start-time-input').value);
+        const currentTranslatedEndTime = parseFloat(document.getElementById('translated-end-time-input').value);
+
+        const hasChanges = (
+            currentOriginalText !== initialOriginalText ||
+            currentTranslatedText !== initialTranslatedText ||
+            currentInstructions !== initialInstructions ||
+            currentSpeaker !== initialSpeaker ||
+            currentTranslatedStartTime !== initialTranslatedStartTime ||
+            currentTranslatedEndTime !== initialTranslatedEndTime
+        );
+
+        if (hasChanges) {
+            const modalEl = document.getElementById('confirmation-modal');
+            const modalTitle = modalEl.querySelector('.modal-title');
+            const modalBody = modalEl.querySelector('.modal-body');
+            const confirmBtn = modalEl.querySelector('#confirm-close-btn');
+            const cancelBtn = modalEl.querySelector('[data-bs-dismiss="modal"]');
+
+            // Store original modal state to restore it later
+            const originalTitle = modalTitle.textContent;
+            const originalBody = modalBody.innerHTML;
+            const originalConfirmText = confirmBtn.textContent;
+            const originalConfirmClasses = confirmBtn.className;
+
+            const cleanup = () => {
+                modalTitle.textContent = originalTitle;
+                modalBody.innerHTML = originalBody;
+                confirmBtn.textContent = originalConfirmText;
+                confirmBtn.className = originalConfirmClasses;
+            };
+
+            modalTitle.textContent = 'Discard Changes?';
+            modalBody.innerHTML = '<p>You have unsaved changes. Are you sure you want to close without saving?</p>';
+            confirmBtn.textContent = 'Yes, Discard';
+            confirmBtn.className = 'btn btn-danger';
+
+            const yesDiscardHandler = () => {
+                utteranceEditor.style.display = 'none';
+                confirmationModal.hide();
+                cleanup();
+            };
+
+            const noDiscardHandler = () => {
+                // Do not hide utteranceEditor, just the confirmation modal
+                confirmationModal.hide();
+                cleanup();
+            };
+
+            confirmBtn.addEventListener('click', yesDiscardHandler, { once: true });
+            cancelBtn.addEventListener('click', noDiscardHandler, { once: true });
+            confirmationModal.show();
+
+        } else {
+            utteranceEditor.style.display = 'none';
+        }
+    });
+
+    // Event listener for when the confirmation modal is hidden
+    document.getElementById('confirmation-modal').addEventListener('hidden.bs.modal', () => {
+        // If the utterance editor is still visible, hide it
+        if (utteranceEditor.style.display === 'block') {
+            utteranceEditor.style.display = 'none';
+        }
+    }, { once: true }); // Use { once: true } to prevent multiple listeners if editUtterance is called multiple times
 }

@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'edit-speaker-voice-modal-template',
         'confirmation-modal-template',
         'thinking-popup-template',
-        'completed-video-template'
+        'generated-video-view-template'
     ];
     templates.forEach(id => {
         const template = document.getElementById(id);
@@ -61,6 +61,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const editVoiceSearch = document.getElementById('edit-voice-search');
     const editVoiceListModal = document.getElementById('edit-voice-list');
     const saveVoiceBtn = document.getElementById('save-voice-btn');
+
+    // Generated Video View elements
+    const generatedVideoView = document.getElementById('generated-video-view');
+    const generatedVideoPreview = document.getElementById('generated-video-preview');
+    const downloadVideoButton = document.getElementById('download-video-button');
+    const goBackToEditingButton = document.getElementById('go-back-to-editing-button');
 
     // Thinking Popup
     const thinkingPopup = document.getElementById('thinking-popup');
@@ -111,7 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
             speakerCard.innerHTML = `
                 <span>${speaker.name}</span>
                 <span class="speaker-voice">${speaker.voiceName}</span>
-                <button class="btn btn-sm btn-outline-secondary edit-speaker-btn" data-speaker-id="${speaker.id}"><i class="bi bi-pencil"></i></button>
+                <i class="ms-2 bi ${speaker.gender === 'Male' ? 'bi-gender-male' : 'bi-gender-female'}"></i>
+                <button class="btn btn-sm btn-outline-secondary edit-speaker-btn d-flex align-items-center justify-content-center" data-speaker-id="${speaker.id}"><i class="bi bi-pencil"></i></button>
                 <button class="btn-close" aria-label="Remove"></button>
             `;
             speakerList.appendChild(speakerCard);
@@ -348,19 +355,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    generateVideoBtn.addEventListener('click', () => {
-        generateVideo(currentVideoData)
-            .then(result => {
-                console.log("Got the following from the backend:");
-                console.log(result);
-                const resp = JSON.parse(result);
-                const completedVideoModal = new bootstrap.Modal(document.getElementById('completed-video-modal'));
-                document.querySelector('#completed-video-video').src = resp.video_url;
-                completedVideoModal.show();
-            })
-            .catch(error => {
-                console.error('Error generating video:', error);
-            });
+    generateVideoBtn.addEventListener('click', async () => {
+        thinkingPopup.style.display = 'flex';
+        arielLogo.classList.add('ariel-logo-animated');
+        // Start animations (dots, phrases) - similar to startProcessingBtn
+        // For now, I'll just show/hide the popup and animation class.
+        // The dot and phrase animations are already handled by the startProcessingBtn logic.
+
+        try {
+            const result = await generateVideo(currentVideoData);
+            console.log("Got the following from the backend:", result.video_url);
+
+            thinkingPopup.style.display = 'none';
+            arielLogo.classList.remove('ariel-logo-animated');
+            // Stop animations (dots, phrases) - similar to startProcessingBtn
+
+            resultsView.style.display = 'none'; // Collapse Timeline and Utterances
+
+            // Display generated video view
+            generatedVideoView.style.display = 'block';
+            generatedVideoPreview.src = result.video_url;
+
+            // Set up download button
+            downloadVideoButton.href = result.video_url;
+            downloadVideoButton.download = `generated_video_${currentVideoData.video_id}.mp4`;
+
+        } catch (error) {
+            console.error('Error generating video:', error);
+            // Show error message to user
+        } finally {
+            thinkingPopup.style.display = 'none';
+            arielLogo.classList.remove('ariel-logo-animated');
+            // Stop animations (dots, phrases) - similar to startProcessingBtn
+        }
     });
 
     confirmCloseBtn.addEventListener('click', () => {
@@ -574,5 +601,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
             });
+
+    goBackToEditingButton.addEventListener('click', () => {
+        generatedVideoView.style.display = 'none';
+        resultsView.style.display = 'block'; // Show Timeline and Utterances again
+    });
     }
 });

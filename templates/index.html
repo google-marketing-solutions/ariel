@@ -254,7 +254,18 @@
     <template id="thinking-popup-template">
         <div id="thinking-popup" class="thinking-popup" style="display: none;">
             <div class="thinking-popup-content">
-                <p>Thinking<span class="dots">...</span></p>
+                <!-- Content injected by JS -->
+            </div>
+        </div>
+    </template>
+
+    <template id="generated-video-view-template">
+        <div id="generated-video-view" style="display: none;">
+            <h3>Generated Video</h3>
+            <video id="generated-video-preview" controls width="100%"></video>
+            <div class="mt-3">
+                <a id="download-video-button" class="btn btn-primary me-2" download>Download Video</a>
+                <button id="go-back-to-editing-button" class="btn btn-secondary">Go back to editing</button>
             </div>
         </div>
     </template>
