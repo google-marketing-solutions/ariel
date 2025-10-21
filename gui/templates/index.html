@@ -265,6 +265,12 @@
             width: auto;
             padding: 0.75rem 1.5rem;
         }
+        .error-message {
+            color: #EA4335;
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+            display: none; /* Hidden by default */
+        }
         #btn-clone-utterance { background-color: #34A853; }
         #btn-clone-utterance:hover { background-color: #2c8a42; }
         #btn-regenerate-utterance { background-color: #fbbc05; }
@@ -321,11 +327,13 @@
                     </div>
                     <div class="form-group dub-only">
                         <label for="original_language">Original Language</label>
-                        <input type="text" id="original_language" name="original_language" value="es-ES">
+                        <input type="text" id="original_language" name="original_language" value="es-ES" onchange="validateLanguageCode(this, document.getElementById('original-language-error'))">
+                        <span id="original-language-error" class="error-message"></span>
                     </div>
                     <div class="form-group dub-only">
                         <label for="target_language">Target Language</label>
-                        <input type="text" id="target_language" name="target_language" value="en-US">
+                        <input type="text" id="target_language" name="target_language" value="en-US" onchange="validateLanguageCode(this, document.getElementById('target-language-error'))">
+                        <span id="target-language-error" class="error-message"></span>
                     </div>
                 </div>
                 <div class="form-group full-width">
@@ -467,11 +475,13 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Source Language</label>
-                        <input id="source-language"></input>
+                        <input id="source-language" onchange="validateLanguageCode(this, document.getElementById('review-source-language-error'))"></input>
+                        <span id="review-source-language-error" class="error-message"></span>
                     </div>
                     <div class="form-group">
                         <label>Target Language</label>
-                        <input id="target-language"></input>
+                        <input id="target-language" onchange="validateLanguageCode(this, document.getElementById('review-target-language-error'))"></input>
+                        <span id="review-target-language-error" class="error-message"></span>
                     </div>
                     
                 </div>
@@ -595,11 +605,13 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Source Language</label>
-                        <input id="edit-source-language"></input>
+                        <input id="edit-source-language" onchange="validateLanguageCode(this, document.getElementById('edit-source-language-error'))"></input>
+                        <span id="edit-source-language-error" class="error-message"></span>
                     </div>
                     <div class="form-group">
                         <label>Target Language</label>
-                        <input id="edit-target-language"></input>
+                        <input id="edit-target-language" onchange="validateLanguageCode(this, document.getElementById('edit-target-language-error'))"></input>
+                        <span id="edit-target-language-error" class="error-message"></span>
                     </div>
                     
                 </div>
@@ -1070,6 +1082,26 @@ document.addEventListener('DOMContentLoaded', function() {
         const modalThrobber = document.getElementById('modal-throbber-overlay');
         modalThrobber.style.display = 'flex';
         
+        const editSourceLanguageInput = document.getElementById('edit-source-language');
+        const editTargetLanguageInput = document.getElementById('edit-target-language');
+        const editSourceLanguageError = document.getElementById('edit-source-language-error');
+        const editTargetLanguageError = document.getElementById('edit-target-language-error');
+
+        if (!validateLanguageCode(editSourceLanguageInput, editSourceLanguageError)) {
+            modalThrobber.style.display = 'none';
+            btnRegenerateUtterance.disabled = false;
+            btnSaveUtterance.disabled = false;
+            btnCloneUtterance.disabled = false;
+            return;
+        }
+        if (!validateLanguageCode(editTargetLanguageInput, editTargetLanguageError)) {
+            modalThrobber.style.display = 'none';
+            btnRegenerateUtterance.disabled = false;
+            btnSaveUtterance.disabled = false;
+            btnCloneUtterance.disabled = false;
+            return;
+        }
+
         const utterance = UTTERANCES_DATA[index];
         utterance.start = parseFloat(document.getElementById('edit-start').value);
         utterance.end = parseFloat(document.getElementById('edit-end').value);
@@ -1077,6 +1109,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('edit-original-text').value;
         utterance.translated_text =
             document.getElementById('edit-translated-text').value;
+        utterance.source_language = document.getElementById('edit-source-language').value;
+        utterance.target_language = document.getElementById('edit-target-language').value;
         utterance.voice_name = document.getElementById('edit-voice-name').value;
         utterance.sync_mode = document.getElementById('edit-sync-mode').value;
         utterance.tone = document.getElementById('edit-tone').value;
@@ -1186,6 +1220,22 @@ document.addEventListener('DOMContentLoaded', function() {
         const throbber = document.querySelector('#review-section .throbber-overlay');
         throbber.style.display = 'flex';
 
+        const sourceLanguageInput = document.getElementById('source-language');
+        const targetLanguageInput = document.getElementById('target-language');
+        const sourceLanguageError = document.getElementById('review-source-language-error');
+        const targetLanguageError = document.getElementById('review-target-language-error');
+
+        if (!validateLanguageCode(sourceLanguageInput, sourceLanguageError)) {
+            btnTranslate.disabled = false;
+            throbber.style.display = 'none';
+            return;
+        }
+        if (!validateLanguageCode(targetLanguageInput, targetLanguageError)) {
+            btnTranslate.disabled = false;
+            throbber.style.display = 'none';
+            return;
+        }
+
         const utterance = UTTERANCES_DATA[CURRENT_INDEX];
         utterance.start = parseFloat(document.getElementById('start').value);
         utterance.end = parseFloat(document.getElementById('end').value);
@@ -1248,6 +1298,22 @@ document.addEventListener('DOMContentLoaded', function() {
         btnEditTranslate.disabled = true;
         const modalThrobber = document.getElementById('modal-throbber-overlay');
         modalThrobber.style.display = 'flex';
+
+        const editSourceLanguageInput = document.getElementById('edit-source-language');
+        const editTargetLanguageInput = document.getElementById('edit-target-language');
+        const editSourceLanguageError = document.getElementById('edit-source-language-error');
+        const editTargetLanguageError = document.getElementById('edit-target-language-error');
+
+        if (!validateLanguageCode(editSourceLanguageInput, editSourceLanguageError)) {
+            btnEditTranslate.disabled = false;
+            modalThrobber.style.display = 'none';
+            return;
+        }
+        if (!validateLanguageCode(editTargetLanguageInput, editTargetLanguageError)) {
+            btnEditTranslate.disabled = false;
+            modalThrobber.style.display = 'none';
+            return;
+        }
 
         const utterance = UTTERANCES_DATA[index];
         utterance.start = parseFloat(document.getElementById('edit-start').value);
@@ -1403,6 +1469,24 @@ document.addEventListener('DOMContentLoaded', function() {
         btnStart.disabled = true;
         const setupThrobber = document.getElementById('setup-throbber-overlay');
         setupThrobber.style.display = 'flex';
+
+        const originalLanguageInput = document.getElementById('original_language');
+        const targetLanguageInput = document.getElementById('target_language');
+        const originalLanguageError = document.getElementById('original-language-error');
+        const targetLanguageError = document.getElementById('target-language-error');
+
+        if (currentWorkflow === 'dub') {
+            if (!validateLanguageCode(originalLanguageInput, originalLanguageError)) {
+                btnStart.disabled = false;
+                setupThrobber.style.display = 'none';
+                return;
+            }
+            if (!validateLanguageCode(targetLanguageInput, targetLanguageError)) {
+                btnStart.disabled = false;
+                setupThrobber.style.display = 'none';
+                return;
+            }
+        }
 
         const formData = new FormData(setupForm);
 
@@ -1644,8 +1728,24 @@ document.addEventListener('DOMContentLoaded', function() {
         const throbber = document.querySelector('#review-section .throbber-overlay');
         throbber.style.display = 'flex';
 
-        
+        const sourceLanguageInput = document.getElementById('source-language');
+        const targetLanguageInput = document.getElementById('target-language');
+        const sourceLanguageError = document.getElementById('review-source-language-error');
+        const targetLanguageError = document.getElementById('review-target-language-error');
 
+        if (!validateLanguageCode(sourceLanguageInput, sourceLanguageError)) {
+            btnRegenerate.disabled = false;
+            btnApprove.disabled = false;
+            throbber.style.display = 'none';
+            return;
+        }
+        if (!validateLanguageCode(targetLanguageInput, targetLanguageError)) {
+            btnRegenerate.disabled = false;
+            btnApprove.disabled = false;
+            throbber.style.display = 'none';
+            return;
+        }
+        
         const utterance = {};
         utterance.start = parseFloat(document.getElementById('start').value);
         utterance.end = parseFloat(document.getElementById('end').value);
@@ -2437,6 +2537,18 @@ document.addEventListener('DOMContentLoaded', function() {
             parseInt(document.getElementById('edit-utterance-index').value, 10);
         if (isNaN(index) || !UTTERANCES_DATA[index]) return;
 
+        const editSourceLanguageInput = document.getElementById('edit-source-language');
+        const editTargetLanguageInput = document.getElementById('edit-target-language');
+        const editSourceLanguageError = document.getElementById('edit-source-language-error');
+        const editTargetLanguageError = document.getElementById('edit-target-language-error');
+
+        if (!validateLanguageCode(editSourceLanguageInput, editSourceLanguageError)) {
+            return;
+        }
+        if (!validateLanguageCode(editTargetLanguageInput, editTargetLanguageError)) {
+            return;
+        }
+
         const utterance = UTTERANCES_DATA[index];
         utterance.start = parseFloat(document.getElementById('edit-start').value);
         utterance.end = parseFloat(document.getElementById('edit-end').value);
@@ -2626,6 +2738,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         return true;
+    }
+
+    function validateLanguageCode(inputElement, errorMessageElement) {
+        const langCode = inputElement.value.trim();
+        // Regex for ISO 639-1 (2-letter language code) followed by a hyphen and ISO 3166-1 alpha-2 (2-letter country code)
+        const regex = /^[a-z]{2}-[A-Z]{2}$/;
+
+        if (!regex.test(langCode)) {
+            errorMessageElement.textContent = 'Invalid language code. Use ISO 639-1 format (e.g., en-US).';
+            errorMessageElement.style.display = 'block';
+            inputElement.focus();
+            return false;
+        } else {
+            errorMessageElement.style.display = 'none';
+            errorMessageElement.textContent = '';
+            return true;
+        }
     }
 
 });

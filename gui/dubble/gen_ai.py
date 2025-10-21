@@ -471,7 +471,7 @@ class DubbleLLM(GenAIInvoker):
          #   custom_pronunciations=custom_pronunciations_container
         )
         
-        voice = texttospeech.VoiceSelectionParams(language_code=config.target_language,
+        voice = texttospeech.VoiceSelectionParams(language_code=utterance.target_language,
                                           name=utterance.voice_name,
                                           model_name=config.tts_model
                                           )
