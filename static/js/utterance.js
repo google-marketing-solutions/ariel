@@ -26,7 +26,7 @@ export function renderUtterances(currentVideoData, speakers, videoDuration) {
                         <div class="utterance-card-content mt-2">
                             <p><strong>Original:</strong> ${utterance.original_text.substring(0, MAX_TEXT_SNIPPET_LENGTH)}...</p>
                             <p><strong>Translated:</strong> ${utterance.translated_text.substring(0, MAX_TEXT_SNIPPET_LENGTH)}...</p>
-                            <p><strong>Speaker:</strong> ${speakerName}</p>
+                            <p><strong>Speaker:</strong> ${speakerName} <i class="ms-2 bi ${utterance.speaker.gender === 'Male' ? 'bi-gender-male' : 'bi-gender-female'}"></i></p>
                             <div class="utterance-overlay" style="display: none;"></div>
                         </div>
                     </div>
@@ -114,6 +114,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
     const initialTranslatedText = utterance.translated_text;
     const initialInstructions = utterance.instructions || '';
     const initialSpeaker = utterance.speaker.voice;
+    let dubbingRegeneratedForSpeakerChange = false; // New flag
     const initialTranslatedStartTime = utterance.translated_start_time;
     const initialTranslatedEndTime = utterance.translated_end_time;
 
@@ -184,7 +185,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
     `;
 
     // --- Main Button Event Listeners ---
-    const saveUtteranceChanges = () => {
+    const saveUtteranceChanges = (closeEditor = true) => {
         utterance.original_text = document.getElementById('original-text-area').value;
         utterance.translated_text = document.getElementById('translated-text-area').value;
         utterance.instructions = document.getElementById('intonation-instructions-area').value;
@@ -194,7 +195,9 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
 
         renderTimeline(currentVideoData, videoDuration, speakers);
         renderUtterances(currentVideoData, speakers, videoDuration);
-        utteranceEditor.style.display = 'none';
+        if (closeEditor) {
+            utteranceEditor.style.display = 'none';
+        }
         document.dispatchEvent(new CustomEvent('timeline-changed'));
     };
 
@@ -236,10 +239,10 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
                 runRegenerateTranslation(currentVideoData, utterance, index, translationInstructions).then(() => {
                     return runRegenerateDubbing(currentVideoData, utterance, index, dubbingInstructions);
                 }).then(() => {
-                    saveUtteranceChanges();
-                    document.activeElement.blur(); // Remove focus from the button
+                    saveUtteranceChanges(false); // Pass false to prevent immediate closing
                     confirmationModal.hide();
                     cleanup();
+                    utteranceEditor.style.display = 'none'; // Close editor after regeneration
                 });
             };
 
@@ -256,30 +259,36 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
 
         } else if (newSpeaker !== initialSpeaker) {
             // --- Flow for Speaker Change ---
-            modalTitle.textContent = 'Regenerate Dubbing?';
-            modalBody.innerHTML = '<p>The speaker has changed. Would you like to regenerate the dubbing with the new voice?</p>';
-            confirmBtn.textContent = 'Yes, Regenerate';
-            confirmBtn.className = 'btn btn-primary';
-
-            const yesHandler = () => {
-                const dubbingInstructions = document.getElementById('intonation-instructions-area').value;
-                runRegenerateDubbing(currentVideoData, utterance, index, dubbingInstructions).then(() => {
-                    saveUtteranceChanges();
-                });
-                confirmationModal.hide();
-                cleanup();
-            };
-
-            const noHandler = () => {
+            if (dubbingRegeneratedForSpeakerChange) {
+                // Dubbing already regenerated for this speaker change, just save
                 saveUtteranceChanges();
-                confirmationModal.hide();
-                cleanup();
-            };
+            } else {
+                // Ask for regeneration
+                modalTitle.textContent = 'Regenerate Dubbing?';
+                modalBody.innerHTML = '<p>The speaker has changed. Would you like to regenerate the dubbing with the new voice?</p>';
+                confirmBtn.textContent = 'Yes, Regenerate';
+                confirmBtn.className = 'btn btn-primary';
 
-            confirmBtn.addEventListener('click', yesHandler, { once: true });
-            cancelBtn.addEventListener('click', noHandler, { once: true });
-            confirmationModal.show();
+                const yesHandler = () => {
+                    const dubbingInstructions = document.getElementById('intonation-instructions-area').value;
+                    runRegenerateDubbing(currentVideoData, utterance, index, dubbingInstructions).then(() => {
+                        saveUtteranceChanges(false); // Pass false to prevent immediate closing
+                        confirmationModal.hide();
+                        cleanup();
+                        utteranceEditor.style.display = 'none'; // Close editor after regeneration
+                    });
+                };
 
+                const noHandler = () => {
+                    saveUtteranceChanges();
+                    confirmationModal.hide();
+                    cleanup();
+                };
+
+                confirmBtn.addEventListener('click', yesHandler, { once: true });
+                cancelBtn.addEventListener('click', noHandler, { once: true });
+                confirmationModal.show();
+            }
         } else {
             // --- Flow for No Major Changes ---
             saveUtteranceChanges();
@@ -291,7 +300,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         runRegenerateTranslation(currentVideoData, utterance, index, instructions)
             .then((updatedUtterance) => {
                 // Update the original utterance object in videoData
-                videoData.utterances[index] = updatedUtterance;
+                currentVideoData.utterances[index] = updatedUtterance;
                 // Update the UI for this specific utterance
                 const translatedTextInput = document.getElementById('translated-text-area');
                 if (translatedTextInput) {
@@ -308,7 +317,19 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
 
     document.getElementById('regenerate-dubbing-btn').addEventListener('click', () => {
         const instructions = document.getElementById('intonation-instructions-area').value;
-        runRegenerateDubbing(currentVideoData, utterance, index, instructions);
+        // Update the utterance object with the currently selected speaker from the dropdown
+        utterance.speaker.voice = document.getElementById('speaker-select').value;
+        runRegenerateDubbing(currentVideoData, utterance, index, instructions)
+            .then(() => {
+                dubbingRegeneratedForSpeakerChange = true; // Set flag
+                // After dubbing is regenerated, re-render all utterances and the timeline to update the speaker data
+                renderUtterances(currentVideoData, speakers, videoDuration);
+                renderTimeline(currentVideoData, videoDuration, speakers);
+            })
+            .catch(error => {
+                console.error('Error regenerating dubbing:', error);
+                showToast('Failed to regenerate dubbing.', 'error');
+            });
     });
 
     function setupTextToSpeechListeners(utterance, containerElement) {

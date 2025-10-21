@@ -27,13 +27,19 @@ export function renderVoiceList(targetListElement, searchInput, genderFilterName
         const item = document.createElement('div');
         item.classList.add('list-group-item', 'list-group-item-action', 'd-flex', 'justify-content-between', 'align-items-center');
        
-        const voiceName = document.createElement('span');
-        voiceName.textContent = `${voice.name} (${voice.gender})`;
-        item.appendChild(voiceName);
+        const voiceNameSpan = document.createElement('span');
+        voiceNameSpan.classList.add('me-auto'); // Align left
+        voiceNameSpan.textContent = voice.name;
+        item.appendChild(voiceNameSpan);
+
+        const genderSpan = document.createElement('span');
+        genderSpan.classList.add('badge', 'bg-secondary', 'mx-auto'); // Center the badge
+        genderSpan.textContent = voice.gender;
+        item.appendChild(genderSpan);
 
         if (voice.url) {
             const playButton = document.createElement('button');
-            playButton.classList.add('btn', 'btn-sm', 'btn-outline-secondary');
+            playButton.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ms-auto'); // Align right
             playButton.innerHTML = '<i class="bi bi-play-fill"></i>';
 
             playButton.addEventListener('click', (e) => {

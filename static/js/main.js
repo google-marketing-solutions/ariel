@@ -302,7 +302,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await processVideo(formData);
             console.log('Received result from backend:', JSON.stringify(result, null, 2)); // DEBUG
             currentVideoData = result;
+            // Enrich utterance.speaker with gender information from the frontend speakers array
             currentVideoData.utterances.forEach(utterance => {
+                const matchingSpeaker = speakers.find(s => s.voice === utterance.speaker.voice);
+                if (matchingSpeaker) {
+                    utterance.speaker.gender = matchingSpeaker.gender;
+                }
                 // Store the initial translated times for future reverts.
                 utterance.initial_translated_start_time = utterance.translated_start_time;
                 utterance.initial_translated_end_time = utterance.translated_end_time;
@@ -459,6 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${speakers.map(s => `
                             <div class="d-flex align-items-center mb-2">
                                 <span class="me-2">${s.name}:</span>
+                                <i class="ms-2 bi ${s.gender === 'Male' ? 'bi-gender-male' : 'bi-gender-female'} text-dark"></i>
                                 <button class="btn btn-outline-secondary edit-speaker-voice-btn" data-speaker-id="${s.id}" data-voice-id="${s.voice}">${s.voiceName}</button>
                             </div>
                         `).join('')}
@@ -539,6 +545,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             const result = await processVideo(formData);
                             currentVideoData = result;
+                            // Enrich utterance.speaker with gender information from the frontend speakers array
+                            currentVideoData.utterances.forEach(utterance => {
+                                const matchingSpeaker = speakers.find(s => s.voice === utterance.speaker.voice);
+                                if (matchingSpeaker) {
+                                    utterance.speaker.gender = matchingSpeaker.gender;
+                                }
+                            });
                             // This would effectively reload the results view, which is a larger refactor.
                             // For now, we'll just update the data and re-render.
                             renderTimeline(currentVideoData, videoDuration, speakers);
