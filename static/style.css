@@ -136,6 +136,10 @@ body {
     color: var(--primary-text-color);
 }
 
+.modal-content video {
+    max-width: 85vw;
+}
+
 .voice-list-modal {
     max-height: 300px;
     overflow-y: auto;
