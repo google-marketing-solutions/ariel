@@ -2715,13 +2715,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function validateLanguageCode(inputElement, errorMessageElement) {
     const langCode = inputElement.value.trim();
-    // Regex for ISO 639-1 (2-letter language code) followed by a hyphen and ISO
-    // 3166-1 alpha-2 (2-letter country code)
-    const regex = /^[a-z]{2}-[A-Z]{2}$/;
+    // Regex for ll-CC (e.g., en-US) or ll-DDD (e.g., es-419) format
+    const regex = /^[a-z]{2}-([A-Z]{2}|\d{3})$/;
 
     if (!regex.test(langCode)) {
       errorMessageElement.textContent =
-          'Invalid language code. Use ISO 639-1 format (e.g., en-US).';
+          'Invalid language code. Use ll-CC (e.g., en-US) or ll-DDD (e.g., es-419) format.';
       errorMessageElement.style.display = 'block';
       inputElement.focus();
       return false;
