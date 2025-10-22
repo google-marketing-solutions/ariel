@@ -1,9 +1,24 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 #!/bin/bash
 PROJECT_ID="my-project-id"
 PROJECT_NUMBER="my-project-number"
 SERVICE_NAME="dubble-gui"
 REGION="us-central1"
 SERVICE_ACCOUNT="dubble-sa"
+
 
 # --- User Access ---
 # Add the email of the user or group you want to grant access to.
@@ -12,7 +27,6 @@ MEMBER_TO_GRANT_ACCESS="my-user@my-domain.com"
 
 echo "Setting region..."
 gcloud config set run/region $REGION
-
 
 echo "Enabling necessary services..."
 gcloud services enable \
@@ -33,7 +47,6 @@ echo "Creating service account..."
 gcloud iam service-accounts create $SERVICE_ACCOUNT \
   --display-name="Dubble Service Account" \
   --project=$PROJECT_ID
-
 
 echo "Granting IAP access to the Service..."
 gcloud run services add-iam-policy-binding $SERVICE_NAME \

@@ -47,21 +47,23 @@ def separate_audio_from_video(config: DubbleConfig) -> DubbleConfig:
       output files.
   """
 
-  original_audio_name = "original_audio"
-  original_audio_extension = "wav"
+  original_audio_name = 'original_audio'
+  original_audio_extension = 'wav'
   video = VideoFileClip(config.video_file_path)
   audio = video.audio
-  original_audio_path = f"{config.output_local_path}/{original_audio_name}.{original_audio_extension}"
+  original_audio_path = f'{config.output_local_path}/{original_audio_name}.{original_audio_extension}'
   audio.write_audiofile(original_audio_path, codec='pcm_s16le')
   command = (
-      f"python3 -m demucs --two-stems=vocals -n htdemucs --out {config.output_local_path}"
-      f" {original_audio_path}"
+      'python3 -m demucs --two-stems=vocals -n htdemucs --out'
+      f' {config.output_local_path} {original_audio_path}'
   )
   subprocess.run(command, shell=True, check=True)
 
-  base_htdemucs_path = os.path.join(config.output_local_path, "htdemucs", original_audio_name)
-  vocals_path = os.path.join(base_htdemucs_path, "vocals.wav")
-  background_path = os.path.join(base_htdemucs_path, "no_vocals.wav")
+  base_htdemucs_path = os.path.join(
+      config.output_local_path, 'htdemucs', original_audio_name
+  )
+  vocals_path = os.path.join(base_htdemucs_path, 'vocals.wav')
+  background_path = os.path.join(base_htdemucs_path, 'no_vocals.wav')
 
   if os.path.exists(vocals_path) and os.path.exists(background_path):
     config.vocals_path = vocals_path
@@ -192,7 +194,11 @@ def assemble_final_video(
       original_video_clip = VideoFileClip(config.video_file_path)
 
       final_audio = CompositeAudioClip(
-          [background_clip.volumex(config.music_volume)] + [vocal_clip.volumex(config.speech_volume) for vocal_clip in timed_vocal_clips]
+          [background_clip.volumex(config.music_volume)]
+          + [
+              vocal_clip.volumex(config.speech_volume)
+              for vocal_clip in timed_vocal_clips
+          ]
       )
       final_audio.duration = min(
           final_audio.duration, original_video_clip.duration
@@ -280,6 +286,7 @@ def get_audio_file_from_llm_bytes_response(
   os.remove(save_path)
 
   return clip
+
 
 def get_audio_file_from_llm_parts_response(
     save_path: str, llm_response: Any

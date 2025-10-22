@@ -14,8 +14,8 @@
 
 """The module of Dubble package containing class definition for data exchange."""
 
-import json
 import dataclasses
+import json
 from typing import Any
 from dubble.configuration import DubbleConfig
 
@@ -66,8 +66,16 @@ class DubbleTTSData:
     speaker_id = data.get('speaker_id', 'SPEAKER_01')
     start = float(data.get('start', -1.0))
     end = float(data.get('end', -1.0))
-    source_language = config.original_language if not data.get('source_language', None) else data.get('source_language', None)
-    target_language = config.target_language if not data.get('target_language', None) else data.get('target_language', None)
+    source_language = (
+        config.original_language
+        if not data.get('source_language', None)
+        else data.get('source_language', None)
+    )
+    target_language = (
+        config.target_language
+        if not data.get('target_language', None)
+        else data.get('target_language', None)
+    )
     original_text = data.get('original_text', '')
     translated_text = data.get('translated_text', '')
     tts_prompt = data.get('tts_prompt', config.DEFAULT_TTS_PROMPT_TEMPLATE)

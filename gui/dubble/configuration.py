@@ -198,7 +198,6 @@ class DubbleConfig:
       # Speed Cap Control
       feature_speed_up_enable: Optional[bool] = None,
       max_speed_up_ratio: Optional[float] = None,
-      
       brand_name: Optional[str] = None,
       gcp_project: Optional[str] = None,
       gcp_project_location: Optional[str] = None,
@@ -272,14 +271,17 @@ class DubbleConfig:
     self.video_file_path = self.get_value(video_file_path, '')
     self.video_file_path_input = self.get_value(video_file_path_input, '')
     self.script = self.get_value(script, '')
-    self.prompt_library = self.get_value(prompt_library, {
-        'diarization': DubbleConfig.DEFAULT_PROMPT_DIARIZATION,
-        'translation': DubbleConfig.DEFAULT_PROMPT_TRANSLATION,
-        'translation_refinement': (
-            DubbleConfig.DEFAULT_PROMPT_TRANSLATION_REFINEMENT
-        ),
-        'tts_prompt_template': DubbleConfig.DEFAULT_TTS_PROMPT_TEMPLATE,
-    })
+    self.prompt_library = self.get_value(
+        prompt_library,
+        {
+            'diarization': DubbleConfig.DEFAULT_PROMPT_DIARIZATION,
+            'translation': DubbleConfig.DEFAULT_PROMPT_TRANSLATION,
+            'translation_refinement': (
+                DubbleConfig.DEFAULT_PROMPT_TRANSLATION_REFINEMENT
+            ),
+            'tts_prompt_template': DubbleConfig.DEFAULT_TTS_PROMPT_TEMPLATE,
+        },
+    )
 
     self.output_bucket = self.get_value(output_bucket, '')
     self.output_local_path = self.get_value(output_local_path, '.')

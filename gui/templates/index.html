@@ -1,5 +1,22 @@
+<!--
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+-->
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -298,6 +315,7 @@
         #btn-cancel-apply { background-color: #EA4335; } #btn-cancel-apply:hover { background-color: #d0382b; }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>🤖 Dubble: AI Video Dubbing</h1>
@@ -320,7 +338,7 @@
             <h2>Initial Configuration</h2>
             <form id="setup-form">
                 <div class="form-grid">
-                    
+
                     <div class="form-group">
                         <label for="brand_name">Brand Name</label>
                         <input type="text" id="brand_name" name="brand_name" placeholder="e.g., 'MyBrand'">
@@ -350,13 +368,13 @@
                         </div>
                     </div>
                 </div>
-                    
-                
+
+
                 <button type="button" class="collapsible">Advanced Configuration</button>
                 <div class="collapsible-content">
                     <div class="form-group full-width dub-only">
-                            <label for="script">Manual TTS Script</label>
-                            <textarea id="script" name="script"></textarea>
+                        <label for="script">Manual TTS Script</label>
+                        <textarea id="script" name="script"></textarea>
                     </div>
                     <div class="form-grid">
                         <div class="form-group full-width">
@@ -369,7 +387,7 @@
                         </div>
                     </div>
                     <div class="form-grid">
-                        
+
                         <!-- Models -->
                         <div class="form-group">
                             <label for="analysis_model">Analysis Model</label>
@@ -383,7 +401,7 @@
                             <label for="tts_model">TTS Model</label>
                             <input type="text" id="tts_model" name="tts_model" value="gemini-2.5-pro-preview-tts">
                         </div>
-                        
+
                         <!-- Temperature Controls -->
                         <div class="form-group">
                             <label for="analysis_temperature_num">Analysis Temperature</label>
@@ -429,7 +447,7 @@
                             <input type="number" id="max_concurrent_threads_num" name="max_concurrent_threads" value="1" min="1" max="10">
                             <input type="range" id="max_concurrent_threads_range" value="1" min="1" max="10">
                         </div>
-                         <div class="form-group">
+                        <div class="form-group">
                             <label for="prompt_edit">Enable Prompt Editing</label>
                             <input type="checkbox" id="prompt_edit" name="prompt_edit" checked style="width: auto;">
                         </div>
@@ -483,7 +501,7 @@
                         <input id="target-language" onchange="validateLanguageCode(this, document.getElementById('review-target-language-error'))"></input>
                         <span id="review-target-language-error" class="error-message"></span>
                     </div>
-                    
+
                 </div>
                 <div class="form-grid">
                     <div class="form-group">
@@ -502,7 +520,7 @@
                         <textarea id="translated-text"></textarea>
                     </div>
                 </div>
-                 <div class="form-grid">
+                <div class="form-grid">
                     <div class="form-group">
                         <label for="voice-name">Voice</label>
                         <select id="voice-name" name="voice_name"></select>
@@ -542,7 +560,7 @@
                 </div>
             </form>
             <audio id="audio-player" controls style="width: 100%; margin-top: 1rem; display: none;">
-       
+
             </audio>
             <div class="review-controls">
                 <button id="btn-start-over" style="background-color: #EA4335;">Start Over</button>
@@ -563,13 +581,14 @@
                 <div id="timeline"></div>
             </div>
             <div class="form-grid">
-                                    <div class="form-group">
-                                        <label for="background_music_volume_range">Background Music Volume: <span id="background_music_volume_display">50%</span></label>
-                                        <input type="range" id="background_music_volume_range" name="background_music_volume" value="50" step="1" min="0" max="200">
-                                    </div>                    <div class="form-group">
-                        <label for="speech_volume_range">Speech Volume: <span id="speech_volume_display">100%</span></label>
-                        <input type="range" id="speech_volume_range" name="speech_volume" value="100" step="1" min="0" max="200">
-                    </div>
+                <div class="form-group">
+                    <label for="background_music_volume_range">Background Music Volume: <span id="background_music_volume_display">50%</span></label>
+                    <input type="range" id="background_music_volume_range" name="background_music_volume" value="50" step="1" min="0" max="200">
+                </div>
+                <div class="form-group">
+                    <label for="speech_volume_range">Speech Volume: <span id="speech_volume_display">100%</span></label>
+                    <input type="range" id="speech_volume_range" name="speech_volume" value="100" step="1" min="0" max="200">
+                </div>
             </div>
             <div class="form-grid">
                 <button type="button" id="btn-assemble-final" disabled>Assemble Video</button>
@@ -577,7 +596,7 @@
             </div>
             <button type="button" id="btn-start-over-long" style="background-color: #EA4335;">Start Over</button>
         </div>
-        
+
         <div id="status-message" class="status"></div>
     </div>
 
@@ -613,7 +632,7 @@
                         <input id="edit-target-language" onchange="validateLanguageCode(this, document.getElementById('edit-target-language-error'))"></input>
                         <span id="edit-target-language-error" class="error-message"></span>
                     </div>
-                    
+
                 </div>
                 <div class="form-grid">
                     <div class="form-group">
@@ -661,7 +680,7 @@
                         <label for="edit-vocal-style-prompt">Vocal Style Prompt</label>
                         <input type="text" id="edit-vocal-style-prompt" name="vocal_style_prompt">
                     </div>
-                    
+
                     <div class="form-group" style="display: none;">
                         <label for="edit-special-instructions">Special Instructions</label>
                         <input type="text" id="edit-special-instructions" name="special_instructions">
@@ -720,2043 +739,1998 @@
         </div>
     </div>
 
-        <!-- Assembly Modal -->    <div id="assembly-modal" class="modal">        <div class="modal-content" style="text-align: center;">            <h2>Assembling Video...</h2>        </div>    </div>
+    <!-- Assembly Modal -->
+    <div id="assembly-modal" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <h2>Assembling Video...</h2> </div>
+    </div>
 
-    
-
-        <!-- Fine-tune Instructions Modal -->    
-         <div id="fine-tune-instructions-modal" class="modal">        <div class="modal-content">            <span class="close-button" id="close-fine-tune-instructions-modal">&times;</span>            <h2>Instructions</h2>            <p>Now generate the speech for all your utterances and the Assemble Video button will be enabled. When a utterance has speech generated, its play button turns green.</p>            <div class="modal-buttons" style="justify-content: center;">                <button id="btn-close-fine-tune-instructions-modal">Close</button>            </div>        </div>    </div>
-
-    
-
+    <!-- Fine-tune Instructions Modal -->
+    <div id="fine-tune-instructions-modal" class="modal">
+        <div class="modal-content"> <span class="close-button" id="close-fine-tune-instructions-modal">&times;</span>
+            <h2>Instructions</h2>
+            <p>Now generate the speech for all your utterances and the Assemble Video button will be enabled. When a utterance has speech generated, its play button turns green.</p>
+            <div class="modal-buttons" style="justify-content: center;">
+                <button id="btn-close-fine-tune-instructions-modal">Close</button>
+            </div>
+        </div>
+    </div>
     <script>
 
 document.addEventListener('DOMContentLoaded', function() {
+  document.querySelector('.collapsible').addEventListener('click', function() {
+    this.classList.toggle('active');
 
-    document.querySelector('.collapsible').addEventListener('click', function() {
+    const content = this.nextElementSibling;
 
-        this.classList.toggle('active');
+    if (content.style.display === 'block') {
+      content.style.display = 'none';
 
-        const content = this.nextElementSibling;
+    } else {
+      content.style.display = 'block';
+    }
+  });
 
-        if (content.style.display === 'block') {
+  // --- SLIDER SYNCHRONIZATION ---
 
-            content.style.display = 'none';
+  function setupSlider(numId, rangeId) {
+    const numInput = document.getElementById(numId);
 
-        } else {
+    const rangeInput = document.getElementById(rangeId);
 
-            content.style.display = 'block';
+    if (numInput && rangeInput) {
+      numInput.addEventListener(
 
-        }
+          'input', () => rangeInput.value = numInput.value);
 
-    });
+      rangeInput.addEventListener(
 
-    // --- SLIDER SYNCHRONIZATION ---
+          'input', () => numInput.value = rangeInput.value);
+    }
+  }
 
-    function setupSlider(numId, rangeId) {
+  setupSlider('analysis_temperature_num', 'analysis_temperature_range');
 
-        const numInput = document.getElementById(numId);
+  setupSlider('translation_temperature_num', 'translation_temperature_range');
 
-        const rangeInput = document.getElementById(rangeId);
+  setupSlider('tts_temperature_num', 'tts_temperature_range');
 
-        if (numInput && rangeInput) {
+  setupSlider('max_speed_up_ratio_num', 'max_speed_up_ratio_range');
 
-            numInput.addEventListener(
+  setupSlider('max_refinement_attempts_num', 'max_refinement_attempts_range');
 
-                'input', () => rangeInput.value = numInput.value);
+  setupSlider('max_concurrent_threads_num', 'max_concurrent_threads_range');
 
-            rangeInput.addEventListener(
+  function setupVolumeSlider(rangeId, displayId) {
+    const rangeInput = document.getElementById(rangeId);
+    const displaySpan = document.getElementById(displayId);
 
-                'input', () => numInput.value = rangeInput.value);
+    if (rangeInput && displaySpan) {
+      rangeInput.addEventListener(
+          'input', () => displaySpan.textContent = `${rangeInput.value}%`);
+    }
+  }
 
-        }
+  setupVolumeSlider(
+      'background_music_volume_range', 'background_music_volume_display');
 
+  setupVolumeSlider('speech_volume_range', 'speech_volume_display');
+
+  // --- STATE MANAGEMENT ---
+
+  let currentWorkflow = 'dub';
+
+  let JOB_ID = null;
+
+  let TOTAL_UTTERANCES = 0;
+
+  let CURRENT_INDEX = 0;
+
+  let UTTERANCES_DATA = [];
+
+  // --- DOM ELEMENTS ---
+
+  const modeSelectionSection =
+      document.getElementById('mode-selection-section');
+
+  const btnModeDub = document.getElementById('btn-mode-dub');
+
+  const btnModeVoiceover = document.getElementById('btn-mode-voiceover');
+
+  const setupForm = document.getElementById('setup-form');
+
+  const statusMessage = document.getElementById('status-message');
+
+  const setupSection = document.getElementById('setup-section');
+
+  const reviewSection = document.getElementById('review-section');
+
+  const reviewProgress = document.getElementById('review-progress');
+
+  const voiceSelect = document.getElementById('voice-name');
+
+  const vocalStylePromptInput = document.getElementById('vocal-style-prompt');
+
+  const specialInstructionsInput =
+
+      document.getElementById('special-instructions');
+
+  const ttsPromptTextarea = document.getElementById('tts-prompt');
+
+  const audioPlayer = document.getElementById('audio-player');
+
+  const btnRegenerate = document.getElementById('btn-regenerate');
+
+  const btnApprove = document.getElementById('btn-approve');
+
+  const btnStart = document.getElementById('btn-start');
+
+  const btnStartOver = document.getElementById('btn-start-over');
+
+  const btnStartOverLong = document.getElementById('btn-start-over-long');
+
+  const btnCleanOutputs = document.getElementById('btn-clean-outputs');
+
+  const btnAssembleFinal = document.getElementById('btn-assemble-final');
+  const btnApplyToOthers = document.getElementById('btn-apply-to-others');
+
+  // --- NEW MODAL DOM ELEMENTS ---
+  const fineTuneInstructionsModal =
+      document.getElementById('fine-tune-instructions-modal');
+  const btnCloseFineTuneInstructionsModal =
+      document.getElementById('btn-close-fine-tune-instructions-modal');
+
+  // --- MODAL DOM ELEMENTS ---
+  const applyToOthersModal = document.getElementById('apply-to-others-modal');
+  const closeApplyModalTop = document.getElementById('close-apply-modal-top');
+  const applyInputSection = document.getElementById('apply-input-section');
+  const applyProgressSection =
+      document.getElementById('apply-progress-section');
+  const btnCancelApply = document.getElementById('btn-cancel-apply');
+  const btnStartApply = document.getElementById('btn-start-apply');
+  const currentVideoCountSpan = document.getElementById('current-video-count');
+  const totalVideoCountSpan = document.getElementById('total-video-count');
+  const btnCloseApplyModalAfterProcess =
+      document.getElementById('btn-close-apply-modal-after-process');
+
+  const utteranceWarningModal =
+      document.getElementById('utterance-warning-modal');
+  const utteranceWarningMessage =
+      document.getElementById('utterance-warning-message');
+  const btnCloseUtteranceWarningModal =
+      document.getElementById('btn-close-utterance-warning-modal');
+
+  const editModal = document.getElementById('edit-utterance-modal');
+
+  const btnCloseModal = editModal.querySelector('.close-button');
+
+  const btnSaveUtterance = document.getElementById('btn-save-utterance');
+
+  const btnRegenerateUtterance =
+
+      document.getElementById('btn-regenerate-utterance');
+
+  const btnCloneUtterance = document.getElementById('btn-clone-utterance');
+  const btnTranslate = document.getElementById('translate-button');
+  const btnEditTranslate = document.getElementById('edit-translate-button');
+
+  const videoFileInput = document.getElementById('video_file');
+  const gcsPathInput = document.getElementById('gcs_path');
+
+  videoFileInput.addEventListener('input', () => {
+    if (videoFileInput.value) {
+      gcsPathInput.value = '';
+    }
+  });
+
+  gcsPathInput.addEventListener('input', () => {
+    if (gcsPathInput.value) {
+      videoFileInput.value = '';
+    }
+  });
+
+  // --- EVENT LISTENERS ---
+
+  btnModeDub.addEventListener('click', () => {
+    modeSelectionSection.style.display = 'none';
+
+    document.getElementById('clean-outputs-button-container').style.display =
+        'none';
+
+    setupSection.style.display = 'block';
+    document.getElementById('setup-throbber-overlay').style.display = 'none';
+    btnStart.disabled = false;  // Ensure Start Analysis button is enabled
+
+    document.querySelectorAll('.dub-only')
+        .forEach(el => el.style.display = 'flex');
+  });
+
+  btnModeVoiceover.addEventListener('click', () => {
+    currentWorkflow = 'voiceover';
+
+    modeSelectionSection.style.display = 'none';
+    document.getElementById('clean-outputs-button-container').style.display =
+        'none';
+    setupSection.style.display = 'block';
+    document.getElementById('setup-throbber-overlay').style.display = 'none';
+    btnStart.disabled = false;  // Ensure Start Analysis button is enabled
+
+    document.querySelectorAll('.dub-only')
+        .forEach(el => el.style.display = 'none');
+  });
+
+  setupForm.addEventListener('submit', handleStartProcess);
+
+  btnRegenerate.addEventListener('click', handleGenerateSpeech);
+
+  btnApprove.addEventListener('click', handleApproveSpeech);
+
+  btnStartOver.addEventListener('click', handleStartOver);
+
+  btnStartOverLong.addEventListener('click', handleStartOver);
+
+  btnCleanOutputs.addEventListener('click', handleCleanOutputs);
+
+  btnAssembleFinal.addEventListener('click', handleFinalAssembly);
+
+  btnTranslate.addEventListener('click', handleTranslate);
+
+  btnEditTranslate.addEventListener('click', handleModalTranslate);
+
+  // --- MODAL EVENT LISTENERS ---
+
+  btnCloseModal.addEventListener('click', closeEditModal);
+
+  btnSaveUtterance.addEventListener('click', handleSaveUtterance);
+
+  btnRegenerateUtterance.addEventListener('click', handleModalGenerateSpeech);
+
+  btnCloneUtterance.addEventListener('click', handleCloneUtterance);
+
+  btnApplyToOthers.addEventListener('click', () => {
+    if (!checkAllUtterancesHaveAudio()) {
+      utteranceWarningMessage.textContent =
+          'Please generate speech for all utterances before applying to other videos.';
+      utteranceWarningModal.style.display = 'block';
+      return;
+    }
+    applyToOthersModal.style.display = 'block';
+    applyInputSection.style.display = 'block';
+    applyProgressSection.style.display = 'none';
+    btnCloseApplyModalAfterProcess.style.display = 'none';
+    document.getElementById('video-urls').value = '';  // Clear previous input
+    if (document.getElementById('apply-modal-status')) {
+      document.getElementById('apply-modal-status').style.display = 'none';
+    }
+  });
+
+  closeApplyModalTop.addEventListener(
+      'click', () => applyToOthersModal.style.display = 'none');
+  btnCancelApply.addEventListener(
+      'click', () => applyToOthersModal.style.display = 'none');
+  btnStartApply.addEventListener('click', handleStartApplyToOthers);
+  btnCloseApplyModalAfterProcess.addEventListener(
+      'click', () => applyToOthersModal.style.display = 'none');
+  btnCloseUtteranceWarningModal.addEventListener(
+      'click', () => utteranceWarningModal.style.display = 'none');
+
+  // --- NEW MODAL EVENT LISTENERS ---
+  btnCloseFineTuneInstructionsModal.addEventListener(
+      'click', () => fineTuneInstructionsModal.style.display = 'none');
+  fineTuneInstructionsModal.querySelector('.close-button')
+      .addEventListener(
+          'click', () => fineTuneInstructionsModal.style.display = 'none');
+
+  async function handleStartApplyToOthers() {
+    const videoUrls = document.getElementById('video-urls')
+                          .value.trim()
+                          .split('\n')
+                          .filter(url => url.trim() !== '');
+    const applyModalStatus = document.getElementById('apply-modal-status');
+    if (videoUrls.length === 0) {
+      applyModalStatus.className = 'status error';
+      applyModalStatus.textContent = 'Please enter at least one video URL.';
+      applyModalStatus.style.display = 'block';
+      return;
     }
 
-    setupSlider('analysis_temperature_num', 'analysis_temperature_range');
+    applyInputSection.style.display = 'none';
+    applyProgressSection.style.display = 'block';
+    totalVideoCountSpan.textContent = videoUrls.length;
 
-    setupSlider('translation_temperature_num', 'translation_temperature_range');
+    let successes = [];
+    let failures = [];
 
-    setupSlider('tts_temperature_num', 'tts_temperature_range');
+    for (let i = 0; i < videoUrls.length; i++) {
+      const videoUrl = videoUrls[i];
+      currentVideoCountSpan.textContent = i + 1;
+      document.getElementById('bulk-progress-message').innerHTML =
+          `Processing video ${i + 1} of ${videoUrls.length}: <strong>${
+              videoUrl}</strong>`;
 
-    setupSlider('max_speed_up_ratio_num', 'max_speed_up_ratio_range');
+      const formData = new FormData();
+      formData.append('job_id', JOB_ID);
+      formData.append('video_url', videoUrl);
+      formData.append(
+          'music_volume',
+          document.getElementById('background_music_volume_range').value);
+      formData.append(
+          'speech_volume',
+          document.getElementById('speech_volume_range').value);
 
-    setupSlider('max_refinement_attempts_num', 'max_refinement_attempts_range');
-
-    setupSlider('max_concurrent_threads_num', 'max_concurrent_threads_range');
-
-    function setupVolumeSlider(rangeId, displayId) {
-        const rangeInput = document.getElementById(rangeId);
-        const displaySpan = document.getElementById(displayId);
-
-        if (rangeInput && displaySpan) {
-            rangeInput.addEventListener(
-                'input', () => displaySpan.textContent = `${rangeInput.value}%`);
-        }
+      try {
+        const response = await fetch(
+            '/apply-to-single-video', {method: 'POST', body: formData});
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.detail);
+        successes.push({original: videoUrl, dubbed: result.dubbed_url});
+      } catch (error) {
+        failures.push({original: videoUrl, error: error.message});
+      }
     }
 
-    setupVolumeSlider('background_music_volume_range', 'background_music_volume_display');
-
-    setupVolumeSlider('speech_volume_range', 'speech_volume_display');
-
-    // --- STATE MANAGEMENT ---
-
-    let currentWorkflow = 'dub';
-
-    let JOB_ID = null;
-
-    let TOTAL_UTTERANCES = 0;
-
-    let CURRENT_INDEX = 0;
-
-    let UTTERANCES_DATA = [];
-
-    // --- DOM ELEMENTS ---
-
-    const modeSelectionSection = document.getElementById('mode-selection-section');
-
-    const btnModeDub = document.getElementById('btn-mode-dub');
-
-    const btnModeVoiceover = document.getElementById('btn-mode-voiceover');
-
-    const setupForm = document.getElementById('setup-form');
-
-    const statusMessage = document.getElementById('status-message');
-
-    const setupSection = document.getElementById('setup-section');
-
-    const reviewSection = document.getElementById('review-section');
-
-    const reviewHeading = document.getElementById('review-heading');
-
-    const reviewProgress = document.getElementById('review-progress');
-
-    const sourceLanguage = document.getElementById('source-language');
-
-    const targetLanguage = document.getElementById('target-language');
-
-    const originalText = document.getElementById('original-text');
-
-    const translatedText = document.getElementById('translated-text');
-
-    const voiceSelect = document.getElementById('voice-name');
-
-    const vocalStylePromptInput = document.getElementById('vocal-style-prompt');
-
-    const specialInstructionsInput =
-
-        document.getElementById('special-instructions');
-
-    const ttsPromptTextarea = document.getElementById('tts-prompt');
-
-    const audioPlayer = document.getElementById('audio-player');
-
-    const btnRegenerate = document.getElementById('btn-regenerate');
-
-    const btnApprove = document.getElementById('btn-approve');
-
-    const btnStart = document.getElementById('btn-start');
-
-    const btnStartOver = document.getElementById('btn-start-over');
-
-    const btnStartOverLong = document.getElementById('btn-start-over-long');
-
-    const btnCleanOutputs = document.getElementById('btn-clean-outputs');
-
-    const btnAssembleFinal = document.getElementById('btn-assemble-final');
-    const btnApplyToOthers = document.getElementById('btn-apply-to-others');
-
-    // --- NEW MODAL DOM ELEMENTS ---
-    const fineTuneInstructionsModal = document.getElementById('fine-tune-instructions-modal');
-    const btnCloseFineTuneInstructionsModal = document.getElementById('btn-close-fine-tune-instructions-modal');
-
-    // --- MODAL DOM ELEMENTS ---
-    const applyToOthersModal = document.getElementById('apply-to-others-modal');
-    const closeApplyModalTop = document.getElementById('close-apply-modal-top');
-    const applyInputSection = document.getElementById('apply-input-section');
-    const applyProgressSection = document.getElementById('apply-progress-section');
-    const btnCancelApply = document.getElementById('btn-cancel-apply');
-    const btnStartApply = document.getElementById('btn-start-apply');
-    const currentVideoCountSpan = document.getElementById('current-video-count');
-    const totalVideoCountSpan = document.getElementById('total-video-count');
-    const btnCloseApplyModalAfterProcess = document.getElementById('btn-close-apply-modal-after-process');
-
-    const utteranceWarningModal = document.getElementById('utterance-warning-modal');
-    const utteranceWarningMessage = document.getElementById('utterance-warning-message');
-    const btnCloseUtteranceWarningModal = document.getElementById('btn-close-utterance-warning-modal');
-
-    const editModal = document.getElementById('edit-utterance-modal');
-
-    const btnCloseModal = editModal.querySelector('.close-button');
-
-    const btnSaveUtterance = document.getElementById('btn-save-utterance');
-
-    const btnRegenerateUtterance =
-
-        document.getElementById('btn-regenerate-utterance');
-
-    const btnCloneUtterance = document.getElementById('btn-clone-utterance');
-    const btnTranslate = document.getElementById('translate-button');
-    const btnEditTranslate = document.getElementById('edit-translate-button');
-
-    const videoFileInput = document.getElementById('video_file');
-    const gcsPathInput = document.getElementById('gcs_path');
-
-    videoFileInput.addEventListener('input', () => {
-        if (videoFileInput.value) {
-            gcsPathInput.value = '';
-        }
-    });
-
-    gcsPathInput.addEventListener('input', () => {
-        if (gcsPathInput.value) {
-            videoFileInput.value = '';
-        }
-    });
-
-    // --- EVENT LISTENERS ---
-
-    btnModeDub.addEventListener('click', () => {
-
-                modeSelectionSection.style.display = 'none';
-
-                document.getElementById('clean-outputs-button-container').style.display = 'none';
-
-                setupSection.style.display = 'block';
-        document.getElementById('setup-throbber-overlay').style.display = 'none';
-        btnStart.disabled = false; // Ensure Start Analysis button is enabled
-
-        document.querySelectorAll('.dub-only').forEach(el => el.style.display = 'flex');
-
-    });
-
-    btnModeVoiceover.addEventListener('click', () => {
-
-        currentWorkflow = 'voiceover';
-
-        modeSelectionSection.style.display = 'none';
-        document.getElementById('clean-outputs-button-container').style.display = 'none';
-        setupSection.style.display = 'block';
-        document.getElementById('setup-throbber-overlay').style.display = 'none';
-        btnStart.disabled = false; // Ensure Start Analysis button is enabled
-
-        document.querySelectorAll('.dub-only').forEach(el => el.style.display = 'none');
-
-    });
-
-    setupForm.addEventListener('submit', handleStartProcess);
-
-    btnRegenerate.addEventListener('click', handleGenerateSpeech);
-
-    btnApprove.addEventListener('click', handleApproveSpeech);
-
-    btnStartOver.addEventListener('click', handleStartOver);
-
-    btnStartOverLong.addEventListener('click', handleStartOver);
-
-    btnCleanOutputs.addEventListener('click', handleCleanOutputs);
-
-    btnAssembleFinal.addEventListener('click', handleFinalAssembly);
-
-    btnTranslate.addEventListener('click', handleTranslate);
-
-    btnEditTranslate.addEventListener('click', handleModalTranslate);
-
-        // --- MODAL EVENT LISTENERS ---
-
-    btnCloseModal.addEventListener('click', closeEditModal);
-
-    btnSaveUtterance.addEventListener('click', handleSaveUtterance);
-
-    btnRegenerateUtterance.addEventListener('click', handleModalGenerateSpeech);
-
-    btnCloneUtterance.addEventListener('click', handleCloneUtterance);
-
-    btnApplyToOthers.addEventListener('click', () => {
-        if (!checkAllUtterancesHaveAudio()) {
-            utteranceWarningMessage.textContent = 'Please generate speech for all utterances before applying to other videos.';
-            utteranceWarningModal.style.display = 'block';
-            return;
-        }
-        applyToOthersModal.style.display = 'block';
-        applyInputSection.style.display = 'block';
-        applyProgressSection.style.display = 'none';
-        btnCloseApplyModalAfterProcess.style.display = 'none';
-        document.getElementById('video-urls').value = ''; // Clear previous input
-        if (document.getElementById('apply-modal-status')) {
-            document.getElementById('apply-modal-status').style.display = 'none';
-        }
-    });
-
-    closeApplyModalTop.addEventListener('click', () => applyToOthersModal.style.display = 'none');
-    btnCancelApply.addEventListener('click', () => applyToOthersModal.style.display = 'none');
-    btnStartApply.addEventListener('click', handleStartApplyToOthers);
-    btnCloseApplyModalAfterProcess.addEventListener('click', () => applyToOthersModal.style.display = 'none');
-    btnCloseUtteranceWarningModal.addEventListener('click', () => utteranceWarningModal.style.display = 'none');
-
-    // --- NEW MODAL EVENT LISTENERS ---
-    btnCloseFineTuneInstructionsModal.addEventListener('click', () => fineTuneInstructionsModal.style.display = 'none');
-    fineTuneInstructionsModal.querySelector('.close-button').addEventListener('click', () => fineTuneInstructionsModal.style.display = 'none');
-
-    async function handleStartApplyToOthers() {
-        const videoUrls = document.getElementById('video-urls').value.trim().split('\n').filter(url => url.trim() !== '');
-        const applyModalStatus = document.getElementById('apply-modal-status');
-        if (videoUrls.length === 0) {
-            applyModalStatus.className = 'status error';
-            applyModalStatus.textContent = 'Please enter at least one video URL.';
-            applyModalStatus.style.display = 'block';
-            return;
-        }
-
-        applyInputSection.style.display = 'none';
-        applyProgressSection.style.display = 'block';
-        totalVideoCountSpan.textContent = videoUrls.length;
-
-        let successes = [];
-        let failures = [];
-
-        for (let i = 0; i < videoUrls.length; i++) {
-            const videoUrl = videoUrls[i];
-            currentVideoCountSpan.textContent = i + 1;
-            document.getElementById('bulk-progress-message').innerHTML = `Processing video ${i + 1} of ${videoUrls.length}: <strong>${videoUrl}</strong>`;
-
-            const formData = new FormData();
-            formData.append('job_id', JOB_ID);
-            formData.append('video_url', videoUrl);
-            formData.append('music_volume', document.getElementById('background_music_volume_range').value);
-            formData.append('speech_volume', document.getElementById('speech_volume_range').value);
-
-            try {
-                const response = await fetch('/apply-to-single-video', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.detail);
-                successes.push({ original: videoUrl, dubbed: result.dubbed_url });
-            } catch (error) {
-                failures.push({ original: videoUrl, error: error.message });
-            }
-        }
-
-        // Hide throbber and show summary
-        applyProgressSection.querySelector('.throbber').style.display = 'none';
-        let summaryHtml = '<h3>Processing Complete</h3>';
-        summaryHtml += `<p>${successes.length} of ${videoUrls.length} videos processed successfully.</p>`;
-
-        if (successes.length > 0) {
-            summaryHtml += '<h4>Successful:</h4><ul>';
-            successes.forEach(s => {
-                summaryHtml += `<li><a href="${s.original}" target="_blank">Original</a> -> Dubbed </li>`;
-            });
-            summaryHtml += '</ul>';
-        }
-
-        if (failures.length > 0) {
-            summaryHtml += '<h4>Failed:</h4><ul>';
-            failures.forEach(f => {
-                summaryHtml += `<li><a href="${f.original}" target="_blank">${f.original}</a> - Error: ${f.error}</li>`;
-            });
-            summaryHtml += '</ul>';
-        }
-
-        document.getElementById('bulk-progress-message').innerHTML = summaryHtml;
-        btnCloseApplyModalAfterProcess.style.display = 'block';
-        showStatus('success', 'Bulk processing finished.');
+    // Hide throbber and show summary
+    applyProgressSection.querySelector('.throbber').style.display = 'none';
+    let summaryHtml = '<h3>Processing Complete</h3>';
+    summaryHtml += `<p>${successes.length} of ${
+        videoUrls.length} videos processed successfully.</p>`;
+
+    if (successes.length > 0) {
+      summaryHtml += '<h4>Successful:</h4><ul>';
+      successes.forEach(s => {
+        summaryHtml += `<li><a href="${
+            s.original}" target="_blank">Original</a> -> Dubbed </li>`;
+      });
+      summaryHtml += '</ul>';
     }
 
-    function showModalStatus(type, message) {
-        const modalStatus = document.getElementById('modal-status-message');
-        modalStatus.className = `status ${type}`;
-        modalStatus.innerHTML = message;
-        modalStatus.style.display = 'block';
+    if (failures.length > 0) {
+      summaryHtml += '<h4>Failed:</h4><ul>';
+      failures.forEach(f => {
+        summaryHtml += `<li><a href="${f.original}" target="_blank">${
+            f.original}</a> - Error: ${f.error}</li>`;
+      });
+      summaryHtml += '</ul>';
     }
 
-    async function handleModalGenerateSpeech() {
+    document.getElementById('bulk-progress-message').innerHTML = summaryHtml;
+    btnCloseApplyModalAfterProcess.style.display = 'block';
+    showStatus('success', 'Bulk processing finished.');
+  }
 
-        event.preventDefault();
-        const index = parseInt(document.getElementById('edit-utterance-index').value, 10);
-        showModalStatus('info', `Generating speech for utterance ${index + 1}...`);
+  function showModalStatus(type, message) {
+    const modalStatus = document.getElementById('modal-status-message');
+    modalStatus.className = `status ${type}`;
+    modalStatus.innerHTML = message;
+    modalStatus.style.display = 'block';
+  }
 
-        btnRegenerateUtterance.disabled = true;
-        const modalThrobber = document.getElementById('modal-throbber-overlay');
-        modalThrobber.style.display = 'flex';
-        
-        const editSourceLanguageInput = document.getElementById('edit-source-language');
-        const editTargetLanguageInput = document.getElementById('edit-target-language');
-        const editSourceLanguageError = document.getElementById('edit-source-language-error');
-        const editTargetLanguageError = document.getElementById('edit-target-language-error');
+  async function handleModalGenerateSpeech() {
+    event.preventDefault();
+    const index =
+        parseInt(document.getElementById('edit-utterance-index').value, 10);
+    showModalStatus('info', `Generating speech for utterance ${index + 1}...`);
 
-        if (!validateLanguageCode(editSourceLanguageInput, editSourceLanguageError)) {
-            modalThrobber.style.display = 'none';
-            btnRegenerateUtterance.disabled = false;
-            btnSaveUtterance.disabled = false;
-            btnCloneUtterance.disabled = false;
-            return;
-        }
-        if (!validateLanguageCode(editTargetLanguageInput, editTargetLanguageError)) {
-            modalThrobber.style.display = 'none';
-            btnRegenerateUtterance.disabled = false;
-            btnSaveUtterance.disabled = false;
-            btnCloneUtterance.disabled = false;
-            return;
-        }
+    btnRegenerateUtterance.disabled = true;
+    const modalThrobber = document.getElementById('modal-throbber-overlay');
+    modalThrobber.style.display = 'flex';
 
-        const utterance = UTTERANCES_DATA[index];
-        utterance.start = parseFloat(document.getElementById('edit-start').value);
-        utterance.end = parseFloat(document.getElementById('edit-end').value);
-        utterance.original_text =
-            document.getElementById('edit-original-text').value;
-        utterance.translated_text =
-            document.getElementById('edit-translated-text').value;
-        utterance.source_language = document.getElementById('edit-source-language').value;
-        utterance.target_language = document.getElementById('edit-target-language').value;
-        utterance.voice_name = document.getElementById('edit-voice-name').value;
-        utterance.sync_mode = document.getElementById('edit-sync-mode').value;
-        utterance.tone = document.getElementById('edit-tone').value;
-        utterance.pitch = document.getElementById('edit-pitch').value;
-        utterance.gender = document.getElementById('edit-gender').value;
-        utterance.age = document.getElementById('edit-age').value;
-        utterance.vocal_style_prompt =
-            document.getElementById('edit-vocal-style-prompt').value;
-        utterance.special_instructions =
-            document.getElementById('edit-special-instructions').value;
-        utterance.tts_prompt = document.getElementById('edit-tts-prompt').value;
+    const editSourceLanguageInput =
+        document.getElementById('edit-source-language');
+    const editTargetLanguageInput =
+        document.getElementById('edit-target-language');
+    const editSourceLanguageError =
+        document.getElementById('edit-source-language-error');
+    const editTargetLanguageError =
+        document.getElementById('edit-target-language-error');
 
-        // Also save the newly generated audio if it exists
-        const editAudioPlayer = document.getElementById('edit-audio-player');
-        if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
-            utterance.audio_url = editAudioPlayer.src;
-        }
-
-        btnSaveUtterance.disabled = true;
-
-        btnCloneUtterance.disabled = true;
-
-        const formData = new FormData();
-
-        formData.append('job_id', JOB_ID);
-
-        formData.append('index', index);
-
-        formData.append('utterance', JSON.stringify(utterance));
-
-
-        try {
-
-            const response =
-
-                await fetch('/generate-speech', {
-
-                    method: 'POST',
-
-                    body: formData
-
-                });
-
-            const result = await response.json();
-
-            if (!response.ok) throw new Error(result.detail);
-
-            const editAudioPlayer = document.getElementById('edit-audio-player');
-
-            editAudioPlayer.src = result.audio_url;
-
-            editAudioPlayer.load();
-
-            editAudioPlayer.style.display = 'block';
-
-            editAudioPlayer.onloadedmetadata = () => {
-                const newDuration = editAudioPlayer.duration;
-                const startInput = document.getElementById('edit-start');
-                const endInput = document.getElementById('edit-end');
-                const currentStart = parseFloat(startInput.value);
-                if (!isNaN(currentStart) && !isNaN(newDuration)) {
-                    const newEnd = currentStart + newDuration;
-                    endInput.value = newEnd.toFixed(2);
-                }
-            };
-
-            // Also update the main data array so it persists if the user saves
-            if (result.audio_url) {
-                UTTERANCES_DATA[index].translated_text = result.translated_text
-                document.getElementById('edit-translated-text').value = result.translated_text;
-                UTTERANCES_DATA[index].audio_url = result.audio_url;
-            }
-
-
-            showModalStatus(
-
-                'success', 'Speech generated. You can save or continue editing.');
-
-            // Re-evaluate button states after speech generation
-            const allUtterancesHaveAudio = checkAllUtterancesHaveAudio();
-            document.getElementById('btn-assemble-final').disabled = !allUtterancesHaveAudio;
-            document.getElementById('btn-apply-to-others').disabled = !allUtterancesHaveAudio;
-
-        } catch (error) {
-
-            showModalStatus('error', `Generation failed: ${error.message}`);
-
-        } finally {
-
-            modalThrobber.style.display = 'none';
-
-            btnRegenerateUtterance.disabled = false;
-
-            btnSaveUtterance.disabled = false;
-
-            btnCloneUtterance.disabled = false;
-
-        }
-
+    if (!validateLanguageCode(
+            editSourceLanguageInput, editSourceLanguageError)) {
+      modalThrobber.style.display = 'none';
+      btnRegenerateUtterance.disabled = false;
+      btnSaveUtterance.disabled = false;
+      btnCloneUtterance.disabled = false;
+      return;
+    }
+    if (!validateLanguageCode(
+            editTargetLanguageInput, editTargetLanguageError)) {
+      modalThrobber.style.display = 'none';
+      btnRegenerateUtterance.disabled = false;
+      btnSaveUtterance.disabled = false;
+      btnCloneUtterance.disabled = false;
+      return;
     }
 
-    async function handleTranslate(event) {
-        event.preventDefault();
-        showStatus('info', `Translating utterance ${CURRENT_INDEX + 1}...`);
+    const utterance = UTTERANCES_DATA[index];
+    utterance.start = parseFloat(document.getElementById('edit-start').value);
+    utterance.end = parseFloat(document.getElementById('edit-end').value);
+    utterance.original_text =
+        document.getElementById('edit-original-text').value;
+    utterance.translated_text =
+        document.getElementById('edit-translated-text').value;
+    utterance.source_language =
+        document.getElementById('edit-source-language').value;
+    utterance.target_language =
+        document.getElementById('edit-target-language').value;
+    utterance.voice_name = document.getElementById('edit-voice-name').value;
+    utterance.sync_mode = document.getElementById('edit-sync-mode').value;
+    utterance.tone = document.getElementById('edit-tone').value;
+    utterance.pitch = document.getElementById('edit-pitch').value;
+    utterance.gender = document.getElementById('edit-gender').value;
+    utterance.age = document.getElementById('edit-age').value;
+    utterance.vocal_style_prompt =
+        document.getElementById('edit-vocal-style-prompt').value;
+    utterance.special_instructions =
+        document.getElementById('edit-special-instructions').value;
+    utterance.tts_prompt = document.getElementById('edit-tts-prompt').value;
 
-        btnTranslate.disabled = true;
-        const throbber = document.querySelector('#review-section .throbber-overlay');
-        throbber.style.display = 'flex';
-
-        const sourceLanguageInput = document.getElementById('source-language');
-        const targetLanguageInput = document.getElementById('target-language');
-        const sourceLanguageError = document.getElementById('review-source-language-error');
-        const targetLanguageError = document.getElementById('review-target-language-error');
-
-        if (!validateLanguageCode(sourceLanguageInput, sourceLanguageError)) {
-            btnTranslate.disabled = false;
-            throbber.style.display = 'none';
-            return;
-        }
-        if (!validateLanguageCode(targetLanguageInput, targetLanguageError)) {
-            btnTranslate.disabled = false;
-            throbber.style.display = 'none';
-            return;
-        }
-
-        const utterance = UTTERANCES_DATA[CURRENT_INDEX];
-        utterance.start = parseFloat(document.getElementById('start').value);
-        utterance.end = parseFloat(document.getElementById('end').value);
-        utterance.original_text =
-            document.getElementById('original-text').value;
-        utterance.translated_text =
-            document.getElementById('translated-text').value;
-        utterance.voice_name = document.getElementById('voice-name').value;
-        utterance.sync_mode = document.getElementById('sync-mode').value;
-        utterance.tone = document.getElementById('tone').value;
-        utterance.pitch = document.getElementById('pitch').value;
-        utterance.gender = document.getElementById('gender').value;
-        utterance.age = document.getElementById('age').value;
-        utterance.vocal_style_prompt =
-            document.getElementById('vocal-style-prompt').value;
-        utterance.special_instructions =
-            document.getElementById('special-instructions').value;
-        utterance.tts_prompt = document.getElementById('tts-prompt').value;
-
-        // Also save the newly generated audio if it exists
-        const editAudioPlayer = document.getElementById('audio-player');
-        if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
-            utterance.audio_url = editAudioPlayer.src;
-        }
-
-        const formData = new FormData();
-        formData.append('job_id', JOB_ID);
-        formData.append('index', CURRENT_INDEX);
-        formData.append('utterance', JSON.stringify(utterance));
- 
-        try {
-            const response = await fetch('/translate-utterance', {
-                method: 'POST',
-                body: formData
-            });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.detail);
-
-            UTTERANCES_DATA[CURRENT_INDEX].source_language = result.source_language;
-            UTTERANCES_DATA[CURRENT_INDEX].target_language = result.target_language;
-            UTTERANCES_DATA[CURRENT_INDEX].translated_text = result.translated_text;
-            UTTERANCES_DATA[CURRENT_INDEX].original_text = result.original_text;
-            document.getElementById('original-text').value = result.original_text;
-            document.getElementById('translated-text').value = result.translated_text;
-            document.getElementById('source-language').value = result.source_language;
-            document.getElementById('target-language').value = result.target_language;
-            showStatus('success', 'Translation complete.');
-        } catch (error) {
-            showStatus('error', `Translation failed: ${error.message}`);
-        } finally {
-            btnTranslate.disabled = false;
-            throbber.style.display = 'none';
-        }
+    // Also save the newly generated audio if it exists
+    const editAudioPlayer = document.getElementById('edit-audio-player');
+    if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
+      utterance.audio_url = editAudioPlayer.src;
     }
 
-    async function handleModalTranslate(event) {
-        event.preventDefault();
-        const index = parseInt(document.getElementById('edit-utterance-index').value, 10);
-        showModalStatus('info', `Translating utterance ${index + 1}...`);
-        btnEditTranslate.disabled = true;
-        const modalThrobber = document.getElementById('modal-throbber-overlay');
-        modalThrobber.style.display = 'flex';
+    btnSaveUtterance.disabled = true;
 
-        const editSourceLanguageInput = document.getElementById('edit-source-language');
-        const editTargetLanguageInput = document.getElementById('edit-target-language');
-        const editSourceLanguageError = document.getElementById('edit-source-language-error');
-        const editTargetLanguageError = document.getElementById('edit-target-language-error');
+    btnCloneUtterance.disabled = true;
 
-        if (!validateLanguageCode(editSourceLanguageInput, editSourceLanguageError)) {
-            btnEditTranslate.disabled = false;
-            modalThrobber.style.display = 'none';
-            return;
+    const formData = new FormData();
+
+    formData.append('job_id', JOB_ID);
+
+    formData.append('index', index);
+
+    formData.append('utterance', JSON.stringify(utterance));
+
+
+    try {
+      const response =
+
+          await fetch('/generate-speech', {
+
+            method: 'POST',
+
+            body: formData
+
+          });
+
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.detail);
+
+      const editAudioPlayer = document.getElementById('edit-audio-player');
+
+      editAudioPlayer.src = result.audio_url;
+
+      editAudioPlayer.load();
+
+      editAudioPlayer.style.display = 'block';
+
+      editAudioPlayer.onloadedmetadata = () => {
+        const newDuration = editAudioPlayer.duration;
+        const startInput = document.getElementById('edit-start');
+        const endInput = document.getElementById('edit-end');
+        const currentStart = parseFloat(startInput.value);
+        if (!isNaN(currentStart) && !isNaN(newDuration)) {
+          const newEnd = currentStart + newDuration;
+          endInput.value = newEnd.toFixed(2);
         }
-        if (!validateLanguageCode(editTargetLanguageInput, editTargetLanguageError)) {
-            btnEditTranslate.disabled = false;
-            modalThrobber.style.display = 'none';
-            return;
-        }
+      };
 
-        const utterance = UTTERANCES_DATA[index];
-        utterance.start = parseFloat(document.getElementById('edit-start').value);
-        utterance.end = parseFloat(document.getElementById('edit-end').value);
-        utterance.original_text =
-            document.getElementById('edit-original-text').value;
-        utterance.translated_text =
-            document.getElementById('edit-translated-text').value;
-        utterance.source_language = document.getElementById('edit-source-language').value;
-        utterance.target_language = document.getElementById('edit-target-language').value;
-        utterance.voice_name = document.getElementById('edit-voice-name').value;
-        utterance.sync_mode = document.getElementById('edit-sync-mode').value;
-        utterance.tone = document.getElementById('edit-tone').value;
-        utterance.pitch = document.getElementById('edit-pitch').value;
-        utterance.gender = document.getElementById('edit-gender').value;
-        utterance.age = document.getElementById('edit-age').value;
-        utterance.vocal_style_prompt =
-            document.getElementById('edit-vocal-style-prompt').value;
-        utterance.special_instructions =
-            document.getElementById('edit-special-instructions').value;
-        utterance.tts_prompt = document.getElementById('edit-tts-prompt').value;
-
-        // Also save the newly generated audio if it exists
-        const editAudioPlayer = document.getElementById('edit-audio-player');
-        if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
-            utterance.audio_url = editAudioPlayer.src;
-        }
+      // Also update the main data array so it persists if the user saves
+      if (result.audio_url) {
+        UTTERANCES_DATA[index].translated_text = result.translated_text;
+        document.getElementById('edit-translated-text').value =
+            result.translated_text;
+        UTTERANCES_DATA[index].audio_url = result.audio_url;
+      }
 
 
-        const formData = new FormData();
-        formData.append('job_id', JOB_ID);
-        formData.append('index', index);
-        formData.append('utterance', JSON.stringify(utterance));
+      showModalStatus(
 
-        try {
-            const response = await fetch('/translate-utterance', {
-                method: 'POST',
-                body: formData
-            });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.detail);
+          'success', 'Speech generated. You can save or continue editing.');
 
-            UTTERANCES_DATA[index].source_language = result.source_language;
-            UTTERANCES_DATA[index].target_language = result.target_language;
-            UTTERANCES_DATA[index].original_text = result.original_text;
-            UTTERANCES_DATA[index].translated_text = result.translated_text;
-            document.getElementById('edit-translated-text').value = result.translated_text;
-            document.getElementById('edit-original-text').value = result.original_text;
-            document.getElementById('edit-source-language').value = result.source_language;
-            document.getElementById('edit-target-language').value = result.target_language;
-            showModalStatus('success', 'Translation complete.');
-        } catch (error) {
-            showModalStatus('error', `Translation failed: ${error.message}`);
-        } finally {
-            btnEditTranslate.disabled = false;
-            modalThrobber.style.display = 'none';
-        }
+      // Re-evaluate button states after speech generation
+      const allUtterancesHaveAudio = checkAllUtterancesHaveAudio();
+      document.getElementById('btn-assemble-final').disabled =
+          !allUtterancesHaveAudio;
+      document.getElementById('btn-apply-to-others').disabled =
+          !allUtterancesHaveAudio;
+
+    } catch (error) {
+      showModalStatus('error', `Generation failed: ${error.message}`);
+
+    } finally {
+      modalThrobber.style.display = 'none';
+
+      btnRegenerateUtterance.disabled = false;
+
+      btnSaveUtterance.disabled = false;
+
+      btnCloneUtterance.disabled = false;
+    }
+  }
+
+  async function handleTranslate(event) {
+    event.preventDefault();
+    showStatus('info', `Translating utterance ${CURRENT_INDEX + 1}...`);
+
+    btnTranslate.disabled = true;
+    const throbber =
+        document.querySelector('#review-section .throbber-overlay');
+    throbber.style.display = 'flex';
+
+    const sourceLanguageInput = document.getElementById('source-language');
+    const targetLanguageInput = document.getElementById('target-language');
+    const sourceLanguageError =
+        document.getElementById('review-source-language-error');
+    const targetLanguageError =
+        document.getElementById('review-target-language-error');
+
+    if (!validateLanguageCode(sourceLanguageInput, sourceLanguageError)) {
+      btnTranslate.disabled = false;
+      throbber.style.display = 'none';
+      return;
+    }
+    if (!validateLanguageCode(targetLanguageInput, targetLanguageError)) {
+      btnTranslate.disabled = false;
+      throbber.style.display = 'none';
+      return;
     }
 
-    // --- HANDLER FUNCTIONS ---
+    const utterance = UTTERANCES_DATA[CURRENT_INDEX];
+    utterance.start = parseFloat(document.getElementById('start').value);
+    utterance.end = parseFloat(document.getElementById('end').value);
+    utterance.original_text = document.getElementById('original-text').value;
+    utterance.translated_text =
+        document.getElementById('translated-text').value;
+    utterance.voice_name = document.getElementById('voice-name').value;
+    utterance.sync_mode = document.getElementById('sync-mode').value;
+    utterance.tone = document.getElementById('tone').value;
+    utterance.pitch = document.getElementById('pitch').value;
+    utterance.gender = document.getElementById('gender').value;
+    utterance.age = document.getElementById('age').value;
+    utterance.vocal_style_prompt =
+        document.getElementById('vocal-style-prompt').value;
+    utterance.special_instructions =
+        document.getElementById('special-instructions').value;
+    utterance.tts_prompt = document.getElementById('tts-prompt').value;
 
-    async function handleCleanOutputs() {
-
-        if (!confirm(
-
-                'Are you sure you want to delete all generated outputs? This action cannot be undone.')) {
-
-            return;
-
-        }
-
-        showStatus('info', 'Cleaning outputs directory...');
-
-        try {
-
-            const response = await fetch('/clean-outputs', {
-
-                method: 'POST'
-
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) throw new Error(result.detail);
-
-            showStatus('success', 'Outputs directory has been cleaned.');
-
-        } catch (error) {
-
-            showStatus('error', `Error: ${error.message}`);
-
-        }
-
+    // Also save the newly generated audio if it exists
+    const editAudioPlayer = document.getElementById('audio-player');
+    if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
+      utterance.audio_url = editAudioPlayer.src;
     }
 
-    function handleStartOver() {
+    const formData = new FormData();
+    formData.append('job_id', JOB_ID);
+    formData.append('index', CURRENT_INDEX);
+    formData.append('utterance', JSON.stringify(utterance));
 
-        // Reset state variables
+    try {
+      const response =
+          await fetch('/translate-utterance', {method: 'POST', body: formData});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.detail);
 
-        JOB_ID = null;
-        currentWorkflow = 'dub';
-        TOTAL_UTTERANCES = 0;
+      UTTERANCES_DATA[CURRENT_INDEX].source_language = result.source_language;
+      UTTERANCES_DATA[CURRENT_INDEX].target_language = result.target_language;
+      UTTERANCES_DATA[CURRENT_INDEX].translated_text = result.translated_text;
+      UTTERANCES_DATA[CURRENT_INDEX].original_text = result.original_text;
+      document.getElementById('original-text').value = result.original_text;
+      document.getElementById('translated-text').value = result.translated_text;
+      document.getElementById('source-language').value = result.source_language;
+      document.getElementById('target-language').value = result.target_language;
+      showStatus('success', 'Translation complete.');
+    } catch (error) {
+      showStatus('error', `Translation failed: ${error.message}`);
+    } finally {
+      btnTranslate.disabled = false;
+      throbber.style.display = 'none';
+    }
+  }
 
-        CURRENT_INDEX = 0;
+  async function handleModalTranslate(event) {
+    event.preventDefault();
+    const index =
+        parseInt(document.getElementById('edit-utterance-index').value, 10);
+    showModalStatus('info', `Translating utterance ${index + 1}...`);
+    btnEditTranslate.disabled = true;
+    const modalThrobber = document.getElementById('modal-throbber-overlay');
+    modalThrobber.style.display = 'flex';
 
-        UTTERANCES_DATA = [];
+    const editSourceLanguageInput =
+        document.getElementById('edit-source-language');
+    const editTargetLanguageInput =
+        document.getElementById('edit-target-language');
+    const editSourceLanguageError =
+        document.getElementById('edit-source-language-error');
+    const editTargetLanguageError =
+        document.getElementById('edit-target-language-error');
 
-        // Reset UI elements
+    if (!validateLanguageCode(
+            editSourceLanguageInput, editSourceLanguageError)) {
+      btnEditTranslate.disabled = false;
+      modalThrobber.style.display = 'none';
+      return;
+    }
+    if (!validateLanguageCode(
+            editTargetLanguageInput, editTargetLanguageError)) {
+      btnEditTranslate.disabled = false;
+      modalThrobber.style.display = 'none';
+      return;
+    }
 
-        modeSelectionSection.style.display = 'block';
-        document.getElementById('clean-outputs-button-container').style.display = 'block';
+    const utterance = UTTERANCES_DATA[index];
+    utterance.start = parseFloat(document.getElementById('edit-start').value);
+    utterance.end = parseFloat(document.getElementById('edit-end').value);
+    utterance.original_text =
+        document.getElementById('edit-original-text').value;
+    utterance.translated_text =
+        document.getElementById('edit-translated-text').value;
+    utterance.source_language =
+        document.getElementById('edit-source-language').value;
+    utterance.target_language =
+        document.getElementById('edit-target-language').value;
+    utterance.voice_name = document.getElementById('edit-voice-name').value;
+    utterance.sync_mode = document.getElementById('edit-sync-mode').value;
+    utterance.tone = document.getElementById('edit-tone').value;
+    utterance.pitch = document.getElementById('edit-pitch').value;
+    utterance.gender = document.getElementById('edit-gender').value;
+    utterance.age = document.getElementById('edit-age').value;
+    utterance.vocal_style_prompt =
+        document.getElementById('edit-vocal-style-prompt').value;
+    utterance.special_instructions =
+        document.getElementById('edit-special-instructions').value;
+    utterance.tts_prompt = document.getElementById('edit-tts-prompt').value;
 
-        setupSection.style.display = 'none';
+    // Also save the newly generated audio if it exists
+    const editAudioPlayer = document.getElementById('edit-audio-player');
+    if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
+      utterance.audio_url = editAudioPlayer.src;
+    }
 
-        reviewSection.style.display = 'none';
 
-        document.getElementById('timeline-section').style.display = 'none';
+    const formData = new FormData();
+    formData.append('job_id', JOB_ID);
+    formData.append('index', index);
+    formData.append('utterance', JSON.stringify(utterance));
 
-        showStatus('info', 'Ready!');
+    try {
+      const response =
+          await fetch('/translate-utterance', {method: 'POST', body: formData});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.detail);
 
-        statusMessage.style.display = 'none';
-        document.getElementById('modal-status-message').style.display = 'none';
-        document.getElementById('apply-modal-status').style.display = 'none';
-        document.getElementById('bulk-progress-message').innerHTML = '';
-        utteranceWarningModal.style.display = 'none';
-        applyToOthersModal.style.display = 'none';
-        assemblyModal.style.display = 'none';
-        fineTuneInstructionsModal.style.display = 'none'; // Hide new modal
-        document.getElementById('setup-throbber-overlay').style.display = 'none'; // Hide setup throbber
-        statusMessage.innerHTML = ''; // Clear status message content
-        statusMessage.style.display = 'none'; // Hide status message
+      UTTERANCES_DATA[index].source_language = result.source_language;
+      UTTERANCES_DATA[index].target_language = result.target_language;
+      UTTERANCES_DATA[index].original_text = result.original_text;
+      UTTERANCES_DATA[index].translated_text = result.translated_text;
+      document.getElementById('edit-translated-text').value =
+          result.translated_text;
+      document.getElementById('edit-original-text').value =
+          result.original_text;
+      document.getElementById('edit-source-language').value =
+          result.source_language;
+      document.getElementById('edit-target-language').value =
+          result.target_language;
+      showModalStatus('success', 'Translation complete.');
+    } catch (error) {
+      showModalStatus('error', `Translation failed: ${error.message}`);
+    } finally {
+      btnEditTranslate.disabled = false;
+      modalThrobber.style.display = 'none';
+    }
+  }
 
-        // Reset the form
+  // --- HANDLER FUNCTIONS ---
 
-        setupForm.reset();
-        document.getElementById('original_language').value = 'es-ES'; // Reset to default
-        document.getElementById('target_language').value = 'en-US'; // Reset to default
-        document.getElementById('video_file').value = ''; // Clear file input
+  async function handleCleanOutputs() {
+    if (!confirm(
 
+            'Are you sure you want to delete all generated outputs? This action cannot be undone.')) {
+      return;
+    }
+
+    showStatus('info', 'Cleaning outputs directory...');
+
+    try {
+      const response = await fetch('/clean-outputs', {
+
+        method: 'POST'
+
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.detail);
+
+      showStatus('success', 'Outputs directory has been cleaned.');
+
+    } catch (error) {
+      showStatus('error', `Error: ${error.message}`);
+    }
+  }
+
+  function handleStartOver() {
+    // Reset state variables
+
+    JOB_ID = null;
+    currentWorkflow = 'dub';
+    TOTAL_UTTERANCES = 0;
+
+    CURRENT_INDEX = 0;
+
+    UTTERANCES_DATA = [];
+
+    // Reset UI elements
+
+    modeSelectionSection.style.display = 'block';
+    document.getElementById('clean-outputs-button-container').style.display =
+        'block';
+
+    setupSection.style.display = 'none';
+
+    reviewSection.style.display = 'none';
+
+    document.getElementById('timeline-section').style.display = 'none';
+
+    showStatus('info', 'Ready!');
+
+    statusMessage.style.display = 'none';
+    document.getElementById('modal-status-message').style.display = 'none';
+    document.getElementById('apply-modal-status').style.display = 'none';
+    document.getElementById('bulk-progress-message').innerHTML = '';
+    utteranceWarningModal.style.display = 'none';
+    applyToOthersModal.style.display = 'none';
+    assemblyModal.style.display = 'none';
+    fineTuneInstructionsModal.style.display = 'none';  // Hide new modal
+    document.getElementById('setup-throbber-overlay').style.display =
+        'none';                            // Hide setup throbber
+    statusMessage.innerHTML = '';          // Clear status message content
+    statusMessage.style.display = 'none';  // Hide status message
+
+    // Reset the form
+
+    setupForm.reset();
+    document.getElementById('original_language').value =
+        'es-ES';  // Reset to default
+    document.getElementById('target_language').value =
+        'en-US';                                       // Reset to default
+    document.getElementById('video_file').value = '';  // Clear file input
+
+    btnStart.disabled = false;
+    renderTimeline();  // Ensure timeline and button states are reset
+  }
+
+  async function handleStartProcess(event) {
+    event.preventDefault();
+
+    showStatus(
+
+        'info', 'Uploading and analyzing video... This may take a moment. ⏳');
+
+    btnStart.disabled = true;
+    const setupThrobber = document.getElementById('setup-throbber-overlay');
+    setupThrobber.style.display = 'flex';
+
+    const originalLanguageInput = document.getElementById('original_language');
+    const targetLanguageInput = document.getElementById('target_language');
+    const originalLanguageError =
+        document.getElementById('original-language-error');
+    const targetLanguageError =
+        document.getElementById('target-language-error');
+
+    if (currentWorkflow === 'dub') {
+      if (!validateLanguageCode(originalLanguageInput, originalLanguageError)) {
         btnStart.disabled = false;
-        renderTimeline(); // Ensure timeline and button states are reset
-
+        setupThrobber.style.display = 'none';
+        return;
+      }
+      if (!validateLanguageCode(targetLanguageInput, targetLanguageError)) {
+        btnStart.disabled = false;
+        setupThrobber.style.display = 'none';
+        return;
+      }
     }
 
-    async function handleStartProcess(event) {
+    const formData = new FormData(setupForm);
 
-        event.preventDefault();
+    formData.append('workflow', currentWorkflow);
 
-        showStatus(
+    // Add GCS path if provided
+    if (gcsPathInput.value) {
+      formData.append('gcs_path', gcsPathInput.value);
+    }
 
-            'info', 'Uploading and analyzing video... This may take a moment. ⏳');
+    formData.append('script', document.getElementById('script').value);
 
-        btnStart.disabled = true;
-        const setupThrobber = document.getElementById('setup-throbber-overlay');
-        setupThrobber.style.display = 'flex';
+    formData.append(
 
-        const originalLanguageInput = document.getElementById('original_language');
-        const targetLanguageInput = document.getElementById('target_language');
-        const originalLanguageError = document.getElementById('original-language-error');
-        const targetLanguageError = document.getElementById('target-language-error');
+        'prompt_diarization',
 
-        if (currentWorkflow === 'dub') {
-            if (!validateLanguageCode(originalLanguageInput, originalLanguageError)) {
-                btnStart.disabled = false;
-                setupThrobber.style.display = 'none';
-                return;
-            }
-            if (!validateLanguageCode(targetLanguageInput, targetLanguageError)) {
-                btnStart.disabled = false;
-                setupThrobber.style.display = 'none';
-                return;
-            }
-        }
+        document.getElementById('prompt_diarization').value);
 
-        const formData = new FormData(setupForm);
+    formData.append(
 
-        formData.append('workflow', currentWorkflow);
+        'prompt_translation',
 
-        // Add GCS path if provided
-        if (gcsPathInput.value) {
-            formData.append('gcs_path', gcsPathInput.value);
-        }
+        document.getElementById('prompt_translation').value);
 
-        formData.append('script', document.getElementById('script').value);
+    formData.append(
 
-        formData.append(
+        'prompt_translation_refinement',
 
-            'prompt_diarization',
+        document.getElementById('prompt_translation_refinement').value);
 
-            document.getElementById('prompt_diarization').value);
+    formData.append(
 
-        formData.append(
+        'tts_prompt_template',
 
-            'prompt_translation',
+        document.getElementById('tts_prompt_template_adv').value);
 
-            document.getElementById('prompt_translation').value);
+    // Handle checkboxes for boolean values
 
-        formData.append(
+    formData.append(
 
-            'prompt_translation_refinement',
+        'feature_speed_up_enable',
 
-            document.getElementById('prompt_translation_refinement').value);
+        document.getElementById('feature_speed_up_enable').checked);
 
-        formData.append(
+    formData.append(
 
-            'tts_prompt_template',
+        'feature_refinement_enable',
 
-            document.getElementById('tts_prompt_template_adv').value);
+        document.getElementById('feature_refinement_enable').checked);
 
-        // Handle checkboxes for boolean values
+    formData.append(
 
-        formData.append(
+        'prompt_edit', document.getElementById('prompt_edit').checked);
 
-            'feature_speed_up_enable',
+    formData.append('workflow', currentWorkflow);
 
-            document.getElementById('feature_speed_up_enable').checked);
+    try {
+      const response =
 
-        formData.append(
+          await fetch('/start-process', {
 
-            'feature_refinement_enable',
+            method: 'POST',
 
-            document.getElementById('feature_refinement_enable').checked);
+            body: formData
 
-        formData.append(
+          });
 
-            'prompt_edit', document.getElementById('prompt_edit').checked);
+      const result = await response.json();
 
-        formData.append('workflow', currentWorkflow);
+      if (!response.ok) throw new Error(result.detail);
 
-        try {
+      JOB_ID = result.job_id;
 
-            const response =
+      UTTERANCES_DATA = result.utterances;
 
-                await fetch('/start-process', {
+      TOTAL_UTTERANCES = UTTERANCES_DATA.length;
 
-                    method: 'POST',
+      // Populate voice options
 
-                    body: formData
+      voiceSelect.innerHTML = '';
 
-                });
+      result.voice_options.forEach(voice => {
+        const option = document.createElement('option');
 
-            const result = await response.json();
+        option.value = voice;
 
-            if (!response.ok) throw new Error(result.detail);
+        option.textContent = voice;
 
-            JOB_ID = result.job_id;
+        voiceSelect.appendChild(option);
+      });
 
-            UTTERANCES_DATA = result.utterances;
+      // Populate sync mode options
 
-            TOTAL_UTTERANCES = UTTERANCES_DATA.length;
+      const syncModeSelect = document.getElementById('sync-mode');
 
-            // Populate voice options
+      syncModeSelect.innerHTML = '';
 
-            voiceSelect.innerHTML = '';
+      result.sync_modes.forEach(mode => {
+        const option = document.createElement('option');
 
-            result.voice_options.forEach(voice => {
+        option.value = mode;
 
-                const option = document.createElement('option');
+        option.textContent = mode;
 
-                option.value = voice;
+        syncModeSelect.appendChild(option);
+      });
 
-                option.textContent = voice;
+      setupSection.style.display = 'none';
 
-                voiceSelect.appendChild(option);
+      /*
+      if (currentWorkflow === 'dub') {
 
-            });
+          showStatus(
 
-            // Populate sync mode options
+              'success',
 
-            const syncModeSelect = document.getElementById('sync-mode');
+              `Analysis complete! Found ${TOTAL_UTTERANCES} utterances to
+     dub.`);
 
-            syncModeSelect.innerHTML = '';
+          reviewSection.style.display = 'block';
 
-            result.sync_modes.forEach(mode => {
+          loadUtterance(0);
 
-                const option = document.createElement('option');
+      } else { // voiceover workflow
 
-                option.value = mode;
+          showStatus(
 
-                option.textContent = mode;
+              'success',
 
-                syncModeSelect.appendChild(option);
+              `Video processed. You can now add utterances to the timeline.`);
 
-            });
+          const sourceVideoPlayer =
+     document.getElementById('source-video-player');
 
-            setupSection.style.display = 'none';
+          sourceVideoPlayer.src = result.video_url;
 
-            /*
-            if (currentWorkflow === 'dub') {
+          showTimelineEditor();
 
-                showStatus(
+     }
+      */
+      showStatus(
 
-                    'success',
+          'success',
 
-                    `Analysis complete! Found ${TOTAL_UTTERANCES} utterances to dub.`);
+          `Video processed. You can now add utterances to the timeline.`);
 
-                reviewSection.style.display = 'block';
+      const sourceVideoPlayer = document.getElementById('source-video-player');
 
-                loadUtterance(0);
+      sourceVideoPlayer.src = result.video_url;
 
-            } else { // voiceover workflow
+      showTimelineEditor();
+      fineTuneInstructionsModal.style.display = 'block';  // Show the new modal
 
-                showStatus(
+    } catch (error) {
+      showStatus('error', `Error: ${error.message}`);
 
-                    'success',
+      btnStart.disabled = false;
+      setupThrobber.style.display = 'none';
+    }
+  }
 
-                    `Video processed. You can now add utterances to the timeline.`);
+  function loadUtterance(index) {
+    if (index >= TOTAL_UTTERANCES) {
+      handleInitialAssembly();
 
-                const sourceVideoPlayer = document.getElementById('source-video-player');
+      showTimelineEditor();
 
-                sourceVideoPlayer.src = result.video_url;
-                
-                showTimelineEditor();
+      return;
+    }
 
-           }
-            */
-            showStatus(
+    CURRENT_INDEX = index;
 
-                    'success',
+    const utterance = UTTERANCES_DATA[index];
 
-                    `Video processed. You can now add utterances to the timeline.`);
+    reviewProgress.textContent =
 
-            const sourceVideoPlayer = document.getElementById('source-video-player');
-
-            sourceVideoPlayer.src = result.video_url;
-            
-            showTimelineEditor();
-            fineTuneInstructionsModal.style.display = 'block'; // Show the new modal
-
-        } catch (error) {
-
-            showStatus('error', `Error: ${error.message}`);
-
-            btnStart.disabled = false;
-            setupThrobber.style.display = 'none';
-
-        }
-
-    };
-
-    function loadUtterance(index) {
-
-        if (index >= TOTAL_UTTERANCES) {
-
-            handleInitialAssembly();
-
-            showTimelineEditor();
-
-            return;
-
-        }
-
-        CURRENT_INDEX = index;
-
-        const utterance = UTTERANCES_DATA[index];
-
-        reviewProgress.textContent =
-
-            `Reviewing Utterance ${index + 1} of ${TOTAL_UTTERANCES} (Time: ${
+        `Reviewing Utterance ${index + 1} of ${TOTAL_UTTERANCES} (Time: ${
 
             utterance.start.toFixed(2)}s - ${utterance.end.toFixed(2)}s)`;
 
-        document.getElementById('start').value = utterance.start.toFixed(2);
+    document.getElementById('start').value = utterance.start.toFixed(2);
 
-        document.getElementById('end').value = utterance.end.toFixed(2);
+    document.getElementById('end').value = utterance.end.toFixed(2);
 
-        document.getElementById('source-language').value = utterance.source_language;
+    document.getElementById('source-language').value =
+        utterance.source_language;
 
-        document.getElementById('target-language').value = utterance.target_language;
+    document.getElementById('target-language').value =
+        utterance.target_language;
 
-        document.getElementById('original-text').value = utterance.original_text;
+    document.getElementById('original-text').value = utterance.original_text;
 
+    document.getElementById('translated-text').value =
+
+        utterance.translated_text;
+
+    voiceSelect.value = utterance.voice_name;
+
+    document.getElementById('sync-mode').value = utterance.sync_mode;
+
+    document.getElementById('tone').value = utterance.tone;
+
+    document.getElementById('pitch').value = utterance.pitch;
+
+    document.getElementById('gender').value = utterance.gender;
+
+    document.getElementById('age').value = utterance.age;
+
+    vocalStylePromptInput.value = utterance.vocal_style_prompt;
+
+    specialInstructionsInput.value = utterance.special_instructions;
+
+    ttsPromptTextarea.value = utterance.tts_prompt;
+
+    audioPlayer.style.display = 'none';
+
+    audioPlayer.src = '';
+
+    btnApprove.disabled = true;
+  }
+
+  async function handleGenerateSpeech(event) {
+    showStatus(
+
+        'info', `Generating speech for utterance ${CURRENT_INDEX + 1}...`);
+
+    btnRegenerate.disabled = true;
+
+    btnApprove.disabled = true;
+    const throbber =
+        document.querySelector('#review-section .throbber-overlay');
+    throbber.style.display = 'flex';
+
+    const sourceLanguageInput = document.getElementById('source-language');
+    const targetLanguageInput = document.getElementById('target-language');
+    const sourceLanguageError =
+        document.getElementById('review-source-language-error');
+    const targetLanguageError =
+        document.getElementById('review-target-language-error');
+
+    if (!validateLanguageCode(sourceLanguageInput, sourceLanguageError)) {
+      btnRegenerate.disabled = false;
+      btnApprove.disabled = false;
+      throbber.style.display = 'none';
+      return;
+    }
+    if (!validateLanguageCode(targetLanguageInput, targetLanguageError)) {
+      btnRegenerate.disabled = false;
+      btnApprove.disabled = false;
+      throbber.style.display = 'none';
+      return;
+    }
+
+    const utterance = {};
+    utterance.start = parseFloat(document.getElementById('start').value);
+    utterance.end = parseFloat(document.getElementById('end').value);
+    utterance.original_text = document.getElementById('original-text').value;
+    utterance.translated_text =
+        document.getElementById('translated-text').value;
+    utterance.voice_name = document.getElementById('voice-name').value;
+    utterance.sync_mode = document.getElementById('sync-mode').value;
+    utterance.tone = document.getElementById('tone').value;
+    utterance.pitch = document.getElementById('pitch').value;
+    utterance.gender = document.getElementById('gender').value;
+    utterance.age = document.getElementById('age').value;
+    utterance.vocal_style_prompt =
+        document.getElementById('vocal-style-prompt').value;
+    utterance.special_instructions =
+        document.getElementById('special-instructions').value;
+    utterance.tts_prompt = document.getElementById('tts-prompt').value;
+
+    // Also save the newly generated audio if it exists
+    const editAudioPlayer = document.getElementById('audio-player');
+    if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
+      utterance.audio_url = editAudioPlayer.src;
+    }
+
+    const formData = new FormData();
+
+    formData.append('job_id', JOB_ID);
+
+    formData.append('index', CURRENT_INDEX);
+
+    formData.append('utterance', JSON.stringify(utterance));
+
+    try {
+      const response =
+
+          await fetch('/generate-speech', {
+
+            method: 'POST',
+
+            body: formData
+
+          });
+
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.detail);
+
+      if (result.utterance) {
+        UTTERANCES_DATA[CURRENT_INDEX] = result.utterance;
         document.getElementById('translated-text').value =
+            result.utterance.translated_text;
+      }
 
-            utterance.translated_text;
+      audioPlayer.src = result.audio_url;
 
-        voiceSelect.value = utterance.voice_name;
+      audioPlayer.load();
 
-        document.getElementById('sync-mode').value = utterance.sync_mode;
+      audioPlayer.style.display = 'block';
 
-        document.getElementById('tone').value = utterance.tone;
+      showStatus('success', 'Speech generated. Please review.');
 
-        document.getElementById('pitch').value = utterance.pitch;
+      btnApprove.disabled = false;
 
-        document.getElementById('gender').value = utterance.gender;
+    } catch (error) {
+      showStatus('error', `Generation failed: ${error.message}`);
 
-        document.getElementById('age').value = utterance.age;
-
-        vocalStylePromptInput.value = utterance.vocal_style_prompt;
-
-        specialInstructionsInput.value = utterance.special_instructions;
-
-        ttsPromptTextarea.value = utterance.tts_prompt;
-
-        audioPlayer.style.display = 'none';
-
-        audioPlayer.src = '';
-
-        btnApprove.disabled = true;
-
+    } finally {
+      btnRegenerate.disabled = false;
+      throbber.style.display = 'none';
     }
+  }
 
-    async function handleGenerateSpeech(event) {
+  async function handleApproveSpeech() {
+    showStatus('info', `Approving utterance ${CURRENT_INDEX + 1}...`);
 
-        showStatus(
+    btnApprove.disabled = true;
 
-            'info', `Generating speech for utterance ${CURRENT_INDEX + 1}...`);
+    const formData = new FormData();
 
-        btnRegenerate.disabled = true;
+    formData.append('job_id', JOB_ID);
 
-        btnApprove.disabled = true;
-        const throbber = document.querySelector('#review-section .throbber-overlay');
-        throbber.style.display = 'flex';
+    formData.append('index', CURRENT_INDEX);
 
-        const sourceLanguageInput = document.getElementById('source-language');
-        const targetLanguageInput = document.getElementById('target-language');
-        const sourceLanguageError = document.getElementById('review-source-language-error');
-        const targetLanguageError = document.getElementById('review-target-language-error');
+    formData.append(
 
-        if (!validateLanguageCode(sourceLanguageInput, sourceLanguageError)) {
-            btnRegenerate.disabled = false;
-            btnApprove.disabled = false;
-            throbber.style.display = 'none';
-            return;
-        }
-        if (!validateLanguageCode(targetLanguageInput, targetLanguageError)) {
-            btnRegenerate.disabled = false;
-            btnApprove.disabled = false;
-            throbber.style.display = 'none';
-            return;
-        }
-        
-        const utterance = {};
-        utterance.start = parseFloat(document.getElementById('start').value);
-        utterance.end = parseFloat(document.getElementById('end').value);
-        utterance.original_text =
-            document.getElementById('original-text').value;
-        utterance.translated_text =
-            document.getElementById('translated-text').value;
-        utterance.voice_name = document.getElementById('voice-name').value;
-        utterance.sync_mode = document.getElementById('sync-mode').value;
-        utterance.tone = document.getElementById('tone').value;
-        utterance.pitch = document.getElementById('pitch').value;
-        utterance.gender = document.getElementById('gender').value;
-        utterance.age = document.getElementById('age').value;
-        utterance.vocal_style_prompt =
-            document.getElementById('vocal-style-prompt').value;
-        utterance.special_instructions =
-            document.getElementById('special-instructions').value;
-        utterance.tts_prompt = document.getElementById('tts-prompt').value;
+        'audio_path', audioPlayer.src.split('/').pop());  // Send filename
 
-        // Also save the newly generated audio if it exists
-        const editAudioPlayer = document.getElementById('audio-player');
-        if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
-            utterance.audio_url = editAudioPlayer.src;
-        }
+    try {
+      const response =
 
-        const formData = new FormData();
+          await fetch('/approve-speech', {
 
-        formData.append('job_id', JOB_ID);
+            method: 'POST',
 
-        formData.append('index', CURRENT_INDEX);
+            body: formData
 
-        formData.append('utterance', JSON.stringify(utterance));
+          });
 
-        try {
+      if (!response.ok) {
+        const result = await response.json();
 
-            const response =
+        throw new Error(result.detail);
+      }
 
-                await fetch('/generate-speech', {
+      UTTERANCES_DATA[CURRENT_INDEX].audio_url = audioPlayer.src;
 
-                    method: 'POST',
+      showStatus('success', `Utterance ${CURRENT_INDEX + 1} approved`);
 
-                    body: formData
+      CURRENT_INDEX++;
 
-                });
+      loadUtterance(CURRENT_INDEX);
 
-            const result = await response.json();
+      // Re-evaluate button states after approval
+      const allUtterancesHaveAudio = checkAllUtterancesHaveAudio();
+      document.getElementById('btn-assemble-final').disabled =
+          !allUtterancesHaveAudio;
+      document.getElementById('btn-apply-to-others').disabled =
+          !allUtterancesHaveAudio;
 
-            if (!response.ok) throw new Error(result.detail);
+    } catch (error) {
+      showStatus('error', `Approval failed: ${error.message}`);
 
-            if (result.utterance) {
-                UTTERANCES_DATA[CURRENT_INDEX] = result.utterance;
-                document.getElementById('translated-text').value = result.utterance.translated_text;
-            }
-
-            audioPlayer.src = result.audio_url;
-
-            audioPlayer.load();
-
-            audioPlayer.style.display = 'block';
-
-            showStatus('success', 'Speech generated. Please review.');
-
-            btnApprove.disabled = false;
-
-        } catch (error) {
-
-            showStatus('error', `Generation failed: ${error.message}`);
-
-        } finally {
-
-            btnRegenerate.disabled = false;
-            throbber.style.display = 'none';
-
-        }
-
+      btnApprove.disabled = false;
     }
+  }
 
-    async function handleApproveSpeech() {
+  function renderTimeline() {
+    const sourceVideoPlayer = document.getElementById('source-video-player');
 
-        showStatus('info', `Approving utterance ${CURRENT_INDEX + 1}...`);
+    const videoDuration = sourceVideoPlayer.duration;
 
-        btnApprove.disabled = true;
+    const timeline = document.getElementById('timeline');
 
-        const formData = new FormData();
+    const timelineContainer = document.querySelector('.timeline-container');
 
-        formData.append('job_id', JOB_ID);
+    timeline.innerHTML = '';  // Clear previous pills
 
-        formData.append('index', CURRENT_INDEX);
+    if (isNaN(videoDuration)) return;
 
-        formData.append(
+    // Add 0s marker
+    const startMarker = document.createElement('div');
+    startMarker.className = 'timeline-marker start';
+    startMarker.dataset.time = '0.00s';
+    timeline.appendChild(startMarker);
 
-            'audio_path', audioPlayer.src.split('/').pop()); // Send filename
+    // Add video end marker
+    const endMarker = document.createElement('div');
+    endMarker.className = 'timeline-marker end';
+    endMarker.dataset.time = videoDuration.toFixed(2) + 's';
+    timeline.appendChild(endMarker);
 
-        try {
+    const trackHeight = 60;  // px per track, increased for spacing
 
-            const response =
+    const timelineHeight =
 
-                await fetch('/approve-speech', {
+        UTTERANCES_DATA.length * trackHeight + 20;  // +20 for padding
 
-                    method: 'POST',
+    timeline.style.height = `${timelineHeight}px`;
 
-                    body: formData
+    timelineContainer.style.height = `${
 
-                });
+        Math.min(timelineHeight, 300)}px`;  // Set container height with a max
 
-            if (!response.ok) {
+    // Enable/disable assemble and apply buttons based on audio generation
+    // status
+    const allUtterancesHaveAudio = checkAllUtterancesHaveAudio();
+    document.getElementById('btn-assemble-final').disabled =
+        !allUtterancesHaveAudio;
+    document.getElementById('btn-apply-to-others').disabled =
+        !allUtterancesHaveAudio;
 
-                const result = await response.json();
+    UTTERANCES_DATA.forEach((utterance, index) => {
+      const pill = document.createElement('div');
 
-                throw new Error(result.detail);
+      pill.className = 'utterance-pill';
 
-            }
+      pill.dataset.index = index;
 
-            UTTERANCES_DATA[CURRENT_INDEX].audio_url = audioPlayer.src;
+      const pillContent = document.createElement('span');
 
-            showStatus('success', `Utterance ${CURRENT_INDEX + 1} approved`);
+      pillContent.textContent = `Utterance ${index + 1}`;
 
-            CURRENT_INDEX++;
+      const playIcon = document.createElement('div');
 
-            loadUtterance(CURRENT_INDEX);
+      playIcon.className = 'play-icon';
 
-            // Re-evaluate button states after approval
-            const allUtterancesHaveAudio = checkAllUtterancesHaveAudio();
-            document.getElementById('btn-assemble-final').disabled = !allUtterancesHaveAudio;
-            document.getElementById('btn-apply-to-others').disabled = !allUtterancesHaveAudio;
+      if (utterance.audio_url) {
+        playIcon.classList.add('play-icon-generated');
+      } else {
+        playIcon.classList.add('play-icon-disabled');
+      }
 
-        } catch (error) {
+      const editIcon = document.createElement('div');
 
-            showStatus('error', `Approval failed: ${error.message}`);
+      editIcon.className = 'edit-icon';
 
-            btnApprove.disabled = false;
+      const deleteIcon = document.createElement('div');
 
-        }
+      deleteIcon.className = 'delete-icon';
 
-    }
+      const iconsContainer = document.createElement('div');
 
-    function renderTimeline() {
+      iconsContainer.className = 'icons';
 
-        const sourceVideoPlayer = document.getElementById('source-video-player');
+      iconsContainer.appendChild(playIcon);
 
-        const videoDuration = sourceVideoPlayer.duration;
+      iconsContainer.appendChild(editIcon);
 
-        const timeline = document.getElementById('timeline');
+      iconsContainer.appendChild(deleteIcon);
 
-        const timelineContainer = document.querySelector('.timeline-container');
+      pill.appendChild(pillContent);
 
-        timeline.innerHTML = ''; // Clear previous pills
+      pill.appendChild(iconsContainer);
 
-        if (isNaN(videoDuration)) return;
+      playIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
 
-        // Add 0s marker
-        const startMarker = document.createElement('div');
-        startMarker.className = 'timeline-marker start';
-        startMarker.dataset.time = '0.00s';
-        timeline.appendChild(startMarker);
+        const utteranceIndex = parseInt(pill.dataset.index, 10);
 
-        // Add video end marker
-        const endMarker = document.createElement('div');
-        endMarker.className = 'timeline-marker end';
-        endMarker.dataset.time = videoDuration.toFixed(2) + 's';
-        timeline.appendChild(endMarker);
+        const utteranceToPlay = UTTERANCES_DATA[utteranceIndex];
 
-        const trackHeight = 60; // px per track, increased for spacing
+        if (utteranceToPlay && utteranceToPlay.audio_url) {
+          const timelineAudio = new Audio(utteranceToPlay.audio_url);
 
-        const timelineHeight =
+          document.getElementById('source-video-player').pause();
 
-            UTTERANCES_DATA.length * trackHeight + 20; // +20 for padding
-
-        timeline.style.height = `${timelineHeight}px`;
-
-        timelineContainer.style.height = `${
-
-        Math.min(timelineHeight, 300)}px`; // Set container height with a max
-
-        // Enable/disable assemble and apply buttons based on audio generation status
-        const allUtterancesHaveAudio = checkAllUtterancesHaveAudio();
-        document.getElementById('btn-assemble-final').disabled = !allUtterancesHaveAudio;
-        document.getElementById('btn-apply-to-others').disabled = !allUtterancesHaveAudio;
-        
-        UTTERANCES_DATA.forEach((utterance, index) => {
-
-            const pill = document.createElement('div');
-
-            pill.className = 'utterance-pill';
-
-            pill.dataset.index = index;
-
-            const pillContent = document.createElement('span');
-
-            pillContent.textContent = `Utterance ${index + 1}`;
-
-            const playIcon = document.createElement('div');
-
-            playIcon.className = 'play-icon';
-
-            if (utterance.audio_url) {
-                playIcon.classList.add('play-icon-generated');
-            } else {
-                playIcon.classList.add('play-icon-disabled');
-            }
-
-            const editIcon = document.createElement('div');
-
-            editIcon.className = 'edit-icon';
-
-            const deleteIcon = document.createElement('div');
-
-            deleteIcon.className = 'delete-icon';
-
-            const iconsContainer = document.createElement('div');
-
-            iconsContainer.className = 'icons';
-
-            iconsContainer.appendChild(playIcon);
-
-            iconsContainer.appendChild(editIcon);
-
-            iconsContainer.appendChild(deleteIcon);
-
-            pill.appendChild(pillContent);
-
-            pill.appendChild(iconsContainer);
-
-            playIcon.addEventListener('click', (e) => {
-
-                e.stopPropagation();
-
-                const utteranceIndex = parseInt(pill.dataset.index, 10);
-
-                const utteranceToPlay = UTTERANCES_DATA[utteranceIndex];
-
-                if (utteranceToPlay && utteranceToPlay.audio_url) {
-
-                    const timelineAudio = new Audio(utteranceToPlay.audio_url);
-
-                    document.getElementById('source-video-player').pause();
-
-                    timelineAudio.play();
-
-                } else {
-                    // If no audio, do nothing and prevent default click behavior
-                    e.preventDefault();
-                    showStatus(
-
-                        'info',
-
-                        `No audio generated for Utterance ${utteranceIndex + 1} yet.`);
-
-                }
-
-            });
-
-            editIcon.addEventListener('click', (e) => {
-
-                e.stopPropagation();
-
-                const utteranceIndex = parseInt(pill.dataset.index, 10);
-
-                openEditModal(utteranceIndex);
-
-            });
-
-            deleteIcon.addEventListener('click', (e) => {
-
-                e.stopPropagation();
-
-                const utteranceIndex = parseInt(pill.dataset.index, 10);
-
-                if (confirm(`Are you sure you want to remove Utterance ${
-
-                utteranceIndex + 1}? This cannot be undone.`)) {
-
-                    removeUtterance(utteranceIndex);
-
-                    UTTERANCES_DATA.splice(utteranceIndex, 1);
-
-                    renderTimeline(); // Re-render the timeline
-
-                    checkAllUtterancesHaveAudio();
-
-                }
-
-                
-
-            });
-
-            const updatePillData = (start, end) => {
-
-                pill.dataset.startTime = start.toFixed(2) + 's';
-
-                pill.dataset.endTime = end.toFixed(2) + 's';
-
-            };
-
-            const startHandle = document.createElement('div');
-
-            startHandle.className = 'handle start';
-
-            pill.appendChild(startHandle);
-
-            const endHandle = document.createElement('div');
-
-            endHandle.className = 'handle end';
-
-            pill.appendChild(endHandle);
-
-            const duration = utterance.end - utterance.start;
-
-            const left = (utterance.start / videoDuration) * 100;
-
-            const width = (duration / videoDuration) * 100;
-
-            pill.style.left = `${left}%`;
-
-            pill.style.width = `${width}%`;
-
-            pill.style.top =
-
-                `${index * trackHeight + 20}px`; // +20 to push down from top
-
-            updatePillData(utterance.start, utterance.end);
-
-            timeline.appendChild(pill);
-
-            // Drag and drop functionality
-
-            let isDragging = false;
-
-            let initialX;
-
-            let initialLeftPercent;
-
-            pill.addEventListener('mousedown', (e) => {
-
-                if (e.target.classList.contains('play-icon') ||
-
-                    e.target.classList.contains('delete-icon'))
-
-                    return;
-
-                e.preventDefault();
-
-                isDragging = true;
-
-                initialX = e.clientX;
-
-                initialLeftPercent = parseFloat(pill.style.left);
-
-                pill.style.cursor = 'grabbing';
-
-                pill.style.zIndex = 1000; // Bring to front
-
-                document.body.style.cursor = 'grabbing';
-
-                const timelineWidth = timeline.offsetWidth;
-
-                const onMouseMove = (moveEvent) => {
-
-                    if (!isDragging) return;
-
-                    const dx = moveEvent.clientX - initialX;
-
-                    const dPercent = (dx / timelineWidth) * 100;
-
-                    let newLeftPercent = initialLeftPercent + dPercent;
-
-                    const pillWidthPercent = parseFloat(pill.style.width);
-
-                    newLeftPercent =
-
-                        Math.max(0, Math.min(newLeftPercent, 100 - pillWidthPercent));
-
-                    pill.style.left = `${newLeftPercent}%`;
-
-                    // Update data attributes for live display
-
-                    const newStartTime = (newLeftPercent / 100) * videoDuration;
-
-                    const originalDuration =
-
-                        UTTERANCES_DATA[index].end - UTTERANCES_DATA[index].start;
-
-                    updatePillData(newStartTime, newStartTime + originalDuration);
-
-                };
-
-                const onMouseUp = () => {
-
-                    if (!isDragging) return;
-
-                    isDragging = false;
-
-                    pill.style.cursor = 'grab';
-
-                    pill.style.zIndex = 'auto';
-
-                    document.body.style.cursor = 'default';
-
-                    document.removeEventListener('mousemove', onMouseMove);
-
-                    document.removeEventListener('mouseup', onMouseUp);
-
-                    // Update utterance data
-
-                    const newLeftPercent = parseFloat(pill.style.left);
-
-                    const newStartTime = (newLeftPercent / 100) * videoDuration;
-
-                    const originalDuration =
-
-                        UTTERANCES_DATA[index].end - UTTERANCES_DATA[index].start;
-
-                    UTTERANCES_DATA[index].start = newStartTime;
-
-                    UTTERANCES_DATA[index].end = newStartTime + originalDuration;
-
-                    updatePillData(
-
-                        UTTERANCES_DATA[index].start, UTTERANCES_DATA[index].end);
-
-                    console.log(`Utterance ${index + 1} new start time: ${
-
-              newStartTime.toFixed(2)}s`);
-
-                };
-
-                document.addEventListener('mousemove', onMouseMove);
-
-                document.addEventListener('mouseup', onMouseUp);
-
-            });
-
-        });
-
-    }
-
-    function showTimelineEditor() {
-
-        reviewSection.style.display = 'none';
-
-        const timelineSection = document.getElementById('timeline-section');
-
-        timelineSection.style.display = 'block';
-
-        const sourceVideoPlayer = document.getElementById('source-video-player');
-
-        sourceVideoPlayer.onloadedmetadata = () => {
-
-            renderTimeline();
-
-        };
-
-    }
-
-    function updateUtterancesFromPills() {
-
-        const pills = document.querySelectorAll('.utterance-pill');
-
-        const videoDuration =
-
-            document.getElementById('source-video-player').duration;
-
-        if (isNaN(videoDuration)) return;
-
-        pills.forEach(pill => {
-
-            const index = parseInt(pill.dataset.index, 10);
-
-            if (isNaN(index) || !UTTERANCES_DATA[index]) return;
-
-            const leftPercent = parseFloat(pill.style.left);
-
-            const newStartTime = (leftPercent / 100) * videoDuration;
-
-            // Keep the original duration of the utterance
-
-            const originalDuration =
-
-                UTTERANCES_DATA[index].end - UTTERANCES_DATA[index].start;
-
-            UTTERANCES_DATA[index].start = newStartTime;
-
-            UTTERANCES_DATA[index].end = newStartTime + originalDuration;
-
-        });
-
-    }
-
-    async function handleInitialAssembly() {
-        const allUtterancesHaveAudio = checkAllUtterancesHaveAudio();
-        if (!allUtterancesHaveAudio) {
-            document.getElementById('btn-assemble-final').disabled = true;
-            document.getElementById('btn-apply-to-others').disabled = true;
-            showStatus('info', 'No audio generated for any utterance. Assemble and Apply buttons remain disabled.');
-            return;
-        }
-
-        showStatus('info', 'Assembling the video... This may take some time. 🎬');
-
-        btnAssembleFinal.disabled = true;
-
-        const assemblyModal = document.getElementById('assembly-modal');
-                assemblyModal.style.display = 'block';
-                const formData = new FormData();
-                formData.append('job_id', JOB_ID);
-                formData.append('updated_utterances', JSON.stringify(UTTERANCES_DATA));
-                formData.append('background_music_volume', document.getElementById('background_music_volume_range').value);
-                formData.append('speech_volume', document.getElementById('speech_volume_range').value);
-
-        try {
-
-            const response =
-
-                await fetch('/assemble-video', {
-
-                    method: 'POST',
-
-                    body: formData
-
-                });
-
-            const result = await response.json();
-
-            if (!response.ok) throw new Error(result.detail);
-
-            const sourceVideoPlayer = document.getElementById('source-video-player');
-
-            sourceVideoPlayer.src = result.video_url;
-
-            showStatus(
-
-                'success',
-
-                `✅ Success! Your dubbed video is ready below. You can also <a href="${
-
-              result.video_url}" download>download it here</a>.`);
-
-        } catch (error) {
-
-            showStatus('error', `Assembly failed: ${error.message}`);
-
-        } finally {
-
-            btnAssembleFinal.disabled = false;
-
-            assemblyModal.style.display = 'none';
-
-        }
-
-    }
-
-    async function handleFinalAssembly() {
-        if (!checkAllUtterancesHaveAudio()) {
-            utteranceWarningMessage.textContent = 'Please generate speech for all utterances before assembling the final video.';
-            utteranceWarningModal.style.display = 'block';
-            btnAssembleFinal.disabled = true;
-            btnApplyToOthers.disabled = true;
-            return;
-        }
-
-        showStatus(
-            'info', 'Assembling the final video... This may take some time. 🎬');
-
-        btnAssembleFinal.disabled = true;
-
-        const assemblyModal = document.getElementById('assembly-modal');
-        assemblyModal.style.display = 'block';
-
-        updateUtterancesFromPills(); // Update data from DOM just before sending
-
-        const formData = new FormData();
-
-        formData.append('job_id', JOB_ID);
-
-        formData.append('updated_utterances', JSON.stringify(UTTERANCES_DATA));
-        formData.append('music_volume', document.getElementById('background_music_volume_range').value);
-        formData.append('speech_volume', document.getElementById('speech_volume_range').value);
-
-        try {
-
-            const response =
-
-                await fetch('/assemble-video', {
-
-                    method: 'POST',
-
-                    body: formData
-
-                });
-
-            const result = await response.json();
-
-            if (!response.ok) throw new Error(result.detail);
-
-            const videoContainer =
-
-                document.getElementById('source-video-player').parentNode;
-
-            videoContainer.innerHTML =
-
-                ''; // Easiest way to clear the old video element and its state
-
-            const sourceVideoPlayer = document.createElement('video');
-
-            sourceVideoPlayer.id = 'source-video-player';
-
-            sourceVideoPlayer.style.width = '100%';
-
-            sourceVideoPlayer.controls = true;
-
-            sourceVideoPlayer.src = '';
-
-            videoContainer.appendChild(sourceVideoPlayer);
-
-            // Re-attach the metadata listener to re-render the timeline when the new
-
-            // video loads
-
-            sourceVideoPlayer.onloadedmetadata = () => {
-
-                renderTimeline();
-
-            };
-
-            setTimeout(() => {
-
-                sourceVideoPlayer.src = `${result.video_url}?t=${new Date().getTime()}`;
-
-                sourceVideoPlayer.load();
-
-            }, 500);
-
-            showStatus(
-
-                'success',
-
-                `✅ Success! Your dubbed video is ready below. You can also <a href="${
-
-              result.video_url}" download>download it here</a>.`);
-
-        } catch (error) {
-
-            showStatus('error', `Assembly failed: ${error.message}`);
-
-        } finally {
-
-            btnAssembleFinal.disabled = false;
-
-            assemblyModal.style.display = 'none';
-
-        }
-
-    }
-
-    async function removeUtterance(utterance_id) {
-
-        const formData = new FormData();
-
-        formData.append('job_id', JOB_ID);
-
-        formData.append('utterance_id', utterance_id);
-
-        try {
-
-            const response =
-
-                await fetch('/remove-utterance', {
-
-                    method: 'POST',
-
-                    body: formData
-
-                });
-
-            const result = await response.json();
-
-            if (!response.ok) throw new Error(result.detail);
-
-            showStatus('success', `✅ Success! Utterance Removed.`);
-
-        } catch (error) {
-
-            showStatus('error', `Remove utterance failed: ${error.message}`);
-
-        } finally {
-
-            
-
-        }
-
-    }
-
-    // --- MODAL FUNCTIONS ---
-
-    function openEditModal(index) {
-
-        const utterance = UTTERANCES_DATA[index];
-
-        if (!utterance) return;
-
-        document.getElementById('modal-status-message').style.display = 'none'; // Clear previous status
-        document.getElementById('modal-status-message').innerHTML = '';
-
-        document.getElementById('edit-utterance-index').value = index;
-
-        document.getElementById('edit-start').value = utterance.start.toFixed(2);
-
-        document.getElementById('edit-source-language').value =
-
-            utterance.source_language;
-
-        document.getElementById('edit-target-language').value =
-
-            utterance.target_language;
-
-        document.getElementById('edit-end').value = utterance.end.toFixed(2);
-        
-        
-        document.getElementById('edit-original-text').value =
-
-            utterance.original_text;
-
-        document.getElementById('edit-translated-text').value =
-
-            utterance.translated_text;
-
-        const editVoiceSelect = document.getElementById('edit-voice-name');
-
-        editVoiceSelect.innerHTML = voiceSelect.innerHTML; // Copy options
-
-        editVoiceSelect.value = utterance.voice_name;
-
-        const editSyncModeSelect = document.getElementById('edit-sync-mode');
-
-        editSyncModeSelect.innerHTML =
-
-            document.getElementById('sync-mode').innerHTML; // Copy options
-
-        editSyncModeSelect.value = utterance.sync_mode;
-
-        document.getElementById('edit-tone').value = utterance.tone;
-
-        document.getElementById('edit-pitch').value = utterance.pitch;
-
-        document.getElementById('edit-gender').value = utterance.gender;
-
-        document.getElementById('edit-age').value = utterance.age;
-
-        document.getElementById('edit-vocal-style-prompt').value =
-
-            utterance.vocal_style_prompt;
-
-        document.getElementById('edit-special-instructions').value =
-
-            utterance.special_instructions;
-
-        document.getElementById('edit-tts-prompt').value = utterance.tts_prompt;
-
-        const editAudioPlayer = document.getElementById('edit-audio-player');
-
-        if (utterance.audio_url) {
-
-            editAudioPlayer.src = utterance.audio_url;
-
-            editAudioPlayer.style.display = 'block';
+          timelineAudio.play();
 
         } else {
+          // If no audio, do nothing and prevent default click behavior
+          e.preventDefault();
+          showStatus(
 
-            editAudioPlayer.style.display = 'none';
+              'info',
 
-            editAudioPlayer.src = '';
-
+              `No audio generated for Utterance ${utteranceIndex + 1} yet.`);
         }
+      });
 
-        editModal.style.display = 'block';
+      editIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
 
+        const utteranceIndex = parseInt(pill.dataset.index, 10);
+
+        openEditModal(utteranceIndex);
+      });
+
+      deleteIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        const utteranceIndex = parseInt(pill.dataset.index, 10);
+
+        if (confirm(`Are you sure you want to remove Utterance ${
+
+                utteranceIndex + 1}? This cannot be undone.`)) {
+          removeUtterance(utteranceIndex);
+
+          UTTERANCES_DATA.splice(utteranceIndex, 1);
+
+          renderTimeline();  // Re-render the timeline
+
+          checkAllUtterancesHaveAudio();
+        }
+      });
+
+      const updatePillData = (start, end) => {
+        pill.dataset.startTime = start.toFixed(2) + 's';
+
+        pill.dataset.endTime = end.toFixed(2) + 's';
+      };
+
+      const startHandle = document.createElement('div');
+
+      startHandle.className = 'handle start';
+
+      pill.appendChild(startHandle);
+
+      const endHandle = document.createElement('div');
+
+      endHandle.className = 'handle end';
+
+      pill.appendChild(endHandle);
+
+      const duration = utterance.end - utterance.start;
+
+      const left = (utterance.start / videoDuration) * 100;
+
+      const width = (duration / videoDuration) * 100;
+
+      pill.style.left = `${left}%`;
+
+      pill.style.width = `${width}%`;
+
+      pill.style.top =
+
+          `${index * trackHeight + 20}px`;  // +20 to push down from top
+
+      updatePillData(utterance.start, utterance.end);
+
+      timeline.appendChild(pill);
+
+      // Drag and drop functionality
+
+      let isDragging = false;
+
+      let initialX;
+
+      let initialLeftPercent;
+
+      pill.addEventListener('mousedown', (e) => {
+        if (e.target.classList.contains('play-icon') ||
+
+            e.target.classList.contains('delete-icon'))
+
+          return;
+
+        e.preventDefault();
+
+        isDragging = true;
+
+        initialX = e.clientX;
+
+        initialLeftPercent = parseFloat(pill.style.left);
+
+        pill.style.cursor = 'grabbing';
+
+        pill.style.zIndex = 1000;  // Bring to front
+
+        document.body.style.cursor = 'grabbing';
+
+        const timelineWidth = timeline.offsetWidth;
+
+        const onMouseMove = (moveEvent) => {
+          if (!isDragging) return;
+
+          const dx = moveEvent.clientX - initialX;
+
+          const dPercent = (dx / timelineWidth) * 100;
+
+          let newLeftPercent = initialLeftPercent + dPercent;
+
+          const pillWidthPercent = parseFloat(pill.style.width);
+
+          newLeftPercent =
+
+              Math.max(0, Math.min(newLeftPercent, 100 - pillWidthPercent));
+
+          pill.style.left = `${newLeftPercent}%`;
+
+          // Update data attributes for live display
+
+          const newStartTime = (newLeftPercent / 100) * videoDuration;
+
+          const originalDuration =
+
+              UTTERANCES_DATA[index].end - UTTERANCES_DATA[index].start;
+
+          updatePillData(newStartTime, newStartTime + originalDuration);
+        };
+
+        const onMouseUp = () => {
+          if (!isDragging) return;
+
+          isDragging = false;
+
+          pill.style.cursor = 'grab';
+
+          pill.style.zIndex = 'auto';
+
+          document.body.style.cursor = 'default';
+
+          document.removeEventListener('mousemove', onMouseMove);
+
+          document.removeEventListener('mouseup', onMouseUp);
+
+          // Update utterance data
+
+          const newLeftPercent = parseFloat(pill.style.left);
+
+          const newStartTime = (newLeftPercent / 100) * videoDuration;
+
+          const originalDuration =
+
+              UTTERANCES_DATA[index].end - UTTERANCES_DATA[index].start;
+
+          UTTERANCES_DATA[index].start = newStartTime;
+
+          UTTERANCES_DATA[index].end = newStartTime + originalDuration;
+
+          updatePillData(
+
+              UTTERANCES_DATA[index].start, UTTERANCES_DATA[index].end);
+
+          console.log(`Utterance ${index + 1} new start time: ${
+
+              newStartTime.toFixed(2)}s`);
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+
+        document.addEventListener('mouseup', onMouseUp);
+      });
+    });
+  }
+
+  function showTimelineEditor() {
+    reviewSection.style.display = 'none';
+
+    const timelineSection = document.getElementById('timeline-section');
+
+    timelineSection.style.display = 'block';
+
+    const sourceVideoPlayer = document.getElementById('source-video-player');
+
+    sourceVideoPlayer.onloadedmetadata = () => {
+      renderTimeline();
+    };
+  }
+
+  function updateUtterancesFromPills() {
+    const pills = document.querySelectorAll('.utterance-pill');
+
+    const videoDuration =
+
+        document.getElementById('source-video-player').duration;
+
+    if (isNaN(videoDuration)) return;
+
+    pills.forEach(pill => {
+      const index = parseInt(pill.dataset.index, 10);
+
+      if (isNaN(index) || !UTTERANCES_DATA[index]) return;
+
+      const leftPercent = parseFloat(pill.style.left);
+
+      const newStartTime = (leftPercent / 100) * videoDuration;
+
+      // Keep the original duration of the utterance
+
+      const originalDuration =
+
+          UTTERANCES_DATA[index].end - UTTERANCES_DATA[index].start;
+
+      UTTERANCES_DATA[index].start = newStartTime;
+
+      UTTERANCES_DATA[index].end = newStartTime + originalDuration;
+    });
+  }
+
+  async function handleInitialAssembly() {
+    const allUtterancesHaveAudio = checkAllUtterancesHaveAudio();
+    if (!allUtterancesHaveAudio) {
+      document.getElementById('btn-assemble-final').disabled = true;
+      document.getElementById('btn-apply-to-others').disabled = true;
+      showStatus(
+          'info',
+          'No audio generated for any utterance. Assemble and Apply buttons remain disabled.');
+      return;
     }
 
-        function closeEditModal() {
+    showStatus('info', 'Assembling the video... This may take some time. 🎬');
 
-            editModal.style.display = 'none';
+    btnAssembleFinal.disabled = true;
 
-            renderTimeline(); // Re-render the timeline to update play button states
+    const assemblyModal = document.getElementById('assembly-modal');
+    assemblyModal.style.display = 'block';
+    const formData = new FormData();
+    formData.append('job_id', JOB_ID);
+    formData.append('updated_utterances', JSON.stringify(UTTERANCES_DATA));
+    formData.append(
+        'background_music_volume',
+        document.getElementById('background_music_volume_range').value);
+    formData.append(
+        'speech_volume', document.getElementById('speech_volume_range').value);
 
-        }
+    try {
+      const response =
 
-    async function handleSaveUtterance() {
-        const index =
-            parseInt(document.getElementById('edit-utterance-index').value, 10);
-        if (isNaN(index) || !UTTERANCES_DATA[index]) return;
+          await fetch('/assemble-video', {
 
-        const editSourceLanguageInput = document.getElementById('edit-source-language');
-        const editTargetLanguageInput = document.getElementById('edit-target-language');
-        const editSourceLanguageError = document.getElementById('edit-source-language-error');
-        const editTargetLanguageError = document.getElementById('edit-target-language-error');
+            method: 'POST',
 
-        if (!validateLanguageCode(editSourceLanguageInput, editSourceLanguageError)) {
-            return;
-        }
-        if (!validateLanguageCode(editTargetLanguageInput, editTargetLanguageError)) {
-            return;
-        }
+            body: formData
 
-        const utterance = UTTERANCES_DATA[index];
-        utterance.start = parseFloat(document.getElementById('edit-start').value);
-        utterance.end = parseFloat(document.getElementById('edit-end').value);
-        utterance.original_text =
-            document.getElementById('edit-original-text').value;
-        utterance.translated_text =
-            document.getElementById('edit-translated-text').value;
-        utterance.voice_name = document.getElementById('edit-voice-name').value;
-        utterance.sync_mode = document.getElementById('edit-sync-mode').value;
-        utterance.tone = document.getElementById('edit-tone').value;
-        utterance.pitch = document.getElementById('edit-pitch').value;
-        utterance.gender = document.getElementById('edit-gender').value;
-        utterance.age = document.getElementById('edit-age').value;
-        utterance.vocal_style_prompt =
-            document.getElementById('edit-vocal-style-prompt').value;
-        utterance.special_instructions =
-            document.getElementById('edit-special-instructions').value;
-        utterance.tts_prompt = document.getElementById('edit-tts-prompt').value;
+          });
 
-        // Also save the newly generated audio if it exists
-        const editAudioPlayer = document.getElementById('edit-audio-player');
-        if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
-            utterance.audio_url = editAudioPlayer.src;
-        }
+      const result = await response.json();
 
-        const formData = new FormData();
+      if (!response.ok) throw new Error(result.detail);
 
-        formData.append('job_id', JOB_ID);
+      const sourceVideoPlayer = document.getElementById('source-video-player');
 
-        formData.append('index', index);
-        
-        formData.append('utterance', JSON.stringify(utterance));
+      sourceVideoPlayer.src = result.video_url;
 
-        try {
+      showStatus(
 
-            const response =
+          'success',
 
-                await fetch('/update-utterance', {
+          `✅ Success! Your dubbed video is ready below. You can also <a href="${
 
-                    method: 'POST',
+              result.video_url}" download>download it here</a>.`);
 
-                    body: formData
+    } catch (error) {
+      showStatus('error', `Assembly failed: ${error.message}`);
 
-                });
+    } finally {
+      btnAssembleFinal.disabled = false;
 
-            const result = await response.json();
+      assemblyModal.style.display = 'none';
+    }
+  }
 
-            if (!response.ok) throw new Error(result.detail);
+  async function handleFinalAssembly() {
+    if (!checkAllUtterancesHaveAudio()) {
+      utteranceWarningMessage.textContent =
+          'Please generate speech for all utterances before assembling the final video.';
+      utteranceWarningModal.style.display = 'block';
+      btnAssembleFinal.disabled = true;
+      btnApplyToOthers.disabled = true;
+      return;
+    }
 
-            showStatus(
+    showStatus(
+        'info', 'Assembling the final video... This may take some time. 🎬');
+
+    btnAssembleFinal.disabled = true;
+
+    const assemblyModal = document.getElementById('assembly-modal');
+    assemblyModal.style.display = 'block';
+
+    updateUtterancesFromPills();  // Update data from DOM just before sending
+
+    const formData = new FormData();
+
+    formData.append('job_id', JOB_ID);
+
+    formData.append('updated_utterances', JSON.stringify(UTTERANCES_DATA));
+    formData.append(
+        'music_volume',
+        document.getElementById('background_music_volume_range').value);
+    formData.append(
+        'speech_volume', document.getElementById('speech_volume_range').value);
+
+    try {
+      const response =
+
+          await fetch('/assemble-video', {
+
+            method: 'POST',
+
+            body: formData
+
+          });
+
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.detail);
+
+      const videoContainer =
+
+          document.getElementById('source-video-player').parentNode;
+
+      videoContainer.innerHTML =
+
+          '';  // Easiest way to clear the old video element and its state
+
+      const sourceVideoPlayer = document.createElement('video');
+
+      sourceVideoPlayer.id = 'source-video-player';
+
+      sourceVideoPlayer.style.width = '100%';
+
+      sourceVideoPlayer.controls = true;
+
+      sourceVideoPlayer.src = '';
+
+      videoContainer.appendChild(sourceVideoPlayer);
+
+      // Re-attach the metadata listener to re-render the timeline when the new
+
+      // video loads
+
+      sourceVideoPlayer.onloadedmetadata = () => {
+        renderTimeline();
+      };
+
+      setTimeout(() => {
+        sourceVideoPlayer.src = `${result.video_url}?t=${new Date().getTime()}`;
+
+        sourceVideoPlayer.load();
+      }, 500);
+
+      showStatus(
+
+          'success',
+
+          `✅ Success! Your dubbed video is ready below. You can also <a href="${
+
+              result.video_url}" download>download it here</a>.`);
+
+    } catch (error) {
+      showStatus('error', `Assembly failed: ${error.message}`);
+
+    } finally {
+      btnAssembleFinal.disabled = false;
+
+      assemblyModal.style.display = 'none';
+    }
+  }
+
+  async function removeUtterance(utterance_id) {
+    const formData = new FormData();
+
+    formData.append('job_id', JOB_ID);
+
+    formData.append('utterance_id', utterance_id);
+
+    try {
+      const response =
+
+          await fetch('/remove-utterance', {
+
+            method: 'POST',
+
+            body: formData
+
+          });
+
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.detail);
+
+      showStatus('success', `✅ Success! Utterance Removed.`);
+
+    } catch (error) {
+      showStatus('error', `Remove utterance failed: ${error.message}`);
+
+    } finally {
+    }
+  }
+
+  // --- MODAL FUNCTIONS ---
+
+  function openEditModal(index) {
+    const utterance = UTTERANCES_DATA[index];
+
+    if (!utterance) return;
+
+    document.getElementById('modal-status-message').style.display =
+        'none';  // Clear previous status
+    document.getElementById('modal-status-message').innerHTML = '';
+
+    document.getElementById('edit-utterance-index').value = index;
+
+    document.getElementById('edit-start').value = utterance.start.toFixed(2);
+
+    document.getElementById('edit-source-language').value =
+
+        utterance.source_language;
+
+    document.getElementById('edit-target-language').value =
+
+        utterance.target_language;
+
+    document.getElementById('edit-end').value = utterance.end.toFixed(2);
+
+
+    document.getElementById('edit-original-text').value =
+
+        utterance.original_text;
+
+    document.getElementById('edit-translated-text').value =
+
+        utterance.translated_text;
+
+    const editVoiceSelect = document.getElementById('edit-voice-name');
+
+    editVoiceSelect.innerHTML = voiceSelect.innerHTML;  // Copy options
+
+    editVoiceSelect.value = utterance.voice_name;
+
+    const editSyncModeSelect = document.getElementById('edit-sync-mode');
+
+    editSyncModeSelect.innerHTML =
+
+        document.getElementById('sync-mode').innerHTML;  // Copy options
+
+    editSyncModeSelect.value = utterance.sync_mode;
+
+    document.getElementById('edit-tone').value = utterance.tone;
+
+    document.getElementById('edit-pitch').value = utterance.pitch;
+
+    document.getElementById('edit-gender').value = utterance.gender;
+
+    document.getElementById('edit-age').value = utterance.age;
+
+    document.getElementById('edit-vocal-style-prompt').value =
+
+        utterance.vocal_style_prompt;
+
+    document.getElementById('edit-special-instructions').value =
+
+        utterance.special_instructions;
+
+    document.getElementById('edit-tts-prompt').value = utterance.tts_prompt;
+
+    const editAudioPlayer = document.getElementById('edit-audio-player');
+
+    if (utterance.audio_url) {
+      editAudioPlayer.src = utterance.audio_url;
+
+      editAudioPlayer.style.display = 'block';
+
+    } else {
+      editAudioPlayer.style.display = 'none';
+
+      editAudioPlayer.src = '';
+    }
+
+    editModal.style.display = 'block';
+  }
+
+  function closeEditModal() {
+    editModal.style.display = 'none';
+
+    renderTimeline();  // Re-render the timeline to update play button states
+  }
+
+  async function handleSaveUtterance() {
+    const index =
+        parseInt(document.getElementById('edit-utterance-index').value, 10);
+    if (isNaN(index) || !UTTERANCES_DATA[index]) return;
+
+    const editSourceLanguageInput =
+        document.getElementById('edit-source-language');
+    const editTargetLanguageInput =
+        document.getElementById('edit-target-language');
+    const editSourceLanguageError =
+        document.getElementById('edit-source-language-error');
+    const editTargetLanguageError =
+        document.getElementById('edit-target-language-error');
+
+    if (!validateLanguageCode(
+            editSourceLanguageInput, editSourceLanguageError)) {
+      return;
+    }
+    if (!validateLanguageCode(
+            editTargetLanguageInput, editTargetLanguageError)) {
+      return;
+    }
+
+    const utterance = UTTERANCES_DATA[index];
+    utterance.start = parseFloat(document.getElementById('edit-start').value);
+    utterance.end = parseFloat(document.getElementById('edit-end').value);
+    utterance.original_text =
+        document.getElementById('edit-original-text').value;
+    utterance.translated_text =
+        document.getElementById('edit-translated-text').value;
+    utterance.voice_name = document.getElementById('edit-voice-name').value;
+    utterance.sync_mode = document.getElementById('edit-sync-mode').value;
+    utterance.tone = document.getElementById('edit-tone').value;
+    utterance.pitch = document.getElementById('edit-pitch').value;
+    utterance.gender = document.getElementById('edit-gender').value;
+    utterance.age = document.getElementById('edit-age').value;
+    utterance.vocal_style_prompt =
+        document.getElementById('edit-vocal-style-prompt').value;
+    utterance.special_instructions =
+        document.getElementById('edit-special-instructions').value;
+    utterance.tts_prompt = document.getElementById('edit-tts-prompt').value;
+
+    // Also save the newly generated audio if it exists
+    const editAudioPlayer = document.getElementById('edit-audio-player');
+    if (editAudioPlayer.src && editAudioPlayer.style.display !== 'none') {
+      utterance.audio_url = editAudioPlayer.src;
+    }
+
+    const formData = new FormData();
+
+    formData.append('job_id', JOB_ID);
+
+    formData.append('index', index);
+
+    formData.append('utterance', JSON.stringify(utterance));
+
+    try {
+      const response =
+
+          await fetch('/update-utterance', {
+
+            method: 'POST',
+
+            body: formData
+
+          });
+
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.detail);
+
+      showStatus(
+
+          'success',
+
+          `Utterance ${
+
+              index + 1} Saved.`);
+      showModalStatus('success', 'Utterance saved.');
+      closeEditModal();
+      renderTimeline();  // Re-render to update pill data and button states
+
+    } catch (error) {
+      showStatus('error', `Clone utterance failed: ${error.message}`);
+
+    } finally {
+      // Re-evaluate button states after saving
+      checkAllUtterancesHaveAudio();
+    }
+  }
+
+  async function handleCloneUtterance() {
+    const index =
+
+        parseInt(document.getElementById('edit-utterance-index').value, 10);
+
+    if (isNaN(index) || !UTTERANCES_DATA[index]) return;
+
+    const originalUtterance = UTTERANCES_DATA[index];
+
+
+    // Deep copy using JSON stringify/parse
+    const newIndex = index + 1;
+    const newUtterance = JSON.parse(JSON.stringify(originalUtterance));
+
+    newUtterance.start = originalUtterance.end;
+
+    newUtterance.end = originalUtterance.end +
+
+        (originalUtterance.end - originalUtterance.start);
+
+    newUtterance.audio_url = null;  // Cloned utterance needs new audio
+
+
+
+    const formData = new FormData();
+
+    formData.append('job_id', JOB_ID);
+
+    formData.append('index', index);
+
+    formData.append('utterance', JSON.stringify(originalUtterance));
+
+
+    try {
+      const response_update =
+
+          await fetch('/update-utterance', {
+
+            method: 'POST',
+
+            body: formData
+
+          });
+
+      formData.set('index', newIndex);
+      formData.append('utterance', JSON.stringify(newUtterance));
+
+      const result_update = await response_update.json();
+
+      try {
+        const response_add =
+
+            await fetch('/add-utterance', {
+
+              method: 'POST',
+
+              body: formData
+
+            });
+
+        const result_add = await response_add.json();
+
+
+        if (!response_add.ok) throw new Error(result_add.detail);
+
+        UTTERANCES_DATA.splice(newIndex, 0, newUtterance);
+
+        showStatus(
 
             'success',
 
             `Utterance ${
 
-            index + 1} Saved.`);
-            showModalStatus('success', 'Utterance saved.');
-            closeEditModal();
-            renderTimeline(); // Re-render to update pill data and button states
+                index +
+                1} cloned. A new utterance has been added to the timeline.`);
 
-        } catch (error) {
 
-            showStatus('error', `Clone utterance failed: ${error.message}`);
-
-        } finally {
-             // Re-evaluate button states after saving
-             checkAllUtterancesHaveAudio();
-        }
-        
+      } catch (error) {
+        showStatus('error', `Clone utterance failed: ${error.message}`);
+      }
+    } catch (error) {
+    } finally {
     }
 
-    async function handleCloneUtterance() {
 
-        const index =
+    renderTimeline();
 
-            parseInt(document.getElementById('edit-utterance-index').value, 10);
+    closeEditModal();
+  }
 
-        if (isNaN(index) || !UTTERANCES_DATA[index]) return;
+  function showStatus(type, message) {
+    statusMessage.style.display = 'block';
 
-        const originalUtterance = UTTERANCES_DATA[index];
-        
+    statusMessage.className = `status ${type}`;
 
-        // Deep copy using JSON stringify/parse
-        const newIndex = index + 1;
-        const newUtterance = JSON.parse(JSON.stringify(originalUtterance));
+    statusMessage.innerHTML = message;
+  }
 
-        // Shift the new utterance slightly to avoid perfect overlap
-
-        const shift = 0.1;
-
-        newUtterance.start = originalUtterance.end;
-
-        newUtterance.end = originalUtterance.end +
-
-            (originalUtterance.end - originalUtterance.start);
-
-        newUtterance.audio_url = null; // Cloned utterance needs new audio
-
-        
-
-        const formData = new FormData();
-
-        formData.append('job_id', JOB_ID);
-
-        formData.append('index', index);
-        
-        formData.append('utterance', JSON.stringify(originalUtterance));
-
-
-        try {
-
-            const response_update =
-
-                await fetch('/update-utterance', {
-
-                    method: 'POST',
-
-                    body: formData
-
-                });
-
-            formData.set('index', newIndex);
-            formData.append('utterance', JSON.stringify(newUtterance));
-
-            const result_update = await response_update.json();
-        
-            try {
-
-                const response_add =
-
-                    await fetch('/add-utterance', {
-
-                        method: 'POST',
-
-                        body: formData
-
-                    });
-
-                const result_add = await response_add.json();
-                
-
-                if (!response_add.ok) throw new Error(result_add.detail);
-
-                UTTERANCES_DATA.splice(newIndex, 0, newUtterance);
-
-                showStatus(
-
-                'success',
-
-                `Utterance ${
-
-                index + 1} cloned. A new utterance has been added to the timeline.`);
-
-
-            } catch (error) {
-
-                showStatus('error', `Clone utterance failed: ${error.message}`);
-
-            } 
-        }
-        catch (error) {
-
-        }    
-        finally {}
-
-        
-        renderTimeline();
-
-        closeEditModal();
-
+  function checkAllUtterancesHaveAudio() {
+    for (const utterance of UTTERANCES_DATA) {
+      if (!utterance.audio_url) {
+        return false;
+      }
     }
+    return true;
+  }
 
-    function showStatus(type, message) {
+  function validateLanguageCode(inputElement, errorMessageElement) {
+    const langCode = inputElement.value.trim();
+    // Regex for ISO 639-1 (2-letter language code) followed by a hyphen and ISO
+    // 3166-1 alpha-2 (2-letter country code)
+    const regex = /^[a-z]{2}-[A-Z]{2}$/;
 
-        statusMessage.style.display = 'block';
-
-        statusMessage.className = `status ${type}`;
-
-        statusMessage.innerHTML = message;
-
+    if (!regex.test(langCode)) {
+      errorMessageElement.textContent =
+          'Invalid language code. Use ISO 639-1 format (e.g., en-US).';
+      errorMessageElement.style.display = 'block';
+      inputElement.focus();
+      return false;
+    } else {
+      errorMessageElement.style.display = 'none';
+      errorMessageElement.textContent = '';
+      return true;
     }
-
-    function checkAllUtterancesHaveAudio() {
-        for (const utterance of UTTERANCES_DATA) {
-            if (!utterance.audio_url) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    function validateLanguageCode(inputElement, errorMessageElement) {
-        const langCode = inputElement.value.trim();
-        // Regex for ISO 639-1 (2-letter language code) followed by a hyphen and ISO 3166-1 alpha-2 (2-letter country code)
-        const regex = /^[a-z]{2}-[A-Z]{2}$/;
-
-        if (!regex.test(langCode)) {
-            errorMessageElement.textContent = 'Invalid language code. Use ISO 639-1 format (e.g., en-US).';
-            errorMessageElement.style.display = 'block';
-            inputElement.focus();
-            return false;
-        } else {
-            errorMessageElement.style.display = 'none';
-            errorMessageElement.textContent = '';
-            return true;
-        }
-    }
-
+  }
 });
 
 </script>

@@ -13,28 +13,26 @@
 # limitations under the License.
 
 """Dubble module for managing the Gen AI interactions."""
-import os
 import concurrent.futures
 import dataclasses
 import json
+import mimetypes
+import os
+import pathlib
 import sys
 import traceback
-import mimetypes
-import pathlib
-import numpy as np
-import pandas as pd
-from google.cloud import texttospeech
 from typing import Any, Dict, List, Optional
 from dubble import av
 from dubble.configuration import DubbleConfig
 from dubble.dubble import DubbingError
 from dubble.dubble import DubbleTTSData
 from google import genai
+from google.api_core import exceptions as api_exceptions
+from google.cloud import texttospeech
 from google.genai import errors
 from google.genai import types
-from google.api_core import exceptions as api_exceptions
-
-
+import numpy as np
+import pandas as pd
 
 
 API_VERSION = 'v1'
@@ -56,15 +54,17 @@ class GenAIInvoker:
     Returns:
       None
     """
-    
+
     if not GenAIInvoker.genai_client:
-        GenAIInvoker.genai_client = genai.Client(vertexai=True,
-                                                project=config.gcp_project,
-                                                location=config.gcp_project_location,
-                                                http_options=types.HttpOptions(api_version=API_VERSION)
-                                                )
+      GenAIInvoker.genai_client = genai.Client(
+          vertexai=True,
+          project=config.gcp_project,
+          location=config.gcp_project_location,
+          http_options=types.HttpOptions(api_version=API_VERSION),
+      )
     if not GenAIInvoker.tts_client:
-        GenAIInvoker.tts_client = texttospeech.TextToSpeechClient()
+      GenAIInvoker.tts_client = texttospeech.TextToSpeechClient()
+
 
 class VoiceSelector(GenAIInvoker):
   """Handles voice selection."""
@@ -132,7 +132,6 @@ class VoiceSelector(GenAIInvoker):
       description.
     """
     df = voices_df[voices_df['gender'] == query['gender']]
-    
 
     query_embedding = self.__embed(
         self.__get_text_for_embeddings(query), config
@@ -206,37 +205,44 @@ class DubbleLLM(GenAIInvoker):
     """
     try:
 
-        file_path = pathlib.Path(config.vocals_path)
-        audio_bytes = None
-        mime_type, _ = mimetypes.guess_type(file_path)
-        if not mime_type:
-            mime_type = "audio/wav" # Default if it can't be guessed
+      file_path = pathlib.Path(config.vocals_path)
+      audio_bytes = None
+      mime_type, _ = mimetypes.guess_type(file_path)
+      if not mime_type:
+        mime_type = 'audio/wav'  # Default if it can't be guessed
 
-        with open(file_path, 'rb') as f:
-            audio_bytes = f.read()
+      with open(file_path, 'rb') as f:
+        audio_bytes = f.read()
 
-        prompt = config.prompt_library['diarization'].format(
-            BRAND_NAME=config.brand_name, ORIGINAL_LANGUAGE=config.original_language
-        )
+      prompt = config.prompt_library['diarization'].format(
+          BRAND_NAME=config.brand_name,
+          ORIGINAL_LANGUAGE=config.original_language,
+      )
 
-        response = self.genai_client.models.generate_content(
-            model=config.analysis_model,
-            contents=[prompt, types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)],
-            config=types.GenerateContentConfig(
-                temperature=config.analysis_temperature
-            ),
-        )
+      response = self.genai_client.models.generate_content(
+          model=config.analysis_model,
+          contents=[
+              prompt,
+              types.Part.from_bytes(data=audio_bytes, mime_type=mime_type),
+          ],
+          config=types.GenerateContentConfig(
+              temperature=config.analysis_temperature
+          ),
+      )
 
-        cleaned_response = (
-            response.text.strip().replace('```json', '').replace('```', '').strip()
-        )
-        dubbing_data = json.loads(cleaned_response)
+      cleaned_response = (
+          response.text.strip()
+          .replace('```json', '')
+          .replace('```', '')
+          .strip()
+      )
+      dubbing_data = json.loads(cleaned_response)
 
-        return [DubbleTTSData.from_dict(item, config) for item in dubbing_data]
+      return [DubbleTTSData.from_dict(item, config) for item in dubbing_data]
     except (ValueError, Exception) as e:
       traceback.print_exc(file=sys.stdout)
       raise Exception(e)
-    
+
   def translate_utterance(
       self, utterance: DubbleTTSData, config: DubbleConfig
   ) -> DubbleTTSData:
@@ -333,10 +339,10 @@ class DubbleLLM(GenAIInvoker):
     audio_file_path = None
 
     for attempt in range(config.max_refinement_attempts + 1):
-      
+
       if utterance.tts_prompt:
         final_prompt_template = utterance.tts_prompt.strip()
-        
+
       try:
         # Assumes utterance is dataclass and asdict works
         tts_prompt = final_prompt_template.format_map(
@@ -393,7 +399,6 @@ class DubbleLLM(GenAIInvoker):
           current_translation = response.text.strip()
           utterance.translated_text = current_translation
 
-    
       except (api_exceptions.GoogleAPIError, IOError) as e:
         traceback.print_exc(file=sys.stdout)
         raise DubbingError(str(e)) from e
@@ -401,9 +406,12 @@ class DubbleLLM(GenAIInvoker):
         traceback.print_exc(file=sys.stdout)
         raise DubbingError(str(e)) from e
 
-    return av.post_process_audio_clip(
-        selected_audio_clip, audio_file_path, utterance, config
-    ), utterance
+    return (
+        av.post_process_audio_clip(
+            selected_audio_clip, audio_file_path, utterance, config
+        ),
+        utterance,
+    )
 
   def __call_llm_for_translation_generation(
       self, prompt: str, config: DubbleConfig
@@ -444,18 +452,18 @@ class DubbleLLM(GenAIInvoker):
            {e}"""
       )
 
-  
   def __call_llm_for_tts_generation(
       self, prompt: str, utterance: DubbleTTSData, config: DubbleConfig
   ) -> genai.types.Part:
     """Synthesizes speech from the input text and saves it to an WAV file.
 
     Args:
-        prompt: Styling instructions on how to synthesize the content in
-          the text field.
+        prompt: Styling instructions on how to synthesize the content in the
+          text field.
         utterance: The text to synthesize.
-        config: The path to save the generated audio file.
-          Defaults to "output.mp3".
+        config: The path to save the generated audio file. Defaults to
+          "output.mp3".
+
     Returns:
       genai.types.Part: The content part from the LLM response containing the
       audio data.
@@ -464,35 +472,31 @@ class DubbleLLM(GenAIInvoker):
       DubbingError: if the model returns no candidates
     """
     try:
- 
-        synthesis_input = texttospeech.SynthesisInput(
-            text=utterance.translated_text,
-            prompt=prompt,
-         #   custom_pronunciations=custom_pronunciations_container
-        )
-        
-        voice = texttospeech.VoiceSelectionParams(language_code=utterance.target_language,
-                                          name=utterance.voice_name,
-                                          model_name=config.tts_model
-                                          )
 
+      synthesis_input = texttospeech.SynthesisInput(
+          text=utterance.translated_text,
+          prompt=prompt,
+          #   custom_pronunciations=custom_pronunciations_container
+      )
 
-        audio_config = texttospeech.AudioConfig(
+      voice = texttospeech.VoiceSelectionParams(
+          language_code=utterance.target_language,
+          name=utterance.voice_name,
+          model_name=config.tts_model,
+      )
+
+      audio_config = texttospeech.AudioConfig(
           audio_encoding=texttospeech.AudioEncoding.LINEAR16
-        )
+      )
 
-        response = self.tts_client.synthesize_speech(
+      response = self.tts_client.synthesize_speech(
           input=synthesis_input, voice=voice, audio_config=audio_config
-        )
-        return response.audio_content
-      
+      )
+      return response.audio_content
+
     except errors.APIError as ae:
-      raise DubbingError(
-          f"""LLM response for Text generation failed.
-           {ae.message}"""
-      )
+      raise DubbingError(f"""LLM response for Text generation failed.
+           {ae.message}""")
     except (AttributeError, IndexError, TypeError, ValueError) as e:
-      raise DubbingError(
-          f"""LLM response for Text generation failed.
-           {e}"""
-      )
+      raise DubbingError(f"""LLM response for Text generation failed.
+           {e}""")
