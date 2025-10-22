@@ -44,7 +44,6 @@ logging_client = google.cloud.logging.Client()
 logging_client.setup_logging(log_level=logging.INFO)
 
 
-
 @app.get("/", response_class=HTMLResponse)
 async def read_item(request: Request):
   return templates.TemplateResponse("index.html", {"request": request})
@@ -95,7 +94,10 @@ async def process_video(
     )
 
     local_audio_path = os.path.join(local_dir, f"audio_{i}.mp3")
+    # Needed until we figure out how to make Gemini TTS reliable.
+    audio_client = genai.Client(api_key=config.gemini_api_key)
     audio_duration = generate_audio(
+      audio_client,
       translated_text,
       t.tone,
       translate_language,
@@ -165,7 +167,7 @@ def generate_video(video_data: Video) -> JSONResponse:
     upload_file_to_gcs(
       gcs_path, video_file, config.gcs_bucket_name, "video/mp4"
     )
-  #return get_url_for_path(config.gcs_bucket_name, gcs_path)
+  # return get_url_for_path(config.gcs_bucket_name, gcs_path)
   to_return = {"video_url": f"{combined_video_path}"}
   return JSONResponse(content=to_return)
 
@@ -195,15 +197,21 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
     utterance.original_text,
     req.instructions,
   )
+  new_path = utterance.audio_url + str(uuid.uuid1()) + ".mp3"  # cache busting
   audio_client = genai.Client(api_key=config.gemini_api_key)
-  audio_data, duration = generate_audio(
-    audio_client, new_translation, utterance.speaker.voice
+  duration = generate_audio(
+    audio_client,
+    new_translation,
+    utterance.instructions,
+    req.video.translate_language,
+    utterance.speaker.voice,
+    new_path,
+    config.gemini_tts_model,
   )
-  new_path = utterance.audio_url + str(uuid.uuid1()) + ".wav" # cache busting
-  save_audio_file(audio_data, new_path)
   return RegenerateResponse(
     translated_text=new_translation, audio_url=new_path, duration=duration
   )
+
 
 @app.post("/regenerate_dubbing")
 def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
@@ -215,22 +223,22 @@ def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
   Returns:
     A response with the new path to the dubbed audio.
   """
-  audio_client  = genai.Client(api_key=config.gemini_api_key)
+  audio_client = genai.Client(api_key=config.gemini_api_key)
   utterance = req.video.utterances[req.utterance]
-  prompt = f"""Generate audio for the TEXT following the INSTRUCTIONS.
-  ## Instructions
-  {req.instructions}
-
-  ## TEXT
-  {utterance.translated_text}
-  """
-  audio_data, duration = generate_audio(
-    audio_client, prompt, utterance.speaker.voice
+  new_path = utterance.audio_url + str(uuid.uuid1()) + ".wav"  # cache busting
+  duration = generate_audio(
+    audio_client,
+    utterance.translated_text,
+    req.instructions,
+    req.video.translate_language,
+    utterance.speaker.voice,
+    new_path,
+    config.gemini_tts_model,
   )
-  new_path = utterance.audio_url + str(uuid.uuid1()) + ".wav" # cache busting
-  save_audio_file(audio_data, new_path)
   return RegenerateResponse(
-    translated_text=utterance.translated_text, audio_url=new_path, duration=duration
+    translated_text=utterance.translated_text,
+    audio_url=new_path,
+    duration=duration,
   )
 
 
@@ -258,17 +266,6 @@ def save_video(video: UploadFile) -> tuple[str, str]:
   # save the file to GCS
   video_gcs_uri = f"gs://{config.gcs_bucket_name}/{gcs_path}"
   return local_path, video_gcs_uri
-
-
-def save_audio_file(audio: str, path: str) -> None:
-  """Saves a base64 encoded audio file to the given path.
-
-  Args:
-    audio: the base64 encoded audio data.
-    path: the path to save the file to.
-  """
-  with open(path, "wb") as audio_file:
-    audio_file.write(base64.b64decode(audio))
 
 
 ##############################
@@ -304,7 +301,7 @@ def generate_audio_test(
     client,
     prompt=prompt,
     voice_name=voice_name,
-    model_name="gemini-2.5-flash-preview-tts",
+    model_name="gemini-2.5-pro-tts",
   )
 
   return JSONResponse(content={"audio_data": audio_data})

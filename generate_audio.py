@@ -2,134 +2,94 @@ import base64
 import io
 import logging
 import re
-import subprocess
 import wave
-from google.genai import types
-from google.cloud import texttospeech
+from google.genai import types, Client
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-
-def pcm_to_wav_base64(
-  pcm_data: bytes,
-  sample_rate: int,
-  bit_depth: int,
-) -> tuple[str, float]:
-  """Converts raw PCM audio data to a base64 encoded WAV string."""
-  with io.BytesIO() as wav_file:
-    with wave.open(wav_file, "wb") as wf:
-      wf.setnchannels(1)
-      wf.setsampwidth(bit_depth // 8)
-      wf.setframerate(sample_rate)
-      wf.writeframes(pcm_data)
-
-      num_frames = wf.getnframes()
-
-    wav_bytes = wav_file.getvalue()
-
-  base64_wav = base64.b64encode(wav_bytes).decode("utf-8")
-  duration = num_frames / sample_rate
-  return base64_wav, duration
-
-
-def _process_audio_part(audio_part) -> tuple[str, float]:
-  """Processes the audio part, extracts metadata, and converts to base64 WAV."""
+def _process_audio_part(audio_part: bytes, path: str) -> float:
+  """Processes the audio part, extracts metadata, and saves the audio as a WAV."""
   # Parse the mime_type string "audio/L16;codec=pcm;rate=24000"
   mime_type = audio_part.inline_data.mime_type
-
   match = re.search(r"L(\d+);codec=(?:\w+);rate=(\d+)", mime_type)
   if not match:
     raise ValueError(f"Could not parse mime_type: {mime_type}")
   bit_depth = int(match.group(1))
   sample_rate = int(match.group(2))
+  pcm_data = audio_part.inline_data.data
+  with wave.open(path, "wb") as wf:
+    wf.setnchannels(1)
+    wf.setsampwidth(bit_depth // 8)
+    wf.setframerate(sample_rate)
+    wf.writeframes(pcm_data)
 
-  return pcm_to_wav_base64(
-    audio_part.inline_data.data, sample_rate=sample_rate, bit_depth=bit_depth
-  )
+    num_frames = wf.getnframes()
+  duration = num_frames / sample_rate
 
-
-def _get_mp3_duration(file_path: str) -> float:
-  """Gets the duration of an mp3 file in seconds.
-
-  Args:
-    file_path: the path to the mp3 to probe.
-
-  Return:
-    the duration of the file in seconds.
-  """
-  ffprobe_command = [
-    "ffprobe",
-    "-v",
-    "error",
-    "-show_entries",
-    "format=duration",
-    "-of",
-    "default=noprint_wrappers=1:nokey=1",
-    file_path,
-  ]
-
-  try:
-    duration_result = subprocess.run(
-      ffprobe_command, capture_output=True, text=True, check=True
-    )
-    duration = duration_result.stdout.strip()
-    return float(duration)
-  except subprocess.CalledProcessError as er:
-    logging.error(f"Error running ffprobe to get mp3 duration: {er}")
-    raise er
-  except FileNotFoundError as fne:
-    logging.error("ffprobe not found. Please ensure it's in the path.")
-    raise fne
-
+  return duration
+    
 
 def generate_audio(
-  text: str,
-  prompt: str,
-  language: str,
-  voice_name: str,
-  output_path: str,
-  model_name: str = "gemini-2.5-pro-tts",
+    client: Client,
+    text: str,
+    prompt: str,
+    language: str,
+    voice_name: str,
+    output_path: str,
+    model_name: str = "gemini-2.5-pro-tts",
 ) -> float:
-  # voice_config = types.VoiceConfig(
-  #     prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name))
+  """Uses Gemini TTS to generate audio for the given text.
 
-  # @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
-  # def call_gemini():
-  #     return client.models.generate_content(
-  #         model=model_name,
-  #         contents=prompt,
-  #         config=types.GenerateContentConfig(
-  #             response_modalities=["AUDIO"],
-  #             speech_config=types.SpeechConfig(voice_config=voice_config),
-  #         ))
+  Args:
+    text: the text to have spoken.
+    prompt: additional instructions for the generation.
+    language: the language to be spoken in ISO format (e.g. en-US)
+    voice_name: the name of the Gemini voice to use.
+    output_path: where to save the generated audio file.
+    model_name: the Gemini model to use. Defaults to gemini-2.5-pro-tts.
 
-  # response = call_gemini()
+  Returns:
+    the duration of the generated file.
+  """
 
-  # # Gemini sometimes just fails to return the object we're expecting.
-  # if response.candidates[0] and response.candidates[0].content and response.candidates[0].content.parts:
-  #     audio_part = response.candidates[0].content.parts[0]
-  #     return _process_audio_part(audio_part)
-  # else:
-  #     logging.error(f"Generating Audio failed with the following response from Gemini: {response}")
+  prompt = f"""Say the text in the TEXT section using the instructions in the INSTRUCTIONS section.
+  The language being spoken is {language}.
+  ## INSTRUCTIONS
+  {prompt}
 
-  # return "", 0.0
-  client = texttospeech.TextToSpeechClient()
-  synth_input = texttospeech.SynthesisInput(
-      text=text, prompt=prompt
-  )
-  voice = texttospeech.VoiceSelectionParams(
-    language_code=language, name=voice_name, model_name=model_name
-  )
-  audio_config = texttospeech.AudioConfig(
-    audio_encoding=texttospeech.AudioEncoding.MP3
-  )
-  try:
-    response = client.synthesize_speech(
-        input=synth_input, voice=voice, audio_config=audio_config
-    )
-  except Exception as e:
-      print(f"Error generating audio for text: >>{text}<< and prompt >>{prompt}<<")
-      raise e
-  with open(output_path, "wb") as out_file:
-    out_file.write(response.audio_content)
+  ## TEXT
+  {text}
+  """
+  
+  voice_config = types.VoiceConfig(
+      prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name))
 
-  return _get_mp3_duration(output_path)
+  safety_settings = [
+    types.SafetySetting(
+      category=types.HarmCategory.HARM_CATEGORY_UNSPECIFIED,
+      threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    ),
+  ]
+
+  
+  @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
+  def call_gemini():
+      return client.models.generate_content(
+          model=model_name,
+          contents=prompt,
+          config=types.GenerateContentConfig(
+              #safety_settings=safety_settings,
+              response_modalities=["AUDIO"],
+              speech_config=types.SpeechConfig(voice_config=voice_config),
+          ))
+
+  response = call_gemini()
+
+  ## Gemini sometimes just fails to return the object we're expecting.
+  if response.candidates[0] and response.candidates[0].content and response.candidates[0].content.parts:
+      audio_part = response.candidates[0].content.parts[0]
+      return _process_audio_part(audio_part, output_path)
+  else:
+      logging.error(f"Generating Audio failed with the following response from Gemini: {response}")
+
+  return 0.0
+  

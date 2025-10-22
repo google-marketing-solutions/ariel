@@ -177,7 +177,7 @@ def transcribe_video(
     prompt = f"""
     Provide a transcript of this audio file.
     Identify different speakers and attempt to infer their gender.
-    There are {num_speakers} speakers.
+    There are {num_speakers} speakers. If you detect more, assume they are the same person.
     For each utterance of the transcript, describe the tone of voice used
     (e.g., enthusiastic, calm, angry, neutral).
     Provide the start and end timestamps in seconds.
