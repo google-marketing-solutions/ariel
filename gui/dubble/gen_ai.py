@@ -28,6 +28,7 @@ from dubble.dubble import DubbingError
 from dubble.dubble import DubbleTTSData
 from google import genai
 from google.api_core import exceptions as api_exceptions
+from google.api_core.exceptions import Cancelled, InvalidArgument
 from google.cloud import texttospeech
 from google.genai import errors
 from google.genai import types
@@ -241,7 +242,7 @@ class DubbleLLM(GenAIInvoker):
       return [DubbleTTSData.from_dict(item, config) for item in dubbing_data]
     except (ValueError, Exception) as e:
       traceback.print_exc(file=sys.stdout)
-      raise Exception(e)
+      raise Exception(e) from e
 
   def translate_utterance(
       self, utterance: DubbleTTSData, config: DubbleConfig
@@ -445,17 +446,22 @@ class DubbleLLM(GenAIInvoker):
       raise DubbingError(
           f"""LLM response for Text generation did not contain any candidates.
            {ae.message}"""
-      )
+      ) from ae
     except (AttributeError, IndexError, TypeError) as e:
       raise DubbingError(
           f"""LLM response for Text generation did not contain any candidates.
            {e}"""
-      )
+      ) from e
 
   def __call_llm_for_tts_generation(
-      self, prompt: str, utterance: DubbleTTSData, config: DubbleConfig
+      self,
+      prompt: str,
+      utterance: DubbleTTSData,
+      config: DubbleConfig,
+      num_retries=3,
+      former_error_message='',
   ) -> genai.types.Part:
-    """Synthesizes speech from the input text and saves it to an WAV file.
+    """Synthesizes speech from the input text and saves it to a WAV file.
 
     Args:
         prompt: Styling instructions on how to synthesize the content in the
@@ -463,6 +469,10 @@ class DubbleLLM(GenAIInvoker):
         utterance: The text to synthesize.
         config: The path to save the generated audio file. Defaults to
           "output.mp3".
+        num_retries: The number of times to retry the TTS generation on certain
+          failures.
+        former_error_message: An error message from a previous failed attempt,
+          used for logging in subsequent retries.
 
     Returns:
       genai.types.Part: The content part from the LLM response containing the
@@ -471,6 +481,14 @@ class DubbleLLM(GenAIInvoker):
     Raises:
       DubbingError: if the model returns no candidates
     """
+
+    if num_retries == 0:
+      raise DubbingError(f"""LLM response for Text generation failed.
+                         Check your logs, or try again. {former_error_message}
+           """)
+
+    num_retries = num_retries - 1
+
     try:
 
       synthesis_input = texttospeech.SynthesisInput(
@@ -494,9 +512,27 @@ class DubbleLLM(GenAIInvoker):
       )
       return response.audio_content
 
+    except Cancelled as ce:
+      return self.__call_llm_for_tts_generation(
+          prompt, utterance, config, num_retries, ce.message
+      )
+    except InvalidArgument as iae:
+      if 'harmful' in iae.message:
+        return self.__call_llm_for_tts_generation(
+            prompt, utterance, config, num_retries, iae.message
+        )
+      else:
+        raise DubbingError(f"""LLM response for Text generation failed.
+           {iae}""") from iae
+
     except errors.APIError as ae:
       raise DubbingError(f"""LLM response for Text generation failed.
-           {ae.message}""")
+           {ae}""") from ae
+
     except (AttributeError, IndexError, TypeError, ValueError) as e:
       raise DubbingError(f"""LLM response for Text generation failed.
-           {e}""")
+           {e}""") from e
+
+    except Exception as ex:
+      raise DubbingError(f"""LLM response for Text generation failed.
+           {ex}""") from ex
