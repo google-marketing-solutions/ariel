@@ -1,6 +1,8 @@
-# Dubble GUI
+# 5 steps video localization process GUI (to be merged in Ariel v2)
 
-This document provides instructions on how to deploy the Dubble GUI to Google Cloud Run.
+This document provides instructions on how to deploy the GUI for the 5 steps video localization process GUI to Google Cloud Run.
+
+**Disclaimer: This is not an official Google product.**
 
 ## Prerequisites
 
@@ -40,6 +42,27 @@ This document provides instructions on how to deploy the Dubble GUI to Google Cl
 
     After the script finishes, it will print the URL of your deployed service. i.e:
     https://dubble-gui-xxxxxxxx-uc.a.run.app
+
+4. **Grant access to other users:**
+
+    Repeat the last 2 commands in the `deploy.sh` script for every user you'd want to grant access:
+
+    ```echo "Adding user to IAP..."
+    gcloud beta iap web add-iam-policy-binding \
+    --resource-type=cloud-run \
+    --service=$SERVICE_NAME \
+    --project=$PROJECT_ID \
+    --region=$REGION \
+    --member="user:$MEMBER_TO_GRANT_ACCESS" \
+    --role=roles/iap.httpsResourceAccessor \
+    --condition=None
+
+    echo "Granting user access to service..."
+    gcloud run services add-iam-policy-binding $SERVICE_NAME \
+    --region=$REGION \
+    --member="user:$MEMBER_TO_GRANT_ACCESS" \
+    --role="roles/run.invoker" \
+    --project=$PROJECT_ID```
 
 
 ##  Note
