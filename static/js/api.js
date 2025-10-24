@@ -84,6 +84,16 @@ export function generateVideo(videoData) {
     }).then(response => response.json());
 }
 
+export function completeVideo(videoData) {
+    return fetch('/complete_video', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(videoData)
+    }).then(response => response.json());
+}
+
 export function updateVideoSettings(updatedVideoData) {
     return fetch('/process', {
         method: 'POST',

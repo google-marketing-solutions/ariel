@@ -133,7 +133,7 @@ export function renderTimeline(videoData, videoDuration, speakers) {
             translatedBlock.dataset.utteranceId = utterance.id;
 
             translatedBlock.addEventListener('dblclick', () => {
-                editUtterance(utterance, videoData.speakers, videoData.utterances, index, speakers);
+                editUtterance(utterance, index, videoData, speakers, videoDuration);
             });
 
             // Drag and drop functionality

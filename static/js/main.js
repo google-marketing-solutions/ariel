@@ -1,4 +1,4 @@
-import { fetchLanguages, fetchVoices, processVideo, generateVideo, runRegenerateDubbing, runRegenerateTranslation } from './api.js';
+import { fetchLanguages, fetchVoices, processVideo, generateVideo, completeVideo, runRegenerateDubbing, runRegenerateTranslation } from './api.js';
 import { renderTimeline } from './timeline.js';
 import { renderUtterances } from './utterance.js';
 import { renderVoiceList, addVoice, handleSpeakerModalClose } from './modals.js';
@@ -12,7 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'edit-speaker-voice-modal-template',
         'confirmation-modal-template',
         'thinking-popup-template',
-        'generated-video-view-template'
+        'generated-video-view-template',
+        'completed-video-template'
     ];
     templates.forEach(id => {
         const template = document.getElementById(id);
@@ -67,6 +68,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const generatedVideoPreview = document.getElementById('generated-video-preview');
     const downloadVideoButton = document.getElementById('download-video-button');
     const goBackToEditingButton = document.getElementById('go-back-to-editing-button');
+    const completeVideoButton = document.getElementById('complete-video-button');
+
+    // Completed Video Modal
+    const completedVideoModal = new bootstrap.Modal(document.getElementById('completed-video-modal'));
+    const completedVideoVideo = document.getElementById('completed-video-video');
 
     // Thinking Popup
     const thinkingPopup = document.getElementById('thinking-popup');
@@ -82,6 +88,35 @@ document.addEventListener('DOMContentLoaded', () => {
         "Flexing Gemini",
         "Machine at work"
     ];
+
+    function startThinkingAnimation() {
+        thinkingPopup.style.display = 'flex';
+        arielLogo.classList.add('ariel-logo-animated');
+        thinkingWord.textContent = 'Thinking'; // Set initial text
+        let dotCount = 0;
+        dotAnimationInterval = setInterval(() => {
+            dotCount = (dotCount + 1) % 4;
+            animatedDots.textContent = '.'.repeat(dotCount);
+        }, 500);
+
+        phraseChangeInterval = setInterval(() => {
+            let currentPhrase = thinkingWord.textContent;
+            let nextPhrase = currentPhrase;
+            while (nextPhrase === currentPhrase) {
+                const randomIndex = Math.floor(Math.random() * thinkingPhrases.length);
+                nextPhrase = thinkingPhrases[randomIndex];
+            }
+            thinkingWord.textContent = nextPhrase;
+        }, 10000); // 10 seconds
+    }
+
+    function stopThinkingAnimation() {
+        thinkingPopup.style.display = 'none';
+        arielLogo.classList.remove('ariel-logo-animated');
+        clearInterval(dotAnimationInterval);
+        clearInterval(phraseChangeInterval);
+        animatedDots.textContent = '';
+    }
 
     let voices = [];
     let speakers = [];
@@ -261,27 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     startProcessingBtn.addEventListener('click', async () => {
-        thinkingPopup.style.display = 'flex';
-        arielLogo.classList.add('ariel-logo-animated');
-
-        // --- Start Animations ---
-        thinkingWord.textContent = 'Thinking'; // Set initial text
-        let dotCount = 0;
-        dotAnimationInterval = setInterval(() => {
-            dotCount = (dotCount + 1) % 4;
-            animatedDots.textContent = '.'.repeat(dotCount);
-        }, 500);
-
-        phraseChangeInterval = setInterval(() => {
-            let currentPhrase = thinkingWord.textContent;
-            let nextPhrase = currentPhrase;
-            // Simple loop to ensure we don't pick the same phrase twice
-            while (nextPhrase === currentPhrase) {
-                const randomIndex = Math.floor(Math.random() * thinkingPhrases.length);
-                nextPhrase = thinkingPhrases[randomIndex];
-            }
-            thinkingWord.textContent = nextPhrase;
-        }, 10000); // 10 seconds
+        startThinkingAnimation();
 
         const formData = new FormData();
         if (videoInput.files[0]) {
@@ -352,20 +367,12 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error during processing:', error);
             // Handle error here (e.g., show an error message)
         } finally {
-            thinkingPopup.style.display = 'none';
-            arielLogo.classList.remove('ariel-logo-animated');
-            clearInterval(dotAnimationInterval);
-            clearInterval(phraseChangeInterval);
-            animatedDots.textContent = '';
+            stopThinkingAnimation();
         }
     });
 
     generateVideoBtn.addEventListener('click', async () => {
-        thinkingPopup.style.display = 'flex';
-        arielLogo.classList.add('ariel-logo-animated');
-        // Start animations (dots, phrases) - similar to startProcessingBtn
-        // For now, I'll just show/hide the popup and animation class.
-        // The dot and phrase animations are already handled by the startProcessingBtn logic.
+        startThinkingAnimation();
 
         try {
             const result = await generateVideo(currentVideoData);
@@ -389,9 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error generating video:', error);
             // Show error message to user
         } finally {
-            thinkingPopup.style.display = 'none';
-            arielLogo.classList.remove('ariel-logo-animated');
-            // Stop animations (dots, phrases) - similar to startProcessingBtn
+            stopThinkingAnimation();
         }
     });
 
@@ -569,8 +574,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         } else if (speakersChanged) {
                             console.log('Batch regenerating dubbings for speaker changes...');
-                            const changedSpeakers = newSpeakers.filter(ns => 
-                                speakers.find(s => s.id === ns.id && s.voice !== ns.voice)
+                            const changedSpeakers = speakers.filter(s => 
+                                !currentVideoData.speakers.find(cs => cs.id === s.id && cs.voice === s.voice)
                             );
                             const changedSpeakerIds = changedSpeakers.map(cs => cs.id);
 
@@ -586,13 +591,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             renderUtterances(currentVideoData, speakers, videoDuration);
                         }
 
-                        // Update the speakers array with new voices
-                        speakers.forEach(s => {
-                            const newSpeaker = newSpeakers.find(ns => ns.id === s.id);
-                            if (newSpeaker) {
-                                s.voice = newSpeaker.voice;
-                            }
-                        });
+                        // Update the speakers array in currentVideoData
+                        currentVideoData.speakers = speakers.map(s => ({ id: s.id, name: s.name, voice: s.voice }));
 
                         // Update display
                         const originalLanguageName = document.getElementById('edit-original-language').selectedOptions[0].text;
@@ -618,6 +618,20 @@ document.addEventListener('DOMContentLoaded', () => {
     goBackToEditingButton.addEventListener('click', () => {
         generatedVideoView.style.display = 'none';
         resultsView.style.display = 'block'; // Show Timeline and Utterances again
+    });
+
+    completeVideoButton.addEventListener('click', async () => {
+        startThinkingAnimation();
+        try {
+            const result = await completeVideo(currentVideoData);
+            completedVideoVideo.src = result.video_url;
+            completedVideoModal.show();
+        } catch (error) {
+            console.error('Error completing video:', error);
+            // Show error message to user
+        } finally {
+            stopThinkingAnimation();
+        }
     });
     }
 });

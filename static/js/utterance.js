@@ -110,13 +110,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
     const confirmationModal = new bootstrap.Modal(document.getElementById('confirmation-modal'));
 
     // Store initial state
-    const initialOriginalText = utterance.original_text;
-    const initialTranslatedText = utterance.translated_text;
-    const initialInstructions = utterance.instructions || '';
-    const initialSpeaker = utterance.speaker.voice;
-    let dubbingRegeneratedForSpeakerChange = false; // New flag
-    const initialTranslatedStartTime = utterance.translated_start_time;
-    const initialTranslatedEndTime = utterance.translated_end_time;
+    const initialUtteranceState = { ...utterance };
 
     console.log('Editing utterance:', JSON.stringify(utterance, null, 2)); // DEBUG
 
@@ -184,7 +178,6 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         <button id="save-utterance-btn" class="btn btn-info">Save</button>
     `;
 
-    // --- Main Button Event Listeners ---
     const saveUtteranceChanges = (closeEditor = true) => {
         utterance.original_text = document.getElementById('original-text-area').value;
         utterance.translated_text = document.getElementById('translated-text-area').value;
@@ -201,112 +194,28 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         document.dispatchEvent(new CustomEvent('timeline-changed'));
     };
 
+    const hasChanges = () => {
+        return (
+            document.getElementById('original-text-area').value !== initialUtteranceState.original_text ||
+            document.getElementById('translated-text-area').value !== initialUtteranceState.translated_text ||
+            document.getElementById('intonation-instructions-area').value !== (initialUtteranceState.instructions || '') ||
+            document.getElementById('speaker-select').value !== initialUtteranceState.speaker.voice ||
+            parseFloat(document.getElementById('translated-start-time-input').value) !== initialUtteranceState.translated_start_time ||
+            parseFloat(document.getElementById('translated-end-time-input').value) !== initialUtteranceState.translated_end_time
+        );
+    };
+
     document.getElementById('save-utterance-btn').addEventListener('click', () => {
-        const newOriginalText = document.getElementById('original-text-area').value;
-        const newSpeaker = document.getElementById('speaker-select').value;
-
-        const modalEl = document.getElementById('confirmation-modal');
-        const modalTitle = modalEl.querySelector('.modal-title');
-        const modalBody = modalEl.querySelector('.modal-body');
-        const confirmBtn = modalEl.querySelector('#confirm-close-btn');
-        const cancelBtn = modalEl.querySelector('[data-bs-dismiss="modal"]');
-
-        // Store original modal state to restore it later
-        const originalTitle = modalTitle.textContent;
-        const originalBody = modalBody.innerHTML;
-        const originalConfirmText = confirmBtn.textContent;
-        const originalConfirmClasses = confirmBtn.className;
-
-        const cleanup = () => {
-            modalTitle.textContent = originalTitle;
-            modalBody.innerHTML = originalBody;
-            confirmBtn.textContent = originalConfirmText;
-            confirmBtn.className = originalConfirmClasses;
-        };
-
-        if (newOriginalText !== initialOriginalText) {
-            // --- Flow for Original Text Change ---
-            modalTitle.textContent = 'Regenerate Translation?';
-            modalBody.innerHTML = '<p>The original text has changed. Would you like to regenerate the translation and dubbing?</p>';
-            confirmBtn.textContent = 'Yes, Regenerate';
-            confirmBtn.className = 'btn btn-primary';
-
-            const yesHandler = () => {
-                utterance.original_text = newOriginalText;
-                const translationInstructions = document.querySelector('#gemini-prompt-input').value;
-                const dubbingInstructions = document.getElementById('intonation-instructions-area').value;
-
-                runRegenerateTranslation(currentVideoData, utterance, index, translationInstructions).then(() => {
-                    return runRegenerateDubbing(currentVideoData, utterance, index, dubbingInstructions);
-                }).then(() => {
-                    saveUtteranceChanges(false); // Pass false to prevent immediate closing
-                    confirmationModal.hide();
-                    cleanup();
-                    utteranceEditor.style.display = 'none'; // Close editor after regeneration
-                });
-            };
-
-            const noHandler = () => {
-                saveUtteranceChanges();
-                document.activeElement.blur(); // Remove focus from the button
-                confirmationModal.hide();
-                cleanup();
-            };
-
-            confirmBtn.addEventListener('click', yesHandler, { once: true });
-            cancelBtn.addEventListener('click', noHandler, { once: true });
-            confirmationModal.show();
-
-        } else if (newSpeaker !== initialSpeaker) {
-            // --- Flow for Speaker Change ---
-            if (dubbingRegeneratedForSpeakerChange) {
-                // Dubbing already regenerated for this speaker change, just save
-                saveUtteranceChanges();
-            } else {
-                // Ask for regeneration
-                modalTitle.textContent = 'Regenerate Dubbing?';
-                modalBody.innerHTML = '<p>The speaker has changed. Would you like to regenerate the dubbing with the new voice?</p>';
-                confirmBtn.textContent = 'Yes, Regenerate';
-                confirmBtn.className = 'btn btn-primary';
-
-                const yesHandler = () => {
-                    const dubbingInstructions = document.getElementById('intonation-instructions-area').value;
-                    runRegenerateDubbing(currentVideoData, utterance, index, dubbingInstructions).then(() => {
-                        saveUtteranceChanges(false); // Pass false to prevent immediate closing
-                        confirmationModal.hide();
-                        cleanup();
-                        utteranceEditor.style.display = 'none'; // Close editor after regeneration
-                    });
-                };
-
-                const noHandler = () => {
-                    saveUtteranceChanges();
-                    confirmationModal.hide();
-                    cleanup();
-                };
-
-                confirmBtn.addEventListener('click', yesHandler, { once: true });
-                cancelBtn.addEventListener('click', noHandler, { once: true });
-                confirmationModal.show();
-            }
-        } else {
-            // --- Flow for No Major Changes ---
-            saveUtteranceChanges();
-        }
+        saveUtteranceChanges();
     });
 
     document.getElementById('regenerate-translation-btn').addEventListener('click', () => {
+        utterance.original_text = document.getElementById('original-text-area').value;
         const instructions = document.querySelector('#gemini-prompt-input').value;
         runRegenerateTranslation(currentVideoData, utterance, index, instructions)
             .then((updatedUtterance) => {
-                // Update the original utterance object in videoData
                 currentVideoData.utterances[index] = updatedUtterance;
-                // Update the UI for this specific utterance
-                const translatedTextInput = document.getElementById('translated-text-area');
-                if (translatedTextInput) {
-                    translatedTextInput.value = updatedUtterance.translated_text;
-                }
-                console.log('Translation regenerated:', updatedUtterance);
+                document.getElementById('translated-text-area').value = updatedUtterance.translated_text;
                 showToast('Translation regenerated successfully!', 'success');
             })
             .catch(error => {
@@ -317,12 +226,9 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
 
     document.getElementById('regenerate-dubbing-btn').addEventListener('click', () => {
         const instructions = document.getElementById('intonation-instructions-area').value;
-        // Update the utterance object with the currently selected speaker from the dropdown
         utterance.speaker.voice = document.getElementById('speaker-select').value;
         runRegenerateDubbing(currentVideoData, utterance, index, instructions)
             .then(() => {
-                dubbingRegeneratedForSpeakerChange = true; // Set flag
-                // After dubbing is regenerated, re-render all utterances and the timeline to update the speaker data
                 renderUtterances(currentVideoData, speakers, videoDuration);
                 renderTimeline(currentVideoData, videoDuration, speakers);
             })
@@ -343,7 +249,6 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
                 } else if (textType === 'translated') {
                     textToSpeak = containerElement.querySelector('#translated-text-area').value;
                 }
-                console.log(`Playing ${textType} text: ${textToSpeak}`);
                 if (utterance.audio_url) {
                     const audio = new Audio(utterance.audio_url);
                     audio.play();
@@ -355,45 +260,13 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
 
     setupTextToSpeechListeners(utterance, utteranceEditorContent);
 
-    // ... other listeners like close, TTS, etc. ...
-
-    const closeEditorBtn = utteranceEditor.querySelector('.btn-close'); // Get the existing 'x' button
+    const closeEditorBtn = utteranceEditor.querySelector('.btn-close');
     closeEditorBtn.addEventListener('click', () => {
-        const currentOriginalText = document.getElementById('original-text-area').value;
-        const currentTranslatedText = document.getElementById('translated-text-area').value;
-        const currentInstructions = document.getElementById('intonation-instructions-area').value;
-        const currentSpeaker = document.getElementById('speaker-select').value;
-        const currentTranslatedStartTime = parseFloat(document.getElementById('translated-start-time-input').value);
-        const currentTranslatedEndTime = parseFloat(document.getElementById('translated-end-time-input').value);
-
-        const hasChanges = (
-            currentOriginalText !== initialOriginalText ||
-            currentTranslatedText !== initialTranslatedText ||
-            currentInstructions !== initialInstructions ||
-            currentSpeaker !== initialSpeaker ||
-            currentTranslatedStartTime !== initialTranslatedStartTime ||
-            currentTranslatedEndTime !== initialTranslatedEndTime
-        );
-
-        if (hasChanges) {
+        if (hasChanges()) {
             const modalEl = document.getElementById('confirmation-modal');
             const modalTitle = modalEl.querySelector('.modal-title');
             const modalBody = modalEl.querySelector('.modal-body');
             const confirmBtn = modalEl.querySelector('#confirm-close-btn');
-            const cancelBtn = modalEl.querySelector('[data-bs-dismiss="modal"]');
-
-            // Store original modal state to restore it later
-            const originalTitle = modalTitle.textContent;
-            const originalBody = modalBody.innerHTML;
-            const originalConfirmText = confirmBtn.textContent;
-            const originalConfirmClasses = confirmBtn.className;
-
-            const cleanup = () => {
-                modalTitle.textContent = originalTitle;
-                modalBody.innerHTML = originalBody;
-                confirmBtn.textContent = originalConfirmText;
-                confirmBtn.className = originalConfirmClasses;
-            };
 
             modalTitle.textContent = 'Discard Changes?';
             modalBody.innerHTML = '<p>You have unsaved changes. Are you sure you want to close without saving?</p>';
@@ -403,29 +276,18 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
             const yesDiscardHandler = () => {
                 utteranceEditor.style.display = 'none';
                 confirmationModal.hide();
-                cleanup();
             };
 
             const noDiscardHandler = () => {
-                // Do not hide utteranceEditor, just the confirmation modal
                 confirmationModal.hide();
-                cleanup();
             };
 
             confirmBtn.addEventListener('click', yesDiscardHandler, { once: true });
-            cancelBtn.addEventListener('click', noDiscardHandler, { once: true });
-            confirmationModal.show();
+            modalEl.addEventListener('hidden.bs.modal', noDiscardHandler, { once: true });
 
+            confirmationModal.show();
         } else {
             utteranceEditor.style.display = 'none';
         }
     });
-
-    // Event listener for when the confirmation modal is hidden
-    document.getElementById('confirmation-modal').addEventListener('hidden.bs.modal', () => {
-        // If the utterance editor is still visible, hide it
-        if (utteranceEditor.style.display === 'block') {
-            utteranceEditor.style.display = 'none';
-        }
-    }, { once: true }); // Use { once: true } to prevent multiple listeners if editUtterance is called multiple times
 }
