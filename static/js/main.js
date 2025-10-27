@@ -197,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         appState.isEditingVideoSettings = true;
         renderVideoSettingsEditor();
     });
+    geminiModelLabel.textContent = 'Flash';
     geminiModelToggle.addEventListener('change', () => {
         geminiModelLabel.textContent = geminiModelToggle.checked ? 'Pro' : 'Flash';
     });
