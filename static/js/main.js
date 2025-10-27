@@ -150,11 +150,17 @@ document.addEventListener('DOMContentLoaded', () => {
             speakerCard.className = 'speaker-card';
             speakerCard.dataset.speakerId = speaker.id;
             speakerCard.innerHTML = `
-                <span>${speaker.name}</span>
-                <span class="speaker-voice">${speaker.voiceName}</span>
-                <i class="ms-2 bi ${speaker.gender === 'Male' ? 'bi-gender-male' : 'bi-gender-female'}"></i>
-                <button class="btn btn-sm btn-outline-secondary edit-speaker-btn d-flex align-items-center justify-content-center" data-speaker-id="${speaker.id}"><i class="bi bi-pencil"></i></button>
-                <button class="btn-close" aria-label="Remove"></button>
+                <div class="speaker-info">
+                    <div class="speaker-name">${speaker.name}</div>
+                    <div class="speaker-details">
+                        <span class="speaker-voice">${speaker.voiceName}</span>
+                        <i class="ms-2 bi ${speaker.gender === 'Male' ? 'bi-gender-male' : 'bi-gender-female'}"></i>
+                    </div>
+                </div>
+                <div class="speaker-actions">
+                    <button class="btn btn-sm btn-outline-secondary edit-speaker-btn d-flex align-items-center justify-content-center" data-speaker-id="${speaker.id}"><i class="bi bi-pencil"></i></button>
+                    <button class="btn-close" aria-label="Remove"></button>
+                </div>
             `;
             speakerList.appendChild(speakerCard);
         });

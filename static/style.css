@@ -104,43 +104,53 @@ body {
 .speaker-card {
     background-color: var(--tertiary-bg-color);
     padding: 1rem;
-    padding-right: 2.5rem; /* Make space for the absolutely positioned close button */
     border-radius: 8px;
     display: flex;
-    flex-wrap: wrap; /* Allow items to wrap */
+    justify-content: space-between; /* Pushes info and actions apart */
+    align-items: flex-start; /* Align items to the top */
+    position: relative;
+    gap: 1rem; /* Add some gap */
+}
+
+.speaker-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-width: 0; /* Prevent overflow issues */
+}
+
+.speaker-name {
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.speaker-details {
+    display: flex;
     align-items: center;
-    position: relative; /* For absolute positioning of the close button */
-    gap: 0.5rem; /* Space between items */
+    color: var(--secondary-text-color);
+    font-size: 0.9rem;
+}
+
+.speaker-voice {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.speaker-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .speaker-card .btn-close {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
     filter: invert(1) grayscale(100%) brightness(200%);
-    z-index: 1; /* Ensure it's above other content */
 }
 
 .speaker-card .edit-speaker-btn {
-    flex-shrink: 0; /* Prevent edit button from shrinking */
-    margin-left: auto; /* Push edit button to the right, next to the close button area */
-}
-
-.speaker-card > span:first-of-type { /* Speaker name */
-    flex-grow: 1; /* Allow name to take available space */
-    min-width: 80px; /* Ensure name has a minimum width */
-}
-
-.speaker-card .speaker-voice,
-.speaker-card .bi { /* Voice and gender icon */
-    flex-shrink: 0; /* Prevent them from shrinking */
-}
-.speaker-card .bi {
-    margin-right: 0.5rem;
-}
-
-.speaker-card .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%);
+    margin-left: 0; /* Reset margin */
 }
 
 .additional-settings-menu {
