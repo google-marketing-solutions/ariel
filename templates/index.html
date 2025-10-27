@@ -260,13 +260,18 @@
     </template>
 
     <template id="generated-video-view-template">
-        <div id="generated-video-view" style="display: none;">
-            <h3>Generated Video</h3>
+        <div id="generated-video-view" class="generated-video-container" style="display: none;">
+            <h3 class="mb-4">Generated Video</h3>
             <video id="generated-video-preview" controls width="100%"></video>
-            <div class="mt-3">
-                <a id="download-video-button" class="btn btn-primary me-2" download>Download Video</a>
-                <button id="go-back-to-editing-button" class="btn btn-secondary">Go back to editing</button>
-                <button id="complete-video-button" class="btn btn-success">Complete Video</button>
+            <div class="button-bar mt-3">
+                <div class="download-group">
+                    <a id="download-video-button" class="btn btn-outline-primary me-2" download>Download Video</a>
+                    <a id="download-audio-button" class="btn btn-outline-primary" download>Download Audio</a>
+                </div>
+                <div class="action-group">
+                    <button id="go-back-to-editing-button" class="btn btn-secondary">Go back to editing</button>
+                    <button id="start-over-button" class="btn btn-danger">Start Over</button>
+                </div>
             </div>
         </div>
     </template>

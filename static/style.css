@@ -568,3 +568,40 @@ select, option{
 .toast.success {
     background-color: #388e3c; /* Green for success */
 }
+
+/* Generated Video View */
+.generated-video-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    max-width: 800px;
+    margin: auto;
+}
+
+.button-bar {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.download-group,
+.action-group {
+    display: flex;
+    gap: 1rem;
+}
+
+#gemini-instructions::placeholder {
+    color: var(--secondary-text-color);
+    opacity: 1; /* Firefox applies a lower opacity by default */
+}
+
+@media (max-width: 768px) {
+    .button-bar {
+        flex-direction: column;
+        align-items: center;
+    }
+}

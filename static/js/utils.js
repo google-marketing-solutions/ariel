@@ -24,7 +24,7 @@ export function showToast(message, type = 'error') {
 export function checkOverlap(utterance, allUtterances) {
     const messages = [];
     for (const other of allUtterances) {
-        if (utterance.id === other.id) continue;
+        if (utterance.id === other.id || other.removed) continue;
 
         // Check for overlap
         if (utterance.translated_start_time < other.translated_end_time && other.translated_start_time < utterance.translated_end_time) {

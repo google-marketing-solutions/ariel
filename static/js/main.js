@@ -67,8 +67,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const generatedVideoView = document.getElementById('generated-video-view');
     const generatedVideoPreview = document.getElementById('generated-video-preview');
     const downloadVideoButton = document.getElementById('download-video-button');
+    const downloadAudioButton = document.getElementById('download-audio-button');
     const goBackToEditingButton = document.getElementById('go-back-to-editing-button');
-    const completeVideoButton = document.getElementById('complete-video-button');
+    const startOverButton = document.getElementById('start-over-button');
 
     // Completed Video Modal
     const completedVideoModal = new bootstrap.Modal(document.getElementById('completed-video-modal'));
@@ -258,9 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     addVoiceBtn.addEventListener('click', () => {
-        if (!appState.isEditingVideoSettings) {
-            addVoice(voices, speakers, renderSpeakers, validateStartProcessing);
-        }
+        addVoice(voices, speakers, renderSpeakers, validateStartProcessing);
     });
 
     speakerList.addEventListener('click', (e) => {
@@ -399,12 +398,25 @@ document.addEventListener('DOMContentLoaded', () => {
             downloadVideoButton.href = result.video_url;
             downloadVideoButton.download = `generated_video_${currentVideoData.video_id}.mp4`;
 
+            // Set up audio download button
+            downloadAudioButton.href = result.audio_url; // Assuming backend provides this
+            downloadAudioButton.download = `generated_audio_${currentVideoData.video_id}.mp3`;
+
         } catch (error) {
             console.error('Error generating video:', error);
             // Show error message to user
         } finally {
             stopThinkingAnimation();
         }
+    });
+
+    goBackToEditingButton.addEventListener('click', () => {
+        generatedVideoView.style.display = 'none';
+        resultsView.style.display = 'block'; // Show Timeline and Utterances again
+    });
+
+    startOverButton.addEventListener('click', () => {
+        location.reload();
     });
 
     confirmCloseBtn.addEventListener('click', () => {
@@ -522,15 +534,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('submit-edit-settings').addEventListener('click', async () => {
                     const newOriginalLanguage = document.getElementById('edit-original-language').value;
                     const newTranslateLanguage = document.getElementById('edit-target-language').value;
-                    // The speakers array is updated directly by the modal interaction.
-                    // No need to construct newSpeakers from buttons.
                     const originalLangChanged = newOriginalLanguage !== currentVideoData.original_language;
                     const translateLangChanged = newTranslateLanguage !== currentVideoData.translate_language;
-                    // Compare the current global speakers array with the original speakers array from currentVideoData
-                    const speakersChanged = JSON.stringify(speakers.map(s => ({ id: s.id, voice: s.voice }))) !== JSON.stringify(currentVideoData.speakers.map(s => ({ id: s.id, voice: s.voice })));
+                    const speakersChanged = JSON.stringify(speakers.map(s => ({ speaker_id: s.id, voice: s.voice }))) !== JSON.stringify(currentVideoData.speakers);
 
                     if (!originalLangChanged && !translateLangChanged && !speakersChanged) {
-                        // No changes, just close the editor
                         videoSettingsContent.innerHTML = originalContent;
                         return;
                     }
@@ -539,33 +547,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     try {
                         if (originalLangChanged) {
-                            // Re-process from scratch
                             console.log('Re-processing entire video...');
                             const formData = new FormData();
-                            // We need to re-append all data, not just the changed language
-                            formData.append('video', videoInput.files[0]); // Assuming videoInput is still accessible
+                            formData.append('video', videoInput.files[0]);
                             formData.append('original_language', newOriginalLanguage);
                             formData.append('translate_language', newTranslateLanguage);
                             formData.append('prompt_enhancements', geminiInstructions.value);
                             formData.append('adjust_speed', adjustSpeedToggle.checked);
-                            const speakersToPost = speakers.map(s => ({
-                                id: s.id,
-                                name: s.name,
-                                voice: s.voice
-                            }));
+                            const speakersToPost = speakers.map(s => ({ id: s.id, name: s.name, voice: s.voice }));
                             formData.append('speakers', JSON.stringify(speakersToPost));
                             
                             const result = await processVideo(formData);
                             currentVideoData = result;
-                            // Enrich utterance.speaker with gender information from the frontend speakers array
                             currentVideoData.utterances.forEach(utterance => {
                                 const matchingSpeaker = speakers.find(s => s.voice === utterance.speaker.voice);
                                 if (matchingSpeaker) {
                                     utterance.speaker.gender = matchingSpeaker.gender;
                                 }
                             });
-                            // This would effectively reload the results view, which is a larger refactor.
-                            // For now, we'll just update the data and re-render.
                             renderTimeline(currentVideoData, videoDuration, speakers);
                             renderUtterances(currentVideoData, speakers, videoDuration);
 
@@ -582,26 +581,32 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else if (speakersChanged) {
                             console.log('Batch regenerating dubbings for speaker changes...');
                             const changedSpeakers = speakers.filter(s => 
-                                !currentVideoData.speakers.find(cs => cs.id === s.id && cs.voice === s.voice)
+                                !currentVideoData.speakers.find(cs => cs.speaker_id === s.id && cs.voice === s.voice)
                             );
                             const changedSpeakerIds = changedSpeakers.map(cs => cs.id);
 
                             const dubbingPromises = currentVideoData.utterances
-                                .filter(u => changedSpeakerIds.includes(u.speaker.id))
+                                .filter(u => changedSpeakerIds.includes(u.speaker.speaker_id))
                                 .map((utterance, index) => {
-                                    // Find the original index of the utterance to pass to the API
                                     const originalIndex = currentVideoData.utterances.findIndex(u_orig => u_orig.id === utterance.id);
                                     return runRegenerateDubbing(currentVideoData, utterance, originalIndex, utterance.instructions);
                                 });
                             await Promise.all(dubbingPromises);
+
+                            changedSpeakers.forEach(changedSpeaker => {
+                                currentVideoData.utterances.forEach(utterance => {
+                                    if (utterance.speaker.speaker_id === changedSpeaker.id) {
+                                        utterance.speaker.voice = changedSpeaker.voice;
+                                    }
+                                });
+                            });
+
                             renderTimeline(currentVideoData, videoDuration, speakers);
                             renderUtterances(currentVideoData, speakers, videoDuration);
                         }
 
-                        // Update the speakers array in currentVideoData
-                        currentVideoData.speakers = speakers.map(s => ({ id: s.id, name: s.name, voice: s.voice }));
+                        currentVideoData.speakers = speakers.map(s => ({ speaker_id: s.id, name: s.name, voice: s.voice }));
 
-                        // Update display
                         const originalLanguageName = document.getElementById('edit-original-language').selectedOptions[0].text;
                         const translationLanguageName = document.getElementById('edit-target-language').selectedOptions[0].text;
                         videoSettingsContent.innerHTML = `
