@@ -16,7 +16,7 @@ from fastapi import FastAPI, Request, Form, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from generate_audio import generate_audio
+from generate_audio import generate_audio, shorten_audio
 from transcribe import TranscribeSegment, transcribe_video, match_voice
 from translate import translate_text
 from google import genai
@@ -40,8 +40,8 @@ templates = Jinja2Templates(directory="templates")
 
 config = get_config()
 
-logging_client = google.cloud.logging.Client()
-logging_client.setup_logging(log_level=logging.INFO)
+# logging_client = google.cloud.logging.Client()
+# logging_client.setup_logging(log_level=logging.INFO)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -93,7 +93,7 @@ async def process_video(
       genai_client, original_language, translate_language, t.transcript, t.tone
     )
 
-    local_audio_path = os.path.join(local_dir, f"audio_{i}.mp3")
+    local_audio_path = os.path.join(local_dir, f"audio_{i}.wav")
     # Needed until we figure out how to make Gemini TTS reliable.
     audio_client = genai.Client(api_key=config.gemini_api_key)
     audio_duration = generate_audio(
@@ -105,6 +105,12 @@ async def process_video(
       local_audio_path,
       model_name=config.gemini_tts_model,
     )
+    original_duration = t.end_time - t.start_time
+    if adjust_speed and audio_duration and audio_duration > original_duration:
+      audio_duration = shorten_audio(
+        local_audio_path, audio_duration, original_duration
+      )
+
     translated_end_time = t.start_time + audio_duration
 
     u = Utterance(
@@ -197,7 +203,7 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
     utterance.original_text,
     req.instructions,
   )
-  new_path = utterance.audio_url + str(uuid.uuid1()) + ".mp3"  # cache busting
+  new_path = utterance.audio_url + str(uuid.uuid1()) + ".wav"  # cache busting
   audio_client = genai.Client(api_key=config.gemini_api_key)
   duration = generate_audio(
     audio_client,

@@ -1,15 +1,16 @@
-import base64
-import io
+import librosa
 import logging
 import re
+import soundfile  # pyright: ignore[reportMissingTypeStubs]
 import wave
 from google.genai import types, Client
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-def _process_audio_part(audio_part: bytes, path: str) -> float:
+
+def _process_audio_part(audio_part: types.Part, path: str) -> float:
   """Processes the audio part, extracts metadata, and saves the audio as a WAV."""
   # Parse the mime_type string "audio/L16;codec=pcm;rate=24000"
-  mime_type = audio_part.inline_data.mime_type
+  mime_type = audio_part.inline_data.mime_type or "no mime type"
   match = re.search(r"L(\d+);codec=(?:\w+);rate=(\d+)", mime_type)
   if not match:
     raise ValueError(f"Could not parse mime_type: {mime_type}")
@@ -23,19 +24,19 @@ def _process_audio_part(audio_part: bytes, path: str) -> float:
     wf.writeframes(pcm_data)
 
     num_frames = wf.getnframes()
-  duration = num_frames / sample_rate
 
+  duration = num_frames / sample_rate
   return duration
-    
+
 
 def generate_audio(
-    client: Client,
-    text: str,
-    prompt: str,
-    language: str,
-    voice_name: str,
-    output_path: str,
-    model_name: str = "gemini-2.5-pro-tts",
+  client: Client,
+  text: str,
+  prompt: str,
+  language: str,
+  voice_name: str,
+  output_path: str,
+  model_name: str = "gemini-2.5-pro-tts",
 ) -> float:
   """Uses Gemini TTS to generate audio for the given text.
 
@@ -59,37 +60,77 @@ def generate_audio(
   ## TEXT
   {text}
   """
-  
+
   voice_config = types.VoiceConfig(
-      prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name))
+    prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
+  )
 
-  safety_settings = [
-    types.SafetySetting(
-      category=types.HarmCategory.HARM_CATEGORY_UNSPECIFIED,
-      threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
-    ),
-  ]
+  duration = 0.0
 
-  
   @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
   def call_gemini():
-      return client.models.generate_content(
-          model=model_name,
-          contents=prompt,
-          config=types.GenerateContentConfig(
-              #safety_settings=safety_settings,
-              response_modalities=["AUDIO"],
-              speech_config=types.SpeechConfig(voice_config=voice_config),
-          ))
+    return client.models.generate_content(
+      model=model_name,
+      contents=prompt,
+      config=types.GenerateContentConfig(
+        # safety_settings=safety_settings,
+        response_modalities=["AUDIO"],
+        speech_config=types.SpeechConfig(voice_config=voice_config),
+      ),
+    )
 
   response = call_gemini()
 
   ## Gemini sometimes just fails to return the object we're expecting.
-  if response.candidates[0] and response.candidates[0].content and response.candidates[0].content.parts:
-      audio_part = response.candidates[0].content.parts[0]
-      return _process_audio_part(audio_part, output_path)
+  if (
+    response.candidates[0]
+    and response.candidates[0].content
+    and response.candidates[0].content.parts
+  ):
+    audio_part = response.candidates[0].content.parts[0]
+    _process_audio_part(audio_part, output_path)
+    duration = strip_silence(output_path)
   else:
-      logging.error(f"Generating Audio failed with the following response from Gemini: {response}")
+    logging.error(
+      f"Generating Audio failed with the following response from Gemini: {response}"
+    )
 
-  return 0.0
-  
+  return duration
+
+
+import numpy as np
+
+
+def strip_silence(path: str) -> float:
+  """Removes the silence from the start and end of an audio file.
+
+  Args:
+    path: the path to the file to strip
+  """
+  y, sr = librosa.load(path)
+  yt, _ = librosa.effects.trim(y)
+
+  # If the audio is all silence, librosa.effects.trim doesn't shorten it.
+  # So if the length is the same, and the audio is all zeros, then we
+  # should return an empty array.
+  if len(y) == len(yt) and np.all(y == 0):
+    yt = np.array([])
+
+  soundfile.write(path, yt, sr)
+  return librosa.get_duration(y=yt, sr=sr)
+
+
+def shorten_audio(
+  path: str, original_duration: float, target_duration: float
+) -> float:
+  """Shortens audio"""
+  y, sr = librosa.load(path)
+  if original_duration == 0:
+    y_sped_up = np.array([])
+  else:
+    rate = original_duration / target_duration
+    y_sped_up = librosa.effects.time_stretch(y, rate=rate)
+
+  soundfile.write(path, y_sped_up, sr)
+
+  return librosa.get_duration(y=y_sped_up, sr=sr)

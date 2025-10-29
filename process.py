@@ -1,8 +1,7 @@
 import os
 import subprocess
 
-from moviepy import AudioFileClip, VideoFileClip
-from pydub import AudioSegment
+import moviepy
 from models import Utterance
 
 
@@ -27,7 +26,7 @@ def separate_audio_from_video(video_file_path: str, output_local_path: str):
   # TODO(): Add support for multiple splitting rounds like in v1.
   original_audio_name = "original_audio"
   original_audio_extension = "wav"
-  video = VideoFileClip(video_file_path)
+  video = moviepy.VideoFileClip(video_file_path)
   audio = video.audio
   original_audio_path = (
     f"{output_local_path}/{original_audio_name}.{original_audio_extension}"
@@ -55,8 +54,8 @@ def separate_audio_from_video(video_file_path: str, output_local_path: str):
     return vocals_path, background_path
   else:
     raise RuntimeError(
-      "Audio separation failed. Could not find output files in the expected" +
-      f" path: {vocals_path}"
+      "Audio separation failed. Could not find output files in the expected"
+      + f" path: {vocals_path}"
     )
 
 
@@ -69,7 +68,7 @@ def merge_background_and_vocals(
   vocals_volume_adjustment: float = 0.0,
   background_volume_adjustment: float = 0.0,
   dubbed_audio_filename: str = "dubbed_audio",
-  output_format: str = "mp3",
+  output_format: str = "wav",
 ) -> str:
   """Mixes background music and vocals tracks, normalizes the volume, and exports the result.
 
@@ -95,30 +94,33 @@ def merge_background_and_vocals(
     background audio.
   """
 
-  background_audio = AudioSegment.from_file(background_audio_file)
-  background_audio += background_volume_adjustment
+  background_audio = moviepy.AudioFileClip(background_audio_file)
+  background_audio.with_start(0)
+  background_audio = background_audio.with_effects([
+    moviepy.afx.MultiplyVolume(0.5)
+  ])
 
   # Create a silent track with the same duration as the background audio
-  combined_vocals = AudioSegment.silent(duration=len(background_audio))
+  audio_parts: list[moviepy.AudioClip] = [background_audio]
 
   # Overlay each vocal chunk at its start time
   for utterance in dubbed_vocals_metadata:
-    if not utterance.audio_url: continue
-    vocal_chunk = AudioSegment.from_file(utterance.audio_url)
-    start_time_ms = int(utterance.translated_start_time * 1000)
-    combined_vocals = combined_vocals.overlay(
-      vocal_chunk, position=start_time_ms
-    )
+    if not utterance.audio_url:
+      continue
+    vocal_chunk = moviepy.AudioFileClip(utterance.audio_url)
+    vocal_chunk = vocal_chunk.with_start(float(utterance.translated_start_time))
+    vocal_chunk = vocal_chunk.with_effects([moviepy.afx.MultiplyVolume(2.0)])
+    audio_parts.append(vocal_chunk)
 
-  combined_vocals += vocals_volume_adjustment
-  mixed_audio = background_audio.overlay(combined_vocals)
+  combined_audio: moviepy.CompositeAudioClip = moviepy.CompositeAudioClip(
+    audio_parts
+  )
   target_language_suffix = "_" + target_language.replace("-", "_").lower()
   dubbed_audio_file = os.path.join(
     output_directory,
     dubbed_audio_filename + target_language_suffix + "." + output_format,
   )
-  mixed_audio.normalize()
-  mixed_audio.export(dubbed_audio_file, format=output_format)
+  combined_audio.write_audiofile(dubbed_audio_file)
   return dubbed_audio_file
 
 
@@ -134,8 +136,8 @@ def combine_video_and_audio(
       audio_file_path: Path to the dubbed audio file.
       output_file_path: Path to save the final dubbed video.
   """
-  video_clip = VideoFileClip(video_file_path)
-  audio_clip = AudioFileClip(audio_file_path)
+  video_clip = moviepy.VideoFileClip(video_file_path)
+  audio_clip = moviepy.AudioFileClip(audio_file_path)
 
   # Set the audio of the video clip to the new dubbed audio (Updated method)
   final_clip = video_clip.with_audio(audio_clip)
