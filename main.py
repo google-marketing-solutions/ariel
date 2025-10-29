@@ -1,4 +1,3 @@
-import base64
 import google.cloud.logging
 import json
 import logging
@@ -94,10 +93,7 @@ async def process_video(
     )
 
     local_audio_path = os.path.join(local_dir, f"audio_{i}.wav")
-    # Needed until we figure out how to make Gemini TTS reliable.
-    audio_client = genai.Client(api_key=config.gemini_api_key)
     audio_duration = generate_audio(
-      audio_client,
       translated_text,
       t.tone,
       translate_language,
@@ -233,7 +229,6 @@ def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
   utterance = req.video.utterances[req.utterance]
   new_path = utterance.audio_url + str(uuid.uuid1()) + ".wav"  # cache busting
   duration = generate_audio(
-    audio_client,
     utterance.translated_text,
     req.instructions,
     req.video.translate_language,

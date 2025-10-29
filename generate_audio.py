@@ -1,36 +1,36 @@
+import io
 import librosa
 import logging
-import re
+import numpy as np
 import soundfile  # pyright: ignore[reportMissingTypeStubs]
 import wave
-from google.genai import types, Client
-from tenacity import retry, stop_after_attempt, wait_fixed
+from google.cloud import texttospeech
+from google.api_core.retry import Retry
 
 
-def _process_audio_part(audio_part: types.Part, path: str) -> float:
-  """Processes the audio part, extracts metadata, and saves the audio as a WAV."""
-  # Parse the mime_type string "audio/L16;codec=pcm;rate=24000"
-  mime_type = audio_part.inline_data.mime_type or "no mime type"
-  match = re.search(r"L(\d+);codec=(?:\w+);rate=(\d+)", mime_type)
-  if not match:
-    raise ValueError(f"Could not parse mime_type: {mime_type}")
-  bit_depth = int(match.group(1))
-  sample_rate = int(match.group(2))
-  pcm_data = audio_part.inline_data.data
-  with wave.open(path, "wb") as wf:
-    wf.setnchannels(1)
-    wf.setsampwidth(bit_depth // 8)
-    wf.setframerate(sample_rate)
-    wf.writeframes(pcm_data)
+def _process_audio_part(audio_data: bytes, path: str) -> float:
+  """Processes the audio part, extracts metadata, and saves the audio to a file.
 
-    num_frames = wf.getnframes()
+  Args:
+    audio_data: the bytes of the wav file.
+    path: the path to save the file to.
 
-  duration = num_frames / sample_rate
+  Returns:
+    the duration of the file.
+  """
+  with io.BytesIO(audio_data) as wav_file:
+    with wave.open(wav_file, "rb") as wav:
+      num_frames = wav.getnframes()
+      frame_rate = wav.getframerate()
+
+    with open(path, "wb") as out_file:
+      out_file.write(wav_file.getbuffer())
+
+  duration = num_frames / frame_rate
   return duration
 
 
 def generate_audio(
-  client: Client,
   text: str,
   prompt: str,
   language: str,
@@ -38,67 +38,48 @@ def generate_audio(
   output_path: str,
   model_name: str = "gemini-2.5-pro-tts",
 ) -> float:
-  """Uses Gemini TTS to generate audio for the given text.
+  # """Uses Gemini TTS to generate audio for the given text.
 
-  Args:
-    text: the text to have spoken.
-    prompt: additional instructions for the generation.
-    language: the language to be spoken in ISO format (e.g. en-US)
-    voice_name: the name of the Gemini voice to use.
-    output_path: where to save the generated audio file.
-    model_name: the Gemini model to use. Defaults to gemini-2.5-pro-tts.
+  # Args:
+  #   text: the text to have spoken.
+  #   prompt: additional instructions for the generation.
+  #   language: the language to be spoken in ISO format (e.g. en-US)
+  #   voice_name: the name of the Gemini voice to use.
+  #   output_path: where to save the generated audio file.
+  #   model_name: the Gemini model to use. Defaults to gemini-2.5-pro-tts.
 
-  Returns:
-    the duration of the generated file.
-  """
-
-  prompt = f"""Say the text in the TEXT section using the instructions in the INSTRUCTIONS section.
-  The language being spoken is {language}.
-  ## INSTRUCTIONS
-  {prompt}
-
-  ## TEXT
-  {text}
-  """
-
-  voice_config = types.VoiceConfig(
-    prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
-  )
-
-  duration = 0.0
-
-  @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
-  def call_gemini():
-    return client.models.generate_content(
-      model=model_name,
-      contents=prompt,
-      config=types.GenerateContentConfig(
-        # safety_settings=safety_settings,
-        response_modalities=["AUDIO"],
-        speech_config=types.SpeechConfig(voice_config=voice_config),
-      ),
+  # Returns:
+  #   the duration of the generated file.
+  # """
+  try:
+    tts_client = texttospeech.TextToSpeechClient()
+    synth_input = texttospeech.SynthesisInput(text=text, prompt=prompt)
+    voice = texttospeech.VoiceSelectionParams(
+      language_code=language, name=voice_name, model_name=model_name
     )
-
-  response = call_gemini()
-
-  ## Gemini sometimes just fails to return the object we're expecting.
-  if (
-    response.candidates[0]
-    and response.candidates[0].content
-    and response.candidates[0].content.parts
-  ):
-    audio_part = response.candidates[0].content.parts[0]
-    _process_audio_part(audio_part, output_path)
-    duration = strip_silence(output_path)
-  else:
-    logging.error(
-      f"Generating Audio failed with the following response from Gemini: {response}"
+    audio_config = texttospeech.AudioConfig(
+      audio_encoding=texttospeech.AudioEncoding.LINEAR16
     )
+    advanced_options = texttospeech.AdvancedVoiceOptions()
+    advanced_options.relax_safety_filters = True
+    request = texttospeech.SynthesizeSpeechRequest(
+      input=synth_input,
+      voice=voice,
+      audio_config=audio_config,
+      advanced_voice_options=advanced_options,
+    )
+    retry_config = Retry(initial=1, maximum=10, multiplier=2, deadline=60)
+    response = tts_client.synthesize_speech(request=request, retry=retry_config)
 
-  return duration
+    if not response.audio_content:
+      logging.error("Text-to-speech API returned empty audio content.")
+      return 0.0
 
-
-import numpy as np
+    duration = _process_audio_part(response.audio_content, output_path)
+    return duration
+  except Exception as e:
+    logging.error(f"An error occurred during audio generation: {e}")
+    return 0.0
 
 
 def strip_silence(path: str) -> float:

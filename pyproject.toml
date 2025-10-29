@@ -15,11 +15,10 @@ dependencies = [
     "soundfile>=0.13.1",
     "python-multipart>=0.0.20",
     "tenacity>=8.4.1",
-    "audioop-lts>=0.2.2",
     "google-cloud-logging>=3.12.1",
-    "google-cloud-texttospeech>=2.32.0",
     "librosa>=0.11.0",
     "torchcodec>=0.8.1",
+    "google-cloud-texttospeech>=2.33.0",
 ]
 
 [dependency-groups]
