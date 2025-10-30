@@ -122,6 +122,8 @@ export function runRegenerateDubbing(currentVideoData, utterance, index, instruc
     return regenerateDubbing(currentVideoData, index, instructions)
         .then(result => {
             utterance.audio_url = result.audio_url;
+            utterance.duration = result.duration;
+            utterance.translated_end_time = utterance.translated_start_time + result.duration;
             return utterance; // Return the updated utterance
         });
 }

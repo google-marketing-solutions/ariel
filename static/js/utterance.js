@@ -128,7 +128,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
 
         <div class="d-flex justify-content-between align-items-center mt-3 mb-1">
             <label class="form-label mb-0">Translated Text</label>
-            <span class="badge bg-secondary">${translatedDuration}s</span>
+            <span id="translated-duration" class="badge bg-secondary">${translatedDuration}s</span>
         </div>
         <div class="d-flex align-items-center">
             <textarea id="translated-text-area" class="form-control" rows="3">${utterance.translated_text}</textarea>
@@ -228,9 +228,12 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         const instructions = document.getElementById('intonation-instructions-area').value;
         utterance.speaker.voice = document.getElementById('speaker-select').value;
         runRegenerateDubbing(currentVideoData, utterance, index, instructions)
-            .then(() => {
-                renderUtterances(currentVideoData, speakers, videoDuration);
+            .then((updatedUtterance) => {
+                currentVideoData.utterances[index] = updatedUtterance;
+                document.getElementById('translated-end-time-input').value = updatedUtterance.translated_end_time
+                document.getElementById('translated-duration').innerText = (updatedUtterance.translated_end_time - updatedUtterance.translated_start_time).toFixed(2);
                 renderTimeline(currentVideoData, videoDuration, speakers);
+                showToast('Dubbing regenerated successfully!', 'success');
             })
             .catch(error => {
                 console.error('Error regenerating dubbing:', error);
