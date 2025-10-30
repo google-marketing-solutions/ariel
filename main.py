@@ -199,10 +199,12 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
     utterance.original_text,
     req.instructions,
   )
-  new_path = utterance.audio_url + str(uuid.uuid1()) + ".wav"  # cache busting
-  audio_client = genai.Client(api_key=config.gemini_api_key)
+  target_dir = os.path.dirname(utterance.audio_url)
+  new_file_name = (
+    f"audio_{req.utterance}-" + str(uuid.uuid1()) + ".wav"
+  )  # cache busting
+  new_path = os.path.join(target_dir, new_file_name)
   duration = generate_audio(
-    audio_client,
     new_translation,
     utterance.instructions,
     req.video.translate_language,
@@ -225,9 +227,12 @@ def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
   Returns:
     A response with the new path to the dubbed audio.
   """
-  audio_client = genai.Client(api_key=config.gemini_api_key)
   utterance = req.video.utterances[req.utterance]
-  new_path = utterance.audio_url + str(uuid.uuid1()) + ".wav"  # cache busting
+  target_dir = os.path.dirname(utterance.audio_url)
+  new_file_name = (
+    f"audio_{req.utterance}-" + str(uuid.uuid1()) + ".wav"
+  )  # cache busting
+  new_path = os.path.join(target_dir, new_file_name)
   duration = generate_audio(
     utterance.translated_text,
     req.instructions,
