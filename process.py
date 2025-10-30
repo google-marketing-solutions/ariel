@@ -96,9 +96,6 @@ def merge_background_and_vocals(
 
   background_audio = moviepy.AudioFileClip(background_audio_file)
   background_audio.with_start(0)
-  background_audio = background_audio.with_effects([
-    moviepy.afx.MultiplyVolume(0.5)
-  ])
 
   # Create a silent track with the same duration as the background audio
   audio_parts: list[moviepy.AudioClip] = [background_audio]
@@ -109,7 +106,6 @@ def merge_background_and_vocals(
       continue
     vocal_chunk = moviepy.AudioFileClip(utterance.audio_url)
     vocal_chunk = vocal_chunk.with_start(float(utterance.translated_start_time))
-    vocal_chunk = vocal_chunk.with_effects([moviepy.afx.MultiplyVolume(2.0)])
     audio_parts.append(vocal_chunk)
 
   combined_audio: moviepy.CompositeAudioClip = moviepy.CompositeAudioClip(
