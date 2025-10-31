@@ -18,7 +18,7 @@ export function showToast(message, type = 'error') {
         setTimeout(() => {
             container.removeChild(toast);
         }, 500);
-    }, 3000);
+    }, 6000);
 }
 
 export function checkOverlap(utterance, allUtterances) {

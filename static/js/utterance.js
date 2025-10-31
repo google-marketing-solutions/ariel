@@ -2,6 +2,31 @@ import { showToast } from './utils.js';
 import { regenerateDubbing, regenerateTranslation, runRegenerateDubbing, runRegenerateTranslation } from './api.js';
 import { renderTimeline } from './timeline.js';
 
+let activeEditorSession = null;
+
+function hasUnsavedChanges() {
+    if (!activeEditorSession) {
+        return false;
+    }
+
+    // Check if the editor is even visible
+    const utteranceEditor = document.getElementById('utterance-editor');
+    if (!utteranceEditor || utteranceEditor.style.display === 'none') {
+        activeEditorSession = null; // Reset if editor is not visible
+        return false;
+    }
+
+    const initial = activeEditorSession.initialState;
+    return (
+        document.getElementById('original-text-area').value !== initial.original_text ||
+        document.getElementById('translated-text-area').value !== initial.translated_text ||
+        document.getElementById('intonation-instructions-area').value !== (initial.instructions || '') ||
+        document.getElementById('speaker-select').value !== initial.speaker.voice ||
+        parseFloat(document.getElementById('translated-start-time-input').value) !== initial.translated_start_time ||
+        parseFloat(document.getElementById('translated-end-time-input').value) !== initial.translated_end_time
+    );
+}
+
 const MAX_TEXT_SNIPPET_LENGTH = 100;
 
 export function renderUtterances(currentVideoData, speakers, videoDuration) {
@@ -105,12 +130,14 @@ export function renderUtterances(currentVideoData, speakers, videoDuration) {
 }
 
 export function editUtterance(utterance, index, currentVideoData, speakers, videoDuration) {
+    if (activeEditorSession && activeEditorSession.id !== utterance.id && hasUnsavedChanges()) {
+        showToast('Please save or discard your changes before editing another utterance.', 'warning');
+        return;
+    }
+
     const utteranceEditor = document.getElementById('utterance-editor');
     const utteranceEditorContent = document.getElementById('utterance-editor-content');
     const confirmationModal = new bootstrap.Modal(document.getElementById('confirmation-modal'));
-
-    // Store initial state
-    const initialUtteranceState = { ...utterance };
 
     console.log('Editing utterance:', JSON.stringify(utterance, null, 2)); // DEBUG
 
@@ -178,6 +205,13 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         <button id="save-utterance-btn" class="btn btn-info">Save</button>
     `;
 
+    // Set up the new editor session
+    activeEditorSession = {
+        id: utterance.id,
+        initialState: { ...utterance, instructions: utterance.instructions || '' },
+        utteranceObject: utterance
+    };
+
     const saveUtteranceChanges = (closeEditor = true) => {
         utterance.original_text = document.getElementById('original-text-area').value;
         utterance.translated_text = document.getElementById('translated-text-area').value;
@@ -190,19 +224,9 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         renderUtterances(currentVideoData, speakers, videoDuration);
         if (closeEditor) {
             utteranceEditor.style.display = 'none';
+            activeEditorSession = null; // Clear session
         }
         document.dispatchEvent(new CustomEvent('timeline-changed'));
-    };
-
-    const hasChanges = () => {
-        return (
-            document.getElementById('original-text-area').value !== initialUtteranceState.original_text ||
-            document.getElementById('translated-text-area').value !== initialUtteranceState.translated_text ||
-            document.getElementById('intonation-instructions-area').value !== (initialUtteranceState.instructions || '') ||
-            document.getElementById('speaker-select').value !== initialUtteranceState.speaker.voice ||
-            parseFloat(document.getElementById('translated-start-time-input').value) !== initialUtteranceState.translated_start_time ||
-            parseFloat(document.getElementById('translated-end-time-input').value) !== initialUtteranceState.translated_end_time
-        );
     };
 
     document.getElementById('save-utterance-btn').addEventListener('click', () => {
@@ -265,7 +289,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
 
     const closeEditorBtn = utteranceEditor.querySelector('.btn-close');
     closeEditorBtn.addEventListener('click', () => {
-        if (hasChanges()) {
+        if (hasUnsavedChanges()) {
             const modalEl = document.getElementById('confirmation-modal');
             const modalTitle = modalEl.querySelector('.modal-title');
             const modalBody = modalEl.querySelector('.modal-body');
@@ -278,7 +302,12 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
 
             const yesDiscardHandler = () => {
                 utteranceEditor.style.display = 'none';
+                activeEditorSession = null; // Clear session
                 confirmationModal.hide();
+                // Revert changes in the data model
+                Object.assign(activeEditorSession.utteranceObject, activeEditorSession.initialState);
+                renderTimeline(currentVideoData, videoDuration, speakers);
+                renderUtterances(currentVideoData, speakers, videoDuration);
             };
 
             const noDiscardHandler = () => {
@@ -291,6 +320,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
             confirmationModal.show();
         } else {
             utteranceEditor.style.display = 'none';
+            activeEditorSession = null; // Clear session
         }
     });
 }

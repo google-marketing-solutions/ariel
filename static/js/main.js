@@ -322,7 +322,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const speakersToPost = speakers.map((s, index) => ({
             id: `speaker_${(index + 1).toString()}`,
             name: s.name,
-            voice: s.voice
+            voice: s.voice,
+            gender: s.gender
         }));
         formData.append('speakers', JSON.stringify(speakersToPost));
 
@@ -561,7 +562,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             formData.append('translate_language', newTranslateLanguage);
                             formData.append('prompt_enhancements', geminiInstructions.value);
                             formData.append('adjust_speed', adjustSpeedToggle.checked);
-                            const speakersToPost = speakers.map(s => ({ id: s.id, name: s.name, voice: s.voice }));
+                            const speakersToPost = speakers.map((s, index) => ({
+                                id: `speaker_${(index + 1).toString()}`,
+                                name: s.name,
+                                voice: s.voice,
+                                gender: s.gender
+                            }));
                             formData.append('speakers', JSON.stringify(speakersToPost));
                             
                             const result = await processVideo(formData);

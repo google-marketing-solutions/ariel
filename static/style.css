@@ -8,6 +8,9 @@
     --original-utterance-color: #787276; /* Light gray for original utterances */
     --removed-utterance-bg-color: #3a3a3a; /* Dark gray for removed utterances */
     --removed-utterance-border-color: #787276; /* Grayish-brown for removed utterance border */
+    --error-color: #d32f2f; /* Red for errors */
+    --success-color: #388e3c; /* Green for success */
+    --warning-color: var(--accent-color); /* Blue for warnings/info */
     --sans-serif-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
@@ -562,11 +565,15 @@ select, option{
 }
 
 .toast.error {
-    background-color: #d32f2f; /* Red for errors */
+    background-color: var(--error-color);
 }
 
 .toast.success {
-    background-color: #388e3c; /* Green for success */
+    background-color: var(--success-color);
+}
+
+.toast.warning {
+    background-color: var(--warning-color);
 }
 
 /* Generated Video View */
