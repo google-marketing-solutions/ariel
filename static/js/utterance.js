@@ -301,13 +301,17 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
             confirmBtn.className = 'btn btn-danger';
 
             const yesDiscardHandler = () => {
-                utteranceEditor.style.display = 'none';
-                activeEditorSession = null; // Clear session
-                confirmationModal.hide();
-                // Revert changes in the data model
+                // Revert the data model FIRST
                 Object.assign(activeEditorSession.utteranceObject, activeEditorSession.initialState);
+
+                // Re-render the UI
                 renderTimeline(currentVideoData, videoDuration, speakers);
                 renderUtterances(currentVideoData, speakers, videoDuration);
+
+                // THEN hide UI and clear session
+                utteranceEditor.style.display = 'none';
+                confirmationModal.hide();
+                activeEditorSession = null;
             };
 
             const noDiscardHandler = () => {
