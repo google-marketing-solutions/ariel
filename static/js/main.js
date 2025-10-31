@@ -3,6 +3,7 @@ import { renderTimeline } from './timeline.js';
 import { renderUtterances } from './utterance.js';
 import { renderVoiceList, addVoice, handleSpeakerModalClose } from './modals.js';
 import { appState } from './state.js';
+import { showToast } from './utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Instantiate templates
@@ -168,7 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Initializations ---
-    fetchLanguages(originalLanguage, translationLanguage).catch(error => console.error('Error fetching languages:', error));
+    fetchLanguages(originalLanguage, translationLanguage).catch(error => {
+        console.error('Error fetching languages:', error);
+        showToast('Could not load language data. Please refresh the page.', 'error');
+    });
 
     fetchVoices()
         .then(data => {
@@ -176,7 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
             renderVoiceList(voiceListModal, voiceSearch, 'gender-filter', voices);
             renderVoiceList(editVoiceListModal, editVoiceSearch, 'edit-gender-filter', voices);
         })
-        .catch(error => console.error('Error fetching voices:', error));
+        .catch(error => {
+            console.error('Error fetching voices:', error);
+            showToast('Could not load voice data. Please refresh the page.', 'error');
+        });
 
     // Setup thinking popup
     thinkingPopupContent.innerHTML = '';
@@ -371,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error('Error during processing:', error);
-            // Handle error here (e.g., show an error message)
+            showToast('An error occurred during processing. Please try again.', 'error');
         } finally {
             stopThinkingAnimation();
         }
@@ -404,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error('Error generating video:', error);
-            // Show error message to user
+            showToast('An error occurred while generating the video. Please try again.', 'error');
         } finally {
             stopThinkingAnimation();
         }
@@ -620,6 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     } catch (error) {
                         console.error('Error during settings update processing:', error);
+                        showToast('An error occurred while updating settings. Please try again.', 'error');
                     } finally {
                         thinkingPopup.style.display = 'none';
                         appState.isEditingVideoSettings = false;
@@ -640,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
             completedVideoModal.show();
         } catch (error) {
             console.error('Error completing video:', error);
-            // Show error message to user
+            showToast('An error occurred while completing the video. Please try again.', 'error');
         } finally {
             stopThinkingAnimation();
         }

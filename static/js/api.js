@@ -1,6 +1,11 @@
 export function fetchLanguages(originalLanguage, translationLanguage) {
     return fetch('static/languages.json')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             const defaultOption = new Option('Please select...', '', true, true);
             defaultOption.disabled = true;
@@ -31,7 +36,12 @@ export function fetchLanguages(originalLanguage, translationLanguage) {
 }
 
 export function fetchVoices() {
-    return fetch('static/voices.json').then(response => response.json());
+    return fetch('static/voices.json').then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    });
 }
 
 export function processVideo(formData) {
@@ -57,7 +67,12 @@ export function regenerateTranslation(videoData, utteranceIndex, instructions) {
             utterance: utteranceIndex,
             instructions: instructions
         })
-    }).then(response => response.json());
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    });
 }
 
 export function regenerateDubbing(videoData, utteranceIndex, instructions) {
@@ -70,18 +85,21 @@ export function regenerateDubbing(videoData, utteranceIndex, instructions) {
             video: videoData,
             utterance: utteranceIndex,
             instructions: instructions
-        })
-    }).then(response => response.json());
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    });
 }
 
 export function generateVideo(videoData) {
-    return fetch('/generate_video', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(videoData)
-    }).then(response => response.json());
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    });
 }
 
 export function completeVideo(videoData) {
@@ -91,7 +109,12 @@ export function completeVideo(videoData) {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(videoData)
-    }).then(response => response.json());
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    });
 }
 
 export function updateVideoSettings(updatedVideoData) {
@@ -101,7 +124,12 @@ export function updateVideoSettings(updatedVideoData) {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(updatedVideoData)
-    }).then(response => response.json());
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    });
 }
 
 // --- Regeneration Wrappers ---
