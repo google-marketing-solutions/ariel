@@ -61,17 +61,24 @@ def generate_audio(
       audio_encoding=texttospeech.AudioEncoding.LINEAR16
     )
     advanced_options = texttospeech.AdvancedVoiceOptions()
-    advanced_options.relax_safety_filters = True
+    # TODO: b/456676630 - add configuration flag for relaxing safety filters
+    # advanced_options.relax_safety_filters = True
     request = texttospeech.SynthesizeSpeechRequest(
       input=synth_input,
       voice=voice,
       audio_config=audio_config,
       advanced_voice_options=advanced_options,
     )
-    retry_config = Retry(initial=1, maximum=10, multiplier=2, deadline=60)
-    response = tts_client.synthesize_speech(request=request, retry=retry_config)
 
-    if not response.audio_content:
+    # we try TTS 3 times before failing. Normally, if a second attempt doesn't
+    # result in audio being generated, it never will with the current text.
+    response = None
+    for _ in range(3):
+      response = _call_tts(tts_client, request)
+      if response.audio_content:
+        break
+
+    if not response:
       logging.error("Text-to-speech API returned empty audio content.")
       return 0.0
 
@@ -80,6 +87,15 @@ def generate_audio(
   except Exception as e:
     logging.error(f"An error occurred during audio generation: {e}")
     return 0.0
+
+
+def _call_tts(
+  tts_client: texttospeech.TextToSpeechClient,
+  request: texttospeech.SynthesizeSpeechRequest,
+) -> texttospeech.SynthesizeSpeechResponse:
+  retry_config = Retry(initial=1, maximum=10, multiplier=2, deadline=60)
+  response = tts_client.synthesize_speech(request=request, retry=retry_config)
+  return response
 
 
 def strip_silence(path: str) -> float:

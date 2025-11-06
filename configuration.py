@@ -24,7 +24,6 @@ class Config:
     gemini_model: str
     audio_format: str
     video_format: str
-    gemini_api_key: str
     gemini_tts_model: str
 
 
@@ -39,7 +38,6 @@ def get_config() -> Config:
         gemini_model=os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash'),
         audio_format=os.environ.get('AUDIO_FORMAT', 'mp3'),
         video_format=os.environ.get('VIDEO_FORMAT', 'mp4'),
-        gemini_api_key=os.environ.get('GEMINI_API_KEY'),
         gemini_tts_model=os.environ.get('GEMINI_TTS_MODEL',
                                         'gemini-2.5-pro-tts'),
     )

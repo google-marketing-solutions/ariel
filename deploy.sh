@@ -4,17 +4,22 @@ set -e
 
 SERVICE_NAME="ariel-v2"
 REGION="us-central1"
+TEMP_BUCKET="ariel-v2-test-persistant-bucket"
 
 # Build requirements.txt needed for cloud run but skipping the local file output from uv
-pipx run uv pip compile pyproject.toml -o requirements.txt > /dev/null
+uv pip compile pyproject.toml -o requirements.txt > /dev/null
 
 # Deploy and capture the exit code
 gcloud beta run deploy "$SERVICE_NAME" \
   --source . \
   --region="$REGION" \
+  --memory 2048Mi \
   --env-vars-file=configuration.yaml  \
   --quiet \
-  --iap
+  --iap \
+  --add-volume name=ariel,type=cloud-storage,bucket="$TEMP_BUCKET" \
+  --add-volume-mount volume=ariel,mount-path="/mnt/ariel" \
+
 
 # Stream logs
-gcloud beta run services logs tail "$SERVICE_NAME" --region="$REGION"
+#gcloud beta run services logs tail "$SERVICE_NAME" --region="$REGION"

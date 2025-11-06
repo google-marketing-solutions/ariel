@@ -1,4 +1,3 @@
-import google.cloud.logging
 import json
 import logging
 import os
@@ -6,9 +5,9 @@ import shutil
 import uuid
 from typing import Annotated
 from cloud_storage import (
-  get_url_for_path,
   upload_file_to_gcs,
   upload_video_to_gcs,
+  get_url_for_path,
 )
 from configuration import get_config
 from fastapi import FastAPI, Request, Form, UploadFile
@@ -33,8 +32,13 @@ from models import (
   RegenerateResponse,
 )
 
+import subprocess
+
+MOUNT_POINT = "/mnt/ariel"
+
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/mnt", StaticFiles(directory="/mnt"), name="temp")
 templates = Jinja2Templates(directory="templates")
 
 config = get_config()
@@ -145,8 +149,8 @@ def generate_video(video_data: Video) -> JSONResponse:
     video_data: the Video object representing the final video.
   """
   logging.info(f"Generating final video for {video_data.video_id}")
-  local_dir = f"static/temp/{video_data.video_id}"
-  local_video_path = f"{local_dir}/{video_data.video_id}"
+  local_dir = os.path.join(MOUNT_POINT, video_data.video_id)
+  local_video_path = os.path.join(local_dir, video_data.video_id)
   logging.info(f"Separating background for {video_data.video_id}")
   _, background_sound_path = separate_audio_from_video(
     local_video_path, local_dir
@@ -158,19 +162,14 @@ def generate_video(video_data: Video) -> JSONResponse:
     output_directory=local_dir,
     target_language=video_data.translate_language,
   )
-  combined_video_path = (
-    f"{local_dir}/{video_data.video_id}.{video_data.translate_language}.mp4"
+  combined_video_path = os.path.join(
+    local_dir, f"{video_data.video_id}.{video_data.translate_language}.mp4"
   )
   combine_video_and_audio(
     local_video_path, merged_audio_path, combined_video_path
   )
-  with open(combined_video_path, "rb") as video_file:
-    gcs_path = f"{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
-    upload_file_to_gcs(
-      gcs_path, video_file, config.gcs_bucket_name, "video/mp4"
-    )
-  # return get_url_for_path(config.gcs_bucket_name, gcs_path)
-  to_return = {"video_url": f"{combined_video_path}"}
+  public_video_path = f"/mnt/ariel/{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
+  to_return = {"video_url": f"{public_video_path}"}
   return JSONResponse(content=to_return)
 
 
@@ -259,13 +258,12 @@ def save_video(video: UploadFile) -> tuple[str, str]:
   """
   video_name = video.filename or "video.mp4"
   video_name = video_name.replace(" ", "_")
-  print(f"#### DEBUG #### The GCS bucket is {config.gcs_bucket_name}")
   gcs_path = upload_video_to_gcs(video_name, video.file, config.gcs_bucket_name)
   # save the file locally
   video.file.seek(0)
-  local_dir = f"static/temp/{os.path.dirname(gcs_path)}"
+  local_dir = os.path.join(MOUNT_POINT, os.path.dirname(gcs_path))
   os.makedirs(name=local_dir, exist_ok=True)
-  local_path = f"static/temp/{gcs_path}"
+  local_path = os.path.join(MOUNT_POINT, gcs_path)
   with open(local_path, "wb") as local_file:
     shutil.copyfileobj(video.file, local_file)
 
