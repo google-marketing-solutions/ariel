@@ -27,6 +27,21 @@ function hasUnsavedChanges() {
     );
 }
 
+export function checkZeroDurationUtterances(utterances) {
+    const generateVideoBtn = document.getElementById('generate-video-btn');
+    if (!generateVideoBtn) return;
+
+    const hasZeroDuration = utterances.some(u => (u.translated_end_time - u.translated_start_time) === 0 && !u.removed && !u.muted);
+
+    if (hasZeroDuration) {
+        generateVideoBtn.disabled = true;
+        generateVideoBtn.title = 'Cannot generate video with zero-duration utterances.';
+    } else {
+        generateVideoBtn.disabled = false;
+        generateVideoBtn.title = '';
+    }
+}
+
 const MAX_TEXT_SNIPPET_LENGTH = 100;
 
 export function renderUtterances(currentVideoData, speakers, videoDuration) {
@@ -138,6 +153,7 @@ export function renderUtterances(currentVideoData, speakers, videoDuration) {
         fragment.appendChild(utteranceCard);
     });
     utterancesList.appendChild(fragment);
+    checkZeroDurationUtterances(utterances);
 }
 
 export function editUtterance(utterance, index, currentVideoData, speakers, videoDuration) {

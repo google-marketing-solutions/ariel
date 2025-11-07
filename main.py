@@ -34,13 +34,13 @@ from models import (
 
 import subprocess
 
-#MOUNT_POINT = "/mnt/ariel"
-MOUNT_POINT = "static/temp"
+MOUNT_POINT = "/mnt/ariel"
+#MOUNT_POINT = "static/temp"
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
-#app.mount("/mnt", StaticFiles(directory="/mnt"), name="temp")
-app.mount("/mnt", StaticFiles(directory="static/temp"), name="temp")
+app.mount("/mnt", StaticFiles(directory="/mnt"), name="temp")
+#app.mount("/mnt", StaticFiles(directory="static/temp"), name="temp")
 templates = Jinja2Templates(directory="templates")
 
 config = get_config()
@@ -259,7 +259,7 @@ def save_video(video: UploadFile) -> tuple[str, str]:
     The local path to the and the path on GCS.
   """
   video_name = video.filename or "video.mp4"
-  video_name = video_name.replace(" ", "_")
+  video_name = sanitize_filename(video_name)
   gcs_path = upload_video_to_gcs(video_name, video.file, config.gcs_bucket_name)
   # save the file locally
   video.file.seek(0)
@@ -273,6 +273,24 @@ def save_video(video: UploadFile) -> tuple[str, str]:
   video_gcs_uri = f"gs://{config.gcs_bucket_name}/{gcs_path}"
   return local_path, video_gcs_uri
 
+def sanitize_filename(orig: str) -> str:
+  """Sanitizes a file name for shell commands.
+
+  Characters in the file name that might cause issues when used in a shell
+  command are removed from the name.
+
+  Args:
+    orig: the original file name.
+
+  Returns:
+    a sanitized version of the name.
+  """
+  special_chars = " \"'$&*()[]{}<>|;?/~"
+  trans_map = str.maketrans(dict.fromkeys(special_chars))
+  new_name = orig.translate(trans_map)
+  if not new_name:
+    return "video.mp4"
+  return new_name
 
 ##############################
 ## TESTING END POINTS BELOW ##

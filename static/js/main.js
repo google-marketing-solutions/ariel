@@ -1,6 +1,6 @@
 import { fetchLanguages, fetchVoices, processVideo, generateVideo, completeVideo, runRegenerateDubbing, runRegenerateTranslation } from './api.js';
 import { renderTimeline } from './timeline.js';
-import { renderUtterances } from './utterance.js';
+import { renderUtterances, checkZeroDurationUtterances } from './utterance.js';
 import { renderVoiceList, addVoice, handleSpeakerModalClose } from './modals.js';
 import { appState } from './state.js';
 import { showToast } from './utils.js';
@@ -355,6 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         renderTimeline(currentVideoData, videoDuration, speakers);
                         // Render utterances only AFTER video duration is known
                         renderUtterances(currentVideoData, speakers, videoDuration);
+                        checkZeroDurationUtterances(currentVideoData.utterances);
                     });
                 };
                 reader.readAsDataURL(videoInput.files[0]);
@@ -363,6 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 videoDuration = lastUtterance.original_end_time;
                 renderTimeline(currentVideoData, videoDuration, speakers);
                 renderUtterances(currentVideoData, speakers, videoDuration);
+                checkZeroDurationUtterances(currentVideoData.utterances);
             }
 
             const originalLanguageName = originalLanguage.options[originalLanguage.selectedIndex].text;
