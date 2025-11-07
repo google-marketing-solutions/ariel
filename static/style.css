@@ -458,6 +458,11 @@ select, option{
     border: 2px dashed var(--removed-utterance-border-color);
 }
 
+.utterance-block.zero-duration {
+    background-color: #ffc107;
+    color: #1a1a1a;
+}
+
 .utterance-block.overlap {
     background: repeating-linear-gradient(
         45deg,
@@ -486,6 +491,22 @@ select, option{
     justify-content: center;
     align-items: center;
     text-align: center;
+}
+
+.utterance-card.zero-duration {
+    background-color: #ffc107;
+    color: #1a1a1a;
+}
+
+.utterance-card.zero-duration .btn-outline-secondary {
+    color: #1a1a1a;
+    border-color: #1a1a1a;
+}
+
+.utterance-card.zero-duration .btn-outline-secondary:hover {
+    color: #ffc107;
+    background-color: #1a1a1a;
+    border-color: #1a1a1a;
 }
 
 /* Responsiveness Hint */

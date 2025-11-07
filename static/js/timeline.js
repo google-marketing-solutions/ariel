@@ -127,6 +127,11 @@ export function renderTimeline(videoData, videoDuration, speakers) {
                 }
             }
 
+            const duration = utterance.translated_end_time - utterance.translated_start_time;
+            if (duration === 0) {
+                translatedBlock.classList.add('zero-duration');
+            }
+
             translatedBlock.style.left = `${utterance.translated_start_time * scale}px`;
             translatedBlock.style.width = `${(utterance.translated_end_time - utterance.translated_start_time) * scale}px`;
             translatedBlock.textContent = `U: ${index + 1}`;

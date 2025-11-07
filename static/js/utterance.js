@@ -44,6 +44,12 @@ export function renderUtterances(currentVideoData, speakers, videoDuration) {
         const speakerName = voiceToNameMap.get(utterance.speaker.voice) || utterance.speaker.voice;
         const utteranceCard = document.createElement('div');
         utteranceCard.classList.add('utterance-card');
+
+        const duration = utterance.translated_end_time - utterance.translated_start_time;
+        if (duration === 0) {
+            utteranceCard.classList.add('zero-duration');
+        }
+
         utteranceCard.innerHTML = `
                 <div>
                     <h6 class="mb-0">U: ${index + 1}</h6>
