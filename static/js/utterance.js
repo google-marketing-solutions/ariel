@@ -44,6 +44,11 @@ export function renderUtterances(currentVideoData, speakers, videoDuration) {
         const speakerName = voiceToNameMap.get(utterance.speaker.voice) || utterance.speaker.voice;
         const utteranceCard = document.createElement('div');
         utteranceCard.classList.add('utterance-card');
+        utteranceCard.dataset.utteranceId = utterance.id;
+
+        if (activeEditorSession && activeEditorSession.id === utterance.id) {
+            utteranceCard.classList.add('editing');
+        }
 
         const duration = utterance.translated_end_time - utterance.translated_start_time;
         if (duration === 0) {
@@ -141,6 +146,17 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         return;
     }
 
+    // Remove 'editing' class from any other card
+    document.querySelectorAll('.utterance-card.editing').forEach(card => {
+        card.classList.remove('editing');
+    });
+
+    // Add 'editing' class to the current card
+    const utteranceCard = document.querySelector(`.utterance-card[data-utterance-id="${utterance.id}"]`);
+    if (utteranceCard) {
+        utteranceCard.classList.add('editing');
+    }
+
     const utteranceEditor = document.getElementById('utterance-editor');
     const utteranceEditorContent = document.getElementById('utterance-editor-content');
     const confirmationModal = new bootstrap.Modal(document.getElementById('confirmation-modal'));
@@ -230,6 +246,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         renderUtterances(currentVideoData, speakers, videoDuration);
         if (closeEditor) {
             utteranceEditor.style.display = 'none';
+            if (utteranceCard) utteranceCard.classList.remove('editing');
             activeEditorSession = null; // Clear session
         }
         document.dispatchEvent(new CustomEvent('timeline-changed'));
@@ -259,11 +276,16 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         utterance.speaker.voice = document.getElementById('speaker-select').value;
         runRegenerateDubbing(currentVideoData, utterance, index, instructions)
             .then((updatedUtterance) => {
+                const duration = updatedUtterance.translated_end_time - updatedUtterance.translated_start_time
                 currentVideoData.utterances[index] = updatedUtterance;
                 document.getElementById('translated-end-time-input').value = updatedUtterance.translated_end_time
-                document.getElementById('translated-duration').innerText = (updatedUtterance.translated_end_time - updatedUtterance.translated_start_time).toFixed(2);
+                document.getElementById('translated-duration').innerText = duration.toFixed(2);
                 renderTimeline(currentVideoData, videoDuration, speakers);
-                showToast('Dubbing regenerated successfully!', 'success');
+                if (duration === 0) {
+                    showToast('Dubbing regeneration failed.', 'error');
+                } else {
+                    showToast('Dubbing regenerated successfully!', 'success');
+                }
             })
             .catch(error => {
                 console.error('Error regenerating dubbing:', error);
@@ -317,6 +339,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
                 // THEN hide UI and clear session
                 utteranceEditor.style.display = 'none';
                 confirmationModal.hide();
+                if (utteranceCard) utteranceCard.classList.remove('editing');
                 activeEditorSession = null;
             };
 
@@ -330,6 +353,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
             confirmationModal.show();
         } else {
             utteranceEditor.style.display = 'none';
+            if (utteranceCard) utteranceCard.classList.remove('editing');
             activeEditorSession = null; // Clear session
         }
     });

@@ -493,6 +493,11 @@ select, option{
     text-align: center;
 }
 
+.utterance-card.editing {
+    border: 2px solid var(--accent-color);
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+}
+
 .utterance-card.zero-duration {
     background-color: #ffc107;
     color: #1a1a1a;
