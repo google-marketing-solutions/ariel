@@ -34,11 +34,13 @@ from models import (
 
 import subprocess
 
-MOUNT_POINT = "/mnt/ariel"
+#MOUNT_POINT = "/mnt/ariel"
+MOUNT_POINT = "static/temp"
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/mnt", StaticFiles(directory="/mnt"), name="temp")
+#app.mount("/mnt", StaticFiles(directory="/mnt"), name="temp")
+app.mount("/mnt", StaticFiles(directory="static/temp"), name="temp")
 templates = Jinja2Templates(directory="templates")
 
 config = get_config()
@@ -123,7 +125,7 @@ async def process_video(
       original_end_time=t.end_time,
       translated_start_time=t.start_time,
       translated_end_time=translated_end_time,
-      is_dirty=False,
+      removed=False,
       audio_url=local_audio_path,
     )
     utterances.append(u)
@@ -168,7 +170,7 @@ def generate_video(video_data: Video) -> JSONResponse:
   combine_video_and_audio(
     local_video_path, merged_audio_path, combined_video_path
   )
-  public_video_path = f"/mnt/ariel/{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
+  public_video_path = f"{MOUNT_POINT}/{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
   to_return = {"video_url": f"{public_video_path}"}
   return JSONResponse(content=to_return)
 

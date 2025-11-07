@@ -59,7 +59,7 @@ class Utterance(BaseModel):
     original_end_time: float
     translated_start_time: float
     translated_end_time: float
-    is_dirty: bool = True
+    removed: bool
     audio_url: str = ""
 
 
