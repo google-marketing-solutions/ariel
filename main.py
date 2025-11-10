@@ -5,9 +5,9 @@ import shutil
 import uuid
 from typing import Annotated
 from cloud_storage import (
-  upload_file_to_gcs,
-  upload_video_to_gcs,
-  get_url_for_path,
+    upload_file_to_gcs,
+    upload_video_to_gcs,
+    get_url_for_path,
 )
 from configuration import get_config
 from fastapi import FastAPI, Request, Form, UploadFile
@@ -15,38 +15,40 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from generate_audio import generate_audio, shorten_audio
-from transcribe import TranscribeSegment, transcribe_video, match_voice
+from transcribe import TranscribeSegment, transcribe_media, match_voice
 from translate import translate_text
 from google import genai
 from process import (
-  separate_audio_from_video,
-  merge_background_and_vocals,
-  combine_video_and_audio,
+    separate_audio_from_video,
+    merge_background_and_vocals,
+    combine_video_and_audio,
 )
 
 from models import (
-  RegenerateRequest,
-  Video,
-  Utterance,
-  Speaker,
-  RegenerateResponse,
+    RegenerateRequest,
+    Video,
+    Utterance,
+    Speaker,
+    RegenerateResponse,
 )
 
 import subprocess
 
-MOUNT_POINT = "/mnt/ariel"
-#MOUNT_POINT = "static/temp"
-
 app = FastAPI()
+
+# Check if running in Google Cloud Run
+if 'K_SERVICE' in os.environ:
+  MOUNT_POINT = "/mnt/ariel"
+  app.mount("/mnt", StaticFiles(directory="/mnt"), name="temp")
+else:
+  # Running locally.
+  MOUNT_POINT = "static/temp"
+  app.mount("/mnt", StaticFiles(directory="static/temp"), name="temp")
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/mnt", StaticFiles(directory="/mnt"), name="temp")
-#app.mount("/mnt", StaticFiles(directory="static/temp"), name="temp")
 templates = Jinja2Templates(directory="templates")
 
 config = get_config()
-
-# logging_client = google.cloud.logging.Client()
-# logging_client.setup_logging(log_level=logging.INFO)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -56,87 +58,105 @@ async def read_item(request: Request):
 
 @app.post("/process")
 async def process_video(
-  video: UploadFile,
-  original_language: Annotated[str, Form()],
-  translate_language: Annotated[str, Form()],
-  prompt_enhancements: Annotated[str, Form()],
-  adjust_speed: Annotated[bool, Form()],
-  speakers: Annotated[str, Form()],
+    video: UploadFile,
+    original_language: Annotated[str, Form()],
+    translate_language: Annotated[str, Form()],
+    prompt_enhancements: Annotated[str, Form()],
+    adjust_speed: Annotated[bool, Form()],
+    speakers: Annotated[str, Form()],
 ) -> Video:
   logging.info(f"Starting Process Video for {video.filename}")
   local_video_path, gcs_video_uri = save_video(video)
+
+  logging.info(f"Separating vocals and background music from {video.filename}")
+  vocals_path, background_path = separate_audio_from_video(
+      local_video_path, MOUNT_POINT
+  )
+
+  logging.info(
+      f"Uploading vocals and background music to GCS for {video.filename}"
+  )
+  with open(vocals_path, "rb") as f:
+    upload_file_to_gcs(vocals_path, f, config.gcs_bucket_name)
+  with open(background_path, "rb") as f:
+    upload_file_to_gcs(background_path, f, config.gcs_bucket_name)
+
+  gcs_vocals_uri = f"gs://{config.gcs_bucket_name}/{vocals_path}"
+
   genai_client = genai.Client(
-    vertexai=True,
-    project=config.gcp_project_id,
-    location=config.gcp_project_location,
+      vertexai=True,
+      project=config.gcp_project_id,
+      location=config.gcp_project_location,
   )
   speaker_list = json.loads(speakers)
   speaker_list = [
-    Speaker(speaker_id=s["id"], voice=s["voice"]) for s in speaker_list
+      Speaker(speaker_id=s["id"], voice=s["voice"]) for s in speaker_list
   ]
   speaker_map = {s.speaker_id: s for s in speaker_list}
 
   logging.info(f"Transcribing {video.filename}")
-  transcriptions = transcribe_video(
-    client=genai_client,
-    model_name=config.gemini_model,
-    gcs_uri=gcs_video_uri,
-    num_speakers=len(speaker_list),
+  transcriptions = transcribe_media(
+      client=genai_client,
+      model_name=config.gemini_model,
+      gcs_uri=gcs_vocals_uri,
+      num_speakers=len(speaker_list),
+      mime_type="audio/wav",
   )
 
   local_dir = os.path.dirname(local_video_path)
 
   utterances: list[Utterance] = []
   logging.info(
-    f"Starting to translate utterances and generate audio for {video.filename}"
+      f"Starting to translate utterances and generate audio for {video.filename}"
   )
   for i, t in enumerate(transcriptions):
     uid = str(uuid.uuid4())
     speaker = speaker_map[t.speaker_id]
 
     translated_text = translate_text(
-      genai_client, original_language, translate_language, t.transcript, t.tone
+        genai_client, original_language, translate_language, t.transcript,
+        t.tone
     )
 
     local_audio_path = os.path.join(local_dir, f"audio_{i}.wav")
     audio_duration = generate_audio(
-      translated_text,
-      t.tone,
-      translate_language,
-      speaker.voice,
-      local_audio_path,
-      model_name=config.gemini_tts_model,
+        translated_text,
+        t.tone,
+        translate_language,
+        speaker.voice,
+        local_audio_path,
+        model_name=config.gemini_tts_model,
     )
     original_duration = t.end_time - t.start_time
     if adjust_speed and audio_duration and audio_duration > original_duration:
       audio_duration = shorten_audio(
-        local_audio_path, audio_duration, original_duration
+          local_audio_path, audio_duration, original_duration
       )
 
     translated_end_time = t.start_time + audio_duration
 
     u = Utterance(
-      id=uid,
-      original_text=t.transcript,
-      translated_text=translated_text,
-      instructions=t.tone,
-      speaker=speaker,
-      original_start_time=t.start_time,
-      original_end_time=t.end_time,
-      translated_start_time=t.start_time,
-      translated_end_time=translated_end_time,
-      removed=False,
-      audio_url=local_audio_path,
+        id=uid,
+        original_text=t.transcript,
+        translated_text=translated_text,
+        instructions=t.tone,
+        speaker=speaker,
+        original_start_time=t.start_time,
+        original_end_time=t.end_time,
+        translated_start_time=t.start_time,
+        translated_end_time=translated_end_time,
+        removed=False,
+        audio_url=local_audio_path,
     )
     utterances.append(u)
 
   to_return = Video(
-    video_id=local_video_path.split("/")[-2],
-    original_language=original_language,
-    translate_language=translate_language,
-    prompt_enhancements=prompt_enhancements,
-    speakers=speaker_list,
-    utterances=utterances,
+      video_id=local_video_path.split("/")[-2],
+      original_language=original_language,
+      translate_language=translate_language,
+      prompt_enhancements=prompt_enhancements,
+      speakers=speaker_list,
+      utterances=utterances,
   )
 
   logging.info(f"Completed processing {video.filename}")
@@ -155,20 +175,20 @@ def generate_video(video_data: Video) -> JSONResponse:
   local_video_path = os.path.join(local_dir, video_data.video_id)
   logging.info(f"Separating background for {video_data.video_id}")
   _, background_sound_path = separate_audio_from_video(
-    local_video_path, local_dir
+      local_video_path, local_dir
   )
   logging.info(f"Merging background and vocals for {video_data.video_id}")
   merged_audio_path = merge_background_and_vocals(
-    background_audio_file=background_sound_path,
-    dubbed_vocals_metadata=video_data.utterances,
-    output_directory=local_dir,
-    target_language=video_data.translate_language,
+      background_audio_file=background_sound_path,
+      dubbed_vocals_metadata=video_data.utterances,
+      output_directory=local_dir,
+      target_language=video_data.translate_language,
   )
   combined_video_path = os.path.join(
-    local_dir, f"{video_data.video_id}.{video_data.translate_language}.mp4"
+      local_dir, f"{video_data.video_id}.{video_data.translate_language}.mp4"
   )
   combine_video_and_audio(
-    local_video_path, merged_audio_path, combined_video_path
+      local_video_path, merged_audio_path, combined_video_path
   )
   public_video_path = f"{MOUNT_POINT}/{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
   to_return = {"video_url": f"{public_video_path}"}
@@ -188,33 +208,33 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
     and the duration of the audio.
   """
   genai_client = genai.Client(
-    vertexai=True,
-    project=config.gcp_project_id,
-    location=config.gcp_project_location,
+      vertexai=True,
+      project=config.gcp_project_id,
+      location=config.gcp_project_location,
   )
   utterance = req.video.utterances[req.utterance]
   new_translation = translate_text(
-    genai_client,
-    req.video.original_language,
-    req.video.translate_language,
-    utterance.original_text,
-    req.instructions,
+      genai_client,
+      req.video.original_language,
+      req.video.translate_language,
+      utterance.original_text,
+      req.instructions,
   )
   target_dir = os.path.dirname(utterance.audio_url)
   new_file_name = (
-    f"audio_{req.utterance}-" + str(uuid.uuid1()) + ".wav"
+      f"audio_{req.utterance}-" + str(uuid.uuid1()) + ".wav"
   )  # cache busting
   new_path = os.path.join(target_dir, new_file_name)
   duration = generate_audio(
-    new_translation,
-    utterance.instructions,
-    req.video.translate_language,
-    utterance.speaker.voice,
-    new_path,
-    config.gemini_tts_model,
+      new_translation,
+      utterance.instructions,
+      req.video.translate_language,
+      utterance.speaker.voice,
+      new_path,
+      config.gemini_tts_model,
   )
   return RegenerateResponse(
-    translated_text=new_translation, audio_url=new_path, duration=duration
+      translated_text=new_translation, audio_url=new_path, duration=duration
   )
 
 
@@ -231,21 +251,21 @@ def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
   utterance = req.video.utterances[req.utterance]
   target_dir = os.path.dirname(utterance.audio_url)
   new_file_name = (
-    f"audio_{req.utterance}-" + str(uuid.uuid1()) + ".wav"
+      f"audio_{req.utterance}-" + str(uuid.uuid1()) + ".wav"
   )  # cache busting
   new_path = os.path.join(target_dir, new_file_name)
   duration = generate_audio(
-    utterance.translated_text,
-    req.instructions,
-    req.video.translate_language,
-    utterance.speaker.voice,
-    new_path,
-    config.gemini_tts_model,
+      utterance.translated_text,
+      req.instructions,
+      req.video.translate_language,
+      utterance.speaker.voice,
+      new_path,
+      config.gemini_tts_model,
   )
   return RegenerateResponse(
-    translated_text=utterance.translated_text,
-    audio_url=new_path,
-    duration=duration,
+      translated_text=utterance.translated_text,
+      audio_url=new_path,
+      duration=duration,
   )
 
 
@@ -273,6 +293,7 @@ def save_video(video: UploadFile) -> tuple[str, str]:
   video_gcs_uri = f"gs://{config.gcs_bucket_name}/{gcs_path}"
   return local_path, video_gcs_uri
 
+
 def sanitize_filename(orig: str) -> str:
   """Sanitizes a file name for shell commands.
 
@@ -292,6 +313,7 @@ def sanitize_filename(orig: str) -> str:
     return "video.mp4"
   return new_name
 
+
 ##############################
 ## TESTING END POINTS BELOW ##
 ##############################
@@ -303,29 +325,35 @@ async def read_item_test(request: Request):
 
 
 @app.get("/transcribe", response_model=list[TranscribeSegment])
-def transcribe(gcs_uri: str):
+def transcribe(gcs_uri: str, mime_type: str = "video/mp4"):
   client = genai.Client(
-    vertexai=True,
-    project=config.gcp_project_id,
-    location=config.gcp_project_location,
+      vertexai=True,
+      project=config.gcp_project_id,
+      location=config.gcp_project_location,
   )
-  return transcribe_video(
-    client, model_name=config.gemini_model, gcs_uri=gcs_uri
+  return transcribe_media(
+      client,
+      model_name=config.gemini_model,
+      gcs_uri=gcs_uri,
+      num_speakers=2,  # default for testing
+      mime_type=mime_type,
   )
 
 
 @app.get("/generate_audio_test")
 def generate_audio_test(
-  api_key: str,
-  prompt: str,
-  voice_name: str,
+    api_key: str,
+    prompt: str,
+    voice_name: str,
 ):
   client = genai.Client(api_key=api_key)
   audio_data = generate_audio(
-    client,
-    prompt=prompt,
-    voice_name=voice_name,
-    model_name="gemini-2.5-pro-tts",
+      text="hello world",
+      language="en",
+      prompt=prompt,
+      voice_name=voice_name,
+      output_path="test.wav",
+      model_name="gemini-2.5-pro-tts",
   )
 
   return JSONResponse(content={"audio_data": audio_data})
@@ -335,14 +363,14 @@ def generate_audio_test(
 def match_voice_endpoint(segments: list[TranscribeSegment]):
   # Initialize the genai client
   client = genai.Client(
-    vertexai=True,
-    project=config.gcp_project_id,
-    location=config.gcp_project_location,
+      vertexai=True,
+      project=config.gcp_project_id,
+      location=config.gcp_project_location,
   )
 
   # Match voices for all speakers
   voice_map = match_voice(
-    client, model_name=config.gemini_model, segments=segments
+      client, model_name=config.gemini_model, segments=segments
   )
 
   return voice_map
