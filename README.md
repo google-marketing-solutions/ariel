@@ -4,6 +4,24 @@ Ariel is a tool for translating video voice tracks. It provides an easy to use
 web interface for uploading videos, creating translations, and redubbing the
 video with translated audio.
 
+## Requirements
+
+The solution requires the following Google APIs and services to be enabled in your Google Cloud project:
+
+*   **Vertex AI API**: For advanced AI capabilities, including model hosting and management.
+*   **Cloud Storage API**: For scalable and secure object storage for videos and audio files.
+*   **Cloud Logging API**: For centralized logging, monitoring, and analysis of application logs.
+*   **Cloud Text-to-Speech API**: For converting text into natural-sounding speech.
+*   **Cloud Translation API**: For translating text between languages.
+*   **Cloud Build API**: For building and deploying the application container.
+*   **Cloud Run API**: For running the application in a serverless environment.
+*   **Identity-Aware Proxy (IAP)**: For securing access to the application.
+*   **IAM Service Account Credentials API**: For managing service account credentials.
+*   **Cloud Resource Manager API**: For managing Google Cloud projects and resources.
+
+Please ensure any organizational policies applied to your Google Cloud projects
+allow for all of these APIs and services before starting the deployment process.
+
 ## Deployment
 
 Deploying Ariel involves two main steps: running the setup script to configure
