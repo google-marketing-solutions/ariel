@@ -19,6 +19,7 @@ dependencies = [
     "librosa>=0.11.0",
     "torchcodec>=0.8.1",
     "google-cloud-texttospeech>=2.33.0",
+    "debugpy>=1.8.17",
 ]
 
 [dependency-groups]

@@ -20,7 +20,9 @@ import uuid
 from google.cloud import storage
 
 
-def upload_video_to_gcs(video_name: str, video_file: typing.BinaryIO, bucket_name: str) -> str:
+def upload_video_to_gcs(
+    video_name: str, video_file: typing.BinaryIO, bucket_name: str
+) -> str:
   """Uploads a video to a Google Cloud Storage bucket, creating a new folder.
 
   This is used for the initial upload of a video. A new, unique path is created
@@ -49,7 +51,11 @@ def upload_video_to_gcs(video_name: str, video_file: typing.BinaryIO, bucket_nam
 
   return dest_path
 
-def upload_file_to_gcs(target_path: str, file_object: typing.BinaryIO, bucket_name: str, mime_type: str="") -> None:
+
+def upload_file_to_gcs(
+    target_path: str, file_object: typing.BinaryIO, bucket_name: str,
+    mime_type: str = ""
+) -> str:
   """Uploads a file to GCS.
 
   Args:
@@ -57,16 +63,21 @@ def upload_file_to_gcs(target_path: str, file_object: typing.BinaryIO, bucket_na
     file_object: the binary file-like object to store.
     bucket_name: the name of the GCS bucket to use.
     mime_type: the file's mime-type. If not provided, it is guessed using the target path.
+
+  Returns:
+    the path to the file in GCS.
   """
   if not mime_type:
-    mime_type = mimetypes.guess_type(target_path)[0] or "application/octet-stream"
+    mime_type = mimetypes.guess_type(target_path
+                                    )[0] or "application/octet-stream"
 
   storage_client = storage.Client()
   bucket = storage_client.bucket(bucket_name)
   blob = bucket.blob(target_path)
   blob.upload_from_file(file_object, content_type=mime_type)
   logging.info(f"Uploaded file {target_path} to GCS.")
-  
+  return target_path
+
 
 def get_url_for_path(bucket_name: str, path: str) -> str:
   """Returns a URL that can be used to fetch the files stored in GCS.
@@ -82,7 +93,8 @@ def get_url_for_path(bucket_name: str, path: str) -> str:
   bucket = storage_client.bucket(bucket_name)
   blob = bucket.blob(path)
 
-  url = blob.generate_signed_url(version="v4", expiration=(60*60*24), method="GET")
+  url = blob.generate_signed_url(
+      version="v4", expiration=(60 * 60 * 24), method="GET"
+  )
 
   return url
-

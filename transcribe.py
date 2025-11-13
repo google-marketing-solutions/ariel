@@ -168,14 +168,15 @@ class TranscribeSegment:
     end_time: float
 
 
-def transcribe_video(
+def transcribe_media(
     client,
     model_name,
     gcs_uri: str,
     num_speakers: int,
+    mime_type: str,
 ) -> list[TranscribeSegment]:
     prompt = f"""
-    Provide a transcript of this audio file.
+    Provide a transcript of this vocals file.
     Identify different speakers and attempt to infer their gender.
     There are {num_speakers} speakers. If you detect more, assume they are the same person.
     For each utterance of the transcript, describe the tone of voice used
@@ -187,20 +188,18 @@ def transcribe_video(
     When assigning speaker_id, use the format "speaker_x", where x is number of
     the speaker in the order they are first heard in the video, starting at 1.
     """
-    video = types.Part.from_uri(file_uri=gcs_uri, mime_type="video/mp4")
+    media = types.Part.from_uri(file_uri=gcs_uri, mime_type=mime_type)
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
     def call_gemini():
         return client.models.generate_content(
             model=model_name,
-            contents=[video, prompt],
+            contents=[media, prompt],
             config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_json_schema={
+                response_mime_type="application/json", response_json_schema={
                     "type": "array",
                     "items": {
-                        "type":
-                        "object",
+                        "type": "object",
                         "properties": {
                             "speaker_id": {
                                 "type": "string"
@@ -228,7 +227,8 @@ def transcribe_video(
                             "start_time", "end_time"
                         ]
                     }
-                }),
+                }
+            ),
         )
 
     response = call_gemini()
@@ -286,8 +286,7 @@ def match_voice(
             model=model_name,
             contents=[prompt],
             config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_json_schema={
+                response_mime_type="application/json", response_json_schema={
                     "type": "object",
                     "properties": {
                         "voice_name": {
@@ -295,7 +294,8 @@ def match_voice(
                         }
                     },
                     "required": ["voice_name"]
-                }),
+                }
+            ),
         )
         response_json = json.loads(response.text)
         voice_map[speaker_id] = response_json["voice_name"]
