@@ -69,19 +69,22 @@ async def process_video(
   local_video_path, gcs_video_uri = save_video(video)
 
   logging.info(f"Separating vocals and background music from {video.filename}")
-  vocals_path, background_path = separate_audio_from_video(
-      local_video_path, MOUNT_POINT
+  local_dir = os.path.dirname(local_video_path)
+  original_audio_path, vocals_path, background_path = separate_audio_from_video(
+      local_video_path, local_dir
   )
 
   logging.info(
-      f"Uploading vocals and background music to GCS for {video.filename}"
+      f"Uploading original audio, vocals and background music to GCS for {video.filename}"
   )
+  with open(original_audio_path, "rb") as f:
+    upload_file_to_gcs(original_audio_path, f, config.gcs_bucket_name)
   with open(vocals_path, "rb") as f:
     upload_file_to_gcs(vocals_path, f, config.gcs_bucket_name)
   with open(background_path, "rb") as f:
     upload_file_to_gcs(background_path, f, config.gcs_bucket_name)
 
-  gcs_vocals_uri = f"gs://{config.gcs_bucket_name}/{vocals_path}"
+  gcs_original_audio_uri = f"gs://{config.gcs_bucket_name}/{original_audio_path}"
 
   genai_client = genai.Client(
       vertexai=True,
@@ -98,12 +101,10 @@ async def process_video(
   transcriptions = transcribe_media(
       client=genai_client,
       model_name=config.gemini_model,
-      gcs_uri=gcs_vocals_uri,
+      gcs_uri=gcs_original_audio_uri,
       num_speakers=len(speaker_list),
       mime_type="audio/wav",
   )
-
-  local_dir = os.path.dirname(local_video_path)
 
   utterances: list[Utterance] = []
   logging.info(
@@ -173,10 +174,13 @@ def generate_video(video_data: Video) -> JSONResponse:
   logging.info(f"Generating final video for {video_data.video_id}")
   local_dir = os.path.join(MOUNT_POINT, video_data.video_id)
   local_video_path = os.path.join(local_dir, video_data.video_id)
-  logging.info(f"Separating background for {video_data.video_id}")
-  _, background_sound_path = separate_audio_from_video(
-      local_video_path, local_dir
+  background_sound_path = os.path.join(
+      local_dir, "htdemucs", "original_audio", "no_vocals.wav"
   )
+  # logging.info(f"Separating background for {video_data.video_id}")
+  # _, background_sound_path = separate_audio_from_video(
+  #     local_video_path, local_dir
+  # )
   logging.info(f"Merging background and vocals for {video_data.video_id}")
   merged_audio_path = merge_background_and_vocals(
       background_audio_file=background_sound_path,
