@@ -3,8 +3,14 @@
 set -e
 
 SERVICE_NAME="ariel-v2"
-REGION="us-central1"
-TEMP_BUCKET="ariel-v2-test-persistant-bucket"
+REGION=$(grep "GCP_PROJECT_LOCATION" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
+GCS_BUCKET=$(grep "GCS_BUCKET_NAME" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
+
+if [[ -z "$REGION" || -z "$TEMP_BUCKET" ]]; then
+  echo "❌ Error: Could not read REGION or TEMP_BUCKET from configuration.yaml."
+  echo "Please run setup.sh first."
+  exit 1
+fi
 
 # Build requirements.txt needed for cloud run but skipping the local file output from uv
 uv pip compile pyproject.toml -o requirements.txt > /dev/null
@@ -17,7 +23,7 @@ gcloud beta run deploy "$SERVICE_NAME" \
   --env-vars-file=configuration.yaml  \
   --quiet \
   --iap \
-  --add-volume name=ariel,type=cloud-storage,bucket="$TEMP_BUCKET" \
+  --add-volume name=ariel,type=cloud-storage,bucket="$GCS_BUCKET" \
   --add-volume-mount volume=ariel,mount-path="/mnt/ariel" \
 
 

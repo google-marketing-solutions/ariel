@@ -3,21 +3,67 @@
 # A script to find a Cloud Run service account and grant it the Vertex AI User role.
 
 # --- Configuration ---
-# Set the name of your Cloud Run service and its region.
+# Set the name of your Cloud Run service.
 SERVICE_NAME="ariel-v2"
-REGION="us-central1"
+
+# Get region from gcloud config, or prompt if not set
+REGION=$(gcloud config get-value compute/region)
+if [[ -z "$REGION" ]]; then
+  read -p "Enter the GCP region for the service (e.g., us-central1): " REGION
+  if [[ -z "$REGION" ]]; then
+    echo "❌ Error: A region is required."
+    exit 1
+  fi
+  # Set the region in gcloud config for future use
+  gcloud config set compute/region "$REGION"
+fi
 
 echo "▶️ Starting permission script for service '$SERVICE_NAME' in region '$REGION'..."
 
-# 2. Get the current Project ID from gcloud config
+# 2. Get and confirm the current Project ID from gcloud config
 PROJECT_ID=$(gcloud config get-value project)
-if [[ -z "$PROJECT_ID" ]]; then
-  echo "❌ Error: gcloud project ID not set. Please run 'gcloud config set project YOUR_PROJECT_ID'."
-  exit 1
-fi
-echo "✅ Found Project ID: $PROJECT_ID"
 
-# 3. Grant the current user permissions to manage IAM
+if [[ -n "$PROJECT_ID" ]]; then
+  read -p "Is this the correct Project ID: '$PROJECT_ID'? (y/n) " confirm
+  if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    PROJECT_ID="" # Clear it so we prompt for a new one
+  fi
+fi
+
+if [[ -z "$PROJECT_ID" ]]; then
+  read -p "Enter the Google Cloud Project ID: " NEW_PROJECT_ID
+  if [[ -z "$NEW_PROJECT_ID" ]]; then
+    echo "❌ Error: A Project ID is required."
+    exit 1
+  fi
+  gcloud config set project "$NEW_PROJECT_ID"
+  PROJECT_ID=$NEW_PROJECT_ID
+fi
+
+echo "✅ Using Project ID: $PROJECT_ID"
+
+# 3. Prompt for and create the Cloud Storage bucket
+read -p "Enter the name for the Cloud Storage bucket to be used for analysis: " BUCKET_NAME
+BUCKET_URI="gs://$BUCKET_NAME"
+
+echo "🔎 Checking for Cloud Storage bucket: $BUCKET_URI..."
+if gsutil ls -b "$BUCKET_URI" &>/dev/null; then
+  echo "✅ Bucket already exists."
+else
+  echo "🤔 Bucket not found. Creating..."
+  gsutil mb -l "$REGION" "$BUCKET_URI"
+  echo "✅ Bucket created."
+fi
+
+# Create configuration.yaml from template
+echo "📝 Creating configuration.yaml..."
+cp configuration.template.yaml configuration.yaml
+sed -i "s/enter project id here/$PROJECT_ID/g" configuration.yaml
+sed -i "s/enter project location here/$REGION/g" configuration.yaml
+sed -i "s/enter bucket name here/$BUCKET_NAME/g" configuration.yaml
+echo "✅ configuration.yaml created."
+
+# 4. Grant the current user permissions to manage IAM
 CURRENT_USER=$(gcloud config get-value account)
 if [[ -z "$CURRENT_USER" ]]; then
     echo "❌ Error: Could not get current user from gcloud config."
@@ -30,7 +76,7 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --quiet
 echo "✅ IAM permissions granted to user."
 
-# 3. Enable the Cloud Build API and grant necessary permissions
+# 5. Enable the Cloud Build API and grant necessary permissions
 echo "🔑 Enabling Cloud Build API and granting permissions..."
 gcloud services enable serviceusage.googleapis.com cloudbuild.googleapis.com iap.googleapis.com generativelanguage.googleapis.com aiplatform.googleapis.com translate.googleapis.com --project="$PROJECT_ID"
 
@@ -53,7 +99,7 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --quiet
 echo "✅ Cloud Build permissions granted."
 
-# 4. Create the service account for the service to run as
+# 6. Create the service account for the service to run as
 SERVICE_ACCOUNT_NAME="$SERVICE_NAME"
 SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
@@ -68,7 +114,7 @@ else
   echo "✅ Service account already exists."
 fi
 
-# 5. Grant necessary roles to the Service Account
+# 7. Grant necessary roles to the Service Account
 echo "🔑 Granting 'Vertex AI User', 'Storage Object Viewer', and 'Logs Writer' roles to $SERVICE_ACCOUNT_EMAIL..."
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
