@@ -222,9 +222,9 @@ class TestGenerateAudio(unittest.TestCase):
     )
 
     self.assertEqual(duration, 0.0)
-    mock_tts_client.synthesize_speech.assert_called_once()
+    self.assertEqual(mock_tts_client.synthesize_speech.call_count, 3)
     mock_logging_error.assert_called_once_with(
-      "Text-to-speech API returned empty audio content."
+      "An error occurred during audio generation: "
     )
 
 
