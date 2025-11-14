@@ -4,35 +4,42 @@ import os
 import shutil
 import uuid
 from typing import Annotated
+
+import google.cloud.logging
 from cloud_storage import (
     upload_file_to_gcs,
     upload_video_to_gcs,
-    get_url_for_path,
 )
 from configuration import get_config
-from fastapi import FastAPI, Request, Form, UploadFile
+from fastapi import FastAPI, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from generate_audio import generate_audio, shorten_audio
-from transcribe import TranscribeSegment, transcribe_media, match_voice
-from translate import translate_text
 from google import genai
-from process import (
-    separate_audio_from_video,
-    merge_background_and_vocals,
-    combine_video_and_audio,
-)
-
+from google.cloud.logging.handlers import CloudLoggingHandler
 from models import (
     RegenerateRequest,
-    Video,
-    Utterance,
-    Speaker,
     RegenerateResponse,
+    Speaker,
+    Utterance,
+    Video,
 )
+from process import (
+    combine_video_and_audio,
+    merge_background_and_vocals,
+    separate_audio_from_video,
+)
+from transcribe import transcribe_media
+from translate import translate_text
 
-import subprocess
+# Set up Google Cloud Logging
+if "K_SERVICE" in os.environ:
+    client = google.cloud.logging.Client()
+    handler = CloudLoggingHandler(client)
+    google.cloud.logging.handlers.setup_logging(handler)
+else:
+    logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
@@ -316,65 +323,3 @@ def sanitize_filename(orig: str) -> str:
   if not new_name:
     return "video.mp4"
   return new_name
-
-
-##############################
-## TESTING END POINTS BELOW ##
-##############################
-
-
-@app.get("/test", response_class=HTMLResponse)
-async def read_item_test(request: Request):
-  return templates.TemplateResponse("test.html", {"request": request})
-
-
-@app.get("/transcribe", response_model=list[TranscribeSegment])
-def transcribe(gcs_uri: str, mime_type: str = "video/mp4"):
-  client = genai.Client(
-      vertexai=True,
-      project=config.gcp_project_id,
-      location=config.gcp_project_location,
-  )
-  return transcribe_media(
-      client,
-      model_name=config.gemini_model,
-      gcs_uri=gcs_uri,
-      num_speakers=2,  # default for testing
-      mime_type=mime_type,
-  )
-
-
-@app.get("/generate_audio_test")
-def generate_audio_test(
-    api_key: str,
-    prompt: str,
-    voice_name: str,
-):
-  client = genai.Client(api_key=api_key)
-  audio_data = generate_audio(
-      text="hello world",
-      language="en",
-      prompt=prompt,
-      voice_name=voice_name,
-      output_path="test.wav",
-      model_name="gemini-2.5-pro-tts",
-  )
-
-  return JSONResponse(content={"audio_data": audio_data})
-
-
-@app.post("/match_voice")
-def match_voice_endpoint(segments: list[TranscribeSegment]):
-  # Initialize the genai client
-  client = genai.Client(
-      vertexai=True,
-      project=config.gcp_project_id,
-      location=config.gcp_project_location,
-  )
-
-  # Match voices for all speakers
-  voice_map = match_voice(
-      client, model_name=config.gemini_model, segments=segments
-  )
-
-  return voice_map

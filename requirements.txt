@@ -35,6 +35,8 @@ click==8.3.0
     #   uvicorn
 cloudpickle==3.1.1
     # via submitit
+debugpy==1.8.17
+    # via ariel (pyproject.toml)
 decorator==5.2.1
     # via
     #   librosa

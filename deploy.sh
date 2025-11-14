@@ -2,12 +2,12 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-SERVICE_NAME="ariel-v2"
+SERVICE_NAME="ariel-v2-dev"
 REGION=$(grep "GCP_PROJECT_LOCATION" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
 GCS_BUCKET=$(grep "GCS_BUCKET_NAME" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
 
-if [[ -z "$REGION" || -z "$TEMP_BUCKET" ]]; then
-  echo "❌ Error: Could not read REGION or TEMP_BUCKET from configuration.yaml."
+if [[ -z "$REGION" || -z "$GCS_BUCKET" ]]; then
+  echo "❌ Error: Could not read REGION or GCS_BUCKET from configuration.yaml."
   echo "Please run setup.sh first."
   exit 1
 fi
@@ -29,3 +29,4 @@ gcloud beta run deploy "$SERVICE_NAME" \
 
 # Stream logs
 #gcloud beta run services logs tail "$SERVICE_NAME" --region="$REGION"
+
