@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import logging
 from google import genai
 import configuration
 
@@ -48,6 +49,10 @@ def translate_text(
   response = genai_client.models.generate_content(
     model=config.gemini_model,
     contents=[prompt],
+  )
+  logging.info(
+      "Gemini Token Count for translate_text:"
+      f" {response.usage_metadata.total_token_count}"
   )
 
   return response.text or "TRANSLATION FAILED"

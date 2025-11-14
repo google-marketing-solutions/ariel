@@ -197,3 +197,23 @@ editing* button to make additional changes.
 
 To start dubbing a new video, you can click the *Start Over* button to return to
 the app's start page.
+
+## Costs
+
+The exact costs for Ariel will be directly proportional to the length of the video and the amount of spoken text it contains. 
+
+Our experience shows that a 10 second video with one speaker will use approximately:
+
+* 1000 - 1500 tokens for transcription
+* 600 - 1000 tokens for translation
+* 100 - 200 characters for text-to-speech
+
+In addition, there are costs related to Cloud Run each time a video is processed, Cloud Storage for storing the videos and intermediate files, and initial Cloud Build costs for deploying the solution. These costs will be dependent on the region and specifics of your Cloud project.
+
+For information on Gemini pricing, please see the [official documentation](https://ai.google.dev/gemini-api/docs/pricing).
+
+For information on the costs of the other services used by Ariel:
+
+* [Google Cloud Storage pricing](https://cloud.google.com/storage/pricing)
+* [Google Cloud Run pricing](https://cloud.google.com/run/pricing)
+* [Google Cloud Build pricing](https://cloud.google.com/build/pricing)

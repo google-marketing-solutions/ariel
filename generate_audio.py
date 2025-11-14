@@ -78,6 +78,10 @@ def generate_audio(
       if response.audio_content:
         break
 
+    logging.info(
+      "Gemini TTS Character Count for generate_audio:" +
+      f" {len(text)} "
+    )
     if not response:
       logging.error("Text-to-speech API returned empty audio content.")
       return 0.0

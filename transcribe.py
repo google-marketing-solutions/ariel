@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import json
+import logging
 from pydantic import TypeAdapter
 from google.genai import types
 from tenacity import retry, stop_after_attempt, wait_fixed
@@ -232,6 +233,10 @@ def transcribe_media(
         )
 
     response = call_gemini()
+    logging.info(
+        "Gemini Token Count for transcribe_media:"
+        f" {response.usage_metadata.total_token_count}"
+    )
     response_json = json.loads(response.text)
     return TypeAdapter(list[TranscribeSegment]).validate_python(response_json)
 
@@ -296,6 +301,10 @@ def match_voice(
                     "required": ["voice_name"]
                 }
             ),
+        )
+        logging.info(
+            "Gemini Token Count for match_voice:"
+            f" {response.usage_metadata.total_token_count}"
         )
         response_json = json.loads(response.text)
         voice_map[speaker_id] = response_json["voice_name"]
