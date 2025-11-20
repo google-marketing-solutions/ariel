@@ -1,9 +1,16 @@
 from dataclasses import dataclass
 import json
 import logging
+import logging
 from pydantic import TypeAdapter
 from google.genai import types
 from tenacity import retry, stop_after_attempt, wait_fixed
+from faster_whisper import WhisperModel
+
+# Load the model only once.
+logging.info("Loading Whisper model...")
+model = WhisperModel("small", device="cpu", compute_type="int8")
+logging.info("Whisper model loaded.")
 
 VOICE_OPTIONS = {
     'Zephyr': {
@@ -161,84 +168,105 @@ VOICE_OPTIONS = {
 
 @dataclass
 class TranscribeSegment:
-    speaker_id: str
-    gender: str
-    transcript: str
-    tone: str
-    start_time: float
-    end_time: float
+  speaker_id: str
+  gender: str
+  transcript: str
+  tone: str
+  start_time: float
+  end_time: float
 
 
-def transcribe_media(
+def annotate_transcript(
     client,
     model_name,
     gcs_uri: str,
     num_speakers: int,
+    script: str,
     mime_type: str,
 ) -> list[TranscribeSegment]:
-    prompt = f"""
-    Provide a transcript of this vocals file.
-    Identify different speakers and attempt to infer their gender.
+  prompt = f"""
+    I am providing you an audio file alongside its transcript with timestamps.
+
+    Your Task:
+    Identify different speakers in the audio and attempt to infer their gender.
     There are {num_speakers} speakers. If you detect more, assume they are the same person.
+
+    For each sentence, make sure to use the provided start and end times from
+    the transcript. This is ABSOLUTELY CRITICAL. Output them in seconds (floats).
+
     For each utterance of the transcript, describe the tone of voice used
     (e.g., enthusiastic, calm, angry, neutral).
-    Provide the start and end timestamps in seconds.
-    **An utterance should be a distinct segment of speech, typically a sentence
-    or a complete phrase, separated by a noticeable pause.**
+    When assigning speaker_id, use the format "speaker_x", where x is the number
+    of the speaker in the order they are first heard in the video, starting at 1.
 
-    When assigning speaker_id, use the format "speaker_x", where x is number of
-    the speaker in the order they are first heard in the video, starting at 1.
+    Transcript:
+    {script}
     """
-    media = types.Part.from_uri(file_uri=gcs_uri, mime_type=mime_type)
+  media = types.Part.from_uri(file_uri=gcs_uri, mime_type=mime_type)
 
-    @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
-    def call_gemini():
-        return client.models.generate_content(
-            model=model_name,
-            contents=[media, prompt],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json", response_json_schema={
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "speaker_id": {
-                                "type": "string"
-                            },
-                            "gender": {
-                                "type": "string"
-                            },
-                            "transcript": {
-                                "type": "string"
-                            },
-                            "tone": {
-                                "type": "string"
-                            },
-                            "start_time": {
-                                "type": "number",
-                                "format": "float"
-                            },
-                            "end_time": {
-                                "type": "number",
-                                "format": "float"
-                            }
+  @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
+  def call_gemini():
+    return client.models.generate_content(
+        model=model_name,
+        contents=[media, prompt],
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json", response_json_schema={
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "speaker_id": {
+                            "type": "string"
                         },
-                        "required": [
-                            "speaker_id", "gender", "transcript", "tone",
-                            "start_time", "end_time"
-                        ]
-                    }
+                        "gender": {
+                            "type": "string"
+                        },
+                        "transcript": {
+                            "type": "string"
+                        },
+                        "tone": {
+                            "type": "string"
+                        },
+                        "start_time": {
+                            "type": "number",
+                            "format": "float"
+                        },
+                        "end_time": {
+                            "type": "number",
+                            "format": "float"
+                        }
+                    },
+                    "required": [
+                        "speaker_id", "gender", "transcript", "tone",
+                        "start_time", "end_time"
+                    ]
                 }
-            ),
-        )
-
-    response = call_gemini()
-    logging.info(
-        "Gemini Token Count for transcribe_media:"
-        f" {response.usage_metadata.total_token_count}"
+            }
+        ),
     )
-    response_json = json.loads(response.text)
-    return TypeAdapter(list[TranscribeSegment]).validate_python(response_json)
+
+  response = call_gemini()
+  logging.info(
+      "Gemini Token Count for transcribe_media:"
+      f" {response.usage_metadata.total_token_count}"
+  )
+  response_json = json.loads(response.text)
+  return TypeAdapter(list[TranscribeSegment]).validate_python(response_json)
+
+
+def transcribe_media(audio_file_path: str):
+  segments, info = model.transcribe(audio_file_path, beam_size=5)
+
+  logging.info(
+      "Detected language '%s' with probability %f" %
+      (info.language, info.language_probability)
+  )
+
+  transcript = []
+  for segment in segments:
+    transcript.append(f"[{segment.start}s -> {segment.end}s]  {segment.text}")
+
+  return "\n".join(transcript)
 
 
 def match_voice(
@@ -246,7 +274,7 @@ def match_voice(
     model_name: str,
     segments: list[TranscribeSegment],
 ) -> dict[str, str]:
-    """
+  """
     Matches speakers to voices from VOICE_OPTIONS using a generative model.
 
     Args:
@@ -257,18 +285,18 @@ def match_voice(
     Returns:
         A dictionary mapping speaker IDs to voice names.
     """
-    speaker_info = {}
-    for segment in segments:
-        if segment.speaker_id not in speaker_info:
-            speaker_info[segment.speaker_id] = {
-                "gender": segment.gender,
-                "tones": [],
-            }
-        speaker_info[segment.speaker_id]["tones"].append(segment.tone)
+  speaker_info = {}
+  for segment in segments:
+    if segment.speaker_id not in speaker_info:
+      speaker_info[segment.speaker_id] = {
+          "gender": segment.gender,
+          "tones": [],
+      }
+    speaker_info[segment.speaker_id]["tones"].append(segment.tone)
 
-    voice_map = {}
-    for speaker_id, info in speaker_info.items():
-        prompt = f"""
+  voice_map = {}
+  for speaker_id, info in speaker_info.items():
+    prompt = f"""
         Based on the speaker's gender and vocal tones, select the most fitting voice from the provided options.
         Ensure that a voice option is only used for a single speaker and not for multiple speakers at the same time.
 
@@ -287,26 +315,26 @@ def match_voice(
         containing the name of the selected voice.
         """
 
-        response = client.models.generate_content(
-            model=model_name,
-            contents=[prompt],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json", response_json_schema={
-                    "type": "object",
-                    "properties": {
-                        "voice_name": {
-                            "type": "string"
-                        }
-                    },
-                    "required": ["voice_name"]
-                }
-            ),
-        )
-        logging.info(
-            "Gemini Token Count for match_voice:"
-            f" {response.usage_metadata.total_token_count}"
-        )
-        response_json = json.loads(response.text)
-        voice_map[speaker_id] = response_json["voice_name"]
+    response = client.models.generate_content(
+        model=model_name,
+        contents=[prompt],
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json", response_json_schema={
+                "type": "object",
+                "properties": {
+                    "voice_name": {
+                        "type": "string"
+                    }
+                },
+                "required": ["voice_name"]
+            }
+        ),
+    )
+    logging.info(
+        "Gemini Token Count for match_voice:"
+        f" {response.usage_metadata.total_token_count}"
+    )
+    response_json = json.loads(response.text)
+    voice_map[speaker_id] = response_json["voice_name"]
 
-    return voice_map
+  return voice_map

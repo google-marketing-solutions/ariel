@@ -20,6 +20,7 @@ dependencies = [
     "torchcodec>=0.8.1",
     "google-cloud-texttospeech>=2.33.0",
     "debugpy>=1.8.17",
+    "faster-whisper>=1.2.1",
 ]
 
 [dependency-groups]

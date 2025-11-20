@@ -19,7 +19,8 @@ uv pip compile pyproject.toml -o requirements.txt > /dev/null
 gcloud beta run deploy "$SERVICE_NAME" \
   --source . \
   --region="$REGION" \
-  --memory 3072Mi \
+  --memory 8192Mi \
+  --cpu 2 \
   --env-vars-file=configuration.yaml  \
   --quiet \
   --iap \
