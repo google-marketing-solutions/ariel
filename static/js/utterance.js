@@ -241,12 +241,17 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         <button id="regenerate-translation-btn" class="btn btn-primary">Regenerate Translation</button>
         <button id="regenerate-dubbing-btn" class="btn btn-success">Regenerate Dubbing</button>
         <button id="save-utterance-btn" class="btn btn-info">Save</button>
+        <button id="revert-utterance-btn" class="btn btn-warning">Revert</button>
     `;
 
     // Set up the new editor session
     activeEditorSession = {
         id: utterance.id,
-        initialState: { ...utterance, instructions: utterance.instructions || '' },
+        initialState: {
+            ...utterance,
+            speaker: { ...utterance.speaker },
+            instructions: utterance.instructions || ''
+        },
         utteranceObject: utterance
     };
 
@@ -272,6 +277,38 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         saveUtteranceChanges();
     });
 
+    document.getElementById('revert-utterance-btn').addEventListener('click', () => {
+        const initial = activeEditorSession.initialState;
+
+        // Restore object properties
+        utterance.original_text = initial.original_text;
+        utterance.translated_text = initial.translated_text;
+        utterance.instructions = initial.instructions;
+        utterance.translated_start_time = initial.translated_start_time;
+        utterance.translated_end_time = initial.translated_end_time;
+        utterance.speaker.voice = initial.speaker.voice;
+        utterance.audio_url = initial.audio_url;
+
+        // Restore UI inputs
+        document.getElementById('original-text-area').value = initial.original_text;
+        document.getElementById('translated-text-area').value = initial.translated_text;
+        document.getElementById('intonation-instructions-area').value = initial.instructions || '';
+        document.getElementById('translated-start-time-input').value = initial.translated_start_time;
+        document.getElementById('translated-end-time-input').value = initial.translated_end_time;
+        document.getElementById('speaker-select').value = initial.speaker.voice;
+        document.querySelector('#gemini-prompt-input').value = '';
+
+        // Update Duration display
+        const translatedDuration = (initial.translated_end_time - initial.translated_start_time).toFixed(2);
+        document.getElementById('translated-duration').innerText = translatedDuration + 's';
+
+        // Re-render
+        renderTimeline(currentVideoData, videoDuration, speakers);
+        renderUtterances(currentVideoData, speakers, videoDuration);
+
+        showToast('Changes reverted.', 'info');
+    });
+
     document.getElementById('regenerate-translation-btn').addEventListener('click', () => {
         utterance.original_text = document.getElementById('original-text-area').value;
         const instructions = document.querySelector('#gemini-prompt-input').value;
@@ -288,8 +325,12 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
     });
 
     document.getElementById('regenerate-dubbing-btn').addEventListener('click', () => {
+        const tempUtterance = {}
+        Object.assign(tempUtterance, utterance);
         const instructions = document.getElementById('intonation-instructions-area').value;
-        utterance.speaker.voice = document.getElementById('speaker-select').value;
+        tempUtterance.speaker.voice = document.getElementById('speaker-select').value;
+        tempUtterance.translated_text = document.getElementById('translated-text-area').value;
+        currentVideoData.utterances[index] = tempUtterance;
         runRegenerateDubbing(currentVideoData, utterance, index, instructions)
             .then((updatedUtterance) => {
                 const duration = updatedUtterance.translated_end_time - updatedUtterance.translated_start_time
