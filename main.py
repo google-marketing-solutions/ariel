@@ -13,6 +13,8 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+import concurrent.futures
+import functools
 import json
 import logging
 import os
@@ -44,7 +46,7 @@ from models import Video
 from process import combine_video_and_audio
 from process import merge_background_and_vocals
 from process import separate_audio_from_video
-from transcribe import annotate_transcript
+from transcribe import TranscribeSegment, annotate_transcript
 from transcribe import transcribe_media
 from translate import translate_text
 
@@ -77,6 +79,79 @@ config = get_config()
 @app.get("/", response_class=HTMLResponse)
 async def read_item(request: Request):
   return templates.TemplateResponse("index.html", {"request": request})
+
+
+def _process_utterance(
+    i: int,
+    t: TranscribeSegment,
+    speaker_map: dict[str, Speaker],
+    genai_client: genai.Client,
+    original_language: str,
+    translate_language: str,
+    gemini_model: str,
+    gemini_tts_model: str,
+    local_dir: str,
+    adjust_speed: bool,
+) -> Utterance:
+  """Processes a single utterance: translates and generates audio.
+
+  Args:
+    i: The index of the utterance.
+    t: The TranscribeSegment object.
+    speaker_map: A map of speaker IDs to Speaker objects.
+    genai_client: The GenAI client.
+    original_language: The original language.
+    translate_language: The target language.
+    gemini_model: The Gemini model for translation.
+    gemini_tts_model: The Gemini TTS model.
+    local_dir: The directory to save audio.
+    adjust_speed: Whether to adjust audio speed.
+
+  Returns:
+    The processed Utterance object.
+  """
+  uid = str(uuid.uuid4())
+  speaker = speaker_map[t.speaker_id]
+
+  translated_text = translate_text(
+      genai_client,
+      original_language,
+      translate_language,
+      t.transcript,
+      gemini_model,
+      t.tone,
+  )
+
+  local_audio_path = os.path.join(local_dir, f"audio_{i}.wav")
+  audio_duration = generate_audio(
+      translated_text,
+      t.tone,
+      translate_language,
+      speaker.voice,
+      local_audio_path,
+      model_name=gemini_tts_model,
+  )
+  original_duration = t.end_time - t.start_time
+  if adjust_speed and audio_duration and audio_duration > original_duration:
+    audio_duration = shorten_audio(
+        local_audio_path, audio_duration, original_duration
+    )
+
+  translated_end_time = t.start_time + audio_duration
+
+  return Utterance(
+      id=uid,
+      original_text=t.transcript,
+      translated_text=translated_text,
+      instructions=t.tone,
+      speaker=speaker,
+      original_start_time=t.start_time,
+      original_end_time=t.end_time,
+      translated_start_time=t.start_time,
+      translated_end_time=translated_end_time,
+      removed=False,
+      audio_url=local_audio_path,
+  )
 
 
 @app.post("/process")
@@ -174,46 +249,25 @@ async def process_video(
       "Starting to translate utterances and generate audio for %s",
       video.filename
   )
-  for i, t in enumerate(annotated_transcript):
-    uid = str(uuid.uuid4())
-    speaker = speaker_map[t.speaker_id]
 
-    translated_text = translate_text(
-        genai_client, original_language, translate_language, t.transcript,
-        gemini_model, t.tone
+  process_func = functools.partial(
+      _process_utterance,
+      speaker_map=speaker_map,
+      genai_client=genai_client,
+      original_language=original_language,
+      translate_language=translate_language,
+      gemini_model=gemini_model,
+      gemini_tts_model=gemini_tts_model,
+      local_dir=local_dir,
+      adjust_speed=adjust_speed,
+  )
+
+  with concurrent.futures.ThreadPoolExecutor() as executor:
+    utterances = list(
+        executor.map(
+            process_func, range(len(annotated_transcript)), annotated_transcript
+        )
     )
-
-    local_audio_path = os.path.join(local_dir, f"audio_{i}.wav")
-    audio_duration = generate_audio(
-        translated_text,
-        t.tone,
-        translate_language,
-        speaker.voice,
-        local_audio_path,
-        model_name=gemini_tts_model,
-    )
-    original_duration = t.end_time - t.start_time
-    if adjust_speed and audio_duration and audio_duration > original_duration:
-      audio_duration = shorten_audio(
-          local_audio_path, audio_duration, original_duration
-      )
-
-    translated_end_time = t.start_time + audio_duration
-
-    u = Utterance(
-        id=uid,
-        original_text=t.transcript,
-        translated_text=translated_text,
-        instructions=t.tone,
-        speaker=speaker,
-        original_start_time=t.start_time,
-        original_end_time=t.end_time,
-        translated_start_time=t.start_time,
-        translated_end_time=translated_end_time,
-        removed=False,
-        audio_url=local_audio_path,
-    )
-    utterances.append(u)
 
   to_return = Video(
       video_id=local_video_path.split("/")[-2],
