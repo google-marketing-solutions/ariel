@@ -21,6 +21,7 @@ gcloud beta run deploy "$SERVICE_NAME" \
   --region="$REGION" \
   --memory 8192Mi \
   --cpu 2 \
+  --timeout 3600 \
   --env-vars-file=configuration.yaml  \
   --quiet \
   --iap \

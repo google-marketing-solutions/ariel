@@ -1,3 +1,5 @@
+"""Functions to upload files to Google Cloud Storage."""
+
 # Copyright 2025 Google LLC
 
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -12,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from datetime import datetime
+import datetime
 import logging
 import mimetypes
 import typing
@@ -26,19 +28,20 @@ def upload_video_to_gcs(
   """Uploads a video to a Google Cloud Storage bucket, creating a new folder.
 
   This is used for the initial upload of a video. A new, unique path is created
-  to upload it to, ensuring multiuple users don't end up using the same video.
+  to upload it to, ensuring multiple users don't end up using the same video.
 
   Args:
-      file_object: A file-like object to upload.
-      mime_type: the mime-type of the video (e.g. "video/mp4")
-      bucket_name: The name of the Google Cloud Storage bucket to store the video
-          in.
+    video_name: the name of the video being uploaded.
+    video_file: the file-like object with the video's data.
+    bucket_name: The name of the Google Cloud Storage bucket to store the
+        video in.
 
-  Returns: The path to the uploaded file in GCS.
+  Returns:
+    The path to the uploaded file in GCS.
   """
-
+  now = datetime.datetime.now().isoformat()
   mime_type = mimetypes.guess_type(video_name)[0] or "video/mp4"
-  dir_name = f"{datetime.now().isoformat()}-{str(uuid.uuid4())}-{video_name}"
+  dir_name = f"{now}-{str(uuid.uuid4())}-{video_name}"
   dir_name = dir_name.replace(":", "_")
   dest_path = f"{dir_name}/{dir_name}"
 
@@ -47,14 +50,16 @@ def upload_video_to_gcs(
   blob = bucket.blob(dest_path)
 
   blob.upload_from_file(video_file, content_type=mime_type)
-  logging.info(f"Initial GCS upload of video to {dest_path}.")
+  logging.info("Initial GCS upload of video to %s.", dest_path)
 
   return dest_path
 
 
 def upload_file_to_gcs(
-    target_path: str, file_object: typing.BinaryIO, bucket_name: str,
-    mime_type: str = ""
+    target_path: str,
+    file_object: typing.BinaryIO,
+    bucket_name: str,
+    mime_type: str = "",
 ) -> str:
   """Uploads a file to GCS.
 
@@ -62,20 +67,22 @@ def upload_file_to_gcs(
     target_path: the path to save the file to, including the file name.
     file_object: the binary file-like object to store.
     bucket_name: the name of the GCS bucket to use.
-    mime_type: the file's mime-type. If not provided, it is guessed using the target path.
+    mime_type: the file's mime-type. If not provided, it is guessed using the
+      target path.
 
   Returns:
     the path to the file in GCS.
   """
   if not mime_type:
-    mime_type = mimetypes.guess_type(target_path
-                                    )[0] or "application/octet-stream"
+    mime_type = (
+        mimetypes.guess_type(target_path)[0] or "application/octet-stream"
+    )
 
   storage_client = storage.Client()
   bucket = storage_client.bucket(bucket_name)
   blob = bucket.blob(target_path)
   blob.upload_from_file(file_object, content_type=mime_type)
-  logging.info(f"Uploaded file {target_path} to GCS.")
+  logging.info("Uploaded file %s to GCS.", target_path)
   return target_path
 
 

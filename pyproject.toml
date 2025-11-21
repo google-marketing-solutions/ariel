@@ -42,3 +42,8 @@ docstring-code-format = true
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.pyright]
+reportUnknownMemberType = "none"
+reportUnusedCallResult = "none"
+reportMissingTypeStubs = "none"

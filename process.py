@@ -1,8 +1,24 @@
+"""Functions used to process the video during dubbing."""
+
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy
+# of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
 import os
 import subprocess
 
-import moviepy
 from models import Utterance
+import moviepy
 
 
 def separate_audio_from_video(video_file_path: str,
@@ -25,7 +41,7 @@ def separate_audio_from_video(video_file_path: str,
     RuntimeError: If the audio separation process fails to produce the expected
       output files.
   """
-  # TODO(): Add support for multiple splitting rounds like in v1.
+  # TODO: b/462682309 - Add support for multiple splitting rounds like in v1.
   original_audio_name = "original_audio"
   original_audio_extension = "wav"
   video = moviepy.VideoFileClip(video_file_path)
@@ -38,12 +54,12 @@ def separate_audio_from_video(video_file_path: str,
   audio.write_audiofile(original_audio_path, codec="pcm_s16le")
 
   command = (
-      f"python3 -m demucs --two-stems=vocals -n htdemucs --out {output_local_path}"
+      "python3 -m demucs --two-stems=vocals -n htdemucs"
+      f" --out {output_local_path}"
       f" {original_audio_path}"
   )
   subprocess.run(command, shell=True, check=True)
 
-  # base_filename = os.path.splitext(os.path.basename(original_audio_path))[0]
   base_htdemucs_path = os.path.join(
       output_local_path, "htdemucs", original_audio_name
   )
@@ -51,8 +67,6 @@ def separate_audio_from_video(video_file_path: str,
   background_path = os.path.join(base_htdemucs_path, "no_vocals.wav")
 
   if os.path.exists(vocals_path) and os.path.exists(background_path):
-    vocals_path = vocals_path
-    background_path = background_path
     return original_audio_path, vocals_path, background_path
   else:
     raise RuntimeError(
@@ -67,28 +81,20 @@ def merge_background_and_vocals(
     dubbed_vocals_metadata: list[Utterance],
     output_directory: str,
     target_language: str,
-    vocals_volume_adjustment: float = 0.0,
-    background_volume_adjustment: float = 0.0,
     dubbed_audio_filename: str = "dubbed_audio",
     output_format: str = "wav",
 ) -> str:
   """Mixes background music and vocals tracks, normalizes the volume, and exports the result.
 
   Args:
-      background_audio_file: Path to the background audio file.
-      dubbed_vocals_metadata: A list of dictionaries, each containing the path
+    background_audio_file: Path to the background audio file.
+    dubbed_vocals_metadata: A list of dictionaries, each containing the path
         to a dubbed vocal chunk and its start time.
-      output_directory: The base directory where the output file will be saved.
-      target_language: The language to dub the ad into. It must be ISO 3166-1
+    output_directory: The base directory where the output file will be saved.
+    target_language: The language to dub the ad into. It must be ISO 3166-1
         alpha-2 country code.
-      vocals_volume_adjustment: By how much the vocals audio volume should be
-        adjusted, in dB.
-      background_volume_adjustment: By how much the background audio volume
-        should be adjusted, in dB.
-      output_subdirectory: The name of the subdirectory within the output
-        directory to save the file.
-      dubbed_audio_filename: The base name for the output audio file.
-      output_format: The file format for the output audio file (e.g., 'mp3').
+    dubbed_audio_filename: The base name for the output audio file.
+    output_format: The file format for the output audio file (e.g., 'mp3').
 
 
   Returns:
@@ -131,9 +137,9 @@ def combine_video_and_audio(
   """Combines a video file with an audio file to create the final video.
 
   Args:
-      video_file_path: Path to the original video file (video stream only).
-      audio_file_path: Path to the dubbed audio file.
-      output_file_path: Path to save the final dubbed video.
+    video_file_path: Path to the original video file (video stream only).
+    audio_file_path: Path to the dubbed audio file.
+    output_file_path: Path to save the final dubbed video.
   """
   video_clip = moviepy.VideoFileClip(video_file_path)
   audio_clip = moviepy.AudioFileClip(audio_file_path)

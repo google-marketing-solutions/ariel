@@ -1,4 +1,5 @@
 """Entry point into the Ariel v2 solution."""
+
 # Copyright 2025 Google LLC
 
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -16,38 +17,37 @@ import json
 import logging
 import os
 import shutil
-import uuid
 from typing import Annotated
+import uuid
 
-import google.cloud.logging
-from cloud_storage import (
-    upload_file_to_gcs,
-    upload_video_to_gcs,
-)
+from cloud_storage import upload_file_to_gcs
+from cloud_storage import upload_video_to_gcs
 from configuration import get_config
-from fastapi import FastAPI, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI
+from fastapi import Form
+from fastapi import Request
+from fastapi import UploadFile
+from fastapi.responses import HTMLResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from generate_audio import generate_audio, shorten_audio
-from transcribe import TranscribeSegment, transcribe_media, annotate_transcript, match_voice
-from translate import translate_text
+from generate_audio import generate_audio
+from generate_audio import shorten_audio
 from google import genai
+import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
-from models import (
-    RegenerateRequest,
-    RegenerateResponse,
-    Speaker,
-    Utterance,
-    Video,
-)
-from process import (
-    combine_video_and_audio,
-    merge_background_and_vocals,
-    separate_audio_from_video,
-)
+from models import RegenerateRequest
+from models import RegenerateResponse
+from models import Speaker
+from models import Utterance
+from models import Video
+from process import combine_video_and_audio
+from process import merge_background_and_vocals
+from process import separate_audio_from_video
+from transcribe import annotate_transcript
 from transcribe import transcribe_media
 from translate import translate_text
+
 
 # Set up Google Cloud Logging
 if "K_SERVICE" in os.environ:
@@ -55,17 +55,17 @@ if "K_SERVICE" in os.environ:
   handler = CloudLoggingHandler(client)
   google.cloud.logging.handlers.setup_logging(handler)
 else:
-  logging.basicConfig(level=logging.INFO)
+  logging.basicConfig(level=logging.INFO, force=True)
 
 app = FastAPI()
 
 # Check if running in Google Cloud Run
-if 'K_SERVICE' in os.environ:
-  MOUNT_POINT = "/mnt/ariel"
+if "K_SERVICE" in os.environ:
+  mount_point = "/mnt/ariel"
   app.mount("/mnt", StaticFiles(directory="/mnt"), name="temp")
 else:
   # Running locally.
-  MOUNT_POINT = "static/temp"
+  mount_point = "static/temp"
   app.mount("/mnt", StaticFiles(directory="static/temp"), name="temp")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -89,26 +89,54 @@ async def process_video(
     speakers: Annotated[str, Form()],
     use_pro_model: Annotated[bool, Form()] = False,
 ) -> Video:
-  logging.info(f"Starting Process Video for {video.filename}")
-  local_video_path, gcs_video_uri = save_video(video)
+  """Endpoint to run the initial video processing workflow.
 
-  logging.info(f"Separating vocals and background music from {video.filename}")
+  This function provides the workflow to separate the audio from the video,
+  transcribes the audio track, translates the utterances, generates new audio
+  from the translations, and returns a new Video object with all of the
+  information.
+
+  Args:
+    video: the original video file.
+    original_language: the language of speech in the original video.
+    translate_language: the language to translate the video to.
+    prompt_enhancements: extra instructions to send Gemini during translation
+        and audio generation.
+    adjust_speed: whether to automatically match the length of the generated
+        utterances to the original.
+    speakers: a list of the speakers in the video. They must be in the order
+        they speak in the video.
+    use_pro_model: whether to use the pro version of Gemini. If true, the pro
+        model defined in the configuration will be used. Otherwise the flash
+        version is used.
+
+  Returns:
+    A Video object with the information for the dubbing.
+
+  """
+  logging.info("Starting Process Video for %s", video.filename)
+  local_video_path, _ = save_video(video)
+
+  logging.info("Separating vocals and background music from %s", video.filename)
   local_dir = os.path.dirname(local_video_path)
   original_audio_path, vocals_path, background_path = separate_audio_from_video(
       local_video_path, local_dir
   )
 
   logging.info(
-      f"Uploading original audio, vocals and background music to GCS for {video.filename}"
+      "Uploading original audio, vocals and background music to GCS for %s",
+      video.filename
   )
   with open(original_audio_path, "rb") as f:
-    upload_file_to_gcs(original_audio_path, f, config.gcs_bucket_name)
+    upload_file_to_gcs(
+        original_audio_path, f, config.gcs_bucket_name)
   with open(vocals_path, "rb") as f:
     upload_file_to_gcs(vocals_path, f, config.gcs_bucket_name)
   with open(background_path, "rb") as f:
     upload_file_to_gcs(background_path, f, config.gcs_bucket_name)
 
-  gcs_original_audio_uri = f"gs://{config.gcs_bucket_name}/{original_audio_path}"
+  gcs_original_audio_uri = (
+      f"gs://{config.gcs_bucket_name}/{original_audio_path}")
 
   genai_client = genai.Client(
       vertexai=True,
@@ -121,12 +149,17 @@ async def process_video(
   ]
   speaker_map = {s.speaker_id: s for s in speaker_list}
 
-  logging.info(f"Transcribing {video.filename}")
+  logging.info("Transcribing %s", video.filename)
   transcript = transcribe_media(original_audio_path)
-  
-  gemini_model = config.gemini_pro_model if use_pro_model else config.gemini_flash_model
-  gemini_tts_model = config.gemini_pro_tts_model if use_pro_model else config.gemini_flash_tts_model
-  
+
+  if use_pro_model:
+    gemini_model = config.gemini_pro_model
+    gemini_tts_model = config.gemini_pro_tts_model
+  else:
+    gemini_model = config.gemini_flash_model
+    gemini_tts_model = config.gemini_flash_tts_model
+
+  logging.info("Annotating transcript for %s", video.filename)
   annotated_transcript = annotate_transcript(
       client=genai_client,
       model_name=gemini_model,
@@ -138,7 +171,8 @@ async def process_video(
 
   utterances: list[Utterance] = []
   logging.info(
-      f"Starting to translate utterances and generate audio for {video.filename}"
+      "Starting to translate utterances and generate audio for %s",
+      video.filename
   )
   for i, t in enumerate(annotated_transcript):
     uid = str(uuid.uuid4())
@@ -192,7 +226,7 @@ async def process_video(
       tts_model_name=gemini_tts_model,
   )
 
-  logging.info(f"Completed processing {video.filename}")
+  logging.info("Completed processing %s", video.filename)
   return to_return
 
 
@@ -202,14 +236,17 @@ def generate_video(video_data: Video) -> JSONResponse:
 
   Args:
     video_data: the Video object representing the final video.
+
+  Returns:
+    A JSON object with the URL to the completed video.
   """
-  logging.info(f"Generating final video for {video_data.video_id}")
-  local_dir = os.path.join(MOUNT_POINT, video_data.video_id)
+  logging.info("Generating final video for %s", video_data.video_id)
+  local_dir = os.path.join(mount_point, video_data.video_id)
   local_video_path = os.path.join(local_dir, video_data.video_id)
   background_sound_path = os.path.join(
       local_dir, "htdemucs", "original_audio", "no_vocals.wav"
   )
-  logging.info(f"Merging background and vocals for {video_data.video_id}")
+  logging.info("Merging background and vocals for %s", video_data.video_id)
   merged_audio_path = merge_background_and_vocals(
       background_audio_file=background_sound_path,
       dubbed_vocals_metadata=video_data.utterances,
@@ -222,7 +259,7 @@ def generate_video(video_data: Video) -> JSONResponse:
   combine_video_and_audio(
       local_video_path, merged_audio_path, combined_video_path
   )
-  public_video_path = f"{MOUNT_POINT}/{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
+  public_video_path = f"{mount_point}/{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
   to_return = {"video_url": f"{public_video_path}"}
   return JSONResponse(content=to_return)
 
@@ -276,7 +313,8 @@ def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
   """Regenerates the dubbing for a given utterance.
 
   Args:
-    req: The request with the video, utterance index, and additional instructions.
+    req: The request with the video, utterance index, and additional
+        instructions.
 
   Returns:
     A response with the new path to the dubbed audio.
@@ -316,9 +354,9 @@ def save_video(video: UploadFile) -> tuple[str, str]:
   gcs_path = upload_video_to_gcs(video_name, video.file, config.gcs_bucket_name)
   # save the file locally
   video.file.seek(0)
-  local_dir = os.path.join(MOUNT_POINT, os.path.dirname(gcs_path))
+  local_dir = os.path.join(mount_point, os.path.dirname(gcs_path))
   os.makedirs(name=local_dir, exist_ok=True)
-  local_path = os.path.join(MOUNT_POINT, gcs_path)
+  local_path = os.path.join(mount_point, gcs_path)
   with open(local_path, "wb") as local_file:
     shutil.copyfileobj(video.file, local_file)
 
@@ -337,7 +375,8 @@ def sanitize_filename(orig: str) -> str:
     orig: the original file name.
 
   Returns:
-    a sanitized version of the name.
+    a sanitized version of the name. If the name is empty after sanitizing,
+        video.mp4 is returned.
   """
   special_chars = " \"'$&*()[]{}<>|;?/~"
   trans_map = str.maketrans(dict.fromkeys(special_chars))
@@ -345,66 +384,3 @@ def sanitize_filename(orig: str) -> str:
   if not new_name:
     return "video.mp4"
   return new_name
-
-
-##############################
-## TESTING END POINTS BELOW ##
-##############################
-
-
-@app.get("/test", response_class=HTMLResponse)
-async def read_item_test(request: Request):
-  return templates.TemplateResponse("test.html", {"request": request})
-
-
-@app.get("/transcribe", response_model=list[TranscribeSegment])
-def transcribe(gcs_uri: str, mime_type: str = "video/mp4"):
-  client = genai.Client(
-      vertexai=True,
-      project=config.gcp_project_id,
-      location=config.gcp_project_location,
-  )
-  return annotate_transcript(
-      client,
-      model_name=config.gemini_model,
-      gcs_uri=gcs_uri,
-      num_speakers=2,  # default for testing
-      script="",
-      mime_type=mime_type,
-  )
-
-
-@app.get("/generate_audio_test")
-def generate_audio_test(
-    api_key: str,
-    prompt: str,
-    voice_name: str,
-):
-  client = genai.Client(api_key=api_key)
-  audio_data = generate_audio(
-      text="hello world",
-      language="en",
-      prompt=prompt,
-      voice_name=voice_name,
-      output_path="test.wav",
-      model_name="gemini-2.5-pro-tts",
-  )
-
-  return JSONResponse(content={"audio_data": audio_data})
-
-
-@app.post("/match_voice")
-def match_voice_endpoint(segments: list[TranscribeSegment]):
-  # Initialize the genai client
-  client = genai.Client(
-      vertexai=True,
-      project=config.gcp_project_id,
-      location=config.gcp_project_location,
-  )
-
-  # Match voices for all speakers
-  voice_map = match_voice(
-      client, model_name=config.gemini_model, segments=segments
-  )
-
-  return voice_map
