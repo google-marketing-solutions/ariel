@@ -1,8 +1,28 @@
-import { showToast } from './utils.js';
-import { regenerateDubbing, regenerateTranslation, runRegenerateDubbing, runRegenerateTranslation } from './api.js';
+import { runRegenerateDubbing, runRegenerateTranslation } from './api.js';
 import { renderTimeline } from './timeline.js';
+import { showToast } from './utils.js';
 
 let activeEditorSession = null;
+
+function playTranslatedAudio(utterance) {
+    if (utterance.audio_url) {
+        const audio = new Audio(utterance.audio_url);
+        audio.play();
+        audio.currentTime = 0;
+    }
+}
+
+function playOriginalAudio(utterance) {
+    const audioSource = document.querySelector('#results-video-preview');
+    if (audioSource) {
+        audioSource.currentTime = utterance.original_start_time;
+        audioSource.play();
+        const duration = (utterance.original_end_time - utterance.original_start_time) * 1000;
+        setTimeout(() => {
+            audioSource.pause();
+        }, duration);
+    }
+}
 
 function hasUnsavedChanges() {
     if (!activeEditorSession) {
@@ -83,9 +103,11 @@ export function renderUtterances(currentVideoData, speakers, videoDuration) {
                     </div>
                 </div>
                 <div class="d-flex flex-column">
-                    <button class="btn btn-sm btn-outline-secondary remove-utterance-btn mb-2"><i class="bi bi-trash"></i></button>
+                    <button class="btn btn-sm btn-outline-secondary edit-utterance-btn mb-2"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-secondary play-audio-btn mb-2" data-text-type="original"><i class="bi bi-volume-up-fill"></i></button>
+                    <button class="btn btn-sm btn-outline-secondary play-audio-btn mb-2" data-text-type="translated"><i class="bi bi-translate"></i></button>
                     <button class="btn btn-sm btn-outline-secondary mute-utterance-btn mb-2"><i class="bi bi-mic-mute"></i></button>
-                    <button class="btn btn-sm btn-outline-secondary edit-utterance-btn"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-secondary remove-utterance-btn"><i class="bi bi-trash"></i></button>
                 </div>
         `;
 
@@ -105,6 +127,18 @@ export function renderUtterances(currentVideoData, speakers, videoDuration) {
         }
 
         // --- BUTTON LISTENERS ---
+
+        const playAudioBtns = utteranceCard.querySelectorAll('.play-audio-btn');
+        playAudioBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const textType = e.currentTarget.dataset.textType;
+                if (textType === 'original') {
+                    playOriginalAudio(utterance);
+                } else if (textType === 'translated') {
+                    playTranslatedAudio(utterance);
+                }
+            });
+        });
 
         const removeBtn = utteranceCard.querySelector('.remove-utterance-btn');
         removeBtn.addEventListener('click', () => {
@@ -187,7 +221,10 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
     utteranceEditorContent.innerHTML = `
         <div class="d-flex justify-content-between align-items-center mb-1">
             <label class="form-label mb-0">Original Text</label>
-            <span class="badge bg-secondary">${originalDuration}s</span>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-secondary me-2">${originalDuration}s</span>
+                <button class="btn btn-sm btn-outline-secondary play-audio-btn" data-text-type="original"><i class="bi bi-volume-up-fill"></i></button>
+            </div>
         </div>
         <textarea id="original-text-area" class="form-control" rows="3">${utterance.original_text}</textarea>
 
@@ -197,7 +234,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         </div>
         <div class="d-flex align-items-center">
             <textarea id="translated-text-area" class="form-control" rows="3">${utterance.translated_text}</textarea>
-            <button class="btn btn-sm btn-outline-secondary ms-2 text-to-speech-icon" data-text-type="translated"><i class="bi bi-volume-up-fill"></i></button>
+            <button class="btn btn-sm btn-outline-secondary ms-2 play-audio-btn" data-text-type="translated"><i class="bi bi-translate"></i></button>
         </div>
 
         <div class="mb-3">
@@ -350,27 +387,21 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
             });
     });
 
-    function setupTextToSpeechListeners(utterance, containerElement) {
-        const ttsIcons = containerElement.querySelectorAll('.text-to-speech-icon');
+    function setupAudioPlaybackListeners(utterance, containerElement) {
+        const ttsIcons = containerElement.querySelectorAll('.play-audio-btn');
         ttsIcons.forEach(icon => {
             icon.addEventListener('click', (e) => {
                 const textType = e.currentTarget.dataset.textType;
-                let textToSpeak = '';
                 if (textType === 'original') {
-                    textToSpeak = utterance.original_text;
+                    playOriginalAudio(utterance);
                 } else if (textType === 'translated') {
-                    textToSpeak = containerElement.querySelector('#translated-text-area').value;
-                }
-                if (utterance.audio_url) {
-                    const audio = new Audio(utterance.audio_url);
-                    audio.play();
-                    audio.currentTime = 0;
+                    playTranslatedAudio(utterance);
                 }
             });
         });
     }
 
-    setupTextToSpeechListeners(utterance, utteranceEditorContent);
+    setupAudioPlaybackListeners(utterance, utteranceEditorContent);
 
     const closeEditorBtn = utteranceEditor.querySelector('.btn-close');
     closeEditorBtn.addEventListener('click', () => {
