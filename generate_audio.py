@@ -89,14 +89,14 @@ def generate_audio(
 
     # we try TTS 3 times before failing. Normally, if a second attempt doesn't
     # result in audio being generated, it never will with the current text.
-    response = None
+    response: texttospeech.SynthesizeSpeechResponse | None = None
     for _ in range(3):
       response = _call_tts(tts_client, request)
       if response.audio_content:
         break
 
     logging.info("Gemini TTS Character Count for generate_audio: %s", len(text))
-    if not response:
+    if not response or not response.audio_content:
       logging.error("Text-to-speech API returned empty audio content.")
       return 0.0
 
@@ -105,10 +105,17 @@ def generate_audio(
   except (
       api_exceptions.GoogleAPICallError,
       api_exceptions.RetryError,
+  ) as api_error:
+    logging.error("An error occurred calling Gemini-TTS: %s", api_error)
+    return 0.0
+  except (
+      EOFError,
       IOError,
       wave.Error,
-  ) as e:
-    logging.error("An error occurred during audio generation: %s", e)
+  ) as sys_error:
+    logging.error(
+        "An error occurred while processing the generated audio: %s", sys_error
+    )
     return 0.0
 
 
