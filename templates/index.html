@@ -266,7 +266,15 @@
             <div class="button-bar mt-3">
                 <div class="download-group">
                     <a id="download-video-button" class="btn btn-outline-primary me-2" download>Download Video</a>
-                    <a id="download-audio-button" class="btn btn-outline-primary" download>Download Audio</a>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            Download Audio
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a id="download-vocals-button" class="dropdown-item" href="#" download>Download Vocals</a></li>
+                            <li><a id="download-vocals-music-button" class="dropdown-item" href="#" download>Download Vocals + Music</a></li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="action-group">
                     <button id="go-back-to-editing-button" class="btn btn-secondary">Go back to editing</button>

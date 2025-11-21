@@ -1,9 +1,9 @@
-import { fetchLanguages, fetchVoices, processVideo, generateVideo, completeVideo, runRegenerateDubbing, runRegenerateTranslation } from './api.js';
-import { renderTimeline } from './timeline.js';
-import { renderUtterances, checkZeroDurationUtterances } from './utterance.js';
-import { renderVoiceList, addVoice, handleSpeakerModalClose } from './modals.js';
+import { completeVideo, fetchLanguages, fetchVoices, generateVideo, processVideo, runRegenerateDubbing, runRegenerateTranslation } from './api.js';
+import { addVoice, handleSpeakerModalClose, renderVoiceList } from './modals.js';
 import { appState } from './state.js';
+import { renderTimeline } from './timeline.js';
 import { showToast } from './utils.js';
+import { checkZeroDurationUtterances, renderUtterances } from './utterance.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Instantiate templates
@@ -68,7 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const generatedVideoView = document.getElementById('generated-video-view');
     const generatedVideoPreview = document.getElementById('generated-video-preview');
     const downloadVideoButton = document.getElementById('download-video-button');
-    const downloadAudioButton = document.getElementById('download-audio-button');
+    const downloadVocalsButton = document.getElementById('download-vocals-button');
+    const downloadVocalsMusicButton = document.getElementById('download-vocals-music-button');
     const goBackToEditingButton = document.getElementById('go-back-to-editing-button');
     const startOverButton = document.getElementById('start-over-button');
 
@@ -280,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
             speakerModalEl.querySelector('.modal-title').textContent = 'Edit Speaker Voice';
             speakerModalEl.querySelector('#add-voice-btn').textContent = 'Save Changes';
             speakerModalEl.querySelector('#speaker-name-input').value = speakerToEdit.name;
-            
+
             speakerModal.show();
             return;
         }
@@ -289,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const speakerCard = e.target.closest('.speaker-card');
             if (speakerCard) {
                 const speakerIdToRemove = speakerCard.dataset.speakerId;
-                
+
                 // Filter out the removed speaker
                 speakers = speakers.filter(s => s.id !== speakerIdToRemove);
 
@@ -393,7 +394,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const result = await generateVideo(currentVideoData);
-            console.log("Got the following from the backend:", result.video_url);
+            console.log("VIDEO URL: Got the following from the backend:", result.video_url);
+            console.log("VOCALS URL: Got the following from the backend:", result.vocals_url);
+            console.log("VOCALS + MUSIC URL: Got the following from the backend:", result.vocals_url);
 
             thinkingPopup.style.display = 'none';
             arielLogo.classList.remove('ariel-logo-animated');
@@ -407,11 +410,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Set up download button
             downloadVideoButton.href = result.video_url;
-            downloadVideoButton.download = `generated_video_${currentVideoData.video_id}.mp4`;
+            downloadVideoButton.download = `generated_video_${currentVideoData.video_id}`;
 
-            // Set up audio download button
-            downloadAudioButton.href = result.audio_url; // Assuming backend provides this
-            downloadAudioButton.download = `generated_audio_${currentVideoData.video_id}.mp3`;
+            // Set up audio download buttons
+            downloadVocalsButton.href = result.vocals_url;
+            downloadVocalsButton.download = `vocals_only_${currentVideoData.video_id}.wav`;
+            downloadVocalsMusicButton.href = result.merged_audio_url;
+            downloadVocalsMusicButton.download = `vocals_and_music_${currentVideoData.video_id}.wav`;
 
         } catch (error) {
             console.error('Error generating video:', error);
@@ -439,8 +444,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateResetButtonVisibility() {
         if (!currentVideoData) return;
 
-        const hasChanges = currentVideoData.utterances.some(u => 
-            u.translated_start_time !== u.initial_translated_start_time || 
+        const hasChanges = currentVideoData.utterances.some(u =>
+            u.translated_start_time !== u.initial_translated_start_time ||
             u.translated_end_time !== u.initial_translated_end_time
         );
 
@@ -526,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         speakerModalEl.querySelector('.modal-title').textContent = 'Change Speaker Voice'; // Change modal title
                         speakerModalEl.querySelector('#add-voice-btn').textContent = 'Change Voice'; // Change button text
                         speakerModalEl.querySelector('#speaker-name-input').value = speakerToEdit.name; // Populate name input
-                        
+
                         // Pre-select the current speaker's voice in the modal
                         const voiceListModalEl = document.getElementById('voice-list');
                         const currentActiveVoice = voiceListModalEl.querySelector('.active');
@@ -572,7 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 gender: s.gender
                             }));
                             formData.append('speakers', JSON.stringify(speakersToPost));
-                            
+
                             const result = await processVideo(formData);
                             currentVideoData = result;
                             currentVideoData.utterances.forEach(utterance => {
@@ -596,7 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         } else if (speakersChanged) {
                             console.log('Batch regenerating dubbings for speaker changes...');
-                            const changedSpeakers = speakers.filter(s => 
+                            const changedSpeakers = speakers.filter(s =>
                                 !currentVideoData.speakers.find(cs => cs.speaker_id === s.id && cs.voice === s.voice)
                             );
                             const changedSpeakerIds = changedSpeakers.map(cs => cs.id);

@@ -38,18 +38,21 @@ from generate_audio import shorten_audio
 from google import genai
 import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
-from models import RegenerateRequest
-from models import RegenerateResponse
-from models import Speaker
-from models import Utterance
-from models import Video
-from process import combine_video_and_audio
-from process import merge_background_and_vocals
-from process import separate_audio_from_video
-from transcribe import TranscribeSegment, annotate_transcript
-from transcribe import transcribe_media
+from models import (
+    RegenerateRequest,
+    RegenerateResponse,
+    Speaker,
+    Utterance,
+    Video,
+)
+from process import (
+    combine_video_and_audio,
+    merge_background_and_vocals,
+    merge_vocals,
+    separate_audio_from_video,
+)
+from transcribe import TranscribeSegment, annotate_transcript, transcribe_media
 from translate import translate_text
-
 
 # Set up Google Cloud Logging
 if "K_SERVICE" in os.environ:
@@ -203,15 +206,15 @@ async def process_video(
       video.filename
   )
   with open(original_audio_path, "rb") as f:
-    upload_file_to_gcs(
-        original_audio_path, f, config.gcs_bucket_name)
+    upload_file_to_gcs(original_audio_path, f, config.gcs_bucket_name)
   with open(vocals_path, "rb") as f:
     upload_file_to_gcs(vocals_path, f, config.gcs_bucket_name)
   with open(background_path, "rb") as f:
     upload_file_to_gcs(background_path, f, config.gcs_bucket_name)
 
   gcs_original_audio_uri = (
-      f"gs://{config.gcs_bucket_name}/{original_audio_path}")
+      f"gs://{config.gcs_bucket_name}/{original_audio_path}"
+  )
 
   genai_client = genai.Client(
       vertexai=True,
@@ -284,6 +287,24 @@ async def process_video(
   return to_return
 
 
+def _get_dubbed_vocals_path(video_data: Video, local_dir: str) -> str:
+  """Generates the path for the dubbed vocals audio file.
+
+  Args:
+    video_data: the Video object representing the final video.
+    local_dir: the local directory to save the file in.
+
+  Returns:
+    The path to the dubbed vocals audio file.
+  """
+  dubbed_vocals_path = merge_vocals(
+      dubbed_vocals_metadata=video_data.utterances,
+      output_directory=local_dir,
+      target_language=video_data.translate_language,
+  )
+  return dubbed_vocals_path
+
+
 @app.post("/generate_video")
 def generate_video(video_data: Video) -> JSONResponse:
   """Generates the final, translated video.
@@ -300,10 +321,11 @@ def generate_video(video_data: Video) -> JSONResponse:
   background_sound_path = os.path.join(
       local_dir, "htdemucs", "original_audio", "no_vocals.wav"
   )
-  logging.info("Merging background and vocals for %s", video_data.video_id)
+  dubbed_vocals_path = _get_dubbed_vocals_path(video_data, local_dir)
+  logging.info(f"Merging background and vocals for {video_data.video_id}")
   merged_audio_path = merge_background_and_vocals(
       background_audio_file=background_sound_path,
-      dubbed_vocals_metadata=video_data.utterances,
+      dubbed_vocals_path=dubbed_vocals_path,
       output_directory=local_dir,
       target_language=video_data.translate_language,
   )
@@ -313,8 +335,14 @@ def generate_video(video_data: Video) -> JSONResponse:
   combine_video_and_audio(
       local_video_path, merged_audio_path, combined_video_path
   )
-  public_video_path = f"{mount_point}/{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
-  to_return = {"video_url": f"{public_video_path}"}
+  public_video_path = f"/{mount_point}/{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
+  public_vocals_path = f"/{mount_point}/{video_data.video_id}/{os.path.basename(dubbed_vocals_path)}"
+  public_merged_audio_path = f"/{mount_point}/{video_data.video_id}/{os.path.basename(merged_audio_path)}"
+  to_return = {
+      "video_url": f"{public_video_path}",
+      "vocals_url": f"{public_vocals_path}",
+      "merged_audio_url": f"{public_merged_audio_path}",
+  }
   return JSONResponse(content=to_return)
 
 

@@ -78,7 +78,7 @@ def separate_audio_from_video(video_file_path: str,
 def merge_background_and_vocals(
     *,
     background_audio_file: str,
-    dubbed_vocals_metadata: list[Utterance],
+    dubbed_vocals_path: str,
     output_directory: str,
     target_language: str,
     dubbed_audio_filename: str = "dubbed_audio",
@@ -87,26 +87,85 @@ def merge_background_and_vocals(
   """Mixes background music and vocals tracks, normalizes the volume, and exports the result.
 
   Args:
-    background_audio_file: Path to the background audio file.
-    dubbed_vocals_metadata: A list of dictionaries, each containing the path
-        to a dubbed vocal chunk and its start time.
-    output_directory: The base directory where the output file will be saved.
-    target_language: The language to dub the ad into. It must be ISO 3166-1
+      background_audio_file: Path to the background audio file.
+      dubbed_vocals_path: Path to the dubbed vocals audio file.
+      output_directory: The base directory where the output file will be saved.
+      target_language: The language to dub the ad into. It must be ISO 3166-1
         alpha-2 country code.
-    dubbed_audio_filename: The base name for the output audio file.
-    output_format: The file format for the output audio file (e.g., 'mp3').
-
+      vocals_volume_adjustment: By how much the vocals audio volume should be
+        adjusted, in dB.
+      background_volume_adjustment: By how much the background audio volume
+        should be adjusted, in dB.
+      output_subdirectory: The name of the subdirectory within the output
+        directory to save the file.
+      dubbed_audio_filename: The base name for the output audio file.
+      output_format: The file format for the output audio file (e.g., 'mp3').
 
   Returns:
-    The path to the output audio file with merged dubbed vocals and original
-    background audio.
+    The path to the output audio file with merged dubbed vocals.
   """
 
   background_audio = moviepy.AudioFileClip(background_audio_file)
-  background_audio.with_start(0)
+  background_audio = background_audio.with_start(0)
+  dubbed_vocals = moviepy.AudioFileClip(dubbed_vocals_path)
 
   # Create a silent track with the same duration as the background audio
-  audio_parts: list[moviepy.AudioClip] = [background_audio]
+  audio_parts: list[moviepy.AudioClip] = [background_audio, dubbed_vocals]
+
+  combined_audio: moviepy.CompositeAudioClip = moviepy.CompositeAudioClip(
+      audio_parts
+  )
+  target_language_suffix = "_" + target_language.replace("-", "_").lower()
+  dubbed_audio_file = os.path.join(
+      output_directory,
+      dubbed_audio_filename + target_language_suffix + "." + output_format,
+  )
+  combined_audio.write_audiofile(dubbed_audio_file)
+  return dubbed_audio_file
+
+
+def merge_vocals(
+    *,
+    dubbed_vocals_metadata: list[Utterance],
+    output_directory: str,
+    target_language: str,
+    vocals_volume_adjustment: float = 0.0,
+    background_volume_adjustment: float = 0.0,
+    dubbed_audio_filename: str = "vocals_only",
+    output_format: str = "wav",
+) -> str:
+  """Merges dubbed vocal tracks into a single audio file.
+
+  Args:
+      dubbed_vocals_metadata: A list of dictionaries, each containing the path
+        to a dubbed vocal chunk and its start time.
+      output_directory: The base directory where the output file will be saved.
+      target_language: The language to dub the ad into. It must be ISO 3166-1
+        alpha-2 country code.
+      vocals_volume_adjustment: By how much the vocals audio volume should be
+        adjusted, in dB.
+      background_volume_adjustment: By how much the background audio volume
+        should be adjusted, in dB.
+      output_subdirectory: The name of the subdirectory within the output
+        directory to save the file.
+      dubbed_audio_filename: The base name for the output audio file.
+      output_format: The file format for the output audio file (e.g., 'mp3').
+
+  Returns:
+    The path to the output audio file with merged dubbed vocals.
+  """
+  audio_parts: list[moviepy.AudioClip] = []
+  max_end_time = 0
+  for utterance in dubbed_vocals_metadata:
+    if utterance.removed or not utterance.audio_url:
+      continue
+    max_end_time = max(max_end_time, utterance.translated_end_time)
+
+  # Create a silent track with the same duration as the background audio
+  silent_audio = moviepy.AudioClip(
+      frame_function=lambda t: [0, 0], duration=max_end_time
+  )
+  audio_parts.append(silent_audio)
 
   # Overlay each vocal chunk at its start time
   for utterance in dubbed_vocals_metadata:
