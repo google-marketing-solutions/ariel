@@ -339,9 +339,9 @@ def generate_video(video_data: Video) -> JSONResponse:
   public_vocals_path = f"/{mount_point}/{video_data.video_id}/{os.path.basename(dubbed_vocals_path)}"
   public_merged_audio_path = f"/{mount_point}/{video_data.video_id}/{os.path.basename(merged_audio_path)}"
   to_return = {
-      "video_url": f"{public_video_path}",
-      "vocals_url": f"{public_vocals_path}",
-      "merged_audio_url": f"{public_merged_audio_path}",
+      "video_url": f"{public_video_path}?v={uuid.uuid4()}",
+      "vocals_url": f"{public_vocals_path}?v={uuid.uuid4()}",
+      "merged_audio_url": f"{public_merged_audio_path}?v={uuid.uuid4()}",
   }
   return JSONResponse(content=to_return)
 
