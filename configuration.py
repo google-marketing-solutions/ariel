@@ -22,9 +22,13 @@ class Config:
     gcp_project_location: str
     gcs_bucket_name: str
     gemini_model: str
+    gemini_flash_model: str
+    gemini_pro_model: str
     audio_format: str
     video_format: str
     gemini_tts_model: str
+    gemini_flash_tts_model: str
+    gemini_pro_tts_model: str
 
 
 def get_config() -> Config:
@@ -36,8 +40,15 @@ def get_config() -> Config:
         gcp_project_location=os.environ.get('GCP_PROJECT_LOCATION'),
         gcs_bucket_name=os.environ.get('GCS_BUCKET_NAME'),
         gemini_model=os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash'),
+        gemini_flash_model=os.environ.get('GEMINI_FLASH_MODEL',
+                                          'gemini-2.5-flash'),
+        gemini_pro_model=os.environ.get('GEMINI_PRO_MODEL', 'gemini-2.5-pro'),
         audio_format=os.environ.get('AUDIO_FORMAT', 'mp3'),
         video_format=os.environ.get('VIDEO_FORMAT', 'mp4'),
         gemini_tts_model=os.environ.get('GEMINI_TTS_MODEL',
                                         'gemini-2.5-pro-tts'),
+        gemini_flash_tts_model=os.environ.get('GEMINI_FLASH_TTS_MODEL',
+                                              'gemini-2.5-flash-tts'),
+        gemini_pro_tts_model=os.environ.get('GEMINI_PRO_TTS_MODEL',
+                                            'gemini-2.5-pro-tts'),
     )

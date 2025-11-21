@@ -2,7 +2,7 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-SERVICE_NAME="ariel-v2-dev"
+SERVICE_NAME="ariel-v2"
 REGION=$(grep "GCP_PROJECT_LOCATION" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
 GCS_BUCKET=$(grep "GCS_BUCKET_NAME" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
 

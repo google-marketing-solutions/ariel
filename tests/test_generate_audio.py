@@ -203,6 +203,34 @@ class TestGenerateAudio(unittest.TestCase):
     y, sr = sf.read(self.output_path)
     self.assertAlmostEqual(len(y) / sr, duration_seconds, delta=0.1)
 
+  @patch("generate_audio.texttospeech.TextToSpeechClient")
+  def test_generate_audio_with_model_name(self, MockTextToSpeechClient):
+    mock_tts_client = MockTextToSpeechClient.return_value
+    mock_response = Mock()
+    sample_rate = 24000
+    duration_seconds = 3.0
+
+    # Create a 3-second wav file in memory
+    wav_data = self.create_in_memory_wav(duration_seconds, sample_rate, 16, 1)
+
+    mock_response.audio_content = wav_data
+    mock_tts_client.synthesize_speech.return_value = mock_response
+
+    model_name = "gemini-2.5-flash-tts"
+    duration = generate_audio(
+      text="Hello, world!",
+      prompt="A friendly voice.",
+      language="en-US",
+      voice_name="echo",
+      output_path=self.output_path,
+      model_name=model_name,
+    )
+
+    mock_tts_client.synthesize_speech.assert_called_once()
+    call_args = mock_tts_client.synthesize_speech.call_args
+    self.assertEqual(call_args.kwargs['request'].voice.model_name, model_name)
+    self.assertAlmostEqual(duration, duration_seconds, delta=0.1)
+
   @patch("generate_audio.logging.error")
   @patch("generate_audio.texttospeech.TextToSpeechClient")
   def test_generate_audio_api_error(

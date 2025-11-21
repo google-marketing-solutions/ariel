@@ -82,6 +82,8 @@ class Video(BaseModel):
     prompt_enhancements: str
     speakers: list[Speaker]
     utterances: list[Utterance]
+    model_name: str = ""
+    tts_model_name: str = ""
 
   
 class RegenerateRequest(BaseModel):

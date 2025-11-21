@@ -319,6 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('translate_language', translationLanguage.value);
         formData.append('prompt_enhancements', geminiInstructions.value);
         formData.append('adjust_speed', adjustSpeedToggle.checked);
+        formData.append('use_pro_model', geminiModelToggle.checked);
         const speakersToPost = speakers.map((s, index) => ({
             id: `speaker_${(index + 1).toString()}`,
             name: s.name,

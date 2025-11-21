@@ -1,3 +1,17 @@
+"""Entry point into the Ariel v2 solution."""
+# Copyright 2025 Google LLC
+
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy
+# of the License at
+
+#   http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
 import json
 import logging
 import os
@@ -73,6 +87,7 @@ async def process_video(
     prompt_enhancements: Annotated[str, Form()],
     adjust_speed: Annotated[bool, Form()],
     speakers: Annotated[str, Form()],
+    use_pro_model: Annotated[bool, Form()] = False,
 ) -> Video:
   logging.info(f"Starting Process Video for {video.filename}")
   local_video_path, gcs_video_uri = save_video(video)
@@ -108,9 +123,13 @@ async def process_video(
 
   logging.info(f"Transcribing {video.filename}")
   transcript = transcribe_media(original_audio_path)
+  
+  gemini_model = config.gemini_pro_model if use_pro_model else config.gemini_flash_model
+  gemini_tts_model = config.gemini_pro_tts_model if use_pro_model else config.gemini_flash_tts_model
+  
   annotated_transcript = annotate_transcript(
       client=genai_client,
-      model_name=config.gemini_model,
+      model_name=gemini_model,
       gcs_uri=gcs_original_audio_uri,
       num_speakers=len(speaker_list),
       script=transcript,
@@ -127,7 +146,7 @@ async def process_video(
 
     translated_text = translate_text(
         genai_client, original_language, translate_language, t.transcript,
-        t.tone
+        gemini_model, t.tone
     )
 
     local_audio_path = os.path.join(local_dir, f"audio_{i}.wav")
@@ -137,7 +156,7 @@ async def process_video(
         translate_language,
         speaker.voice,
         local_audio_path,
-        model_name=config.gemini_tts_model,
+        model_name=gemini_tts_model,
     )
     original_duration = t.end_time - t.start_time
     if adjust_speed and audio_duration and audio_duration > original_duration:
@@ -169,6 +188,8 @@ async def process_video(
       prompt_enhancements=prompt_enhancements,
       speakers=speaker_list,
       utterances=utterances,
+      model_name=gemini_model,
+      tts_model_name=gemini_tts_model,
   )
 
   logging.info(f"Completed processing {video.filename}")
@@ -229,6 +250,7 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
       req.video.original_language,
       req.video.translate_language,
       utterance.original_text,
+      req.video.model_name,
       req.instructions,
   )
   target_dir = os.path.dirname(utterance.audio_url)
@@ -242,7 +264,7 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
       req.video.translate_language,
       utterance.speaker.voice,
       new_path,
-      config.gemini_tts_model,
+      req.video.tts_model_name,
   )
   return RegenerateResponse(
       translated_text=new_translation, audio_url=new_path, duration=duration
@@ -271,7 +293,7 @@ def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
       req.video.translate_language,
       utterance.speaker.voice,
       new_path,
-      config.gemini_tts_model,
+      req.video.tts_model_name,
   )
   return RegenerateResponse(
       translated_text=utterance.translated_text,
