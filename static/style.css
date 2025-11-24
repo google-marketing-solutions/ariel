@@ -627,6 +627,48 @@ select, option{
     gap: 1rem;
 }
 
+.floating-video-player {
+  position: fixed;
+  top: 100px;
+  left: 20px;
+  z-index: 1050;
+  background-color: rgba(42, 42, 42, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  max-width: 50vw;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease-in-out;
+  overflow: hidden; /* This will clip the video's corners */
+}
+
+.floating-video-player .results-video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+
+
+#close-floating-video-btn {
+    display: none;
+}
+
+.floating-video-player #close-floating-video-btn {
+    display: block;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1051;
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.floating-video-player:hover {
+    cursor: move;
+}
+
 #gemini-instructions::placeholder {
     color: var(--secondary-text-color);
     opacity: 1; /* Firefox applies a lower opacity by default */

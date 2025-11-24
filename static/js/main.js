@@ -346,6 +346,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             mainContent.style.display = 'none';
             resultsView.style.display = 'block';
+            const videoPlayerContainer = document.getElementById('video-player-container');
+            videoPlayerContainer.classList.add('floating-video-player');
+            makeDraggable(videoPlayerContainer);
+
+            const closeFloatingVideoBtn = document.getElementById('close-floating-video-btn');
+            closeFloatingVideoBtn.addEventListener('click', () => {
+                videoPlayerContainer.classList.remove('floating-video-player');
+                videoPlayerContainer.style.cssText = ''; // Reset inline styles
+            });
             // timelineControlsContainer.style.display = 'block';
 
             if (videoInput.files[0]) {
@@ -425,6 +434,70 @@ document.addEventListener('DOMContentLoaded', () => {
             stopThinkingAnimation();
         }
     });
+
+function makeDraggable(element) {
+    let isDragging = false;
+    let offsetX, offsetY;
+    let currentX, currentY;
+    let animationFrameId;
+
+    function onMouseMove(e) {
+        if (isDragging) {
+            e.preventDefault();
+            currentX = e.clientX;
+            currentY = e.clientY;
+            if (!animationFrameId) {
+                animationFrameId = requestAnimationFrame(updatePosition);
+            }
+        }
+    }
+
+    function updatePosition() {
+        animationFrameId = null;
+        if (!isDragging) return;
+
+        let newX = currentX - offsetX;
+        let newY = currentY - offsetY;
+
+        const viewportWidth = document.documentElement.clientWidth;
+        const viewportHeight = document.documentElement.clientHeight;
+        const elementWidth = element.offsetWidth;
+        const elementHeight = element.offsetHeight;
+
+        newX = Math.max(0, Math.min(newX, viewportWidth - elementWidth));
+        newY = Math.max(0, Math.min(newY, viewportHeight - elementHeight));
+
+        element.style.left = `${newX}px`;
+        element.style.top = `${newY}px`;
+    }
+
+    function onMouseUp() {
+        if (isDragging) {
+            isDragging = false;
+            element.style.cursor = 'move';
+            document.body.style.userSelect = '';
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+    }
+
+    element.addEventListener('mousedown', (e) => {
+        if (e.target === element || e.target.classList.contains('results-video')) {
+            isDragging = true;
+            offsetX = e.clientX - element.getBoundingClientRect().left;
+            offsetY = e.clientY - element.getBoundingClientRect().top;
+            element.style.cursor = 'grabbing';
+            document.body.style.userSelect = 'none';
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
+    });
+}
 
     goBackToEditingButton.addEventListener('click', () => {
         generatedVideoView.style.display = 'none';
