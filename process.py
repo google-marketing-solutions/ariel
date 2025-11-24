@@ -169,12 +169,26 @@ def merge_vocals(
 
   # Overlay each vocal chunk at its start time
   for utterance in dubbed_vocals_metadata:
-    if utterance.removed or not utterance.audio_url:
+    if utterance.removed:
       continue
 
-    vocal_chunk = moviepy.AudioFileClip(utterance.audio_url)
-    vocal_chunk = vocal_chunk.with_start(float(utterance.translated_start_time))
-    audio_parts.append(vocal_chunk)
+    vocal_chunk = None
+    if utterance.muted:
+      original_vocals_path = os.path.join(
+          output_directory, "htdemucs", "original_audio", "vocals.wav"
+      )
+      vocal_chunk = moviepy.AudioFileClip(original_vocals_path)
+      vocal_chunk = vocal_chunk.subclipped(
+          utterance.original_start_time, utterance.original_end_time
+      )
+    elif utterance.audio_url:
+      vocal_chunk = moviepy.AudioFileClip(utterance.audio_url)
+
+    if vocal_chunk:
+      vocal_chunk = vocal_chunk.with_start(
+          float(utterance.translated_start_time)
+      )
+      audio_parts.append(vocal_chunk)
 
   combined_audio: moviepy.CompositeAudioClip = moviepy.CompositeAudioClip(
       audio_parts
