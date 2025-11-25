@@ -150,6 +150,14 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --role="roles/logging.logWriter" \
     --quiet
 
+# Grant 'roles/run.invoker' to the IAP service account
+IAP_SERVICE_ACCOUNT="service-${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com"
+echo "🔑 Granting 'Cloud Run Invoker' role to the IAP service account ($IAP_SERVICE_ACCOUNT)..."
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:$IAP_SERVICE_ACCOUNT" \
+    --role="roles/run.invoker" \
+    --quiet
+
 echo "🎉 Success! Permission granted."
 echo "--------------------------------------------------------"
 echo "Next Step: Deploy Ariel v2 by running deploy.sh."
