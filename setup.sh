@@ -99,6 +99,19 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --quiet
 echo "✅ Cloud Build permissions granted."
 
+# Grant roles to the Default Compute Service Account
+DEFAULT_COMPUTE_SERVICE_ACCOUNT="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+echo "🔑 Granting 'Storage Object Viewer' and 'Cloud Run Developer' roles to the Default Compute Service Account..."
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:$DEFAULT_COMPUTE_SERVICE_ACCOUNT" \
+    --role="roles/storage.objectViewer" \
+    --quiet
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:$DEFAULT_COMPUTE_SERVICE_ACCOUNT" \
+    --role="roles/run.builder" \
+    --quiet
+echo "✅ Default Compute Service Account permissions granted."
+
 # 6. Create the service account for the service to run as
 SERVICE_ACCOUNT_NAME="$SERVICE_NAME"
 SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -124,6 +137,11 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
+    --role="roles/run.builder" \
+    --quiet
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
     --role="roles/storage.objectViewer" \
     --quiet
 
@@ -134,6 +152,5 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 
 echo "🎉 Success! Permission granted."
 echo "--------------------------------------------------------"
-echo "Next Step: Deploy your Cloud Run service with IAP enabled."
-echo "gcloud run deploy $SERVICE_NAME --region=$REGION --source . --service-account=$SERVICE_ACCOUNT_EMAIL --iap=enabled"
+echo "Next Step: Deploy Ariel v2 by running deploy.sh."
 echo "--------------------------------------------------------"
