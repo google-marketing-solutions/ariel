@@ -6,21 +6,8 @@
 # Set the name of your Cloud Run service.
 SERVICE_NAME="ariel-v2"
 
-# Get region from gcloud config, or prompt if not set
-REGION=$(gcloud config get-value compute/region)
-if [[ -z "$REGION" ]]; then
-  read -p "Enter the GCP region for the service (e.g., us-central1): " REGION
-  if [[ -z "$REGION" ]]; then
-    echo "❌ Error: A region is required."
-    exit 1
-  fi
-  # Set the region in gcloud config for future use
-  gcloud config set compute/region "$REGION"
-fi
 
-echo "▶️ Starting permission script for service '$SERVICE_NAME' in region '$REGION'..."
-
-# 2. Get and confirm the current Project ID from gcloud config
+# 1. Get and confirm the current Project ID from gcloud config
 PROJECT_ID=$(gcloud config get-value project)
 
 if [[ -n "$PROJECT_ID" ]]; then
@@ -41,6 +28,20 @@ if [[ -z "$PROJECT_ID" ]]; then
 fi
 
 echo "✅ Using Project ID: $PROJECT_ID"
+
+# Get region from gcloud config, or prompt if not set
+REGION=$(gcloud config get-value compute/region)
+if [[ -z "$REGION" ]]; then
+  read -p "Enter the GCP region for the service (e.g., us-central1): " REGION
+  if [[ -z "$REGION" ]]; then
+    echo "❌ Error: A region is required."
+    exit 1
+  fi
+  # Set the region in gcloud config for future use
+  gcloud config set compute/region "$REGION"
+fi
+
+echo "▶️ Starting permission script for service '$SERVICE_NAME' in region '$REGION'..."
 
 # 3. Prompt for and create the Cloud Storage bucket
 read -p "Enter the name for the Cloud Storage bucket to be used for analysis: " BUCKET_NAME
@@ -127,6 +128,14 @@ else
   echo "✅ Service account already exists."
 fi
 
+# Wait for service account to be fully propagated
+echo "⏳ Waiting for service account to be available..."
+while ! gcloud iam service-accounts describe "$SERVICE_ACCOUNT_EMAIL" --project="$PROJECT_ID" --quiet &> /dev/null; do
+  echo "zzz..."
+  sleep 5
+done
+echo "✅ Service account is ready."
+
 # 7. Grant necessary roles to the Service Account
 echo "🔑 Granting 'Vertex AI User', 'Storage Object Viewer', and 'Logs Writer' roles to $SERVICE_ACCOUNT_EMAIL..."
 
@@ -148,14 +157,6 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
     --role="roles/logging.logWriter" \
-    --quiet
-
-# Grant 'roles/run.invoker' to the IAP service account
-IAP_SERVICE_ACCOUNT="service-${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com"
-echo "🔑 Granting 'Cloud Run Invoker' role to the IAP service account ($IAP_SERVICE_ACCOUNT)..."
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-    --member="serviceAccount:$IAP_SERVICE_ACCOUNT" \
-    --role="roles/run.invoker" \
     --quiet
 
 echo "🎉 Success! Permission granted."
