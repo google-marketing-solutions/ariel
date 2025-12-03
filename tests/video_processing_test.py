@@ -20,8 +20,8 @@ import tempfile
 from absl.testing import absltest
 from ariel import video_processing
 from moviepy.audio.AudioClip import AudioArrayClip
-from moviepy.editor import ColorClip
 from moviepy.video.compositing.CompositeVideoClip import clips_array
+from moviepy.video.VideoClip import ColorClip
 import numpy as np
 
 
@@ -36,15 +36,15 @@ def _create_mock_video(directory: str, video_duration: int = 5) -> str:
       The full path to the saved video file.
   """
   filename = os.path.join(directory, "mock_video.mp4")
-  red = ColorClip((256, 200), color=(255, 0, 0)).set_duration(video_duration)
-  green = ColorClip((256, 200), color=(0, 255, 0)).set_duration(video_duration)
-  blue = ColorClip((256, 200), color=(0, 0, 255)).set_duration(video_duration)
+  red = ColorClip((256, 200), color=(255, 0, 0), duration=video_duration)
+  green = ColorClip((256, 200), color=(0, 255, 0), duration=video_duration)
+  blue = ColorClip((256, 200), color=(0, 0, 255), duration=video_duration)
   combined_arrays = clips_array([[red, green, blue]])
   combined_arrays.fps = 30
   samples = int(44100 * video_duration)
   audio_data = np.zeros((samples, 2), dtype=np.int16)
   audio_clip = AudioArrayClip(audio_data, fps=44100)
-  final_clip = combined_arrays.set_audio(audio_clip)
+  final_clip = combined_arrays.with_audio(audio_clip)
   final_clip.write_videofile(filename, logger=None)
   return filename
 
@@ -97,15 +97,9 @@ class CombineAudioVideoTest(absltest.TestCase):
       video_path = os.path.join(
           directory, video_processing._OUTPUT, "video.mp4"
       )
-      red = ColorClip((256, 200), color=(255, 0, 0)).set_duration(
-          video_duration
-      )
-      green = ColorClip((256, 200), color=(0, 255, 0)).set_duration(
-          video_duration
-      )
-      blue = ColorClip((256, 200), color=(0, 0, 255)).set_duration(
-          video_duration
-      )
+      red = ColorClip((256, 200), color=(255, 0, 0), duration=video_duration)
+      green = ColorClip((256, 200), color=(0, 255, 0), duration=video_duration)
+      blue = ColorClip((256, 200), color=(0, 0, 255), duration=video_duration)
       combined_arrays = clips_array([[red, green, blue]])
       combined_arrays.fps = 30
       combined_arrays.write_videofile(video_path)

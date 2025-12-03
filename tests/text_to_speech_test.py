@@ -62,8 +62,14 @@ class TestVoiceAssigner(absltest.TestCase):
     mock_voices_object.get_all.return_value.voices = self.mock_elevenlabs_voices
     self.mock_elevenlabs_client.voices = mock_voices_object
     self.utterance_metadata = [
-        {"speaker_id": "speaker1", "ssml_gender": "Male"},
-        {"speaker_id": "speaker2", "ssml_gender": "Female"},
+        {
+            "speaker_id": "speaker1",
+            "ssml_gender": "Male"
+        },
+        {
+            "speaker_id": "speaker2",
+            "ssml_gender": "Female"
+        },
     ]
 
   def test_assigned_voices_google_tts_with_preferred_voices(self):
@@ -299,7 +305,10 @@ class UpdateUtteranceMetadataTest(parameterized.TestCase):
                   "ssml_gender": "Female",
               },
           ],
-          {"speaker1": "Callum", "speaker2": "Sophie"},
+          {
+              "speaker1": "Callum",
+              "speaker2": "Sophie"
+          },
           [
               {
                   "start": 0.0,
@@ -614,9 +623,16 @@ class TestElevenlabsCloneVoices(absltest.TestCase):
 
   def test_clone_voices_success(self):
     mock_client = MagicMock(spec=ElevenLabs)
-    mock_voice = MagicMock(spec=Voice)
-    mock_voice.voice_id = "cloned_voice_name"
-    mock_client.clone.return_value = mock_voice
+
+    mock_voice1 = MagicMock(spec=Voice)
+    mock_voice1.voice_id = "voice1"
+    mock_voice2 = MagicMock(spec=Voice)
+    mock_voice2.voice_id = "voice2"
+
+    mock_client.voices = MagicMock()
+    mock_client.voices.ivc = MagicMock()
+    mock_client.voices.ivc.create.side_effect = [mock_voice1, mock_voice2]
+
     speaker_data_mapping = [
         text_to_speech.SpeakerData(
             speaker_id="speaker1",
@@ -629,14 +645,19 @@ class TestElevenlabsCloneVoices(absltest.TestCase):
             paths=["path/to/audio3.wav"],
         ),
     ]
+
     result = text_to_speech.elevenlabs_run_clone_voices(
         client=mock_client, speaker_data_mapping=speaker_data_mapping
     )
+
     self.assertEqual(
         result,
-        {"speaker1": "cloned_voice_name", "speaker2": "cloned_voice_name"},
+        {
+            "speaker1": "voice1",
+            "speaker2": "voice2",
+        },
     )
-    mock_client.clone.assert_called()
+    self.assertEqual(mock_client.voices.ivc.create.call_count, 2)
 
 
 class TestDubAllUtterances(parameterized.TestCase):
