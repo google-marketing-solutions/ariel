@@ -1,15 +1,16 @@
 # After modifying this file, always run:
 # pip-compile --generate-hashes requirements.in
-google-cloud-logging==3.10.0
-google-cloud-storage==2.18.2
-google-cloud-pubsub==2.25.2
-googleapis-common-protos==1.69.2
-cloudevents==1.11.0
-Flask==3.0.3
-gunicorn==23.0.0
-Werkzeug==3.0.6
-gtech-ariel==0.0.24
-async-timeout==5.0.1
-exceptiongroup==1.0.2
-tensorflow_io_gcs_filesystem==0.37.1
-dill==0.3.9
+google-cloud-logging
+google-cloud-storage
+google-cloud-pubsub
+googleapis-common-protos
+cloudevents
+Flask
+gunicorn
+Werkzeug
+gtech-ariel
+async-timeout
+exceptiongroup
+tensorflow_io_gcs_filesystem
+dill
+setuptools

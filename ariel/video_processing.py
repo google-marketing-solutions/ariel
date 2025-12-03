@@ -17,12 +17,18 @@
 import os
 from typing import Final
 from absl import logging
-from moviepy.editor import AudioFileClip, VideoFileClip, concatenate_videoclips
+from moviepy.audio.AudioClip import AudioArrayClip
+from moviepy.audio.AudioClip import concatenate_audioclips
+from moviepy.audio.io.AudioFileClip import AudioFileClip
+from moviepy.video.io.VideoFileClip import VideoFileClip
+import numpy as np
 import tensorflow as tf
 
 VIDEO_PROCESSING: Final[str] = "video_processing"
 _OUTPUT: Final[str] = "output"
 _DEFAULT_FPS: Final[int] = 30
+_DEFAULT_AUDIO_SAMPLING_RATE: Final[int] = 44100
+_DEFAULT_AUDIO_CHANNELS: Final[int] = 2  # Stereo.
 _DEFAULT_DUBBED_VIDEO_FILE: Final[str] = "dubbed_video"
 _DEFAULT_OUTPUT_FORMAT: Final[str] = ".mp4"
 
@@ -69,11 +75,11 @@ def split_audio_video(
       tf.io.gfile.copy(audio_file_override, audio_output_file, overwrite=True)
     else:
       audio_clip = video_clip.audio
-      audio_clip.write_audiofile(audio_output_file, verbose=False, logger=None)
-    video_clip_without_audio = video_clip.set_audio(None)
+      audio_clip.write_audiofile(audio_output_file, logger=None)
+    video_clip_without_audio = video_clip.without_audio()
     fps = video_clip.fps or _DEFAULT_FPS
     video_clip_without_audio.write_videofile(
-        video_output_file, codec="libx264", fps=fps, verbose=False, logger=None
+        video_output_file, codec="libx264", fps=fps, logger=None
     )
   return video_output_file, audio_output_file
 
@@ -102,13 +108,16 @@ def combine_audio_video(
   audio = AudioFileClip(dubbed_audio_file)
   duration_difference = video.duration - audio.duration
   if duration_difference > 0:
-    silence = AudioFileClip(duration=duration_difference).set_duration(
-        duration_difference
+    fps = audio.fps or _DEFAULT_AUDIO_SAMPLING_RATE
+    channels = audio.nchannels or _DEFAULT_AUDIO_CHANNELS
+    silence_array = np.zeros(
+        (int(duration_difference * fps), channels), dtype=np.float32
     )
-    audio = concatenate_videoclips([audio, silence])
+    silence = AudioArrayClip(silence_array, fps=fps)
+    audio = concatenate_audioclips([audio, silence])
   elif duration_difference < 0:
-    audio = audio.subclip(0, video.duration)
-  final_clip = video.set_audio(audio)
+    audio = audio.subclipped(0, video.duration)
+  final_clip = video.with_audio(audio)
   target_language_suffix = "_" + target_language.replace("-", "_").lower()
   dubbed_video_file = os.path.join(
       output_directory,
@@ -120,10 +129,9 @@ def combine_audio_video(
   final_clip.write_videofile(
       dubbed_video_file,
       codec="libx264",
+      audio=True,
       audio_codec="aac",
       temp_audiofile="temp-audio.m4a",
       remove_temp=True,
-      verbose=False,
-      logger=None,
   )
   return dubbed_video_file
