@@ -1,0 +1,358 @@
+<!doctype html>
+<html>
+  <head>
+    <title>FastAPI App</title>
+    <style>
+      body {
+        font-family: sans-serif;
+      }
+      .container {
+        max-width: 800px;
+        margin: 2em auto;
+        padding: 1em;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+      .form-group {
+        margin-bottom: 1em;
+      }
+      label {
+        display: block;
+        margin-bottom: 0.5em;
+      }
+      input[type='text'] {
+        width: 100%;
+        padding: 0.5em;
+        box-sizing: border-box;
+      }
+      button {
+        padding: 0.7em 1.2em;
+        cursor: pointer;
+      }
+      audio {
+        width: 100%;
+        margin-top: 1em;
+      }
+      .card {
+        border: 1px solid #eee;
+        border-radius: 5px;
+        padding: 1em;
+        margin-top: 1em;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+      }
+      .card p {
+        margin: 0.5em 0;
+      }
+      .card button {
+        margin-top: 0.5em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Video Transcription</h1>
+      <div class="form-group">
+        <label for="gcs-url-input">GCS URL:</label>
+        <input type="text" id="gcs-url-input" value="" />
+      </div>
+      <button id="transcribe-btn">Transcribe</button>
+      <div id="transcription-result"></div>
+    </div>
+
+    <div class="container">
+      <h1>Text-to-Speech</h1>
+
+      <div class="form-group">
+        <label for="prompt-input">Prompt:</label>
+        <input type="text" id="prompt-input" value="Hello world, this is TTS" />
+      </div>
+
+      <div class="form-group">
+        <label for="voice-name-select">Voice Name:</label>
+        <select id="voice-name-select"></select>
+      </div>
+      <button id="generate-audio-btn">Generate Audio</button>
+
+      <audio id="audio-player" controls></audio>
+    </div>
+
+    <script>
+      const voiceOptions = [
+        'Achernar',
+        'Achird',
+        'Algenib',
+        'Algieba',
+        'Alnilam',
+        'Aoede',
+        'Autonoe',
+        'Callirrhoe',
+        'Charon',
+        'Despina',
+        'Enceladus',
+        'Erinome',
+        'Fenrir',
+        'Gacrux',
+        'Iapetus',
+        'Kore',
+        'Laomedeia',
+        'Leda',
+        'Orus',
+        'Pulcherrima',
+        'Puck',
+        'Rasalgethi',
+        'Sadachbia',
+        'Sadaltager',
+        'Schedar',
+        'Sulafat',
+        'Umbriel',
+        'Vindemiatrix',
+        'Zephyr',
+        'Zubenelgenubi',
+      ];
+
+      const mainVoiceSelect = document.getElementById('voice-name-select');
+      if (mainVoiceSelect) {
+        mainVoiceSelect.innerHTML = voiceOptions
+          .map(v => `<option value="${v}">${v}</option>`)
+          .join('');
+      }
+
+      document
+        .getElementById('generate-audio-btn')
+        .addEventListener('click', function () {
+          const prompt = document.getElementById('prompt-input').value;
+          generateAndPlayAudio('audio-player', prompt);
+        });
+
+      document
+        .getElementById('transcribe-btn')
+        .addEventListener('click', function () {
+          transcribeVideo();
+        });
+
+      function playBase64Audio(playerID, base64String, volume) {
+        const binaryString = atob(base64String);
+        const binaryArray = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          binaryArray[i] = binaryString.charCodeAt(i);
+        }
+        const player = document.getElementById(playerID);
+        if (!player) {
+          console.error('Audio player not found:', playerID);
+          return;
+        }
+        player.src = URL.createObjectURL(
+          new Blob([binaryArray], { type: 'audio/wav' })
+        );
+        player.volume = volume;
+
+        return new Promise(resolve => {
+          player.play();
+          player.onended = resolve;
+        });
+      }
+
+      function generateAndPlayAudio(playerID, prompt, voiceName) {
+        const selectedVoiceName =
+          document.getElementById('voice-name-select').value;
+
+        const params = new URLSearchParams({
+          prompt: prompt,
+          voice_name: voiceName || selectedVoiceName,
+        });
+
+        const url = `/generate_audio_test?${params.toString()}`;
+
+        fetch(url)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return response.json();
+          })
+          .then(data => {
+            playBase64Audio(playerID, data.audio_data, 1.0);
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error generating audio.');
+          });
+      }
+
+      function matchVoicesForUniqueSpeakers(data) {
+        fetch('/match_voice', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return response.json();
+          })
+          .then(voiceMap => {
+            for (const speakerId in voiceMap) {
+              const voiceName = voiceMap[speakerId];
+              const cardsForSpeaker = document.querySelectorAll(
+                `.card[data-speaker-id='${speakerId}']`
+              );
+              cardsForSpeaker.forEach(card => {
+                const voiceSelectElement = card.querySelector(
+                  "select[id^='voice-name-select-']"
+                );
+                if (voiceSelectElement) {
+                  voiceSelectElement.value = voiceName;
+                }
+              });
+            }
+          })
+          .catch(error => {
+            console.error('Error matching voices:', error);
+            // Update all cards to show an error
+            const allVoiceNameElements = document.querySelectorAll(
+              "select[id^='voice-name-select-']"
+            );
+            allVoiceNameElements.forEach(el => {
+              const errorOption = document.createElement('option');
+              errorOption.textContent = 'Error matching voice';
+              el.insertBefore(errorOption, el.firstChild);
+              el.value = errorOption.textContent;
+            });
+          });
+      }
+
+      function createTranscriptionCard(segment, index) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.speakerId = segment.speaker_id; // Add speaker_id for easy selection
+        const audioPlayerId = `segment-audio-${index}`;
+        const transcriptId = `segment-transcript-${index}`;
+        const voiceNameSelectId = `voice-name-select-${index}`;
+
+        const voiceOptionsHtml = voiceOptions
+          .map(voice => `<option value="${voice}">${voice}</option>`)
+          .join('');
+
+        card.innerHTML = `
+          <p><strong>Speaker:</strong> ${segment.speaker_id} (${
+          segment.gender
+        })</p>
+          <p><strong>Time:</strong> ${segment.start_time.toFixed(
+            2
+          )}s - ${segment.end_time.toFixed(2)}s</p>
+          <div class="form-group">
+            <label for="${voiceNameSelectId}">Voice Name:</label>
+            <select id="${voiceNameSelectId}">
+              ${voiceOptionsHtml}
+            </select>
+          </div>
+          <textarea id="${transcriptId}" rows="3" style="width: 100%;">Say with ${
+          segment.tone
+        } tonality: "${segment.transcript}"</textarea>
+          <button>Generate Audio</button>
+          <audio id="${audioPlayerId}" controls style="display: block;"></audio>
+        `;
+
+        return card;
+      }
+
+      function addCardEventListener(card) {
+        const button = card.querySelector('button');
+        const transcriptId = card.querySelector('textarea').id;
+        const audioPlayerId = card.querySelector('audio').id;
+        const voiceSelect = card.querySelector(
+          "select[id^='voice-name-select-']"
+        );
+
+        button.addEventListener('click', () => {
+          const transcriptInput = document.getElementById(transcriptId);
+          const editedTranscript = transcriptInput.value;
+          const voiceName = voiceSelect.value;
+
+          if (voiceName) {
+            generateAndPlayAudio(audioPlayerId, editedTranscript, voiceName);
+          } else {
+            alert('Please select a voice.');
+          }
+        });
+      }
+
+      function handleTranscriptionData(data) {
+        const resultDiv = document.getElementById('transcription-result');
+        resultDiv.innerHTML = ''; // Clear the 'Transcribing...' message
+
+        // First, create and append all cards
+        data.forEach((segment, index) => {
+          const card = createTranscriptionCard(segment, index);
+          addCardEventListener(card);
+          resultDiv.appendChild(card);
+        });
+
+        // Then, match voices for all speakers
+        matchVoicesForUniqueSpeakers(data);
+      }
+
+      function handleTranscriptionError(error) {
+        console.error('Error:', error);
+        const resultDiv = document.getElementById('transcription-result');
+        resultDiv.innerHTML = 'Error during transcription.';
+        alert('Error during transcription.');
+      }
+
+      function transcribeVideo() {
+        const gcsUrl = document.getElementById('gcs-url-input').value;
+        const resultDiv = document.getElementById('transcription-result');
+        resultDiv.innerHTML = 'Transcribing...';
+
+        const params = new URLSearchParams({
+          gcs_uri: gcsUrl,
+        });
+
+        const url = `/transcribe?${params.toString()}`;
+
+        fetch(url)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return response.json();
+          })
+          .then(data => handleTranscriptionData(data))
+          .catch(handleTranscriptionError);
+      }
+
+      function saveValues() {
+        const ids = ['prompt-input', 'gcs-url-input'];
+        ids.forEach(id => {
+          const element = document.getElementById(id);
+          if (element) {
+            localStorage.setItem(id, element.value);
+          }
+        });
+      }
+
+      function loadValues() {
+        const ids = ['prompt-input', 'gcs-url-input'];
+        ids.forEach(id => {
+          const value = localStorage.getItem(id);
+          if (value !== null) {
+            const element = document.getElementById(id);
+            if (element) {
+              element.value = value;
+            }
+          }
+        });
+      }
+
+      window.onload = loadValues;
+
+      const inputs = document.querySelectorAll('input[type="text"]');
+      inputs.forEach(input => {
+        input.addEventListener('input', saveValues);
+      });
+    </script>
+  </body>
+</html>

@@ -178,6 +178,13 @@ dist
 *.mp3
 *.mp4
 *.srt
+*.wav
 
 # OS files
 .DS_Store
+
+# Gemini
+GEMINI.md
+
+# Credentials
+configuration.yaml
