@@ -54,7 +54,7 @@ def separate_audio_from_video(video_file_path: str,
   audio.write_audiofile(original_audio_path, codec="pcm_s16le")
 
   command = (
-      "python3 -m demucs --two-stems=vocals -n htdemucs"
+      "python3 -m demucs --two-stems=vocals -n htdemucs -d cpu"
       f" --out {output_local_path}"
       f" {original_audio_path}"
   )
