@@ -328,7 +328,7 @@ export class AppComponent {
     adjust_speed: [false],
     vocals_volume_adjustment: [5.0],
     background_volume_adjustment: [0.0],
-    gemini_model_name: ['gemini-1.5-flash'],
+    gemini_model_name: ['gemini-2.5-flash'],
     temperature: [1.0],
     top_p: [0.95],
     top_k: [40],
@@ -337,7 +337,7 @@ export class AppComponent {
     use_elevenlabs: [false],
     elevenlabs_token: [''],
     elevenlabs_clone_voices: [false],
-    elevenlabs_remove_cloned_voices: [false],
+    elevenlabs_remove_cloned_voices: [true],
   });
   translationsFormGroup = this._formBuilder.group({
     dubbings: new FormArray([]),

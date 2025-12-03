@@ -23,7 +23,6 @@ from absl import logging
 from ariel import audio_processing
 from elevenlabs import VoiceSettings, save
 from elevenlabs.client import ElevenLabs
-from elevenlabs.client import is_voice_id
 from elevenlabs.types.voice import Voice
 from google.cloud import texttospeech
 from pydub import AudioSegment
@@ -174,10 +173,18 @@ class VoiceAssigner:
           for voice in response.voices
       }
     elif isinstance(self.client, ElevenLabs):
-      return {
-          voice.name: voice.labels["gender"].capitalize()
-          for voice in self.client.voices.get_all().voices
-      }
+      available_voices = {}
+      for voice in self.client.voices.get_all().voices:
+        try:
+          available_voices[voice.name] = voice.labels["gender"].capitalize()
+        except KeyError:
+          logging.info(
+              "ElevenLabs voice %s doesn't have the `gender` property"
+              " specified. Assigning `Neutral`.",
+              voice,
+          )
+          available_voices[voice.name] = "Neutral"
+      return available_voices
     else:
       raise ValueError("Unsupported client type.")
 
@@ -538,16 +545,7 @@ def calculate_target_utterance_speed(
 
 
 def _find_voice_id(*, client: ElevenLabs, elevenlabs_voice: str) -> str:
-  """Retrieves the ElevenLabs voice ID.
-
-  The function uses the same logic as part of the `generate` method of the
-  ElevenLabs
-  class
-  in version 1.9.0, specifically the lines: 177 - 184. It's to accommodate for
-  the
-  `text_to_speech.convert` method accepting the voice_id only. The link:
-
-  https://github.com/elevenlabs/elevenlabs-python/blob/1.9.0/src/elevenlabs/client.py#L177
+  """Retrieves the ElevenLabs voice ID for a given voice name or ID.
 
   Args:
     client: The ElevenLabs client object.
@@ -557,25 +555,19 @@ def _find_voice_id(*, client: ElevenLabs, elevenlabs_voice: str) -> str:
     The ElevenLabs voice ID.
 
   Raises:
-    ValueError: If the voice is not found and can't be assigned any voice ID.
+    ValueError: If the voice is not found.
   """
-  if isinstance(elevenlabs_voice, str) and is_voice_id(elevenlabs_voice):
-    return elevenlabs_voice
-  all_available_voices = client.voices.get_all(show_legacy=True)
-  voice_id = next(
-      (
-          voice.voice_id
-          for voice in all_available_voices.voices
-          if voice.name == elevenlabs_voice
-      ),
-      None,
+  all_voices = client.voices.get_all()
+
+  # Try matching either by name or ID.
+  for voice in all_voices.voices:
+    if elevenlabs_voice in (voice.name, voice.voice_id):
+      return voice.voice_id
+
+  raise ValueError(
+      f"No matching voice ID found for '{elevenlabs_voice}'. It is either"
+      " unavailable or you provided an incorrect name."
   )
-  if not voice_id:
-    raise ValueError(
-        f"No voice ID found for {elevenlabs_voice}. It is either"
-        " unavailable or you provided an incorrect name."
-    )
-  return voice_id
 
 
 def elevenlabs_convert_text_to_speech(
@@ -703,7 +695,7 @@ def elevenlabs_run_clone_voices(
   """
   speaker_to_voices_mapping = {}
   for speaker_data in speaker_data_mapping:
-    voice = client.clone(
+    voice = client.voices.ivc.create(
         name=f"{speaker_data.speaker_id}",
         description=f"Voice for {speaker_data.speaker_id}",
         files=speaker_data.paths,
