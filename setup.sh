@@ -54,6 +54,22 @@ else
   echo "🤔 Bucket not found. Creating..."
   gsutil mb -l "$REGION" "$BUCKET_URI"
   echo "✅ Bucket created."
+
+  echo "⏳ Setting 5-day TTL lifecycle policy..."
+  cat <<EOF > lifecycle.json
+{
+  "rule":
+  [
+    {
+      "action": {"type": "Delete"},
+      "condition": {"age": 5}
+    }
+  ]
+}
+EOF
+  gsutil lifecycle set lifecycle.json "$BUCKET_URI"
+  rm lifecycle.json
+  echo "✅ Lifecycle policy set."
 fi
 
 # Create configuration.yaml from template
