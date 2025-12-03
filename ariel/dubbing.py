@@ -22,7 +22,6 @@ import json
 import os
 import re
 import readline
-import shutil
 import sys
 import time
 from typing import Final, Mapping, Sequence, Set
@@ -64,7 +63,7 @@ _EXPECTED_ELEVENLABS_ENVIRONMENTAL_VARIABLE_NAME: Final[str] = (
 _DEFAULT_PYANNOTE_MODEL: Final[str] = "pyannote/speaker-diarization-3.1"
 _DEFAULT_ELEVENLABS_MODEL: Final[str] = "eleven_multilingual_v2"
 _DEFAULT_TRANSCRIPTION_MODEL: Final[str] = "large-v3"
-_DEFAULT_GEMINI_MODEL: Final[str] = "gemini-1.5-flash"
+_DEFAULT_GEMINI_MODEL: Final[str] = "gemini-2.5-flash"
 _DEFAULT_GEMINI_TEMPERATURE: Final[float] = 1.0
 _DEFAULT_GEMINI_TOP_P: Final[float] = 0.95
 _DEFAULT_GEMINI_TOP_K: Final[int] = 40
@@ -816,10 +815,17 @@ class Dubber:
   @functools.cached_property
   def speech_to_text_model(self) -> WhisperModel:
     """Initializes the Whisper speech-to-text model."""
+    device_for_whisper = "cpu"
+    compute_type = "int8"
+    if self.device == "cuda":
+      logging.warning(
+          "A GPU is available, but faster-whisper is being run on CPU to avoid"
+          " potential crashes. This might be slower."
+      )
     return WhisperModel(
         model_size_or_path=_DEFAULT_TRANSCRIPTION_MODEL,
-        device=self.device,
-        compute_type="float16" if self.device == "cuda" else "int8",
+        device=device_for_whisper,
+        compute_type=compute_type,
         download_root=self._whisper_cache_dir,
     )
 
@@ -1091,7 +1097,7 @@ class Dubber:
       except speech_to_text.GeminiDiarizationError:
         attempt += 1
         logging.warning(
-            f"Diarization attempt {attempt} failed. Will try again."
+            "Diarization attempt %s failed. Will try again.", attempt
         )
         if attempt == _MAX_GEMINI_RETRIES:
           raise RuntimeError("Can't diarize speakers. Try again.")
@@ -1133,7 +1139,7 @@ class Dubber:
       except translation.GeminiTranslationError:
         attempt += 1
         logging.warning(
-            f"Translation attempt {attempt} failed. Will try again."
+            "Translation attempt %s failed. Will try again.", attempt
         )
         if attempt == _MAX_GEMINI_RETRIES:
           raise RuntimeError("Can't translate script. Try again.")
@@ -1282,7 +1288,7 @@ class Dubber:
       except translation.GeminiTranslationError:
         attempt += 1
         logging.warning(
-            f"Translation attempt {attempt} failed. Will try again."
+            "Translation attempt %s failed. Will try again.", attempt
         )
         if attempt == _MAX_GEMINI_RETRIES:
           raise RuntimeError("Can't translate the added utterance. Try again.")
@@ -2456,22 +2462,24 @@ class Dubber:
     self.save_utterance_metadata_output = utterance_metadata_file
 
   def run_clean_directory(self) -> None:
-    """Removes all files and directories from a directory, except for those listed in keep_files."""
-    output_folder = os.path.join(self.output_directory, _OUTPUT)
-    output_files = tf.io.gfile.listdir(output_folder)
-    keep_files = [os.path.join(output_folder, file) for file in output_files]
-    keep_files.append(output_folder)
-    for item in tf.io.gfile.listdir(self.output_directory):
-      item_path = os.path.join(self.output_directory, item)
-      if item in keep_files:
+    """Removes intermediate files and directories, keeping the final output."""
+    final_output_subdir_name = _OUTPUT
+    # item_name is "audio_processing", "video_processing", "output"
+    for item_name in tf.io.gfile.listdir(self.output_directory):
+      if item_name == final_output_subdir_name:
         continue
+      item_full_path = os.path.join(self.output_directory, item_name)
       try:
-        if tf.io.gfile.isdir(item_path):
-          shutil.rmtree(item_path)
+        if tf.io.gfile.isdir(item_full_path):
+          tf.io.gfile.rmtree(item_full_path)
         else:
-          tf.io.gfile.remove(item_path)
+          tf.io.gfile.remove(item_full_path)
+      except tf.errors.NotFoundError:
+        logging.warning(
+            "Item %s not found during cleanup, skipping.", item_full_path
+        )
       except OSError as e:
-        logging.error(f"Error deleting {item_path}: {e}")
+        logging.error("Error deleting %s: %s", item_full_path, e)
     logging.info("Temporary artifacts are now removed.")
 
   def dub_ad(self) -> PostprocessingArtifacts:
