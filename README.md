@@ -6,7 +6,8 @@ video with translated audio.
 
 ## Requirements
 
-The solution requires the following Google APIs and services to be enabled in your Google Cloud project:
+The solution requires the following Google APIs and services to be enabled in
+your Google Cloud project:
 
 *   **Vertex AI API**: For advanced AI capabilities, including model hosting and management.
 *   **Cloud Storage API**: For scalable and secure object storage for videos and audio files.
@@ -93,6 +94,25 @@ gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
 
 Replace `YOUR_PROJECT_ID` with your Google Cloud project ID and `USER_EMAIL`
 with the email address of the user you want to grant access to.
+
+## Running Ariel Locally
+
+After running `setup.sh`, you can also run the application locally via the
+`run_locally.sh` script. 
+
+After running `run_locally.sh`, the solution will start on localhost, and
+generally on port 8080. You can use the UI just as you would if it were
+deployed to Cloud Run. Keep in mind that much of the processing will then happen
+locally, so the performance of the app will be directly related to the computer
+you are using.
+
+`setup.sh` will create the file `configuration.yaml`, which the solution uses to
+configure things like the GCP project to use when sending requests to Gemini,
+the GCS buckets to use, and the like, as well as apply the necessary roles to
+service accounts and related admin tasks. If you are comfortable with Google
+Cloud, can set up the API and Storage bucket yourself, and do not want to have
+Service Accounts changed, you can also forego running `setup.sh`, make a copy of
+`configuration.template.yaml` named `configuration.yaml
 
 ## Usage
 
@@ -200,17 +220,23 @@ the app's start page.
 
 ## Costs
 
-The exact costs for Ariel will be directly proportional to the length of the video and the amount of spoken text it contains. 
+The exact costs for Ariel will be directly proportional to the length of the
+video and the amount of spoken text it contains. 
 
-Our experience shows that a 10 second video with one speaker will use approximately:
+Our experience shows that a 10 second video with one speaker will use
+approximately:
 
 * 1000 - 1500 tokens for transcription
 * 600 - 1000 tokens for translation
 * 100 - 200 characters for text-to-speech
 
-In addition, there are costs related to Cloud Run each time a video is processed, Cloud Storage for storing the videos and intermediate files, and initial Cloud Build costs for deploying the solution. These costs will be dependent on the region and specifics of your Cloud project.
+In addition, there are costs related to Cloud Run each time a video is
+processed, Cloud Storage for storing the videos and intermediate files, and
+initial Cloud Build costs for deploying the solution. These costs will be
+dependent on the region and specifics of your Cloud project.
 
-For information on Gemini pricing, please see the [official documentation](https://ai.google.dev/gemini-api/docs/pricing).
+For information on Gemini pricing, please see the
+[official documentation](https://ai.google.dev/gemini-api/docs/pricing).
 
 For information on the costs of the other services used by Ariel:
 
