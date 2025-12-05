@@ -134,7 +134,7 @@ echo "✅ Cloud Build permissions granted."
 
 # Grant roles to the Default Compute Service Account
 DEFAULT_COMPUTE_SERVICE_ACCOUNT="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
-echo "🔑 Granting 'Storage Object Viewer' and 'Cloud Run Developer' roles to the Default Compute Service Account..."
+echo "🔑 Granting 'Storage Object Viewer', 'Cloud Run Developer', and 'Vertex AI User' roles to the Default Compute Service Account..."
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:$DEFAULT_COMPUTE_SERVICE_ACCOUNT" \
     --role="roles/storage.objectViewer" \
@@ -142,6 +142,10 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:$DEFAULT_COMPUTE_SERVICE_ACCOUNT" \
     --role="roles/run.builder" \
+    --quiet
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:$DEFAULT_COMPUTE_SERVICE_ACCOUNT" \
+    --role="roles/aiplatform.user" \
     --quiet
 
 echo "🔑 Granting 'Storage Object User' role to the Default Compute Service Account on bucket $BUCKET_URI..."
