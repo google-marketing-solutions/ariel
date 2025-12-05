@@ -235,6 +235,9 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         const file = event.dataTransfer.files[0];
         if (file && file.type.startsWith('video/')) {
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            videoInput.files = dataTransfer.files;
             displayVideo(file);
         }
         validateStartProcessing();
