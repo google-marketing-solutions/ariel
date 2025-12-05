@@ -9,9 +9,6 @@ GCP_PROJECT_LOCATION: "enter project location here"
 #GCS Bucket name
 GCS_BUCKET_NAME: "enter bucket name here"
 
-#GCS BUCKET USED FOR TEMP FILES
-TEMP_BUCKET_NAME: "enter bucket name here"
-
 # Gemini Model for transcription
 GEMINI_PRO_MODEL: "gemini-2.5-pro"
 GEMINI_FLASH_MODEL: "gemini-2.5-flash"
