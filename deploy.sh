@@ -14,6 +14,9 @@ fi
 # Build requirements.txt needed for cloud run but skipping the local file output from uv
 uv pip compile pyproject.toml -o requirements.txt > /dev/null
 
+SERVICE_ACCOUNT_NAME="$SERVICE_NAME"
+SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+
 deploy_service() {
   gcloud beta run deploy "$SERVICE_NAME" \
     --source . \
@@ -25,7 +28,8 @@ deploy_service() {
     --quiet \
     --iap \
     --add-volume name=ariel,type=cloud-storage,bucket="$GCS_BUCKET" \
-    --add-volume-mount volume=ariel,mount-path="/mnt/ariel"
+    --add-volume-mount volume=ariel,mount-path="/mnt/ariel" \
+    --service-account="$SERVICE_ACCOUNT_EMAIL"
 }
 
 # First deployment attempt
