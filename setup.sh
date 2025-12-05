@@ -44,19 +44,27 @@ fi
 echo "▶️ Starting permission script for service '$SERVICE_NAME' in region '$REGION'..."
 
 # 3. Prompt for and create the Cloud Storage bucket
-read -p "Enter the name for the Cloud Storage bucket to be used for analysis: " BUCKET_NAME
-BUCKET_URI="gs://$BUCKET_NAME"
+while true; do
+  read -p "Enter the name for the Cloud Storage bucket to be used for analysis: " BUCKET_NAME
+  BUCKET_URI="gs://$BUCKET_NAME"
 
-echo "🔎 Checking for Cloud Storage bucket: $BUCKET_URI..."
-if gsutil ls -b "$BUCKET_URI" &>/dev/null; then
-  echo "✅ Bucket already exists."
-else
-  echo "🤔 Bucket not found. Creating..."
-  gsutil mb -l "$REGION" "$BUCKET_URI"
-  echo "✅ Bucket created."
+  echo "🔎 Checking for Cloud Storage bucket: $BUCKET_URI..."
+  LS_OUTPUT=$(gsutil ls -b "$BUCKET_URI" 2>&1)
+  LS_EXIT_CODE=$?
 
-  echo "⏳ Setting 5-day TTL lifecycle policy..."
-  cat <<EOF > lifecycle.json
+  if [[ $LS_EXIT_CODE -eq 0 ]]; then
+    echo "✅ Bucket already exists and is readable."
+    break
+  elif echo "$LS_OUTPUT" | grep -q "AccessDeniedException"; then
+    echo "❌ Error: The bucket '$BUCKET_NAME' exists but is not readable."
+    echo "Please enter a globally unique name for a new bucket."
+  elif echo "$LS_OUTPUT" | grep -q "BucketNotFoundException"; then
+    echo "🤔 Bucket not found. Creating..."
+    if gsutil mb -l "$REGION" "$BUCKET_URI"; then
+      echo "✅ Bucket created."
+
+      echo "⏳ Setting 5-day TTL lifecycle policy..."
+      cat <<EOF > lifecycle.json
 {
   "rule":
   [
@@ -67,10 +75,18 @@ else
   ]
 }
 EOF
-  gsutil lifecycle set lifecycle.json "$BUCKET_URI"
-  rm lifecycle.json
-  echo "✅ Lifecycle policy set."
-fi
+      gsutil lifecycle set lifecycle.json "$BUCKET_URI"
+      rm lifecycle.json
+      echo "✅ Lifecycle policy set."
+      break
+    else
+      echo "❌ Failed to create bucket. Please try a different name."
+    fi
+  else
+    echo "❌ Error checking bucket: $LS_OUTPUT"
+    echo "Please try a different name."
+  fi
+done
 
 # Create configuration.yaml from template
 echo "📝 Creating configuration.yaml..."
