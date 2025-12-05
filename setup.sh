@@ -111,7 +111,7 @@ echo "✅ IAM permissions granted to user."
 
 # 5. Enable the Cloud Build API and grant necessary permissions
 echo "🔑 Enabling Cloud Build API and granting permissions..."
-gcloud services enable serviceusage.googleapis.com cloudbuild.googleapis.com iap.googleapis.com generativelanguage.googleapis.com aiplatform.googleapis.com translate.googleapis.com --project="$PROJECT_ID"
+gcloud services enable serviceusage.googleapis.com cloudbuild.googleapis.com iap.googleapis.com generativelanguage.googleapis.com aiplatform.googleapis.com translate.googleapis.com texttospeech.googleapis.com --project="$PROJECT_ID"
 
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
 if [[ -z "$PROJECT_NUMBER" ]]; then
