@@ -17,6 +17,10 @@ uv pip compile pyproject.toml -o requirements.txt > /dev/null
 SERVICE_ACCOUNT_NAME="$SERVICE_NAME"
 SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
+# Grant the service account storage.objects.create access to the bucket
+echo "🔑 Granting 'Storage Object Creator' role to the Cloud Run service account on bucket gs://$GCS_BUCKET..."
+gsutil iam ch serviceAccount:${SERVICE_ACCOUNT_EMAIL}:roles/storage.objectCreator gs://$GCS_BUCKET
+
 deploy_service() {
   gcloud beta run deploy "$SERVICE_NAME" \
     --source . \
