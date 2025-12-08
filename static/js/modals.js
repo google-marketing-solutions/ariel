@@ -11,7 +11,7 @@ audioPlayer.addEventListener('ended', () => {
     }
 });
 
-export function renderVoiceList(targetListElement, searchInput, genderFilterName, voices) {
+export function renderVoiceList(targetListElement, searchInput, genderFilterName, voices, onVoiceSelect, selectedVoiceName) {
     const searchTerm = searchInput.value.toLowerCase();
     const genderFilter = document.querySelector(`input[name="${genderFilterName}"]:checked`).value;
 
@@ -25,35 +25,39 @@ export function renderVoiceList(targetListElement, searchInput, genderFilterName
 
     filteredVoices.forEach(voice => {
         const item = document.createElement('div');
-        item.classList.add('list-group-item', 'list-group-item-action', 'd-flex', 'justify-content-between', 'align-items-center');
-       
+        item.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+
+        if (voice.name === selectedVoiceName) {
+            item.classList.add('active');
+        }
+
         const voiceNameSpan = document.createElement('span');
-        voiceNameSpan.classList.add('me-auto'); // Align left
         voiceNameSpan.textContent = voice.name;
         item.appendChild(voiceNameSpan);
 
+        const controls = document.createElement('div');
+        controls.classList.add('d-flex', 'align-items-center');
+
         const genderSpan = document.createElement('span');
-        genderSpan.classList.add('badge', 'bg-secondary', 'mx-auto'); // Center the badge
+        genderSpan.classList.add('badge', 'bg-secondary', 'me-3');
         genderSpan.textContent = voice.gender;
-        item.appendChild(genderSpan);
+        controls.appendChild(genderSpan);
+
 
         if (voice.url) {
             const playButton = document.createElement('button');
-            playButton.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ms-auto'); // Align right
+            playButton.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'me-2');
             playButton.innerHTML = '<i class="bi bi-play-fill"></i>';
 
             playButton.addEventListener('click', (e) => {
                 e.stopPropagation();
 
                 if (currentlyPlayingButton === playButton) {
-                    // Clicked the same button that is currently playing
                     audioPlayer.pause();
                     playButton.innerHTML = '<i class="bi bi-play-fill"></i>';
                     currentlyPlayingButton = null;
                 } else {
-                    // Clicked a new button
                     if (currentlyPlayingButton) {
-                        // Stop the previously playing audio and reset its button
                         currentlyPlayingButton.innerHTML = '<i class="bi bi-play-fill"></i>';
                     }
                     audioPlayer.src = voice.url;
@@ -62,35 +66,27 @@ export function renderVoiceList(targetListElement, searchInput, genderFilterName
                     currentlyPlayingButton = playButton;
                 }
             });
-            item.appendChild(playButton);
+            controls.appendChild(playButton);
         }
 
-        item.dataset.voiceName = voice.name;
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            const currentActive = targetListElement.querySelector('.active');
-            if (currentActive) {
-                currentActive.classList.remove('active');
-            }
-            item.classList.add('active');
+        const selectButton = document.createElement('button');
+        selectButton.classList.add('btn', 'btn-sm', 'btn-primary');
+        selectButton.textContent = 'Select';
+        selectButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            onVoiceSelect(voice);
         });
+        controls.appendChild(selectButton);
+
+        item.appendChild(controls);
+
         targetListElement.appendChild(item);
     });
 }
 
-export function addVoice(voices, speakers, renderSpeakers, validateStartProcessing) {
-    const voiceListModal = document.getElementById('voice-list');
+export function addVoice(voiceData, speakers, renderSpeakers, validateStartProcessing) {
     const speakerNameInput = document.getElementById('speaker-name-input');
     const speakerModal = bootstrap.Modal.getInstance(document.getElementById('speaker-modal'));
-
-    const selectedVoiceEl = voiceListModal.querySelector('.active');
-    if (!selectedVoiceEl) {
-        showToast('Please select a voice.', 'error');
-        return;
-    }
-
-    const voiceName = selectedVoiceEl.dataset.voiceName;
-    const voiceData = voices.find(v => v.name === voiceName);
 
     if (!voiceData) {
         showToast('Selected voice data could not be found. Please try again.', 'error');
@@ -129,9 +125,8 @@ export function addVoice(voices, speakers, renderSpeakers, validateStartProcessi
     validateStartProcessing();
     if (appState.isEditingVideoSettings) {
         // Do nothing here, main.js's hidden.bs.modal listener will call renderVideoSettingsEditor()
-        // This prevents double rendering and ensures the editor is refreshed correctly.
     } else {
-        renderSpeakers(); // Only re-render the initial speaker list if not in editor mode
+        renderSpeakers();
     }
 }
 

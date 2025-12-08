@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const speakerList = document.getElementById('speaker-list');
     const voiceSearch = document.getElementById('voice-search');
     const voiceListModal = document.getElementById('voice-list');
-    const addVoiceBtn = document.getElementById('add-voice-btn');
 
     // Results View
     const mainContent = document.querySelector('.main-content');
@@ -57,7 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetTimelineBtn = document.getElementById('reset-timeline-btn');
 
     // Modals
-    const speakerModal = new bootstrap.Modal(document.getElementById('speaker-modal'));
+    const speakerModalEl = document.getElementById('speaker-modal');
+    const speakerModal = new bootstrap.Modal(speakerModalEl);
     const confirmCloseBtn = document.getElementById('confirm-close-btn');
     const editSpeakerVoiceModal = new bootstrap.Modal(document.getElementById('edit-speaker-voice-modal'));
     const editVoiceSearch = document.getElementById('edit-voice-search');
@@ -125,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let speakers = [];
     let currentVideoData = null;
     let videoDuration = 0;
+    let currentEditingVoiceName = null;
 
     function validateStartProcessing() {
         const videoSelected = videoInput.files.length > 0;
@@ -169,6 +170,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const onVoiceSelect = (voice) => {
+        addVoice(voice, speakers, renderSpeakers, validateStartProcessing);
+    };
+
     // --- Initializations ---
     fetchLanguages(originalLanguage, translationLanguage).catch(error => {
         console.error('Error fetching languages:', error);
@@ -178,8 +183,8 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchVoices()
         .then(data => {
             voices = data.voices;
-            renderVoiceList(voiceListModal, voiceSearch, 'gender-filter', voices);
-            renderVoiceList(editVoiceListModal, editVoiceSearch, 'edit-gender-filter', voices);
+            renderVoiceList(voiceListModal, voiceSearch, 'gender-filter', voices, onVoiceSelect, currentEditingVoiceName);
+            renderVoiceList(editVoiceListModal, editVoiceSearch, 'edit-gender-filter', voices, onVoiceSelect, null);
         })
         .catch(error => {
             console.error('Error fetching voices:', error);
@@ -246,31 +251,43 @@ document.addEventListener('DOMContentLoaded', () => {
     originalLanguage.addEventListener('change', validateStartProcessing);
     translationLanguage.addEventListener('change', validateStartProcessing);
 
-    addSpeakerBtn.addEventListener('click', () => speakerModal.show());
-    document.getElementById('speaker-modal').addEventListener('hidden.bs.modal', () => {
+    addSpeakerBtn.addEventListener('click', () => {
+        currentEditingVoiceName = null;
+        speakerModal.show();
+    });
+
+    speakerModalEl.addEventListener('shown.bs.modal', () => {
+        // Reset filters and search when modal opens
+        document.getElementById('gender-all').checked = true;
+        voiceSearch.value = '';
+        renderVoiceList(voiceListModal, voiceSearch, 'gender-filter', voices, onVoiceSelect, currentEditingVoiceName);
+
+        // Scroll to selected voice if editing
+        const activeVoiceElement = voiceListModal.querySelector('.active');
+        if (activeVoiceElement) {
+            activeVoiceElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+
+    speakerModalEl.addEventListener('hidden.bs.modal', () => {
         if (appState.isEditingVideoSettings) {
             renderVideoSettingsEditor(); // Re-render the editor to reflect changes
         }
         // Reset modal to its default "add" state when closed
         appState.editingSpeakerId = null;
-        const speakerModalEl = document.getElementById('speaker-modal');
+        currentEditingVoiceName = null;
         speakerModalEl.querySelector('.modal-title').textContent = 'Select Speaker Voice';
-        speakerModalEl.querySelector('#add-voice-btn').textContent = 'Add Voice';
         handleSpeakerModalClose();
     });
 
-    voiceSearch.addEventListener('input', () => renderVoiceList(voiceListModal, voiceSearch, 'gender-filter', voices));
+    voiceSearch.addEventListener('input', () => renderVoiceList(voiceListModal, voiceSearch, 'gender-filter', voices, onVoiceSelect, currentEditingVoiceName));
     document.querySelectorAll('input[name="gender-filter"]').forEach(radio => {
-        radio.addEventListener('change', () => renderVoiceList(voiceListModal, voiceSearch, 'gender-filter', voices));
+        radio.addEventListener('change', () => renderVoiceList(voiceListModal, voiceSearch, 'gender-filter', voices, onVoiceSelect, currentEditingVoiceName));
     });
 
-    editVoiceSearch.addEventListener('input', () => renderVoiceList(editVoiceListModal, editVoiceSearch, 'edit-gender-filter', voices));
+    editVoiceSearch.addEventListener('input', () => renderVoiceList(editVoiceListModal, editVoiceSearch, 'edit-gender-filter', voices, onVoiceSelect, null));
     document.querySelectorAll('input[name="edit-gender-filter"]').forEach(radio => {
-        radio.addEventListener('change', () => renderVoiceList(editVoiceListModal, editVoiceSearch, 'edit-gender-filter', voices));
-    });
-
-    addVoiceBtn.addEventListener('click', () => {
-        addVoice(voices, speakers, renderSpeakers, validateStartProcessing);
+        radio.addEventListener('change', () => renderVoiceList(editVoiceListModal, editVoiceSearch, 'edit-gender-filter', voices, onVoiceSelect, null));
     });
 
     speakerList.addEventListener('click', (e) => {
@@ -279,10 +296,9 @@ document.addEventListener('DOMContentLoaded', () => {
             appState.editingSpeakerId = editBtn.dataset.speakerId;
             const speakerToEdit = speakers.find(s => s.id === appState.editingSpeakerId);
             if (!speakerToEdit) return;
-
-            const speakerModalEl = document.getElementById('speaker-modal');
+            
+            currentEditingVoiceName = speakerToEdit.voiceName;
             speakerModalEl.querySelector('.modal-title').textContent = 'Edit Speaker Voice';
-            speakerModalEl.querySelector('#add-voice-btn').textContent = 'Save Changes';
             speakerModalEl.querySelector('#speaker-name-input').value = speakerToEdit.name;
 
             speakerModal.show();
@@ -602,22 +618,11 @@ function makeDraggable(element) {
                         appState.editingSpeakerId = speakerId;
                         const speakerToEdit = speakers.find(s => s.id === speakerId); // Find the speaker to edit
                         if (!speakerToEdit) return;
-
+                        
+                        currentEditingVoiceName = speakerToEdit.voiceName;
                         const speakerModalEl = document.getElementById('speaker-modal');
                         speakerModalEl.querySelector('.modal-title').textContent = 'Change Speaker Voice'; // Change modal title
-                        speakerModalEl.querySelector('#add-voice-btn').textContent = 'Change Voice'; // Change button text
                         speakerModalEl.querySelector('#speaker-name-input').value = speakerToEdit.name; // Populate name input
-
-                        // Pre-select the current speaker's voice in the modal
-                        const voiceListModalEl = document.getElementById('voice-list');
-                        const currentActiveVoice = voiceListModalEl.querySelector('.active');
-                        if (currentActiveVoice) {
-                            currentActiveVoice.classList.remove('active');
-                        }
-                        const voiceToSelect = voiceListModalEl.querySelector(`[data-voice-name="${speakerToEdit.voiceName}"]`);
-                        if (voiceToSelect) {
-                            voiceToSelect.classList.add('active');
-                        }
 
                         speakerModal.show();
                     });
