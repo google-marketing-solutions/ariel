@@ -158,7 +158,7 @@ done
 echo "✅ Service account is ready."
 
 # 7. Grant necessary roles to the Service Account
-echo "🔑 Granting 'Vertex AI User', 'Storage Object Viewer', and 'Logs Writer' roles to $SERVICE_ACCOUNT_EMAIL..."
+echo "🔑 Granting 'Vertex AI User', 'Cloud Run Developer', 'Storage Object Admin', and 'Logs Writer' roles to $SERVICE_ACCOUNT_EMAIL..."
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
@@ -172,7 +172,7 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
-    --role="roles/storage.objectViewer" \
+    --role="roles/storage.objectAdmin" \
     --quiet
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
