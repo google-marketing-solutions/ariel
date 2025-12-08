@@ -292,6 +292,24 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         utteranceObject: utterance
     };
 
+    let currentDuration = utterance.translated_end_time - utterance.translated_start_time;
+
+    document.getElementById('translated-start-time-input').addEventListener('change', (e) => {
+        const newStart = parseFloat(e.target.value);
+        if (!isNaN(newStart)) {
+            const newEnd = newStart + currentDuration;
+            document.getElementById('translated-end-time-input').value = newEnd.toFixed(2);
+        }
+    });
+
+    document.getElementById('translated-end-time-input').addEventListener('change', (e) => {
+        const newEnd = parseFloat(e.target.value);
+        if (!isNaN(newEnd)) {
+            const newStart = newEnd - currentDuration;
+            document.getElementById('translated-start-time-input').value = newStart.toFixed(2);
+        }
+    });
+
     const saveUtteranceChanges = (closeEditor = true) => {
         utterance.original_text = document.getElementById('original-text-area').value;
         utterance.translated_text = document.getElementById('translated-text-area').value;
@@ -338,6 +356,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         // Update Duration display
         const translatedDuration = (initial.translated_end_time - initial.translated_start_time).toFixed(2);
         document.getElementById('translated-duration').innerText = translatedDuration + 's';
+        currentDuration = initial.translated_end_time - initial.translated_start_time; // Update duration
 
         // Re-render
         renderTimeline(currentVideoData, videoDuration, speakers);
@@ -374,6 +393,7 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
                 currentVideoData.utterances[index] = updatedUtterance;
                 document.getElementById('translated-end-time-input').value = updatedUtterance.translated_end_time
                 document.getElementById('translated-duration').innerText = duration.toFixed(2);
+                currentDuration = duration; // Update duration
                 renderTimeline(currentVideoData, videoDuration, speakers);
                 if (duration === 0) {
                     showToast('Dubbing regeneration failed.', 'error');
