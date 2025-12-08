@@ -219,7 +219,7 @@ async def process_video(
   genai_client = genai.Client(
       vertexai=True,
       project=config.gcp_project_id,
-      location=config.gcp_project_location,
+      location='global',
   )
   speaker_list = json.loads(speakers)
   speaker_list = [
@@ -361,7 +361,7 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
   genai_client = genai.Client(
       vertexai=True,
       project=config.gcp_project_id,
-      location=config.gcp_project_location,
+      location='global',
   )
   utterance = req.video.utterances[req.utterance]
   new_translation = translate_text(
