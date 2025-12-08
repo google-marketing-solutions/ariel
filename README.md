@@ -4,6 +4,14 @@ Ariel is a tool for translating video voice tracks. It provides an easy to use
 web interface for uploading videos, creating translations, and redubbing the
 video with translated audio.
 
+## Note on Data Residency
+Ariel uses Google Gemini Text-To-Speech (TTS). This model is only available
+using the global Cloud Region. To simplify deployment, as certain versions of
+Gemini models are not available in every region, we also use the global region
+when sending data to Gemini. If you have strict policies on data residency,
+please be aware that the solution will require bespoke changes to meet your
+requirements and cannot be used as is.
+
 ## Requirements
 
 The solution requires the following Google APIs and services to be enabled in
