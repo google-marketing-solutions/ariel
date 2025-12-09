@@ -91,9 +91,19 @@ done
 # Create configuration.yaml from template
 echo "📝 Creating configuration.yaml..."
 cp configuration.template.yaml configuration.yaml
-sed -i "s/enter project id here/$PROJECT_ID/g" configuration.yaml
-sed -i "s/enter project location here/$REGION/g" configuration.yaml
-sed -i "s/enter bucket name here/$BUCKET_NAME/g" configuration.yaml
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # macOS (BSD sed) requires an empty string for the -i flag
+  sed -i "" "s/enter project id here/$PROJECT_ID/g" configuration.yaml
+  sed -i "" "s/enter project location here/$REGION/g" configuration.yaml
+  sed -i "" "s/enter bucket name here/$BUCKET_NAME/g" configuration.yaml
+else
+  # Linux (GNU sed) does not
+  sed -i "s/enter project id here/$PROJECT_ID/g" configuration.yaml
+  sed -i "s/enter project location here/$REGION/g" configuration.yaml
+  sed -i "s/enter bucket name here/$BUCKET_NAME/g" configuration.yaml
+fi
+
 echo "✅ configuration.yaml created."
 
 # 4. Grant the current user permissions to manage IAM
