@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ariel v2.0 AI Voiceover Studio</title>
+    <link rel="icon" href="static/Image/Ariel_Logo.png" type="image/png" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+    <link rel="stylesheet" href="static/style.css" />
+  </head>
+  <body>
+    <header class="top-header">
+      <div class="logo">
+        <img src="static/Image/Ariel_Logo.png" alt="Ariel Logo" class="logo-img" />
+        <h1>Ariel v2.0 AI Voiceover Studio</h1>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <h2>New Dubbing Job</h2>
+
+      <div id="video-placeholder" class="video-placeholder">
+        <div id="video-drop-zone" class="video-drop-zone">
+          <i class="bi bi-film"></i>
+          <p>Drag & Drop video file here</p>
+          <div class="d-flex justify-content-center">
+            <button id="select-video-computer" class="btn btn-primary">
+              Select Video from Computer
+            </button>
+          </div>
+          <input type="file" id="video-input" accept="video/*" class="d-none" />
+        </div>
+        <video id="video-preview" controls></video>
+      </div>
+
+      <div class="dubbing-settings">
+        <div class="settings-left">
+          <div class="row">
+            <div class="col-md-4">
+              <div class="speakers-section">
+                <h5>Speakers</h5>
+                <div id="speaker-list" class="speaker-list"></div>
+                <button id="add-speaker-btn" class="btn btn-outline-primary mt-2">
+                  <i class="bi bi-plus-circle"></i> Add Speaker
+                </button>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="language-section">
+                <div class="mb-3">
+                  <label for="original-language" class="form-label"
+                    >Original Language
+                    <a
+                      href="https://docs.cloud.google.com/text-to-speech/docs/gemini-tts#available_languages"
+                      target="_blank"
+                    >
+                      <i class="bi bi-question-circle-fill"></i>
+                    </a>
+                  </label>
+                  <select id="original-language" class="form-select"></select>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="language-section">
+                <div class="mb-3">
+                  <label for="target-language" class="form-label"
+                    >Translation Language
+                    <a
+                      href="https://docs.cloud.google.com/text-to-speech/docs/gemini-tts#available_languages"
+                      target="_blank"
+                    >
+                      <i class="bi bi-question-circle-fill"></i>
+                    </a>
+                  </label>
+                  <select id="target-language" class="form-select"></select>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gemini-instructions-section mt-3">
+            <label for="gemini-instructions" class="form-label">Gemini Instructions</label>
+            <textarea
+              id="gemini-instructions"
+              class="form-control"
+              rows="4"
+              placeholder="e.g., No dubbing phrases, company name, special instructions..."
+            ></textarea>
+          </div>
+        </div>
+        <div class="settings-right">
+          <div class="d-flex align-items-center">
+            <span>Gemini Model</span>
+            <div class="form-check form-switch mx-2">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
+                id="gemini-model-toggle"
+              />
+            </div>
+            <span id="gemini-model-label">Flash</span>
+          </div>
+          <div class="d-flex align-items-center mt-3">
+            <span>Adjust speed:</span>
+            <div class="form-check form-switch mx-2">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
+                id="adjust-speed-toggle"
+              />
+            </div>
+            <span id="adjust-speed-label">No</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="start-processing-section">
+        <button id="start-processing-btn" class="btn btn-success btn-lg" disabled>
+          Start Processing
+        </button>
+      </div>
+    </main>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <template id="results-view-template">
+      <div id="results-view" style="display: none">
+        <div class="row">
+          <div class="col-6" style="max-width: 50vw">
+            <div id="video-player-container" class="mt-3">
+              <button id="close-floating-video-btn" class="btn-close" aria-label="Close"></button>
+              <video id="results-video-preview" class="results-video" controls></video>
+            </div>
+          </div>
+          <div class="col-6" style="max-width: 50vw">
+            <div id="video-settings-view" class="video-settings-view card">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <h5 class="card-title">Video Settings</h5>
+                  <button id="edit-video-settings-btn" class="btn btn-sm btn-outline-primary">
+                    Edit
+                  </button>
+                </div>
+                <div id="video-settings-content"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="timeline" class="timeline-container">
+          <div class="timeline-header">
+            <div class="timeline-label-column"></div>
+            <div class="timeline-marker-column" id="timeline-markers"></div>
+          </div>
+          <div class="timeline-content">
+            <div class="timeline-original-section">
+              <div class="timeline-label-column" id="original-speaker-labels"></div>
+              <div class="timeline-tracks-column" id="original-utterances-tracks"></div>
+            </div>
+            <div class="timeline-translated-section">
+              <div class="timeline-label-column" id="translated-speaker-labels"></div>
+              <div class="timeline-tracks-column" id="translated-utterances-tracks"></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <button id="reset-timeline-btn" class="btn btn-secondary mt-3" style="display: none">
+            Reset Times
+          </button>
+        </div>
+        <div class="row mt-3">
+          <div class="col-5" style="max-width: 40vw">
+            <div id="utterances-list" class="utterances-list"></div>
+          </div>
+          <div class="col-7">
+            <div id="utterance-editor" class="utterance-editor card" style="display: none">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <h5 class="card-title">Edit Utterance</h5>
+                  <button
+                    type="button"
+                    class="btn-close btn-close-white"
+                    id="close-utterance-editor"
+                  ></button>
+                </div>
+                <div id="utterance-editor-content"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="text-center mt-3">
+          <button id="generate-video-btn" class="btn btn-primary btn-lg">Generate Video</button>
+        </div>
+      </div>
+    </template>
+
+    <template id="speaker-modal-template">
+      <div class="modal fade" id="speaker-modal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Select Speaker Voice</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label for="speaker-name-input" class="form-label">Speaker Name</label>
+                <input
+                  type="text"
+                  id="speaker-name-input"
+                  class="form-control"
+                  placeholder="e.g., Narrator"
+                />
+              </div>
+              <hr class="my-3" />
+              <div class="d-flex align-items-center mb-3">
+                <input
+                  type="text"
+                  id="voice-search"
+                  class="form-control me-3"
+                  placeholder="Search voices..."
+                />
+                <div class="btn-group" role="group" style="white-space: nowrap;">
+                  <input
+                    type="radio"
+                    class="btn-check"
+                    name="gender-filter"
+                    id="gender-all"
+                    value="all"
+                    autocomplete="off"
+                    checked
+                  />
+                  <label class="btn btn-outline-primary" for="gender-all">All</label>
+
+                  <input
+                    type="radio"
+                    class="btn-check"
+                    name="gender-filter"
+                    id="gender-male"
+                    value="Male"
+                    autocomplete="off"
+                  />
+                  <label class="btn btn-outline-primary" for="gender-male">Male</label>
+
+                  <input
+                    type="radio"
+                    class="btn-check"
+                    name="gender-filter"
+                    id="gender-female"
+                    value="Female"
+                    autocomplete="off"
+                  />
+                  <label class="btn btn-outline-primary" for="gender-female">Female</label>
+                </div>
+              </div>
+              <div id="voice-list" class="voice-list-modal">
+                <!-- Voice items will be added here -->
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template id="edit-speaker-voice-modal-template">
+      <div class="modal fade" id="edit-speaker-voice-modal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Edit Speaker Voice</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <input
+                type="text"
+                id="edit-voice-search"
+                class="form-control mb-3"
+                placeholder="Search voices..."
+              />
+              <div class="d-flex justify-content-center mb-3">
+                <div class="btn-group" role="group">
+                  <input
+                    type="radio"
+                    class="btn-check"
+                    name="edit-gender-filter"
+                    id="edit-gender-all"
+                    value="all"
+                    autocomplete="off"
+                    checked
+                  />
+                  <label class="btn btn-outline-primary" for="edit-gender-all">All</label>
+
+                  <input
+                    type="radio"
+                    class="btn-check"
+                    name="edit-gender-filter"
+                    id="edit-gender-male"
+                    value="Male"
+                    autocomplete="off"
+                  />
+                  <label class="btn btn-outline-primary" for="edit-gender-male">Male</label>
+
+                  <input
+                    type="radio"
+                    class="btn-check"
+                    name="edit-gender-filter"
+                    id="edit-gender-female"
+                    value="Female"
+                    autocomplete="off"
+                  />
+                  <label class="btn btn-outline-primary" for="edit-gender-female">Female</label>
+                </div>
+              </div>
+              <div id="edit-voice-list" class="voice-list-modal">
+                <!-- Voice items will be added here -->
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                Cancel
+              </button>
+              <button type="button" id="save-voice-btn" class="btn btn-primary">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template id="confirmation-modal-template">
+      <div class="modal fade" id="confirmation-modal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Unsaved Changes</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <p>You have unsaved changes. Are you sure you want to close?</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                Cancel
+              </button>
+              <button type="button" id="confirm-close-btn" class="btn btn-danger">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template id="thinking-popup-template">
+      <div id="thinking-popup" class="thinking-popup" style="display: none">
+        <div class="thinking-popup-content">
+          <!-- Content injected by JS -->
+        </div>
+      </div>
+    </template>
+
+    <template id="generated-video-view-template">
+      <div id="generated-video-view" class="generated-video-container" style="display: none">
+        <h3 class="mb-4">Generated Video</h3>
+        <video id="generated-video-preview" controls width="100%"></video>
+        <div class="button-bar mt-3">
+          <div class="download-group">
+            <a id="download-video-button" class="btn btn-outline-primary me-2" download
+              >Download Video</a
+            >
+            <div class="btn-group">
+              <button
+                type="button"
+                class="btn btn-outline-primary dropdown-toggle"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Download Audio
+              </button>
+              <ul class="dropdown-menu">
+                <li>
+                  <a id="download-vocals-button" class="dropdown-item" href="#" download
+                    >Download Vocals</a
+                  >
+                </li>
+                <li>
+                  <a id="download-vocals-music-button" class="dropdown-item" href="#" download
+                    >Download Vocals + Music</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="action-group">
+            <button id="go-back-to-editing-button" class="btn btn-secondary">
+              Go back to editing
+            </button>
+            <button id="start-over-button" class="btn btn-danger">Start Over</button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template id="completed-video-template">
+      <div class="modal fade" id="completed-video-modal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered completed-modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Completed Video</h5>
+            </div>
+            <div class="modal-body">
+              <video id="completed-video-video" controls preload="auto"></video>
+            </div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                id="completed-video-close-btn"
+                class="btn btn-danger"
+                data-bs-dismiss="modal"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/main.js" type="module"></script>
+  </body>
+</html>

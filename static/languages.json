@@ -1,0 +1,437 @@
+[
+    {
+      "name": "Arabic (Egypt)",
+      "code": "ar-EG",
+      "readiness": "GA"
+    },
+    {
+      "name": "Dutch (Netherlands)",
+      "code": "nl-NL",
+      "readiness": "GA"
+    },
+    {
+      "name": "English (India)",
+      "code": "en-IN",
+      "readiness": "GA"
+    },
+    {
+      "name": "English (United States)",
+      "code": "en-US",
+      "readiness": "GA"
+    },
+    {
+      "name": "French (France)",
+      "code": "fr-FR",
+      "readiness": "GA"
+    },
+    {
+      "name": "German (Germany)",
+      "code": "de-DE",
+      "readiness": "GA"
+    },
+    {
+      "name": "Hindi (India)",
+      "code": "hi-IN",
+      "readiness": "GA"
+    },
+    {
+      "name": "Indonesian (Indonesia)",
+      "code": "id-ID",
+      "readiness": "GA"
+    },
+    {
+      "name": "Italian (Italy)",
+      "code": "it-IT",
+      "readiness": "GA"
+    },
+    {
+      "name": "Japanese (Japan)",
+      "code": "ja-JP",
+      "readiness": "GA"
+    },
+    {
+      "name": "Korean (South Korea)",
+      "code": "ko-KR",
+      "readiness": "GA"
+    },
+    {
+      "name": "Marathi (India)",
+      "code": "mr-IN",
+      "readiness": "GA"
+    },
+    {
+      "name": "Polish (Poland)",
+      "code": "pl-PL",
+      "readiness": "GA"
+    },
+    {
+      "name": "Portuguese (Brazil)",
+      "code": "pt-BR",
+      "readiness": "GA"
+    },
+    {
+      "name": "Romanian (Romania)",
+      "code": "ro-RO",
+      "readiness": "GA"
+    },
+    {
+      "name": "Russian (Russia)",
+      "code": "ru-RU",
+      "readiness": "GA"
+    },
+    {
+      "name": "Spanish (Spain)",
+      "code": "es-ES",
+      "readiness": "GA"
+    },
+    {
+      "name": "Tamil (India)",
+      "code": "ta-IN",
+      "readiness": "GA"
+    },
+    {
+      "name": "Telugu (India)",
+      "code": "te-IN",
+      "readiness": "GA"
+    },
+    {
+      "name": "Thai (Thailand)",
+      "code": "th-TH",
+      "readiness": "GA"
+    },
+    {
+      "name": "Turkish (Turkey)",
+      "code": "tr-TR",
+      "readiness": "GA"
+    },
+    {
+      "name": "Ukrainian (Ukraine)",
+      "code": "uk-UA",
+      "readiness": "GA"
+    },
+    {
+      "name": "Vietnamese (Vietnam)",
+      "code": "vi-VN",
+      "readiness": "GA"
+    },
+    {
+      "name": "Afrikaans (South Africa) [P]",
+      "code": "af-ZA",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Albanian (Albania) [P]",
+      "code": "sq-AL",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Amharic (Ethiopia) [P]",
+      "code": "am-ET",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Arabic (World) [P]",
+      "code": "ar-001",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Armenian (Armenia) [P]",
+      "code": "hy-AM",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Azerbaijani (Azerbaijan) [P]",
+      "code": "az-AZ",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Bangla (Bangladesh) [P]",
+      "code": "bn-bd",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Basque (Spain) [P]",
+      "code": "eu-ES",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Belarusian (Belarus) [P]",
+      "code": "be-BY",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Bulgarian (Bulgaria) [P]",
+      "code": "bg-BG",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Burmese (Myanmar) [P]",
+      "code": "my-MM",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Catalan (Spain) [P]",
+      "code": "ca-ES",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Cebuano (Philippines) [P]",
+      "code": "ceb-PH",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Chinese, Mandarin (China) [P]",
+      "code": "cmn-cn",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Chinese, Mandarin (Taiwan) [P]",
+      "code": "cmn-tw",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Croatian (Croatia) [P]",
+      "code": "hr-HR",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Czech (Czech Republic) [P]",
+      "code": "cs-CZ",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Danish (Denmark) [P]",
+      "code": "da-DK",
+      "readiness": "Preview"
+    },
+    {
+      "name": "English (Australia) [P]",
+      "code": "en-AU",
+      "readiness": "Preview"
+    },
+    {
+      "name": "English (United Kingdom) [P]",
+      "code": "en-GB",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Estonian (Estonia) [P]",
+      "code": "et-EE",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Filipino (Philippines) [P]",
+      "code": "fil-PH",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Finnish (Finland) [P]",
+      "code": "fi-FI",
+      "readiness": "Preview"
+    },
+    {
+      "name": "French (Canada) [P]",
+      "code": "fr-CA",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Galician (Spain) [P]",
+      "code": "gl-ES",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Georgian (Georgia) [P]",
+      "code": "ka-GE",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Greek (Greece) [P]",
+      "code": "el-GR",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Gujarati (India) [P]",
+      "code": "gu-IN",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Haitian Creole (Haiti) [P]",
+      "code": "ht-HT",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Hebrew (Israel) [P]",
+      "code": "he-IL",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Hungarian (Hungary) [P]",
+      "code": "hu-HU",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Icelandic (Iceland) [P]",
+      "code": "is-IS",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Javanese (Java) [P]",
+      "code": "jv-JV",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Kannada (India) [P]",
+      "code": "kn-IN",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Konkani (India) [P]",
+      "code": "kok-in",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Lao (Laos) [P]",
+      "code": "lo-LA",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Latin (Vatican City) [P]",
+      "code": "la-VA",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Latvian (Latvia) [P]",
+      "code": "lv-LV",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Lithuanian (Lithuania) [P]",
+      "code": "lt-IT",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Luxembourgish (Luxembourg) [P]",
+      "code": "lb-LU",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Macedonian (North Macedonia) [P]",
+      "code": "mk-MK",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Maithili (India) [P]",
+      "code": "mai-IN",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Malagasy (Madagascar) [P]",
+      "code": "mg-MG",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Malay (Malaysia) [P]",
+      "code": "ms-MY",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Malayalam (India) [P]",
+      "code": "ml-IN",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Mongolian (Mongolia) [P]",
+      "code": "mn-MN",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Nepali (Nepal) [P]",
+      "code": "ne-NP",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Norwegian, Bokmål (Norway) [P]",
+      "code": "nb-NO",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Norwegian, Nynorsk (Norway) [P]",
+      "code": "nn-NO",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Odia (India) [P]",
+      "code": "or-IN",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Pashto (Afghanistan) [P]",
+      "code": "ps-AF",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Persian (Iran) [P]",
+      "code": "fa-IR",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Portuguese (Portugal) [P]",
+      "code": "pt-PT",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Punjabi (India) [P]",
+      "code": "pa-IN",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Serbian (Serbia) [P]",
+      "code": "sr-RS",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Sindhi (India) [P]",
+      "code": "sd-IN",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Sinhala (Sri Lanka) [P]",
+      "code": "si-LK",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Slovak (Slovakia) [P]",
+      "code": "sk-SK",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Slovenian (Slovenia) [P]",
+      "code": "sl-SI",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Spanish (Latin America) [P]",
+      "code": "es-419",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Spanish (Mexico) [P]",
+      "code": "es-MX",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Swahili (Kenya) [P]",
+      "code": "sw-KE",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Swedish (Sweden) [P]",
+      "code": "sv-SE",
+      "readiness": "Preview"
+    },
+    {
+      "name": "Urdu (Pakistan) [P]",
+      "code": "ur-PK",
+      "readiness": "Preview"
+    }
+  ]

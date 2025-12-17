@@ -1,0 +1,64 @@
+"""Functions related to translating text."""
+# Copyright 2025 Google LLC
+
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy
+# of the License at
+
+#   http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+import logging
+
+from google import genai
+
+
+def translate_text(
+    genai_client: genai.Client,
+    original_lang: str,
+    target_lang: str,
+    text: str,
+    model_name: str,
+    instructions: str = "",
+) -> str:
+  """Translates text from the original to the target language.
+
+  Uses Google Gemini to translate the text. Gemini was chosen to be able to
+  provide detailed instructions on how the translation should be done.
+
+  Args:
+    genai_client: the genai.Client to use for Gemini queries.
+    original_lang: the language the text is in.
+    target_lang: the language to translate to.
+    text: the text to translate.
+    model_name: the name of the model to use.
+    instructions: additional instructions to include to steer the translation.
+        Defaults to 'Nothing'
+
+  Returns:
+    the translated text.
+  """
+
+  prompt = f"""
+  # Translation Job
+  ## Instructions
+  Translate the text from {original_lang} to {target_lang}. Return only the translated text.
+  {instructions}
+  ## Original text
+  {text}
+  """
+
+  response = genai_client.models.generate_content(
+      model=model_name,
+      contents=[prompt],
+  )
+  logging.info(
+      "Gemini Token Count for translate_text: %s",
+      response.usage_metadata.total_token_count)
+
+  return response.text or "TRANSLATION FAILED"

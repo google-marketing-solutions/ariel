@@ -1,268 +1,468 @@
-# Copyright 2024 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    https://www.apache.org/licenses/LICENSE-2.0
-#
+"""Entry point into the Ariel v2 solution."""
+
+# Copyright 2025 Google LLC
+
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy
+# of the License at
+
+#   http://www.apache.org/licenses/LICENSE-2.0
+
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+import concurrent.futures
+import functools
+import json
+import logging
+import os
+import shutil
+from typing import Annotated
+import uuid
 
-"""A main file executing an end-to-end dubbing prcoesses of Ariel package from the Google EMEA gTech Ads Data Science."""
+from cloud_storage import upload_file_to_gcs
+from cloud_storage import upload_video_to_gcs
+from configuration import get_config
+from fastapi import FastAPI
+from fastapi import Form
+from fastapi import Request
+from fastapi import UploadFile
+from fastapi.responses import HTMLResponse
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from generate_audio import generate_audio
+from generate_audio import shorten_audio
+from google import genai
+import google.cloud.logging
+from google.cloud.logging.handlers import CloudLoggingHandler
+from models import (
+    RegenerateRequest,
+    RegenerateResponse,
+    Speaker,
+    Utterance,
+    Video,
+)
+from process import (
+    combine_video_and_audio,
+    merge_background_and_vocals,
+    merge_vocals,
+    separate_audio_from_video,
+)
+from transcribe import TranscribeSegment, annotate_transcript, transcribe_media
+from translate import translate_text
 
-import ast
-from typing import Sequence
-from absl import app
-from absl import flags
-from ariel.dubbing import Dubber
-from ariel.dubbing import get_safety_settings
+# Set up Google Cloud Logging
+if "K_SERVICE" in os.environ:
+  client = google.cloud.logging.Client()
+  handler = CloudLoggingHandler(client)
+  google.cloud.logging.handlers.setup_logging(handler)
+else:
+  logging.basicConfig(level=logging.INFO, force=True)
 
-FLAGS = flags.FLAGS
+app = FastAPI()
 
-_INPUT_FILE = flags.DEFINE_string(
-    "input_file",
-    None,
-    "Path to the input video or audio file.",
-    required=True,
-)
-_OUTPUT_DIRECTORY = flags.DEFINE_string(
-    "output_directory",
-    None,
-    "Directory to save output files.",
-    required=True,
-)
-_ADVERTISER_NAME = flags.DEFINE_string(
-    "advertiser_name",
-    None,
-    "Name of the advertiser.",
-    required=True,
-)
-_ORIGINAL_LANGUAGE = flags.DEFINE_string(
-    "original_language",
-    None,
-    "Original language of the ad (ISO 3166-1 alpha-2 country code).",
-    required=True,
-)
-_TARGET_LANGUAGE = flags.DEFINE_string(
-    "target_language",
-    None,
-    "Target language for dubbing (ISO 3166-1 alpha-2 country code).",
-    required=True,
-)
-_GCP_PROJECT_ID = flags.DEFINE_string(
-    "gcp_project_id",
-    None,
-    "Google Cloud Platform (GCP) project ID for Gemini model"
-    " access and Google Text-To-Speech API (if this method is picked)",
-    required=True,
-)
-_GCP_REGION = flags.DEFINE_string(
-    "gcp_region",
-    None,
-    "GCP region to use when making API calls and where a temporary"
-    " bucket will be created for Gemini to analyze the video / audio ad."
-    " The bucket with all its contents will be removed immediately afterwards.",
-    required=True,
-)
-_NUMBER_OF_SPEAKERS = flags.DEFINE_integer(
-    "number_of_speakers",
-    1,
-    "Number of speakers in the ad.",
-)
-_HUGGING_FACE_TOKEN = flags.DEFINE_string(
-    "hugging_face_token",
-    None,
-    "Hugging Face API token.",
-)
-_NO_DUBBING_PHRASES = flags.DEFINE_list(
-    "no_dubbing_phrases",
-    [],
-    "Phrases to exclude in the dubbing process, they orignal utterance will be"
-    " used instead.",
-)
-_DIARIZATION_INSTRUCTIONS = flags.DEFINE_string(
-    "diarization_instructions",
-    None,
-    "Specific instructions for speaker diarization.",
-)
-_TRANSLATION_INSTRUCTIONS = flags.DEFINE_string(
-    "translation_instructions",
-    None,
-    "Specific instructions for translation.",
-)
-_MERGE_UTTERANCES = flags.DEFINE_bool(
-    "merge_utterances",
-    True,
-    "Merge utterances with timestamps closer than the threshold.",
-)
-_MINIMUM_MERGE_THRESHOLD = flags.DEFINE_float(
-    "minimum_merge_threshold",
-    0.001,
-    "Threshold for merging utterances in seconds.",
-)
-_PREFERRED_VOICES = flags.DEFINE_list(
-    "preferred_voices",
-    [],
-    "Preferred voice names for text-to-speech (e.g., ['Wavenet'] for Google's"
-    " TTS or ['Calllum'] for ElevenLabs).",
-)
-_ASSIGNED_VOICES_OVERRIDE = flags.DEFINE_string(
-    "assigned_voices_override",
-    None,
-    "A mapping between unique speaker IDs and the"
-    " full name of their assigned voices. E.g. {'speaker_01':"
-    " 'en-US-Casual-K'} or {'speaker_01': 'Charlie'}.",
-)
-_KEEP_VOICE_ASSIGNMENTS = flags.DEFINE_bool(
-    "keep_voice_assignments",
-    False,
-    "Whether the voices assigned on the first run"
-    " should be used again when utilizing the same class instance. It helps"
-    " prevents repetitive voice assignment and cloning.",
-)
-_ADJUST_SPEED = flags.DEFINE_bool(
-    "adjust_speed",
-    False,
-    "Whether to adjust the duration of the dubbed audio files to match the"
-    " duration of the source audio files.",
-)
-_VOCALS_VOLUME_ADJUSTMENT = flags.DEFINE_float(
-    "vocals_volume_adjustment",
-    5.0,
-    "By how much the vocals audio volume should be adjusted",
-)
-_BACKGROUND_VOLUME_ADJUSTMENT = flags.DEFINE_float(
-    "background_volume_adjustment",
-    0.0,
-    "By how much the background audio volume should be adjusted.",
-)
-_VOICE_SEPARATION_ROUNDS = flags.DEFINE_integer(
-    "voice_separation_rounds",
-    2,
-    "The number of times the background audio file"
-    " should be processed for voice detection and removal. It helps with"
-    " the old voice artifacts being present in the dubbed ad.",
-)
-_CLEAN_UP = flags.DEFINE_bool(
-    "clean_up",
-    False,
-    "Delete intermediate files after dubbing.",
-)
-_GEMINI_MODEL_NAME = flags.DEFINE_string(
-    "gemini_model_name",
-    "gemini-2.5-flash",
-    "Name of the Gemini model to use.",
-)
-_TEMPERATURE = flags.DEFINE_float(
-    "temperature",
-    1.0,
-    "Controls randomness in generation.",
-)
-_TOP_P = flags.DEFINE_float(
-    "top_p",
-    0.95,
-    "Nucleus sampling threshold.",
-)
-_TOP_K = flags.DEFINE_integer(
-    "top_k",
-    40,
-    "Top-k sampling parameter.",
-)
-_SAFETY_SETTINGS = flags.DEFINE_string(
-    "_safety_settings",
-    "Medium",
-    "The indicator of what kind of Gemini safety settings should"
-    " be used in the dubbing process. Can be"
-    " 'Low', 'Medium', 'High', or 'None'",
-)
-_MAX_OUTPUT_TOKENS = flags.DEFINE_integer(
-    "max_output_tokens",
-    8192,
-    "Maximum number of tokens in the generated response.",
-)
-_ELEVENLABS_TOKEN = flags.DEFINE_string(
-    "elevenlabs_token",
-    None,
-    "ElevenLabs API token.",
-)
-_ELEVENLABS_CLONE_VOICES = flags.DEFINE_bool(
-    "elevenlabs_clone_voices",
-    False,
-    "Whether to clone source voices. It requires using ElevenLabs API.",
-)
-_ELEVENLABS_MODEL = flags.DEFINE_string(
-    "elevenlabs_model",
-    "eleven_multilingual_v2",
-    "The ElevenLabs model to use in the Text-To-Speech process.",
-)
-_ELEVENLABS_REMOVE_CLONED_VOICES = flags.DEFINE_bool(
-    "elevenlabs_remove_cloned_voices",
-    False,
-    "Whether to remove all the voices that"
-    " were cloned with ELevenLabs during the dubbing process.",
-)
-_WITH_VERIFICATION = flags.DEFINE_bool(
-    "with_verification",
-    True,
-    "Verify, and optionally edit, the utterance metadata in the dubbing"
-    " process.",
-)
+# Check if running in Google Cloud Run
+if "K_SERVICE" in os.environ:
+  mount_point = "/mnt/ariel"
+  app.mount("/mnt", StaticFiles(directory="/mnt"), name="temp")
+else:
+  # Running locally.
+  mount_point = "static/temp"
+  app.mount("/mnt", StaticFiles(directory="static/temp"), name="temp")
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+config = get_config()
 
 
-def main(argv: Sequence[str]) -> None:
-  """Parses command-line arguments and runs the dubbing process."""
-  if len(argv) > 1:
-    raise app.UsageError("Too many command-line arguments.")
+@app.get("/", response_class=HTMLResponse)
+async def read_item(request: Request):
+  return templates.TemplateResponse("index.html", {"request": request})
 
-  dubber = Dubber(
-      input_file=_INPUT_FILE.value,
-      output_directory=_OUTPUT_DIRECTORY.value,
-      advertiser_name=_ADVERTISER_NAME.value,
-      original_language=_ORIGINAL_LANGUAGE.value,
-      target_language=_TARGET_LANGUAGE.value,
-      gcp_project_id=_GCP_PROJECT_ID.value,
-      gcp_region=_GCP_REGION.value,
-      number_of_speakers=_NUMBER_OF_SPEAKERS.value,
-      hugging_face_token=_HUGGING_FACE_TOKEN.value,
-      no_dubbing_phrases=_NO_DUBBING_PHRASES.value,
-      diarization_instructions=_DIARIZATION_INSTRUCTIONS.value,
-      translation_instructions=_TRANSLATION_INSTRUCTIONS.value,
-      merge_utterances=_MERGE_UTTERANCES.value,
-      minimum_merge_threshold=_MINIMUM_MERGE_THRESHOLD.value,
-      preferred_voices=_PREFERRED_VOICES.value,
-      assigned_voices_override=ast.literal_eval(_ASSIGNED_VOICES_OVERRIDE.value)
-      if _ASSIGNED_VOICES_OVERRIDE.value else None,
-      keep_voice_assignments=_KEEP_VOICE_ASSIGNMENTS.value,
-      adjust_speed=_ADJUST_SPEED.value,
-      vocals_volume_adjustment=_VOCALS_VOLUME_ADJUSTMENT.value,
-      background_volume_adjustment=_BACKGROUND_VOLUME_ADJUSTMENT.value,
-      voice_separation_rounds=_VOICE_SEPARATION_ROUNDS.value,
-      clean_up=_CLEAN_UP.value,
-      gemini_model_name=_GEMINI_MODEL_NAME.value,
-      temperature=_TEMPERATURE.value,
-      top_p=_TOP_P.value,
-      top_k=_TOP_K.value,
-      max_output_tokens=_MAX_OUTPUT_TOKENS.value,
-      safety_settings=get_safety_settings(_SAFETY_SETTINGS.value),
-      use_elevenlabs=False if _ELEVENLABS_TOKEN.value == "".strip() else True,
-      elevenlabs_token=_ELEVENLABS_TOKEN.value,
-      elevenlabs_clone_voices=_ELEVENLABS_CLONE_VOICES.value,
-      elevenlabs_model=_ELEVENLABS_MODEL.value,
-      elevenlabs_remove_cloned_voices=_ELEVENLABS_REMOVE_CLONED_VOICES.value,
-      with_verification=_WITH_VERIFICATION.value,
+
+def _process_utterance(
+    i: int,
+    t: TranscribeSegment,
+    speaker_map: dict[str, Speaker],
+    genai_client: genai.Client,
+    original_language: str,
+    translate_language: str,
+    gemini_model: str,
+    gemini_tts_model: str,
+    local_dir: str,
+    adjust_speed: bool,
+) -> Utterance:
+  """Processes a single utterance: translates and generates audio.
+
+  Args:
+    i: The index of the utterance.
+    t: The TranscribeSegment object.
+    speaker_map: A map of speaker IDs to Speaker objects.
+    genai_client: The GenAI client.
+    original_language: The original language.
+    translate_language: The target language.
+    gemini_model: The Gemini model for translation.
+    gemini_tts_model: The Gemini TTS model.
+    local_dir: The directory to save audio.
+    adjust_speed: Whether to adjust audio speed.
+
+  Returns:
+    The processed Utterance object.
+  """
+  uid = str(uuid.uuid4())
+  speaker = speaker_map[t.speaker_id]
+
+  translated_text = translate_text(
+      genai_client,
+      original_language,
+      translate_language,
+      t.transcript,
+      gemini_model,
+      t.tone,
   )
-  dubber.dub_ad()
+
+  local_audio_path = os.path.join(local_dir, f"audio_{i}.wav")
+  audio_duration = generate_audio(
+      translated_text,
+      t.tone,
+      translate_language,
+      speaker.voice,
+      local_audio_path,
+      model_name=gemini_tts_model,
+  )
+  original_duration = t.end_time - t.start_time
+  if adjust_speed and audio_duration and audio_duration > original_duration:
+    audio_duration = shorten_audio(
+        local_audio_path, audio_duration, original_duration
+    )
+
+  translated_end_time = t.start_time + audio_duration
+
+  return Utterance(
+      id=uid,
+      original_text=t.transcript,
+      translated_text=translated_text,
+      instructions=t.tone,
+      speaker=speaker,
+      original_start_time=t.start_time,
+      original_end_time=t.end_time,
+      translated_start_time=t.start_time,
+      translated_end_time=translated_end_time,
+      removed=False,
+      audio_url=local_audio_path,
+  )
 
 
-if __name__ == "__main__":
-  flags.mark_flag_as_required("input_file")
-  flags.mark_flag_as_required("output_directory")
-  flags.mark_flag_as_required("advertiser_name")
-  flags.mark_flag_as_required("original_language")
-  flags.mark_flag_as_required("target_language")
-  flags.mark_flag_as_required("gcp_project_id")
-  app.run(main)
+@app.post("/process")
+async def process_video(
+    video: UploadFile,
+    original_language: Annotated[str, Form()],
+    translate_language: Annotated[str, Form()],
+    prompt_enhancements: Annotated[str, Form()],
+    adjust_speed: Annotated[bool, Form()],
+    speakers: Annotated[str, Form()],
+    use_pro_model: Annotated[bool, Form()] = False,
+) -> Video:
+  """Endpoint to run the initial video processing workflow.
+
+  This function provides the workflow to separate the audio from the video,
+  transcribes the audio track, translates the utterances, generates new audio
+  from the translations, and returns a new Video object with all of the
+  information.
+
+  Args:
+    video: the original video file.
+    original_language: the language of speech in the original video.
+    translate_language: the language to translate the video to.
+    prompt_enhancements: extra instructions to send Gemini during translation
+        and audio generation.
+    adjust_speed: whether to automatically match the length of the generated
+        utterances to the original.
+    speakers: a list of the speakers in the video. They must be in the order
+        they speak in the video.
+    use_pro_model: whether to use the pro version of Gemini. If true, the pro
+        model defined in the configuration will be used. Otherwise the flash
+        version is used.
+
+  Returns:
+    A Video object with the information for the dubbing.
+
+  """
+  logging.info("Starting Process Video for %s", video.filename)
+  local_video_path, _ = save_video(video)
+
+  logging.info("Separating vocals and background music from %s", video.filename)
+  local_dir = os.path.dirname(local_video_path)
+  original_audio_path, vocals_path, background_path = separate_audio_from_video(
+      local_video_path, local_dir
+  )
+
+  logging.info(
+      "Uploading original audio, vocals and background music to GCS for %s",
+      video.filename
+  )
+  with open(original_audio_path, "rb") as f:
+    upload_file_to_gcs(original_audio_path, f, config.gcs_bucket_name)
+  with open(vocals_path, "rb") as f:
+    upload_file_to_gcs(vocals_path, f, config.gcs_bucket_name)
+  with open(background_path, "rb") as f:
+    upload_file_to_gcs(background_path, f, config.gcs_bucket_name)
+
+  gcs_original_audio_uri = (
+      f"gs://{config.gcs_bucket_name}/{original_audio_path}"
+  )
+
+  genai_client = genai.Client(
+      vertexai=True,
+      project=config.gcp_project_id,
+      location='global',
+  )
+  speaker_list = json.loads(speakers)
+  speaker_list = [
+      Speaker(speaker_id=s["id"], voice=s["voice"]) for s in speaker_list
+  ]
+  speaker_map = {s.speaker_id: s for s in speaker_list}
+
+  logging.info("Transcribing %s", video.filename)
+  transcript = transcribe_media(original_audio_path)
+
+  if use_pro_model:
+    gemini_model = config.gemini_pro_model
+    gemini_tts_model = config.gemini_pro_tts_model
+  else:
+    gemini_model = config.gemini_flash_model
+    gemini_tts_model = config.gemini_flash_tts_model
+
+  logging.info("Annotating transcript for %s", video.filename)
+  annotated_transcript = annotate_transcript(
+      client=genai_client,
+      model_name=gemini_model,
+      gcs_uri=gcs_original_audio_uri,
+      num_speakers=len(speaker_list),
+      script=transcript,
+      mime_type="audio/wav",
+  )
+
+  utterances: list[Utterance] = []
+  logging.info(
+      "Starting to translate utterances and generate audio for %s",
+      video.filename
+  )
+
+  process_func = functools.partial(
+      _process_utterance,
+      speaker_map=speaker_map,
+      genai_client=genai_client,
+      original_language=original_language,
+      translate_language=translate_language,
+      gemini_model=gemini_model,
+      gemini_tts_model=gemini_tts_model,
+      local_dir=local_dir,
+      adjust_speed=adjust_speed,
+  )
+
+  with concurrent.futures.ThreadPoolExecutor() as executor:
+    utterances = list(
+        executor.map(
+            process_func, range(len(annotated_transcript)), annotated_transcript
+        )
+    )
+
+  to_return = Video(
+      video_id=local_video_path.split("/")[-2],
+      original_language=original_language,
+      translate_language=translate_language,
+      prompt_enhancements=prompt_enhancements,
+      speakers=speaker_list,
+      utterances=utterances,
+      model_name=gemini_model,
+      tts_model_name=gemini_tts_model,
+  )
+
+  logging.info("Completed processing %s", video.filename)
+  return to_return
+
+
+def _get_dubbed_vocals_path(video_data: Video, local_dir: str) -> str:
+  """Generates the path for the dubbed vocals audio file.
+
+  Args:
+    video_data: the Video object representing the final video.
+    local_dir: the local directory to save the file in.
+
+  Returns:
+    The path to the dubbed vocals audio file.
+  """
+  dubbed_vocals_path = merge_vocals(
+      dubbed_vocals_metadata=video_data.utterances,
+      output_directory=local_dir,
+      target_language=video_data.translate_language,
+  )
+  return dubbed_vocals_path
+
+
+@app.post("/generate_video")
+def generate_video(video_data: Video) -> JSONResponse:
+  """Generates the final, translated video.
+
+  Args:
+    video_data: the Video object representing the final video.
+
+  Returns:
+    A JSON object with the URL to the completed video.
+  """
+  logging.info("Generating final video for %s", video_data.video_id)
+  local_dir = os.path.join(mount_point, video_data.video_id)
+  local_video_path = os.path.join(local_dir, video_data.video_id)
+  background_sound_path = os.path.join(
+      local_dir, "htdemucs", "original_audio", "no_vocals.wav"
+  )
+  dubbed_vocals_path = _get_dubbed_vocals_path(video_data, local_dir)
+  logging.info(f"Merging background and vocals for {video_data.video_id}")
+  merged_audio_path = merge_background_and_vocals(
+      background_audio_file=background_sound_path,
+      dubbed_vocals_path=dubbed_vocals_path,
+      output_directory=local_dir,
+      target_language=video_data.translate_language,
+  )
+  combined_video_path = os.path.join(
+      local_dir, f"{video_data.video_id}.{video_data.translate_language}.mp4"
+  )
+  combine_video_and_audio(
+      local_video_path, merged_audio_path, combined_video_path
+  )
+  public_video_path = f"{mount_point}/{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
+  public_vocals_path = f"{mount_point}/{video_data.video_id}/{os.path.basename(dubbed_vocals_path)}"
+  public_merged_audio_path = f"{mount_point}/{video_data.video_id}/{os.path.basename(merged_audio_path)}"
+  to_return = {
+      "video_url": f"{public_video_path}?v={uuid.uuid4()}",
+      "vocals_url": f"{public_vocals_path}?v={uuid.uuid4()}",
+      "merged_audio_url": f"{public_merged_audio_path}?v={uuid.uuid4()}",
+  }
+  return JSONResponse(content=to_return)
+
+
+@app.post("/regenerate_translation")
+def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
+  """Regenerates the translation for a given utterance.
+
+  Args:
+    req: The request object with the video, utterance index, and
+        additional instructions.
+
+  Returns:
+    A response with the new translation, updated audio file path,
+    and the duration of the audio.
+  """
+  genai_client = genai.Client(
+      vertexai=True,
+      project=config.gcp_project_id,
+      location='global',
+  )
+  utterance = req.video.utterances[req.utterance]
+  new_translation = translate_text(
+      genai_client,
+      req.video.original_language,
+      req.video.translate_language,
+      utterance.original_text,
+      req.video.model_name,
+      req.instructions,
+  )
+  target_dir = os.path.dirname(utterance.audio_url)
+  new_file_name = (
+      f"audio_{req.utterance}-" + str(uuid.uuid1()) + ".wav"
+  )  # cache busting
+  new_path = os.path.join(target_dir, new_file_name)
+  duration = generate_audio(
+      new_translation,
+      utterance.instructions,
+      req.video.translate_language,
+      utterance.speaker.voice,
+      new_path,
+      req.video.tts_model_name,
+  )
+  return RegenerateResponse(
+      translated_text=new_translation, audio_url=new_path, duration=duration
+  )
+
+
+@app.post("/regenerate_dubbing")
+def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
+  """Regenerates the dubbing for a given utterance.
+
+  Args:
+    req: The request with the video, utterance index, and additional
+        instructions.
+
+  Returns:
+    A response with the new path to the dubbed audio.
+  """
+  utterance = req.video.utterances[req.utterance]
+  target_dir = os.path.dirname(utterance.audio_url)
+  new_file_name = (
+      f"audio_{req.utterance}-" + str(uuid.uuid1()) + ".wav"
+  )  # cache busting
+  new_path = os.path.join(target_dir, new_file_name)
+  duration = generate_audio(
+      utterance.translated_text,
+      req.instructions,
+      req.video.translate_language,
+      utterance.speaker.voice,
+      new_path,
+      req.video.tts_model_name,
+  )
+  return RegenerateResponse(
+      translated_text=utterance.translated_text,
+      audio_url=new_path,
+      duration=duration,
+  )
+
+
+def save_video(video: UploadFile) -> tuple[str, str]:
+  """Saves a video file on GCS and locally so that it can be found again.
+
+  Args:
+    video: the file to be saved.
+
+  Returns:
+    The local path to the and the path on GCS.
+  """
+  video_name = video.filename or "video.mp4"
+  video_name = sanitize_filename(video_name)
+  gcs_path = upload_video_to_gcs(video_name, video.file, config.gcs_bucket_name)
+  # save the file locally
+  video.file.seek(0)
+  local_dir = os.path.join(mount_point, os.path.dirname(gcs_path))
+  os.makedirs(name=local_dir, exist_ok=True)
+  local_path = os.path.join(mount_point, gcs_path)
+  with open(local_path, "wb") as local_file:
+    shutil.copyfileobj(video.file, local_file)
+
+  # save the file to GCS
+  video_gcs_uri = f"gs://{config.gcs_bucket_name}/{gcs_path}"
+  return local_path, video_gcs_uri
+
+
+def sanitize_filename(orig: str) -> str:
+  """Sanitizes a file name for shell commands.
+
+  Characters in the file name that might cause issues when used in a shell
+  command are removed from the name.
+
+  Args:
+    orig: the original file name.
+
+  Returns:
+    a sanitized version of the name. If the name is empty after sanitizing,
+        video.mp4 is returned.
+  """
+  special_chars = " \"'$&*()[]{}<>|;?/~"
+  trans_map = str.maketrans(dict.fromkeys(special_chars))
+  new_name = orig.translate(trans_map)
+  if not new_name:
+    return "video.mp4"
+  return new_name
