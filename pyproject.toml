@@ -23,6 +23,10 @@ dependencies = [
     "faster-whisper>=1.2.1",
 ]
 
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+default = true
+
 [dependency-groups]
 dev = [
     "basedpyright>=1.31.6",
