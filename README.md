@@ -103,6 +103,27 @@ gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
 Replace `YOUR_PROJECT_ID` with your Google Cloud project ID and `USER_EMAIL`
 with the email address of the user you want to grant access to.
 
+## Updating Ariel
+
+To update an existing deployment, run `git pull` from your clone of the git
+repository and then run the `deploy.sh` script. The settings created for the
+initial deployment will be reused. If you wish to change any of the settings
+before updating, run the `setup.sh` script first, as during the initial
+Deployment.
+
+### Updating Gemini Models
+
+Ariel is initially deployed to use the most recent, generally available Gemini model as of the last update to the code (currently Gemini 2.5). If you want to update the model being used, you will need to update the `configuration.yaml` file and redeploy the solution.
+
+To update the model, follow these steps:
+
+1. Edit the file `configuration.yaml`, updating the lines starting with `GEMINI_PRO_MODEL` and `GEMINI_FLAH_MODEL` to use the model code for the model you want to use. You can find model codes in the [Gemini documentation](https://ai.google.dev/gemini-api/docs/models).
+1. If needed, you can also update the models being used for text-to-speech by updating the lines starting with `GEMINI_TTS`.
+1. Redeploy the solution by running `deploy.sh`.
+
+
+`configuration.yaml` is created by `setup.sh` during the initial deployment. If you no longer have this file, you can manually create it using the template and filling in the appropriate values for your project.
+
 ## Running Ariel Locally
 
 The first step required to run Ariel locally is to install the dependencies. We
@@ -251,6 +272,9 @@ In addition, there are costs related to Cloud Run each time a video is
 processed, Cloud Storage for storing the videos and intermediate files, and
 initial Cloud Build costs for deploying the solution. These costs will be
 dependent on the region and specifics of your Cloud project.
+
+At the time of writing (December 2025), dubbing a 30 second video costs less
+than 0.50 USD.
 
 For information on Gemini pricing, please see the
 [official documentation](https://ai.google.dev/gemini-api/docs/pricing).
