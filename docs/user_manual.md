@@ -1,4 +1,4 @@
-# ![Ariel v2 logo][images/logo.png] Ariel v2 User Manual
+# ![Ariel v2 logo](images/logo.png) Ariel v2 User Manual
 
 ---
 
@@ -19,13 +19,13 @@ To access Ariel v2.0, navigate to the URL provided by your deployment administra
 
 Upon loading the application, you will be presented with the **New Dubbing Job** screen. This is where you configure the initial processing parameters.
 
-![The Ariel v2 homepage][images/interface.png]
+![The Ariel v2 homepage](images/interface.png)
 
 ---
 
 # 2\. Setting Up a Dubbing Job
 
-![The Ariel v2 interface with numbers][images/dubbing_job.png]
+![The Ariel v2 interface with numbers](images/dubbing_job.png)
 
 ## Step 1: Upload Video
 
@@ -51,13 +51,13 @@ You must identify the speakers in the video *before* processing to ensure specif
 
    * Filter by Gender using the **Male** / **Female** / **All** buttons.
 
-   * Click the **Play icon (![Play icon][images/play_icon.png])** next to a voice to preview it.
+   * Click the **Play icon (![Play icon](images/play_icon.png))** next to a voice to preview it.
 
 5. Select your desired voice and by clicking **Select**..
 
 6. Repeat this process for every distinct speaker in your video.
 
-![The dialog used to choose speakers][images/speaker_dialog.png]
+![The dialog used to choose speakers](images/speaker_dialog.png)
 
 ## Step 3: Language Settings
 
@@ -89,7 +89,7 @@ Click the green **Start Processing** button. The application will separate the a
 
 Once processing is complete, the view shifts to the Editing Studio. Here you can refine the translation, timing, and audio.
 
-![Ariel with a video ready for editing][images/editing.png]
+![Ariel with a video ready for editing](images/editing.png)
 
 ## 1 Video Player
 
@@ -117,15 +117,15 @@ You can **drag a translated utterance** to adjust its start time. Click and drag
 
 Located on the bottom left, there is a list of utterances, i.e. segments of speech from the video . Each utterance shows the text from the original video, the translation of the text, and the speaker who made the utterance. In addition, there are five icons placed along the right:
 
-![The pencil icon][images/pencil_icon.png] Used to open this utterance in the editor.
+![The pencil icon](images/pencil_icon.png) Used to open this utterance in the editor.
 
-![The speaker icon][images/speaker_icon.png] Play the original audio from the video.
+![The speaker icon](images/speaker_icon.png) Play the original audio from the video.
 
-![The translate icon][images/translate_icon.png] Play the translated audio.
+![The translate icon](images/translate_icon.png) Play the translated audio.
 
-![The mute icon][images/mute_icon.png] Use the original audio in the final video.
+![The mute icon](images/mute_icon.png) Use the original audio in the final video.
 
-![The trash icon][images/trash_icon.png] Don’t use audio for this utterance in the final video.
+![The trash icon](images/trash_icon.png) Don’t use audio for this utterance in the final video.
 
 ## 4 General Video Settings
 
@@ -147,7 +147,7 @@ After clicking **Submit**, the video will be reprocessed, with updated transcrip
 
 Clicking the **Pencil Icon** on an utterance opens the **Utterance Editor** on the right side of the screen.
 
-![An utterance open in the editor][images/utterance.png]
+![An utterance open in the editor](images/utterance.png)
 
 ## Available Actions:
 
@@ -196,7 +196,7 @@ When processing finishes, the **Generated Video View** will appear. In this view
 
    * **Download Audio \-\> Vocals \+ Music:** Saves a WAV file containing the AI voices mixed with the background music.
 
-![The final Ariel page][images/finished.png]
+![The final Ariel page](images/finished.png)
 
 ---
 
@@ -228,7 +228,7 @@ When processing finishes, the **Generated Video View** will appear. In this view
 
 # Architecture
 
-![Overview of Ariel's architecture][images/arch.png]
+![Overview of Ariel's architecture](images/arch.png)
 
 The solution is built entirely using **Google Cloud’s AI ecosystem** (specifically Google Cloud Vertex AI) alongside open-source libraries for audio and video processing. 
 
