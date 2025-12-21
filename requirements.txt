@@ -70,7 +70,7 @@ fastapi-cloud-cli==0.3.1
     # via fastapi-cli
 faster-whisper==1.2.1
     # via ariel (pyproject.toml)
-filelock==3.20.0
+filelock==3.20.1
     # via
     #   huggingface-hub
     #   torch
