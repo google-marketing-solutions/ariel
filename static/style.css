@@ -712,3 +712,10 @@ option {
     align-items: center;
   }
 }
+
+.video-audio-controls-wrapper {
+  display: flex;
+  flex-direction: row; /* Arrange items horizontally */
+  align-items: flex-start; /* Align items to the top */
+  gap: 1rem; /* Space between video player and buttons */
+}

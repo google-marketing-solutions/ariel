@@ -305,6 +305,26 @@ def _get_dubbed_vocals_path(video_data: Video, local_dir: str) -> str:
   return dubbed_vocals_path
 
 
+@app.post("/generate_audio")
+def generate_audio_endpoint(video_data: Video) -> JSONResponse:
+  """Generates the audio for the timeline.
+
+  Args:
+    video_data: the Video object representing the final video.
+
+  Returns:
+    A JSON object with the URL to the generated audio.
+  """
+  logging.info("Generating audio for %s", video_data.video_id)
+  local_dir = os.path.join(mount_point, video_data.video_id)
+  dubbed_vocals_path = _get_dubbed_vocals_path(video_data, local_dir)
+  public_vocals_path = f"{mount_point}/{video_data.video_id}/{os.path.basename(dubbed_vocals_path)}"
+  to_return = {
+      "audio_url": f"{public_vocals_path}?v={uuid.uuid4()}",
+  }
+  return JSONResponse(content=to_return)
+
+
 @app.post("/generate_video")
 def generate_video(video_data: Video) -> JSONResponse:
   """Generates the final, translated video.

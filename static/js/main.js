@@ -14,6 +14,7 @@
 * under the License.
 */
 
+import { generateAudio, playAudio } from './audio.js';
 import { completeVideo, fetchLanguages, fetchVoices, generateVideo, processVideo, runRegenerateDubbing, runRegenerateTranslation } from './api.js';
 import { addVoice, handleSpeakerModalClose, renderVoiceList } from './modals.js';
 import { appState } from './state.js';
@@ -70,6 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const editVideoSettingsBtn = document.getElementById('edit-video-settings-btn');
     const generateVideoBtn = document.getElementById('generate-video-btn');
     const resetTimelineBtn = document.getElementById('reset-timeline-btn');
+    const generateAudioBtn = document.getElementById('generate-audio-btn');
+    const playAudioBtn = document.getElementById('play-audio-btn');
 
     // Modals
     const speakerModalEl = document.getElementById('speaker-modal');
@@ -100,6 +103,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const animatedDots = document.createElement('span');
     let dotAnimationInterval;
     let phraseChangeInterval;
+    let currentAudio = null;
+
+    generateAudioBtn.addEventListener('click', async () => {
+        currentAudio = await generateAudio(currentVideoData);
+    });
+
+    playAudioBtn.addEventListener('click', () => {
+        playAudio(currentAudio);
+    });
 
     const thinkingPhrases = [
         "Spinning the gears",
