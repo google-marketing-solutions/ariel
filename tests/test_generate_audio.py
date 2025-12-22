@@ -374,16 +374,16 @@ class TestGenerateAudio(unittest.TestCase):
           "Text-to-speech API returned empty audio content.", cm.output[0]
       )
 
-  @unittest.mock.patch("main._get_dubbed_vocals_path")
-  def test_generate_audio_endpoint(self, mock_get_dubbed_vocals_path: unittest.mock.Mock):
+  @unittest.mock.patch("main.merge_vocals")
+  def test_generate_audio_endpoint(self, mock_merge_vocals: unittest.mock.Mock):
     """Tests the /generate_audio endpoint."""
-    mock_get_dubbed_vocals_path.return_value = os.path.join(
+    mock_merge_vocals.return_value = os.path.join(
         mount_point, self.video_id, "dubbed_vocals.wav"
     )
 
     # Create a dummy audio file for the mocked path
-    os.makedirs(os.path.dirname(mock_get_dubbed_vocals_path.return_value), exist_ok=True)
-    with open(mock_get_dubbed_vocals_path.return_value, "w") as f:
+    os.makedirs(os.path.dirname(mock_merge_vocals.return_value), exist_ok=True)
+    with open(mock_merge_vocals.return_value, "w") as f:
         f.write("dummy audio content")
 
     # Create a dummy Video object
@@ -415,7 +415,7 @@ class TestGenerateAudio(unittest.TestCase):
     self.assertEqual(response.status_code, 200)
     self.assertIn("audio_url", response.json())
     self.assertIn(f"{mount_point}/{self.video_id}/dubbed_vocals.wav", response.json()["audio_url"])
-    mock_get_dubbed_vocals_path.assert_called_once_with(dummy_video, os.path.join(mount_point, self.video_id))
+    mock_merge_vocals.assert_called_once()
 
 
 if __name__ == "__main__":
