@@ -2,8 +2,8 @@
  * @jest-environment jsdom
  */
 
-import { generateAudio, playAudio } from './audio';
-import { showToast } from './utils';
+import {generateAudio, playAudio} from './audio';
+import {showToast} from './utils';
 
 // Mock the showToast function
 jest.mock('./utils', () => ({
@@ -27,11 +27,11 @@ describe('Audio Functions', () => {
 
   describe('generateAudio', () => {
     it('should call fetch with the correct parameters and return an Audio object', async () => {
-      const mockVideoData = { video_id: '123' };
+      const mockVideoData = {video_id: '123'};
       const mockAudioUrl = 'test.mp3';
       global.fetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ audio_url: mockAudioUrl }),
+        json: () => Promise.resolve({audio_url: mockAudioUrl}),
       });
 
       const audio = await generateAudio(mockVideoData);
@@ -45,12 +45,15 @@ describe('Audio Functions', () => {
       });
 
       expect(Audio).toHaveBeenCalledWith(mockAudioUrl);
-      expect(showToast).toHaveBeenCalledWith('Audio generated successfully', 'success');
+      expect(showToast).toHaveBeenCalledWith(
+        'Audio generated successfully',
+        'success',
+      );
       expect(audio).toBe(mockAudio);
     });
 
     it('should handle fetch errors gracefully and return null', async () => {
-      const mockVideoData = { video_id: '123' };
+      const mockVideoData = {video_id: '123'};
       global.fetch.mockResolvedValue({
         ok: false,
         status: 500,
@@ -58,7 +61,10 @@ describe('Audio Functions', () => {
 
       const audio = await generateAudio(mockVideoData);
 
-      expect(showToast).toHaveBeenCalledWith('HTTP error! status: 500', 'error');
+      expect(showToast).toHaveBeenCalledWith(
+        'HTTP error! status: 500',
+        'error',
+      );
       expect(audio).toBeNull();
     });
   });
