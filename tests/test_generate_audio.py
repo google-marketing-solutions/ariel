@@ -51,7 +51,7 @@ class TestGenerateAudio(unittest.TestCase):
     super().setUp()
     self.temp_dir = tempfile.mkdtemp()
     self.output_path = os.path.join(self.temp_dir, "test_audio.wav")
-    
+
     # Create a TestClient for our FastAPI app
     self.client = TestClient(app)
 
