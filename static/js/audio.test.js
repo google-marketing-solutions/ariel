@@ -45,7 +45,7 @@ describe('Audio Functions', () => {
       });
 
       expect(Audio).toHaveBeenCalledWith(mockAudioUrl);
-      expect(showToast).toHaveBeenCalledWith('Audio generated successfully');
+      expect(showToast).toHaveBeenCalledWith('Audio generated successfully', 'success');
       expect(audio).toBe(mockAudio);
     });
 
