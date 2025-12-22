@@ -153,15 +153,9 @@
       <div id="results-view" style="display: none">
         <div class="row">
           <div class="col-6" style="max-width: 50vw">
-            <div class="video-audio-controls-wrapper">
-              <div id="video-player-container" class="mt-3">
-                <button id="close-floating-video-btn" class="btn-close" aria-label="Close"></button>
-                <video id="results-video-preview" class="results-video" controls></video>
-              </div>
-              <div id="audio-buttons" class="mt-3">
-                <button id="generate-audio-btn" class="btn btn-primary">Generate Audio</button>
-                <button id="play-audio-btn" class="btn btn-primary">Play Audio</button>
-              </div>
+            <div id="video-player-container" class="mt-3">
+              <button id="close-floating-video-btn" class="btn-close" aria-label="Close"></button>
+              <video id="results-video-preview" class="results-video" controls></video>
             </div>
           </div>
           <div class="col-6" style="max-width: 50vw">
@@ -220,7 +214,13 @@
           </div>
         </div>
         <div class="text-center mt-3">
-          <button id="generate-video-btn" class="btn btn-primary btn-lg">Generate Video</button>
+          <div class="bottom-buttons-wrapper d-flex">
+            <div id="audio-buttons" class="mt-3 me-auto">
+              <button id="generate-audio-btn" class="btn btn-primary">Generate Audio</button>
+              <button id="play-audio-btn" class="btn btn-primary">Play Audio</button>
+            </div>
+            <button id="generate-video-btn" class="btn btn-primary btn-lg">Generate Video</button>
+          </div>
         </div>
       </div>
     </template>

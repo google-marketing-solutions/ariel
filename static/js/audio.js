@@ -38,7 +38,7 @@ export async function generateAudio(videoData) {
 
         const data = await response.json();
         const audio = new Audio(data.audio_url);
-        showToast('Audio generated successfully');
+        showToast('Audio generated successfully', 'success');
         return audio;
     } catch (error) {
         console.error('Error generating audio:', error);
