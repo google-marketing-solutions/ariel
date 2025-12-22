@@ -461,21 +461,25 @@ export function editUtterance(
     .addEventListener('click', () => {
       const newUtterance = JSON.parse(JSON.stringify(utterance)); // Deep copy
       newUtterance.id = `utterance_${Date.now()}`; // Simple unique ID
-      const duration = utterance.translated_end_time - utterance.translated_start_time;
+      const duration =
+        utterance.translated_end_time - utterance.translated_start_time;
       newUtterance.translated_start_time = utterance.translated_end_time;
-      newUtterance.translated_end_time = utterance.translated_end_time + duration;
-      
+      newUtterance.translated_end_time =
+        utterance.translated_end_time + duration;
+
       // Find the index of the current utterance and insert the new one after it
-      const currentIndex = currentVideoData.utterances.findIndex(u => u.id === utterance.id);
+      const currentIndex = currentVideoData.utterances.findIndex(
+        u => u.id === utterance.id,
+      );
       currentVideoData.utterances.splice(currentIndex + 1, 0, newUtterance);
-      
+
       renderTimeline(currentVideoData, videoDuration, speakers);
       renderUtterances(currentVideoData, speakers, videoDuration);
-      
+
       utteranceEditor.style.display = 'none';
       if (utteranceCard) utteranceCard.classList.remove('editing');
       activeEditorSession = null;
-      
+
       showToast('Utterance cloned successfully!', 'success');
     });
 
