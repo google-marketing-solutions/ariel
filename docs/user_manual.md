@@ -179,6 +179,8 @@ Clicking the **Pencil Icon** on an utterance opens the **Utterance Editor** on t
 
 6. **Change Speaker:** Use the dropdown to assign a different speaker voice to this specific utterance.
 
+7. **Clone Utterance:** Click the **Clone** button to create an exact duplicate of the current utterance. The cloned utterance will be placed immediately after the original on the timeline, and the editor will close. This is useful for repeating phrases or breaking down long utterances into smaller, manageable segments.
+
 In addition, you can hear the original audio by clicking the ![][image8]button, and listen to the translated audio by clicking the ![][image9] button. Please note \- Cloud Run may need some time to start up. If you click the button and nothing happens, please be patient and wait for the audio. Clicking multiple times will result in the audio being played multiple times, possibly at the same time.
 
 To save the changes, click **Save**. To revert to the last saved version, click **Revert**.
