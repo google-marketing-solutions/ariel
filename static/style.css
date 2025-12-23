@@ -706,9 +706,16 @@ option {
   opacity: 1; /* Firefox applies a lower opacity by default */
 }
 
+
+
 @media (max-width: 768px) {
+
   .button-bar {
+
     flex-direction: column;
+
     align-items: center;
+
   }
+
 }
