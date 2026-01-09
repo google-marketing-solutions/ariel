@@ -63,18 +63,19 @@ while true; do
   BUCKET_URI="gs://$BUCKET_NAME"
 
   echo "🔎 Checking for Cloud Storage bucket: $BUCKET_URI..."
-  LS_OUTPUT=$(gsutil ls -b "$BUCKET_URI" 2>&1)
-  LS_EXIT_CODE=$?
+  # Check if bucket exists and we have access
+  DESCRIBE_OUTPUT=$(gcloud storage buckets describe "$BUCKET_URI" 2>&1)
+  DESCRIBE_EXIT_CODE=$?
 
-  if [[ $LS_EXIT_CODE -eq 0 ]]; then
+  if [[ $DESCRIBE_EXIT_CODE -eq 0 ]]; then
     echo "✅ Bucket already exists and is readable."
     break
-  elif echo "$LS_OUTPUT" | grep -q "AccessDeniedException"; then
+  elif echo "$DESCRIBE_OUTPUT" | grep -q "HTTPError 403"; then
     echo "❌ Error: The bucket '$BUCKET_NAME' exists but is not readable."
     echo "Please enter a globally unique name for a new bucket."
-  elif echo "$LS_OUTPUT" | grep -q "BucketNotFoundException"; then
+  elif echo "$DESCRIBE_OUTPUT" | grep -q "HTTPError 404"; then
     echo "🤔 Bucket not found. Creating..."
-    if gsutil mb -l "$REGION" "$BUCKET_URI"; then
+    if gcloud storage buckets create "$BUCKET_URI" --location="$REGION"; then
       echo "✅ Bucket created."
 
       echo "⏳ Setting 5-day TTL lifecycle policy..."
@@ -89,7 +90,7 @@ while true; do
   ]
 }
 EOF
-      gsutil lifecycle set lifecycle.json "$BUCKET_URI"
+      gcloud storage buckets update "$BUCKET_URI" --lifecycle-file=lifecycle.json
       rm lifecycle.json
       echo "✅ Lifecycle policy set."
       break
