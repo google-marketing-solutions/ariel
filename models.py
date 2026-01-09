@@ -87,7 +87,7 @@ class Video(BaseModel):
   video_id: str
   original_language: str
   translate_language: str
-  prompt_enhancements: str
+  prompt_enhancements: str = ""
   speakers: list[Speaker]
   utterances: list[Utterance]
   model_name: str = ""
