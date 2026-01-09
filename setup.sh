@@ -70,10 +70,10 @@ while true; do
   if [[ $DESCRIBE_EXIT_CODE -eq 0 ]]; then
     echo "✅ Bucket already exists and is readable."
     break
-  elif echo "$DESCRIBE_OUTPUT" | grep -q "HTTPError 403"; then
+  elif echo "$DESCRIBE_OUTPUT" | grep -q "Permission 'storage.buckets.get' denied on resource"; then
     echo "❌ Error: The bucket '$BUCKET_NAME' exists but is not readable."
     echo "Please enter a globally unique name for a new bucket."
-  elif echo "$DESCRIBE_OUTPUT" | grep -q "HTTPError 404"; then
+  elif echo "$DESCRIBE_OUTPUT" | grep -q "not found: 404"; then
     echo "🤔 Bucket not found. Creating..."
     if gcloud storage buckets create "$BUCKET_URI" --location="$REGION"; then
       echo "✅ Bucket created."
