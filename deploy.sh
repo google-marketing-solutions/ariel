@@ -33,7 +33,9 @@ SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount
 
 # Grant the service account storage.objects.create access to the bucket
 echo "🔑 Granting 'Storage Object Creator' role to the Cloud Run service account on bucket gs://$GCS_BUCKET..."
-gsutil iam ch serviceAccount:${SERVICE_ACCOUNT_EMAIL}:roles/storage.objectCreator gs://$GCS_BUCKET
+gcloud storage buckets add-iam-policy-binding gs://$GCS_BUCKET \
+    --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+    --role="roles/storage.objectCreator"
 
 deploy_service() {
   gcloud beta run deploy "$SERVICE_NAME" \
