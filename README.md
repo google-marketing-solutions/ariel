@@ -58,7 +58,7 @@ the service to Cloud Run.
 Before you begin, ensure you have the following installed and configured:
 
 *   [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) (which
-    includes `gcloud` and `gsutil`)
+    includes `gcloud`)
 *   Authenticated with Google Cloud: `gcloud auth login`
 *   A Google Cloud project created and the billing enabled.
 
@@ -152,7 +152,7 @@ for more information.
 
 Next, running `setup.sh` will create the configuration.yaml file required to set
 the necessary environment variable. Once the file is created, you can also run
-the application locally via the`run_locally.sh` script. 
+the application locally via the`run_locally.sh` script.
 
 After running `run_locally.sh`, the solution will start on localhost, and
 generally on port 8080. You can use the UI just as you would if it were
@@ -275,7 +275,7 @@ the app's start page.
 ## Costs
 
 The exact costs for Ariel will be directly proportional to the length of the
-video and the amount of spoken text it contains. 
+video and the amount of spoken text it contains.
 
 Our experience shows that a 10 second video with one speaker will use
 approximately:
