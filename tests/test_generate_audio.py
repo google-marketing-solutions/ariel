@@ -31,12 +31,20 @@ from google.api_core import exceptions as api_exceptions
 import numpy as np
 import soundfile as sf
 
+# Import TestClient and our FastAPI app
+from fastapi.testclient import TestClient
+from main import app
+from main import mount_point
+from models import Speaker, Utterance, Video
+
 
 class TestGenerateAudio(unittest.TestCase):
   """Tests for generating audio."""
 
   temp_dir: str = ""
   output_path: str = ""
+  client: TestClient
+  video_id: str = "test_video_id"
 
   @override
   def setUp(self):
@@ -44,10 +52,22 @@ class TestGenerateAudio(unittest.TestCase):
     self.temp_dir = tempfile.mkdtemp()
     self.output_path = os.path.join(self.temp_dir, "test_audio.wav")
 
+    # Create a TestClient for our FastAPI app
+    self.client = TestClient(app)
+
+    # Ensure the mount_point exists for the test
+    os.makedirs(os.path.join(mount_point, self.video_id), exist_ok=True)
+
+
   @override
   def tearDown(self):
     super().tearDown()
     shutil.rmtree(self.temp_dir)
+    # Clean up the test video directory
+    test_video_dir = os.path.join(mount_point, self.video_id)
+    if os.path.exists(test_video_dir):
+        shutil.rmtree(test_video_dir)
+
 
   def create_in_memory_wav(
       self,
@@ -314,7 +334,7 @@ class TestGenerateAudio(unittest.TestCase):
     with self.assertLogs(level="ERROR") as cm:
       duration = generate_audio(
           text="Test text.",
-          prompt="Test prompt.",
+          prompt="A test prompt.",
           language="en-US",
           voice_name="test_voice",
           output_path=self.output_path,
@@ -353,6 +373,49 @@ class TestGenerateAudio(unittest.TestCase):
       self.assertIn(
           "Text-to-speech API returned empty audio content.", cm.output[0]
       )
+
+  @unittest.mock.patch("main.merge_vocals")
+  def test_generate_audio_endpoint(self, mock_merge_vocals: unittest.mock.Mock):
+    """Tests the /generate_audio endpoint."""
+    mock_merge_vocals.return_value = os.path.join(
+        mount_point, self.video_id, "dubbed_vocals.wav"
+    )
+
+    # Create a dummy audio file for the mocked path
+    os.makedirs(os.path.dirname(mock_merge_vocals.return_value), exist_ok=True)
+    with open(mock_merge_vocals.return_value, "w") as f:
+        f.write("dummy audio content")
+
+    # Create a dummy Video object
+    dummy_video = Video(
+        video_id=self.video_id,
+        original_language="en",
+        translate_language="es",
+        prompt_enhancements="test prompt",
+        speakers=[Speaker(speaker_id="speaker1", voice="voice1")],
+        utterances=[Utterance(
+            id="utterance1",
+            original_text="Hello",
+            translated_text="Hola",
+            instructions="",
+            speaker=Speaker(speaker_id="speaker1", voice="voice1"),
+            original_start_time=0.0,
+            original_end_time=1.0,
+            translated_start_time=0.0,
+            translated_end_time=1.0,
+            removed=False,
+            audio_url="/path/to/audio1.wav"
+        )],
+        model_name="flash",
+        tts_model_name="flash-tts"
+    )
+
+    response = self.client.post("/generate_audio", json=dummy_video.model_dump())
+
+    self.assertEqual(response.status_code, 200)
+    self.assertIn("audio_url", response.json())
+    self.assertIn(f"{mount_point}/{self.video_id}/dubbed_vocals.wav", response.json()["audio_url"])
+    mock_merge_vocals.assert_called_once()
 
 
 if __name__ == "__main__":

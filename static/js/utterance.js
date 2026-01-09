@@ -14,99 +14,113 @@
 * under the License.
 */
 
-import { runRegenerateDubbing, runRegenerateTranslation } from './api.js';
-import { renderTimeline } from './timeline.js';
-import { showToast } from './utils.js';
+import {runRegenerateDubbing, runRegenerateTranslation} from './api.js';
+import {renderTimeline} from './timeline.js';
+import {showToast} from './utils.js';
 
 let activeEditorSession = null;
 
 function playTranslatedAudio(utterance) {
-    if (utterance.audio_url) {
-        const audio = new Audio(utterance.audio_url);
-        audio.play();
-        audio.currentTime = 0;
-    }
+  if (utterance.audio_url) {
+    const audio = new Audio(utterance.audio_url);
+    audio.play();
+    audio.currentTime = 0;
+  }
 }
 
 function playOriginalAudio(utterance) {
-    const audioSource = document.querySelector('#results-video-preview');
-    if (audioSource) {
-        audioSource.currentTime = utterance.original_start_time;
-        audioSource.play();
-        const duration = (utterance.original_end_time - utterance.original_start_time) * 1000;
-        setTimeout(() => {
-            audioSource.pause();
-        }, duration);
-    }
+  const audioSource = document.querySelector('#results-video-preview');
+  if (audioSource) {
+    audioSource.currentTime = utterance.original_start_time;
+    audioSource.play();
+    const duration =
+      (utterance.original_end_time - utterance.original_start_time) * 1000;
+    setTimeout(() => {
+      audioSource.pause();
+    }, duration);
+  }
 }
 
 function hasUnsavedChanges() {
-    if (!activeEditorSession) {
-        return false;
-    }
+  if (!activeEditorSession) {
+    return false;
+  }
 
-    // Check if the editor is even visible
-    const utteranceEditor = document.getElementById('utterance-editor');
-    if (!utteranceEditor || utteranceEditor.style.display === 'none') {
-        activeEditorSession = null; // Reset if editor is not visible
-        return false;
-    }
+  // Check if the editor is even visible
+  const utteranceEditor = document.getElementById('utterance-editor');
+  if (!utteranceEditor || utteranceEditor.style.display === 'none') {
+    activeEditorSession = null; // Reset if editor is not visible
+    return false;
+  }
 
-    const initial = activeEditorSession.initialState;
-    return (
-        document.getElementById('original-text-area').value !== initial.original_text ||
-        document.getElementById('translated-text-area').value !== initial.translated_text ||
-        document.getElementById('intonation-instructions-area').value !== (initial.instructions || '') ||
-        document.getElementById('speaker-select').value !== initial.speaker.voice ||
-        parseFloat(document.getElementById('translated-start-time-input').value) !== initial.translated_start_time ||
-        parseFloat(document.getElementById('translated-end-time-input').value) !== initial.translated_end_time
-    );
+  const initial = activeEditorSession.initialState;
+  return (
+    document.getElementById('original-text-area').value !==
+      initial.original_text ||
+    document.getElementById('translated-text-area').value !==
+      initial.translated_text ||
+    document.getElementById('intonation-instructions-area').value !==
+      (initial.instructions || '') ||
+    document.getElementById('speaker-select').value !== initial.speaker.voice ||
+    parseFloat(document.getElementById('translated-start-time-input').value) !==
+      initial.translated_start_time ||
+    parseFloat(document.getElementById('translated-end-time-input').value) !==
+      initial.translated_end_time
+  );
 }
 
 export function checkZeroDurationUtterances(utterances) {
-    const generateVideoBtn = document.getElementById('generate-video-btn');
-    if (!generateVideoBtn) return;
+  const generateVideoBtn = document.getElementById('generate-video-btn');
+  if (!generateVideoBtn) return;
 
-    const hasZeroDuration = utterances.some(u => (u.translated_end_time - u.translated_start_time) === 0 && !u.removed && !u.muted);
+  const hasZeroDuration = utterances.some(
+    u =>
+      u.translated_end_time - u.translated_start_time === 0 &&
+      !u.removed &&
+      !u.muted,
+  );
 
-    if (hasZeroDuration) {
-        generateVideoBtn.disabled = true;
-        generateVideoBtn.title = 'Cannot generate video with zero-duration utterances.';
-    } else {
-        generateVideoBtn.disabled = false;
-        generateVideoBtn.title = '';
-    }
+  if (hasZeroDuration) {
+    generateVideoBtn.disabled = true;
+    generateVideoBtn.title =
+      'Cannot generate video with zero-duration utterances.';
+  } else {
+    generateVideoBtn.disabled = false;
+    generateVideoBtn.title = '';
+  }
 }
 
 const MAX_TEXT_SNIPPET_LENGTH = 100;
 
 export function renderUtterances(currentVideoData, speakers, videoDuration) {
-    const utterancesList = document.getElementById('utterances-list');
-    utterancesList.innerHTML = '';
-    const fragment = document.createDocumentFragment();
-    const utterances = currentVideoData.utterances;
+  const utterancesList = document.getElementById('utterances-list');
+  utterancesList.innerHTML = '';
+  const fragment = document.createDocumentFragment();
+  const utterances = currentVideoData.utterances;
 
-    const voiceToNameMap = new Map();
-    speakers.forEach(s => {
-        voiceToNameMap.set(s.voice, s.name);
-    });
+  const voiceToNameMap = new Map();
+  speakers.forEach(s => {
+    voiceToNameMap.set(s.voice, s.name);
+  });
 
-    utterances.forEach((utterance, index) => {
-        const speakerName = voiceToNameMap.get(utterance.speaker.voice) || utterance.speaker.voice;
-        const utteranceCard = document.createElement('div');
-        utteranceCard.classList.add('utterance-card');
-        utteranceCard.dataset.utteranceId = utterance.id;
+  utterances.forEach((utterance, index) => {
+    const speakerName =
+      voiceToNameMap.get(utterance.speaker.voice) || utterance.speaker.voice;
+    const utteranceCard = document.createElement('div');
+    utteranceCard.classList.add('utterance-card');
+    utteranceCard.dataset.utteranceId = utterance.id;
 
-        if (activeEditorSession && activeEditorSession.id === utterance.id) {
-            utteranceCard.classList.add('editing');
-        }
+    if (activeEditorSession && activeEditorSession.id === utterance.id) {
+      utteranceCard.classList.add('editing');
+    }
 
-        const duration = utterance.translated_end_time - utterance.translated_start_time;
-        if (duration === 0) {
-            utteranceCard.classList.add('zero-duration');
-        }
+    const duration =
+      utterance.translated_end_time - utterance.translated_start_time;
+    if (duration === 0) {
+      utteranceCard.classList.add('zero-duration');
+    }
 
-        utteranceCard.innerHTML = `
+    utteranceCard.innerHTML = `
                 <div>
                     <h6 class="mb-0">U: ${index + 1}</h6>
                     <div class="utterance-content-wrapper">
@@ -127,114 +141,145 @@ export function renderUtterances(currentVideoData, speakers, videoDuration) {
                 </div>
         `;
 
-        const content = utteranceCard.querySelector('.utterance-card-content');
-        const overlay = utteranceCard.querySelector('.utterance-overlay');
+    const content = utteranceCard.querySelector('.utterance-card-content');
+    const overlay = utteranceCard.querySelector('.utterance-overlay');
 
-        // Set initial visual state based on flags
-        if (utterance.removed) {
-            content.classList.add('removed');
-            overlay.textContent = 'No audio will be generated';
-            overlay.style.display = 'flex';
+    // Set initial visual state based on flags
+    if (utterance.removed) {
+      content.classList.add('removed');
+      overlay.textContent = 'No audio will be generated';
+      overlay.style.display = 'flex';
+    }
+    if (utterance.muted) {
+      content.classList.add('muted');
+      overlay.textContent = 'Original audio will be used';
+      overlay.style.display = 'flex';
+    }
+
+    // --- BUTTON LISTENERS ---
+
+    const playAudioBtns = utteranceCard.querySelectorAll('.play-audio-btn');
+    playAudioBtns.forEach(btn => {
+      btn.addEventListener('click', e => {
+        const textType = e.currentTarget.dataset.textType;
+        if (textType === 'original') {
+          playOriginalAudio(utterance);
+        } else if (textType === 'translated') {
+          playTranslatedAudio(utterance);
         }
-        if (utterance.muted) {
-            content.classList.add('muted');
-            overlay.textContent = 'Original audio will be used';
-            overlay.style.display = 'flex';
-        }
-
-        // --- BUTTON LISTENERS ---
-
-        const playAudioBtns = utteranceCard.querySelectorAll('.play-audio-btn');
-        playAudioBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const textType = e.currentTarget.dataset.textType;
-                if (textType === 'original') {
-                    playOriginalAudio(utterance);
-                } else if (textType === 'translated') {
-                    playTranslatedAudio(utterance);
-                }
-            });
-        });
-
-        const removeBtn = utteranceCard.querySelector('.remove-utterance-btn');
-        removeBtn.addEventListener('click', () => {
-            utterance.removed = !utterance.removed;
-            // Ensure mute is cancelled if remove is activated
-            if (utterance.removed && utterance.muted) {
-                utterance.muted = false;
-            }
-            renderUtterances(currentVideoData, speakers, videoDuration);
-            renderTimeline(currentVideoData, videoDuration, speakers);
-        });
-
-        const muteBtn = utteranceCard.querySelector('.mute-utterance-btn');
-        muteBtn.addEventListener('click', () => {
-            utterance.muted = !utterance.muted;
-            // Ensure remove is cancelled if mute is activated
-            if (utterance.muted && utterance.removed) {
-                utterance.removed = false;
-            }
-
-            if (utterance.muted) {
-                utterance.translated_start_time = utterance.original_start_time;
-                utterance.translated_end_time = utterance.original_end_time;
-            } else {
-                utterance.translated_start_time = utterance.initial_translated_start_time;
-                utterance.translated_end_time = utterance.initial_translated_end_time;
-            }
-            renderUtterances(currentVideoData, speakers, videoDuration);
-            renderTimeline(currentVideoData, videoDuration, speakers);
-        });
-
-        const editBtn = utteranceCard.querySelector('.edit-utterance-btn');
-        editBtn.addEventListener('click', () => {
-            // Cancel mute/remove state before editing
-            if (utterance.muted || utterance.removed) {
-                utterance.muted = false;
-                utterance.removed = false;
-                utterance.translated_start_time = utterance.initial_translated_start_time;
-                utterance.translated_end_time = utterance.initial_translated_end_time;
-                renderUtterances(currentVideoData, speakers, videoDuration);
-                renderTimeline(currentVideoData, videoDuration, speakers);
-            }
-            editUtterance(utterance, index, currentVideoData, speakers, videoDuration);
-        });
-
-        fragment.appendChild(utteranceCard);
+      });
     });
-    utterancesList.appendChild(fragment);
-    checkZeroDurationUtterances(utterances);
+
+    const removeBtn = utteranceCard.querySelector('.remove-utterance-btn');
+    removeBtn.addEventListener('click', () => {
+      utterance.removed = !utterance.removed;
+      // Ensure mute is cancelled if remove is activated
+      if (utterance.removed && utterance.muted) {
+        utterance.muted = false;
+      }
+      renderUtterances(currentVideoData, speakers, videoDuration);
+      renderTimeline(currentVideoData, videoDuration, speakers);
+    });
+
+    const muteBtn = utteranceCard.querySelector('.mute-utterance-btn');
+    muteBtn.addEventListener('click', () => {
+      utterance.muted = !utterance.muted;
+      // Ensure remove is cancelled if mute is activated
+      if (utterance.muted && utterance.removed) {
+        utterance.removed = false;
+      }
+
+      if (utterance.muted) {
+        utterance.translated_start_time = utterance.original_start_time;
+        utterance.translated_end_time = utterance.original_end_time;
+      } else {
+        utterance.translated_start_time =
+          utterance.initial_translated_start_time;
+        utterance.translated_end_time = utterance.initial_translated_end_time;
+      }
+      renderUtterances(currentVideoData, speakers, videoDuration);
+      renderTimeline(currentVideoData, videoDuration, speakers);
+    });
+
+    const editBtn = utteranceCard.querySelector('.edit-utterance-btn');
+    editBtn.addEventListener('click', () => {
+      // Cancel mute/remove state before editing
+      if (utterance.muted || utterance.removed) {
+        utterance.muted = false;
+        utterance.removed = false;
+        utterance.translated_start_time =
+          utterance.initial_translated_start_time;
+        utterance.translated_end_time = utterance.initial_translated_end_time;
+        renderUtterances(currentVideoData, speakers, videoDuration);
+        renderTimeline(currentVideoData, videoDuration, speakers);
+      }
+      editUtterance(
+        utterance,
+        index,
+        currentVideoData,
+        speakers,
+        videoDuration,
+      );
+    });
+
+    fragment.appendChild(utteranceCard);
+  });
+  utterancesList.appendChild(fragment);
+  checkZeroDurationUtterances(utterances);
 }
 
-export function editUtterance(utterance, index, currentVideoData, speakers, videoDuration) {
-    if (activeEditorSession && activeEditorSession.id !== utterance.id && hasUnsavedChanges()) {
-        showToast('Please save or discard your changes before editing another utterance.', 'warning');
-        return;
-    }
+export function editUtterance(
+  utterance,
+  index,
+  currentVideoData,
+  speakers,
+  videoDuration,
+) {
+  if (
+    activeEditorSession &&
+    activeEditorSession.id !== utterance.id &&
+    hasUnsavedChanges()
+  ) {
+    showToast(
+      'Please save or discard your changes before editing another utterance.',
+      'warning',
+    );
+    return;
+  }
 
-    // Remove 'editing' class from any other card
-    document.querySelectorAll('.utterance-card.editing').forEach(card => {
-        card.classList.remove('editing');
-    });
+  // Remove 'editing' class from any other card
+  document.querySelectorAll('.utterance-card.editing').forEach(card => {
+    card.classList.remove('editing');
+  });
 
-    // Add 'editing' class to the current card
-    const utteranceCard = document.querySelector(`.utterance-card[data-utterance-id="${utterance.id}"]`);
-    if (utteranceCard) {
-        utteranceCard.classList.add('editing');
-    }
+  // Add 'editing' class to the current card
+  const utteranceCard = document.querySelector(
+    `.utterance-card[data-utterance-id="${utterance.id}"]`,
+  );
+  if (utteranceCard) {
+    utteranceCard.classList.add('editing');
+  }
 
-    const utteranceEditor = document.getElementById('utterance-editor');
-    const utteranceEditorContent = document.getElementById('utterance-editor-content');
-    const confirmationModal = new bootstrap.Modal(document.getElementById('confirmation-modal'));
+  const utteranceEditor = document.getElementById('utterance-editor');
+  const utteranceEditorContent = document.getElementById(
+    'utterance-editor-content',
+  );
+  const confirmationModal = new bootstrap.Modal(
+    document.getElementById('confirmation-modal'),
+  );
 
-    console.log('Editing utterance:', JSON.stringify(utterance, null, 2)); // DEBUG
+  console.log('Editing utterance:', JSON.stringify(utterance, null, 2)); // DEBUG
 
-    const originalDuration = (utterance.original_end_time - utterance.original_start_time).toFixed(2);
-    const translatedDuration = (utterance.translated_end_time - utterance.translated_start_time).toFixed(2);
+  const originalDuration = (
+    utterance.original_end_time - utterance.original_start_time
+  ).toFixed(2);
+  const translatedDuration = (
+    utterance.translated_end_time - utterance.translated_start_time
+  ).toFixed(2);
 
-    utteranceEditor.style.display = 'block';
-    utteranceEditor.dataset.utteranceId = utterance.id;
-    utteranceEditorContent.innerHTML = `
+  utteranceEditor.style.display = 'block';
+  utteranceEditor.dataset.utteranceId = utterance.id;
+  utteranceEditorContent.innerHTML = `
         <div class="d-flex justify-content-between align-items-center mb-1">
             <label class="form-label mb-0">Original Text</label>
             <div class="d-flex align-items-center">
@@ -297,188 +342,238 @@ export function editUtterance(utterance, index, currentVideoData, speakers, vide
         <button id="revert-utterance-btn" class="btn btn-warning">Revert</button>
     `;
 
-    // Set up the new editor session
-    activeEditorSession = {
-        id: utterance.id,
-        initialState: {
-            ...utterance,
-            speaker: { ...utterance.speaker },
-            instructions: utterance.instructions || ''
-        },
-        utteranceObject: utterance
-    };
+  // Set up the new editor session
+  activeEditorSession = {
+    id: utterance.id,
+    initialState: {
+      ...utterance,
+      speaker: {...utterance.speaker},
+      instructions: utterance.instructions || '',
+    },
+    utteranceObject: utterance,
+  };
 
-    let currentDuration = utterance.translated_end_time - utterance.translated_start_time;
+  let currentDuration =
+    utterance.translated_end_time - utterance.translated_start_time;
 
-    document.getElementById('translated-start-time-input').addEventListener('change', (e) => {
-        const newStart = parseFloat(e.target.value);
-        if (!isNaN(newStart)) {
-            const newEnd = newStart + currentDuration;
-            document.getElementById('translated-end-time-input').value = newEnd.toFixed(2);
-        }
+  document
+    .getElementById('translated-start-time-input')
+    .addEventListener('change', e => {
+      const newStart = parseFloat(e.target.value);
+      if (!isNaN(newStart)) {
+        const newEnd = newStart + currentDuration;
+        document.getElementById('translated-end-time-input').value =
+          newEnd.toFixed(2);
+      }
     });
 
-    document.getElementById('translated-end-time-input').addEventListener('change', (e) => {
-        const newEnd = parseFloat(e.target.value);
-        if (!isNaN(newEnd)) {
-            const newStart = newEnd - currentDuration;
-            document.getElementById('translated-start-time-input').value = newStart.toFixed(2);
-        }
+  document
+    .getElementById('translated-end-time-input')
+    .addEventListener('change', e => {
+      const newEnd = parseFloat(e.target.value);
+      if (!isNaN(newEnd)) {
+        const newStart = newEnd - currentDuration;
+        document.getElementById('translated-start-time-input').value =
+          newStart.toFixed(2);
+      }
     });
 
-    const saveUtteranceChanges = (closeEditor = true) => {
-        utterance.original_text = document.getElementById('original-text-area').value;
-        utterance.translated_text = document.getElementById('translated-text-area').value;
-        utterance.instructions = document.getElementById('intonation-instructions-area').value;
-        utterance.speaker.voice = document.getElementById('speaker-select').value;
-        utterance.translated_start_time = parseFloat(document.getElementById('translated-start-time-input').value);
-        utterance.translated_end_time = parseFloat(document.getElementById('translated-end-time-input').value);
+  const saveUtteranceChanges = (closeEditor = true) => {
+    utterance.original_text =
+      document.getElementById('original-text-area').value;
+    utterance.translated_text = document.getElementById(
+      'translated-text-area',
+    ).value;
+    utterance.instructions = document.getElementById(
+      'intonation-instructions-area',
+    ).value;
+    utterance.speaker.voice = document.getElementById('speaker-select').value;
+    utterance.translated_start_time = parseFloat(
+      document.getElementById('translated-start-time-input').value,
+    );
+    utterance.translated_end_time = parseFloat(
+      document.getElementById('translated-end-time-input').value,
+    );
 
-        renderTimeline(currentVideoData, videoDuration, speakers);
-        renderUtterances(currentVideoData, speakers, videoDuration);
-        if (closeEditor) {
-            utteranceEditor.style.display = 'none';
-            if (utteranceCard) utteranceCard.classList.remove('editing');
-            activeEditorSession = null; // Clear session
-        }
-        document.dispatchEvent(new CustomEvent('timeline-changed'));
-    };
-
-    document.getElementById('save-utterance-btn').addEventListener('click', () => {
-        saveUtteranceChanges();
-    });
-
-    document.getElementById('revert-utterance-btn').addEventListener('click', () => {
-        const initial = activeEditorSession.initialState;
-
-        // Restore object properties
-        utterance.original_text = initial.original_text;
-        utterance.translated_text = initial.translated_text;
-        utterance.instructions = initial.instructions;
-        utterance.translated_start_time = initial.translated_start_time;
-        utterance.translated_end_time = initial.translated_end_time;
-        utterance.speaker.voice = initial.speaker.voice;
-        utterance.audio_url = initial.audio_url;
-
-        // Restore UI inputs
-        document.getElementById('original-text-area').value = initial.original_text;
-        document.getElementById('translated-text-area').value = initial.translated_text;
-        document.getElementById('intonation-instructions-area').value = initial.instructions || '';
-        document.getElementById('translated-start-time-input').value = initial.translated_start_time;
-        document.getElementById('translated-end-time-input').value = initial.translated_end_time;
-        document.getElementById('speaker-select').value = initial.speaker.voice;
-        document.querySelector('#gemini-prompt-input').value = '';
-
-        // Update Duration display
-        const translatedDuration = (initial.translated_end_time - initial.translated_start_time).toFixed(2);
-        document.getElementById('translated-duration').innerText = translatedDuration + 's';
-        currentDuration = initial.translated_end_time - initial.translated_start_time; // Update duration
-
-        // Re-render
-        renderTimeline(currentVideoData, videoDuration, speakers);
-        renderUtterances(currentVideoData, speakers, videoDuration);
-
-        showToast('Changes reverted.', 'info');
-    });
-
-    document.getElementById('regenerate-translation-btn').addEventListener('click', () => {
-        utterance.original_text = document.getElementById('original-text-area').value;
-        const instructions = document.querySelector('#gemini-prompt-input').value;
-        runRegenerateTranslation(currentVideoData, utterance, index, instructions)
-            .then((updatedUtterance) => {
-                currentVideoData.utterances[index] = updatedUtterance;
-                document.getElementById('translated-text-area').value = updatedUtterance.translated_text;
-                showToast('Translation regenerated successfully!', 'success');
-            })
-            .catch(error => {
-                console.error('Error regenerating translation:', error);
-                showToast('Failed to regenerate translation.', 'error');
-            });
-    });
-
-    document.getElementById('regenerate-dubbing-btn').addEventListener('click', () => {
-        const tempUtterance = {}
-        Object.assign(tempUtterance, utterance);
-        const instructions = document.getElementById('intonation-instructions-area').value;
-        tempUtterance.speaker.voice = document.getElementById('speaker-select').value;
-        tempUtterance.translated_text = document.getElementById('translated-text-area').value;
-        currentVideoData.utterances[index] = tempUtterance;
-        runRegenerateDubbing(currentVideoData, utterance, index, instructions)
-            .then((updatedUtterance) => {
-                const duration = updatedUtterance.translated_end_time - updatedUtterance.translated_start_time
-                currentVideoData.utterances[index] = updatedUtterance;
-                document.getElementById('translated-end-time-input').value = updatedUtterance.translated_end_time
-                document.getElementById('translated-duration').innerText = duration.toFixed(2);
-                currentDuration = duration; // Update duration
-                renderTimeline(currentVideoData, videoDuration, speakers);
-                if (duration === 0) {
-                    showToast('Dubbing regeneration failed.', 'error');
-                } else {
-                    showToast('Dubbing regenerated successfully!', 'success');
-                }
-            })
-            .catch(error => {
-                console.error('Error regenerating dubbing:', error);
-                showToast('Failed to regenerate dubbing.', 'error');
-            });
-    });
-
-    function setupAudioPlaybackListeners(utterance, containerElement) {
-        const ttsIcons = containerElement.querySelectorAll('.play-audio-btn');
-        ttsIcons.forEach(icon => {
-            icon.addEventListener('click', (e) => {
-                const textType = e.currentTarget.dataset.textType;
-                if (textType === 'original') {
-                    playOriginalAudio(utterance);
-                } else if (textType === 'translated') {
-                    playTranslatedAudio(utterance);
-                }
-            });
-        });
+    renderTimeline(currentVideoData, videoDuration, speakers);
+    renderUtterances(currentVideoData, speakers, videoDuration);
+    if (closeEditor) {
+      utteranceEditor.style.display = 'none';
+      if (utteranceCard) utteranceCard.classList.remove('editing');
+      activeEditorSession = null; // Clear session
     }
+    document.dispatchEvent(new CustomEvent('timeline-changed'));
+  };
 
-    setupAudioPlaybackListeners(utterance, utteranceEditorContent);
-
-    const closeEditorBtn = utteranceEditor.querySelector('.btn-close');
-    closeEditorBtn.addEventListener('click', () => {
-        if (hasUnsavedChanges()) {
-            const modalEl = document.getElementById('confirmation-modal');
-            const modalTitle = modalEl.querySelector('.modal-title');
-            const modalBody = modalEl.querySelector('.modal-body');
-            const confirmBtn = modalEl.querySelector('#confirm-close-btn');
-
-            modalTitle.textContent = 'Discard Changes?';
-            modalBody.innerHTML = '<p>You have unsaved changes. Are you sure you want to close without saving?</p>';
-            confirmBtn.textContent = 'Yes, Discard';
-            confirmBtn.className = 'btn btn-danger';
-
-            const yesDiscardHandler = () => {
-                // Revert the data model FIRST
-                Object.assign(activeEditorSession.utteranceObject, activeEditorSession.initialState);
-
-                // Re-render the UI
-                renderTimeline(currentVideoData, videoDuration, speakers);
-                renderUtterances(currentVideoData, speakers, videoDuration);
-
-                // THEN hide UI and clear session
-                utteranceEditor.style.display = 'none';
-                confirmationModal.hide();
-                if (utteranceCard) utteranceCard.classList.remove('editing');
-                activeEditorSession = null;
-            };
-
-            const noDiscardHandler = () => {
-                confirmationModal.hide();
-            };
-
-            confirmBtn.addEventListener('click', yesDiscardHandler, { once: true });
-            modalEl.addEventListener('hidden.bs.modal', noDiscardHandler, { once: true });
-
-            confirmationModal.show();
-        } else {
-            utteranceEditor.style.display = 'none';
-            if (utteranceCard) utteranceCard.classList.remove('editing');
-            activeEditorSession = null; // Clear session
-        }
+  document
+    .getElementById('save-utterance-btn')
+    .addEventListener('click', () => {
+      saveUtteranceChanges();
     });
+
+  document
+    .getElementById('revert-utterance-btn')
+    .addEventListener('click', () => {
+      const initial = activeEditorSession.initialState;
+
+      // Restore object properties
+      utterance.original_text = initial.original_text;
+      utterance.translated_text = initial.translated_text;
+      utterance.instructions = initial.instructions;
+      utterance.translated_start_time = initial.translated_start_time;
+      utterance.translated_end_time = initial.translated_end_time;
+      utterance.speaker.voice = initial.speaker.voice;
+      utterance.audio_url = initial.audio_url;
+
+      // Restore UI inputs
+      document.getElementById('original-text-area').value =
+        initial.original_text;
+      document.getElementById('translated-text-area').value =
+        initial.translated_text;
+      document.getElementById('intonation-instructions-area').value =
+        initial.instructions || '';
+      document.getElementById('translated-start-time-input').value =
+        initial.translated_start_time;
+      document.getElementById('translated-end-time-input').value =
+        initial.translated_end_time;
+      document.getElementById('speaker-select').value = initial.speaker.voice;
+      document.querySelector('#gemini-prompt-input').value = '';
+
+      // Update Duration display
+      const translatedDuration = (
+        initial.translated_end_time - initial.translated_start_time
+      ).toFixed(2);
+      document.getElementById('translated-duration').innerText =
+        translatedDuration + 's';
+      currentDuration =
+        initial.translated_end_time - initial.translated_start_time; // Update duration
+
+      // Re-render
+      renderTimeline(currentVideoData, videoDuration, speakers);
+      renderUtterances(currentVideoData, speakers, videoDuration);
+
+      showToast('Changes reverted.', 'info');
+    });
+
+  document
+    .getElementById('regenerate-translation-btn')
+    .addEventListener('click', () => {
+      utterance.original_text =
+        document.getElementById('original-text-area').value;
+      const instructions = document.querySelector('#gemini-prompt-input').value;
+      runRegenerateTranslation(currentVideoData, utterance, index, instructions)
+        .then(updatedUtterance => {
+          currentVideoData.utterances[index] = updatedUtterance;
+          document.getElementById('translated-text-area').value =
+            updatedUtterance.translated_text;
+          showToast('Translation regenerated successfully!', 'success');
+        })
+        .catch(error => {
+          console.error('Error regenerating translation:', error);
+          showToast('Failed to regenerate translation.', 'error');
+        });
+    });
+
+  document
+    .getElementById('regenerate-dubbing-btn')
+    .addEventListener('click', () => {
+      const tempUtterance = {};
+      Object.assign(tempUtterance, utterance);
+      const instructions = document.getElementById(
+        'intonation-instructions-area',
+      ).value;
+      tempUtterance.speaker.voice =
+        document.getElementById('speaker-select').value;
+      tempUtterance.translated_text = document.getElementById(
+        'translated-text-area',
+      ).value;
+      currentVideoData.utterances[index] = tempUtterance;
+      runRegenerateDubbing(currentVideoData, utterance, index, instructions)
+        .then(updatedUtterance => {
+          const duration =
+            updatedUtterance.translated_end_time -
+            updatedUtterance.translated_start_time;
+          currentVideoData.utterances[index] = updatedUtterance;
+          document.getElementById('translated-end-time-input').value =
+            updatedUtterance.translated_end_time;
+          document.getElementById('translated-duration').innerText =
+            duration.toFixed(2);
+          currentDuration = duration; // Update duration
+          renderTimeline(currentVideoData, videoDuration, speakers);
+          if (duration === 0) {
+            showToast('Dubbing regeneration failed.', 'error');
+          } else {
+            showToast('Dubbing regenerated successfully!', 'success');
+          }
+        })
+        .catch(error => {
+          console.error('Error regenerating dubbing:', error);
+          showToast('Failed to regenerate dubbing.', 'error');
+        });
+    });
+
+  function setupAudioPlaybackListeners(utterance, containerElement) {
+    const ttsIcons = containerElement.querySelectorAll('.play-audio-btn');
+    ttsIcons.forEach(icon => {
+      icon.addEventListener('click', e => {
+        const textType = e.currentTarget.dataset.textType;
+        if (textType === 'original') {
+          playOriginalAudio(utterance);
+        } else if (textType === 'translated') {
+          playTranslatedAudio(utterance);
+        }
+      });
+    });
+  }
+
+  setupAudioPlaybackListeners(utterance, utteranceEditorContent);
+
+  const closeEditorBtn = utteranceEditor.querySelector('.btn-close');
+  closeEditorBtn.addEventListener('click', () => {
+    if (hasUnsavedChanges()) {
+      const modalEl = document.getElementById('confirmation-modal');
+      const modalTitle = modalEl.querySelector('.modal-title');
+      const modalBody = modalEl.querySelector('.modal-body');
+      const confirmBtn = modalEl.querySelector('#confirm-close-btn');
+
+      modalTitle.textContent = 'Discard Changes?';
+      modalBody.innerHTML =
+        '<p>You have unsaved changes. Are you sure you want to close without saving?</p>';
+      confirmBtn.textContent = 'Yes, Discard';
+      confirmBtn.className = 'btn btn-danger';
+
+      const yesDiscardHandler = () => {
+        // Revert the data model FIRST
+        Object.assign(
+          activeEditorSession.utteranceObject,
+          activeEditorSession.initialState,
+        );
+
+        // Re-render the UI
+        renderTimeline(currentVideoData, videoDuration, speakers);
+        renderUtterances(currentVideoData, speakers, videoDuration);
+
+        // THEN hide UI and clear session
+        utteranceEditor.style.display = 'none';
+        confirmationModal.hide();
+        if (utteranceCard) utteranceCard.classList.remove('editing');
+        activeEditorSession = null;
+      };
+
+      const noDiscardHandler = () => {
+        confirmationModal.hide();
+      };
+
+      confirmBtn.addEventListener('click', yesDiscardHandler, {once: true});
+      modalEl.addEventListener('hidden.bs.modal', noDiscardHandler, {
+        once: true,
+      });
+
+      confirmationModal.show();
+    } else {
+      utteranceEditor.style.display = 'none';
+      if (utteranceCard) utteranceCard.classList.remove('editing');
+      activeEditorSession = null; // Clear session
+    }
+  });
 }

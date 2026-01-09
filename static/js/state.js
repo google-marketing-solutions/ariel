@@ -15,6 +15,6 @@
 */
 
 export const appState = {
-    editingSpeakerId: null,
-    isEditingVideoSettings: false,
+  editingSpeakerId: null,
+  isEditingVideoSettings: false,
 };
