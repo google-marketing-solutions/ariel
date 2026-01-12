@@ -165,14 +165,14 @@ def merge_vocals(
   if max_end_time == 0:
     # If there are no utterances, create an empty audio file and return
     target_language_suffix = "_" + target_language.replace("-", "_").lower()
-    dubbed_audio_file = os.path.join(
+    empty_audio_file = os.path.join(
         output_directory,
         dubbed_audio_filename + target_language_suffix + "." + output_format,
     )
-    with open(dubbed_audio_file, "w") as f:
+    with open(empty_audio_file, "w") as f:
       pass  # Create an empty file
     # Return early as there's nothing to merge
-    return dubbed_audio_file
+    return empty_audio_file
   silent_audio = moviepy.AudioClip(
       frame_function=lambda t: [0, 0], duration=max_end_time
   )
@@ -205,12 +205,12 @@ def merge_vocals(
       audio_parts
   )
   target_language_suffix = "_" + target_language.replace("-", "_").lower()
-  dubbed_audio_file = os.path.join(
+  empty_audio_file = os.path.join(
       output_directory,
       dubbed_audio_filename + target_language_suffix + "." + output_format,
   )
-  combined_audio.write_audiofile(dubbed_audio_file)
-  return dubbed_audio_file
+  combined_audio.write_audiofile(empty_audio_file)
+  return empty_audio_file
 
 
 def combine_video_and_audio(
