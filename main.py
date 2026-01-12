@@ -160,9 +160,9 @@ async def process_video(
     video: UploadFile,
     original_language: Annotated[str, Form()],
     translate_language: Annotated[str, Form()],
-    prompt_enhancements: Annotated[str, Form()],
     adjust_speed: Annotated[bool, Form()],
     speakers: Annotated[str, Form()],
+    prompt_enhancements: Annotated[str, Form()] = "",
     use_pro_model: Annotated[bool, Form()] = False,
 ) -> Video:
   """Endpoint to run the initial video processing workflow.
