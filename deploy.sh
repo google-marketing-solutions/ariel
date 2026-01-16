@@ -48,25 +48,25 @@ if [ "$DOCKER_AVAILABLE" = "true" ]; then
 
   REPO_EXISTS=$(gcloud artifacts repositories describe $DOCKER_REPO_NAME --location=$REGION >/dev/null 2>&1 && echo "true" || echo "false")
   if "${REPO_EXISTS}"; then
-    echo "⚠️ Repository '$DOCKER_REPO_NAME' already exists in location '$REGION'. Skipping creation...\n"
+    echo "⚠️ Repository '$DOCKER_REPO_NAME' already exists in location '$REGION'. Skipping creation..."
   else
     echo "📦 Creating artifacts repository for docker images"
     gcloud artifacts repositories create $DOCKER_REPO_NAME --repository-format=docker \
       --location=$REGION --description="Google Professional Services images" \
       --project=$PROJECT_ID
     test $? -eq 0 || exit
-    echo "✅ Repository '$DOCKER_REPO_NAME' created successfully in location '$REGION'!\n"
+    echo "✅ Repository '$DOCKER_REPO_NAME' created successfully in location '$REGION'!"
     gcloud auth configure-docker $REGION-docker.pkg.dev
   fi
 fi
 
 deploy_service() {
   if [ "$DOCKER_AVAILABLE" = "true" ]; then
-    echo "  📦 Building Docker image $DOCKER_IMAGE_TAG\n"
+    echo "  📦 Building Docker image $DOCKER_IMAGE_TAG"
     docker build -t $DOCKER_IMAGE_TAG .
     docker push $DOCKER_IMAGE_TAG
 
-    echo "--🚀 Deploying $SERVICE_NAME Cloud Run container...\n"
+    echo "  🚀 Deploying $SERVICE_NAME Cloud Run container..."
     gcloud beta run deploy "$SERVICE_NAME" \
       --image=$DOCKER_IMAGE_TAG \
       --region="$REGION" \
