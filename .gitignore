@@ -188,3 +188,7 @@ GEMINI.md
 
 # Credentials
 configuration.yaml
+
+# Local requirements
+requirements.txt.local
+requitements.txt.tmp

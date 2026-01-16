@@ -7,7 +7,7 @@ RUN apt-get -y update && \
 
 WORKDIR /app
 COPY ./requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 ENV HF_HOME=/app/models
 RUN python -c "from faster_whisper import WhisperModel; WhisperModel('small', device='cpu', compute_type='int8')"
 

@@ -14,6 +14,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+uv pip compile pyproject.toml -o requirements.txt.local > /dev/null
+pip install -r requirements.txt.local
+
 if [ -f "configuration.yaml" ]; then
   eval $(python3 -c 'import yaml, sys;
 config = yaml.safe_load(sys.stdin);

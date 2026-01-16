@@ -31,7 +31,13 @@ fi
 DOCKER_AVAILABLE=$(docker --version >/dev/null 2>&1 && echo "true" || echo "false")
 
 # Build requirements.txt needed for cloud run but skipping the local file output from uv
-uv pip compile pyproject.toml -o requirements.txt > /dev/null
+uv pip compile pyproject.toml -o requirements.txt.tmp > /dev/null
+
+if [ ! -f requirements.txt ] || ! cmp -s requirements.txt.tmp requirements.txt; then
+  mv requirements.txt.tmp requirements.txt
+else
+  rm requirements.txt.tmp
+fi
 
 SERVICE_ACCOUNT_NAME="$SERVICE_NAME"
 SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
