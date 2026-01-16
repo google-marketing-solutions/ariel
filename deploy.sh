@@ -31,6 +31,7 @@ fi
 DOCKER_AVAILABLE=$(docker --version >/dev/null 2>&1 && echo "true" || echo "false")
 
 # Build requirements.txt needed for cloud run but skipping the local file output from uv
+pip install uv
 uv pip compile pyproject.toml -o requirements.txt > /dev/null
 
 SERVICE_ACCOUNT_NAME="$SERVICE_NAME"
@@ -66,7 +67,7 @@ deploy_service() {
     docker build -t $DOCKER_IMAGE_TAG .
     docker push $DOCKER_IMAGE_TAG
 
-    echo "--🚀 Deploying $SERVICE_NAME Cloud Run container...\n"
+    echo "  🚀 Deploying $SERVICE_NAME Cloud Run container...\n"
     gcloud beta run deploy "$SERVICE_NAME" \
       --image=$DOCKER_IMAGE_TAG \
       --region="$REGION" \
@@ -80,7 +81,7 @@ deploy_service() {
       --add-volume-mount volume=ariel,mount-path="/mnt/ariel" \
       --service-account="$SERVICE_ACCOUNT_EMAIL"
   else
-    echo "--🏗️ Docker is not available. Using Cloud Build..."
+    echo "  🏗️ Docker is not available. Using Cloud Build..."
     gcloud beta run deploy "$SERVICE_NAME" \
       --source . \
       --region="$REGION" \
