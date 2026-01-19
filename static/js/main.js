@@ -14,7 +14,6 @@
 * under the License.
 */
 
-import {generateAudio, playAudio} from './audio.js';
 import {
   completeVideo,
   fetchLanguages,
@@ -24,11 +23,12 @@ import {
   runRegenerateDubbing,
   runRegenerateTranslation,
 } from './api.js';
-import {addVoice, handleSpeakerModalClose, renderVoiceList} from './modals.js';
-import {appState} from './state.js';
-import {renderTimeline} from './timeline.js';
-import {showToast} from './utils.js';
-import {checkZeroDurationUtterances, renderUtterances} from './utterance.js';
+import { generateAudio, playAudio } from './audio.js';
+import { addVoice, handleSpeakerModalClose, renderVoiceList } from './modals.js';
+import { appState } from './state.js';
+import { renderTimeline } from './timeline.js';
+import { showToast } from './utils.js';
+import { checkZeroDurationUtterances, renderUtterances } from './utterance.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Instantiate templates
@@ -549,10 +549,11 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
     } catch (error) {
       console.error('Error during processing:', error);
-      showToast(
-        'An error occurred during processing. Please try again.',
-        'error',
-      );
+      const displayMessage = error.message.includes('Video file is too large')
+        ? error.message
+        : 'An error occurred during processing. Please try again, error message: ' +
+        error.message;
+      showToast(displayMessage, 'error');
     } finally {
       stopThinkingAnimation();
     }
@@ -934,10 +935,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
             } catch (error) {
               console.error('Error during settings update processing:', error);
-              showToast(
-                'An error occurred while updating settings. Please try again.',
-                'error',
-              );
+              const displayMessage = error.message.includes('Video file is too large')
+                ? error.message
+                : 'An error occurred while updating settings. Please try again.';
+              showToast(displayMessage, 'error');
             } finally {
               thinkingPopup.style.display = 'none';
               appState.isEditingVideoSettings = false;

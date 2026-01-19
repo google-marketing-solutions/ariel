@@ -68,6 +68,12 @@ export function processVideo(formData) {
     body: formData,
   }).then(response => {
     if (!response.ok) {
+      console.log(response);
+      if (response.status === 413) {
+        throw new Error(
+          'Video file is too large for the server to process. Please upload a smaller video (limit is typically 32MB).',
+        );
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     return response.json();
@@ -151,6 +157,11 @@ export function updateVideoSettings(updatedVideoData) {
     body: JSON.stringify(updatedVideoData),
   }).then(response => {
     if (!response.ok) {
+      if (response.status === 413) {
+        throw new Error(
+          'Video file is too large for the server to process. Please upload a smaller video (limit is typically 32MB).',
+        );
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     return response.json();
