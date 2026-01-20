@@ -61,6 +61,8 @@ Before you begin, ensure you have the following installed and configured:
     includes `gcloud`)
 *   Authenticated with Google Cloud: `gcloud auth login`
 *   A Google Cloud project created and the billing enabled.
+*   [Docker](https://docs.docker.com/get-docker/) (Optional):
+For faster local builds.
 
 ### 1. Initial Setup
 
@@ -92,7 +94,9 @@ using the `deploy.sh` script.
 This script will:
 
 *   Read the configuration from `configuration.yaml`.
-*   Build the container image using Google Cloud Build.
+*   Build the container image. The script checks for a local Docker
+installation and uses it if available for potentially faster builds.
+If Docker is not found, it automatically falls back to using Google Cloud Build.
 *   Deploy the service to Cloud Run with IAP (Identity-Aware Proxy) enabled for
     security.
 
@@ -133,7 +137,7 @@ Ariel is initially deployed to use the most recent, generally available Gemini m
 
 To update the model, follow these steps:
 
-1. Edit the file `configuration.yaml`, updating the lines starting with `GEMINI_PRO_MODEL` and `GEMINI_FLAH_MODEL` to use the model code for the model you want to use. You can find model codes in the [Gemini documentation](https://ai.google.dev/gemini-api/docs/models).
+1. Edit the file `configuration.yaml`, updating the lines starting with `GEMINI_PRO_MODEL` and `GEMINI_FLASH_MODEL` to use the model code for the model you want to use. You can find model codes in the [Gemini documentation](https://ai.google.dev/gemini-api/docs/models).
 1. If needed, you can also update the models being used for text-to-speech by updating the lines starting with `GEMINI_TTS`.
 1. Redeploy the solution by running `deploy.sh`.
 
