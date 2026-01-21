@@ -18,6 +18,9 @@ SERVICE_NAME="ariel-v2"
 REGION=$(grep "GCP_PROJECT_LOCATION" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
 GCS_BUCKET=$(grep "GCS_BUCKET_NAME" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
 PROJECT_ID=$(grep "GCP_PROJECT_ID" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
+DOCKER_REPO_NAME=gps-docker-repo
+ARTIFACT_POSITORY_NAME=$REGION-docker.pkg.dev/$PROJECT_ID/$DOCKER_REPO_NAME
+DOCKER_IMAGE_TAG=$ARTIFACT_POSITORY_NAME/ariel-process:latest
 
 if [[ -z "$REGION" || -z "$GCS_BUCKET" || -z "$PROJECT_ID" ]]; then
   echo "❌ Error: Could not read configuration from configuration.yaml."
@@ -25,8 +28,16 @@ if [[ -z "$REGION" || -z "$GCS_BUCKET" || -z "$PROJECT_ID" ]]; then
   exit 1
 fi
 
+DOCKER_AVAILABLE=$(docker --version >/dev/null 2>&1 && echo "true" || echo "false")
+
 # Build requirements.txt needed for cloud run but skipping the local file output from uv
-uv pip compile pyproject.toml -o requirements.txt > /dev/null
+uv pip compile pyproject.toml -o requirements.txt.tmp > /dev/null
+
+if [ ! -f requirements.txt ] || ! cmp -s requirements.txt.tmp requirements.txt; then
+  mv requirements.txt.tmp requirements.txt
+else
+  rm requirements.txt.tmp
+fi
 
 SERVICE_ACCOUNT_NAME="$SERVICE_NAME"
 SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -37,19 +48,58 @@ gcloud storage buckets add-iam-policy-binding gs://$GCS_BUCKET \
     --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
     --role="roles/storage.objectCreator"
 
+if [ "$DOCKER_AVAILABLE" = "true" ]; then
+  echo "ℹ️ Using local Docker build to speed up development and deployment"
+  echo "🛠️ Setting up Docker registry in GCP..."
+
+  REPO_EXISTS=$(gcloud artifacts repositories describe $DOCKER_REPO_NAME --location=$REGION >/dev/null 2>&1 && echo "true" || echo "false")
+  if "${REPO_EXISTS}"; then
+    echo "⚠️ Repository '$DOCKER_REPO_NAME' already exists in location '$REGION'. Skipping creation..."
+  else
+    echo "📦 Creating artifacts repository for docker images"
+    gcloud artifacts repositories create $DOCKER_REPO_NAME --repository-format=docker \
+      --location=$REGION --description="Google Professional Services images" \
+      --project=$PROJECT_ID
+    test $? -eq 0 || exit
+    echo "✅ Repository '$DOCKER_REPO_NAME' created successfully in location '$REGION'!"
+    gcloud auth configure-docker $REGION-docker.pkg.dev
+  fi
+fi
+
 deploy_service() {
-  gcloud beta run deploy "$SERVICE_NAME" \
-    --source . \
-    --region="$REGION" \
-    --memory 8192Mi \
-    --cpu 2 \
-    --timeout 3600 \
-    --env-vars-file=configuration.yaml  \
-    --quiet \
-    --iap \
-    --add-volume name=ariel,type=cloud-storage,bucket="$GCS_BUCKET" \
-    --add-volume-mount volume=ariel,mount-path="/mnt/ariel" \
-    --service-account="$SERVICE_ACCOUNT_EMAIL"
+  if [ "$DOCKER_AVAILABLE" = "true" ]; then
+    echo "  📦 Building Docker image $DOCKER_IMAGE_TAG"
+    docker build -t $DOCKER_IMAGE_TAG .
+    docker push $DOCKER_IMAGE_TAG
+
+    echo "  🚀 Deploying $SERVICE_NAME Cloud Run container..."
+    gcloud beta run deploy "$SERVICE_NAME" \
+      --image=$DOCKER_IMAGE_TAG \
+      --region="$REGION" \
+      --memory 8192Mi \
+      --cpu 2 \
+      --timeout 3600 \
+      --env-vars-file=configuration.yaml  \
+      --quiet \
+      --iap \
+      --add-volume name=ariel,type=cloud-storage,bucket="$GCS_BUCKET" \
+      --add-volume-mount volume=ariel,mount-path="/mnt/ariel" \
+      --service-account="$SERVICE_ACCOUNT_EMAIL"
+  else
+    echo "--🏗️ Docker is not available. Using Cloud Build..."
+    gcloud beta run deploy "$SERVICE_NAME" \
+      --source . \
+      --region="$REGION" \
+      --memory 8192Mi \
+      --cpu 2 \
+      --timeout 3600 \
+      --env-vars-file=configuration.yaml  \
+      --quiet \
+      --iap \
+      --add-volume name=ariel,type=cloud-storage,bucket="$GCS_BUCKET" \
+      --add-volume-mount volume=ariel,mount-path="/mnt/ariel" \
+      --service-account="$SERVICE_ACCOUNT_EMAIL"
+  fi
 }
 
 # First deployment attempt
