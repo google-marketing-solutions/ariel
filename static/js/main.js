@@ -549,11 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
     } catch (error) {
       console.error('Error during processing:', error);
-      const displayMessage = error.message.includes('Video file is too large')
-        ? error.message
-        : 'An error occurred during processing. Please try again, error message: ' +
-        error.message;
-      showToast(displayMessage, 'error');
+      showToast(error.message, 'error');
     } finally {
       stopThinkingAnimation();
     }
@@ -935,10 +931,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
             } catch (error) {
               console.error('Error during settings update processing:', error);
-              const displayMessage = error.message.includes('Video file is too large')
-                ? error.message
-                : 'An error occurred while updating settings. Please try again.';
-              showToast(displayMessage, 'error');
+              showToast(error.message, 'error');
             } finally {
               thinkingPopup.style.display = 'none';
               appState.isEditingVideoSettings = false;
