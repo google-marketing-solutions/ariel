@@ -33,16 +33,16 @@ requirements and cannot be used as is.
 The solution requires the following Google APIs and services to be enabled in
 your Google Cloud project:
 
-*   **Vertex AI API**: For advanced AI capabilities, including model hosting and management.
-*   **Cloud Storage API**: For scalable and secure object storage for videos and audio files.
-*   **Cloud Logging API**: For centralized logging, monitoring, and analysis of application logs.
-*   **Cloud Text-to-Speech API**: For converting text into natural-sounding speech.
-*   **Cloud Translation API**: For translating text between languages.
-*   **Cloud Build API**: For building and deploying the application container.
-*   **Cloud Run API**: For running the application in a serverless environment.
-*   **Identity-Aware Proxy (IAP)**: For securing access to the application.
-*   **IAM Service Account Credentials API**: For managing service account credentials.
-*   **Cloud Resource Manager API**: For managing Google Cloud projects and resources.
+*   **[Vertex AI API](https://cloud.google.com/vertex-ai/docs)**: For advanced AI capabilities, including model hosting and management.
+*   **[Cloud Storage API](https://cloud.google.com/storage/docs)**: For scalable and secure object storage for videos and audio files.
+*   **[Cloud Logging API](https://cloud.google.com/logging/docs)**: For centralized logging, monitoring, and analysis of application logs.
+*   **[Cloud Text-to-Speech API](https://cloud.google.com/text-to-speech/docs)**: For converting text into natural-sounding speech.
+*   **[Cloud Translation API](https://cloud.google.com/translate/docs)**: For translating text between languages.
+*   **[Cloud Build API](https://cloud.google.com/build/docs)**: For building and deploying the application container.
+*   **[Cloud Run API](https://cloud.google.com/run/docs)**: For running the application in a serverless environment.
+*   **[Identity-Aware Proxy (IAP)](https://cloud.google.com/iap/docs)**: For securing access to the application.
+*   **[IAM Service Account Credentials API](https://cloud.google.com/iam/docs/reference/credentials/rest)**: For managing service account credentials.
+*   **[Cloud Resource Manager API](https://cloud.google.com/resource-manager/docs)**: For managing Google Cloud projects and resources.
 
 Please ensure any organizational policies applied to your Google Cloud projects
 allow for all of these APIs and services before starting the deployment process.
