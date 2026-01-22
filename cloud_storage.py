@@ -20,6 +20,8 @@ import mimetypes
 import typing
 import uuid
 from google.cloud import storage
+import json
+import os
 
 
 def upload_video_to_gcs(
@@ -105,3 +107,60 @@ def get_url_for_path(bucket_name: str, path: str) -> str:
   )
 
   return url
+
+
+def list_all_videos(bucket_name: str) -> list[dict]:
+  """Returns a list of translated videos with their metadata."""
+  storage_client = storage.Client()
+  bucket = storage_client.bucket(bucket_name)
+  blobs = storage_client.list_blobs(bucket_name)
+
+  videos = []
+
+  for blob in blobs:
+    if blob.name.lower().endswith(".mp4"):
+      parts = blob.name.split("/")
+      if len(parts) >= 2:
+          folder_name = parts[-2]
+          file_name = parts[-1]
+          if folder_name == file_name:
+              continue
+
+      url = get_url_for_path(bucket_name, blob.name)
+      
+      folder = os.path.dirname(blob.name)
+      metadata_path = f"{folder}/metadata.json"
+      meta = {
+          "original_language": "Unknown",
+          "translate_language": "Unknown",
+          "duration": 0,
+          "speakers": []
+      }
+      metadata_blob = bucket.blob(metadata_path)
+      if metadata_blob.exists():
+          try:
+              json_str = metadata_blob.download_as_text()
+              file_data = json.loads(json_str)
+              meta.update(file_data)
+          except Exception as e:
+              logging.error(f"Error fetching metadata for {blob.name}: {e}")
+
+      raw_speakers = meta.get("speakers", [])
+      clean_speakers = []
+      for s in raw_speakers:
+          if "voice" in s:
+              clean_speakers.append({"voice": s["voice"]})
+
+      videos.append({
+        "name": blob.name,
+        "url": url,
+        "created_at": blob.time_created,
+        "original_language": meta.get("original_language", "Unknown"),
+        "translate_language": meta.get("translate_language", "Unknown"),
+        "duration": meta.get("duration", 0),
+        "speakers": clean_speakers
+      })
+  
+  videos.sort(key=lambda x: x['created_at'], reverse=True)
+
+  return videos
