@@ -174,13 +174,34 @@ export function renderTimeline(videoData, videoDuration, speakers) {
         editUtterance(utterance, index, videoData, speakers, videoDuration);
       });
 
+      translatedBlock.addEventListener('click', e => {
+        // Prevent event propagation to avoid conflicts with drag if the event
+        // is part of a drag operation. This might not be strictly necessary
+        // depending on browser event bubbling, but adds robustness.
+        if (translatedBlock.dataset.isDragging === 'true') {
+          translatedBlock.dataset.isDragging = 'false'; // Reset flag
+          return;
+        }
+        editUtterance(utterance, index, videoData, speakers, videoDuration);
+      });
+
       // Drag and drop functionality
       translatedBlock.addEventListener('mousedown', e => {
+        let isDragging = false;
         const initialX = e.clientX;
         const initialLeft = translatedBlock.offsetLeft;
         const blockWidth = translatedBlock.offsetWidth;
 
+        const utteranceEditor = document.getElementById('utterance-editor');
+        const editedUtteranceId = utteranceEditor.dataset.utteranceId;
+
+        // Select the utterance in the editor when dragging starts, if not already selected
+        if (editedUtteranceId !== utterance.id) {
+          editUtterance(utterance, index, videoData, speakers, videoDuration);
+        }
+
         function handleMouseMove(e) {
+          isDragging = true; // Set drag flag
           const dx = e.clientX - initialX;
           let newLeft = initialLeft + dx;
 
@@ -241,22 +262,28 @@ export function renderTimeline(videoData, videoDuration, speakers) {
           document.removeEventListener('mousemove', handleMouseMove);
           document.removeEventListener('mouseup', handleMouseUp);
 
-          const newLeft = translatedBlock.offsetLeft;
-          const newStartTime = parseFloat((newLeft / scale).toFixed(2));
-          const utteranceDuration =
-            utterance.translated_end_time - utterance.translated_start_time;
-          const newEndTime = parseFloat(
-            (newStartTime + utteranceDuration).toFixed(2),
-          );
+          if (isDragging) {
+            translatedBlock.dataset.isDragging = 'true'; // Set flag if it was a drag
+            const newLeft = translatedBlock.offsetLeft;
+            const newStartTime = parseFloat((newLeft / scale).toFixed(2));
+            const utteranceDuration =
+              utterance.translated_end_time - utterance.translated_start_time;
+            const newEndTime = parseFloat(
+              (newStartTime + utteranceDuration).toFixed(2),
+            );
 
-          // Update the utterance data
-          utterance.translated_start_time = newStartTime;
-          utterance.translated_end_time = newEndTime;
+            // Update the utterance data
+            utterance.translated_start_time = newStartTime;
+            utterance.translated_end_time = newEndTime;
 
-          // Re-render the timeline
-          renderTimeline(videoData, videoDuration, speakers);
-          // Notify the app that the timeline has changed
-          document.dispatchEvent(new CustomEvent('timeline-changed'));
+            // Re-render the timeline
+            renderTimeline(videoData, videoDuration, speakers);
+            // Notify the app that the timeline has changed
+            document.dispatchEvent(new CustomEvent('timeline-changed'));
+          } else {
+            // If not dragging, allow the click event to proceed
+            translatedBlock.dataset.isDragging = 'false';
+          }
         }
 
         document.addEventListener('mousemove', handleMouseMove);

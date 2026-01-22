@@ -69,7 +69,7 @@ if "K_SERVICE" in os.environ:
 else:
   # Running locally.
   mount_point = "temp"
-  app.mount("/mnt", StaticFiles(directory="temp"), name="temp")
+  app.mount("/temp", StaticFiles(directory="temp"), name="temp")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
