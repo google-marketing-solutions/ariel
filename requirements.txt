@@ -12,6 +12,10 @@ anyio==4.12.1
     #   httpx
     #   starlette
     #   watchfiles
+audioop-lts==0.2.2
+    # via
+    #   standard-aifc
+    #   standard-sunau
 audioread==3.1.0
     # via librosa
 av==16.1.0
@@ -404,7 +408,9 @@ scipy==1.17.0
 sentry-sdk==2.50.0
     # via fastapi-cloud-cli
 setuptools==80.10.1
-    # via ctranslate2
+    # via
+    #   ctranslate2
+    #   torch
 shellingham==1.5.4
     # via
     #   huggingface-hub
@@ -419,6 +425,16 @@ soundfile==0.13.1
     #   librosa
 soxr==1.0.0
     # via librosa
+standard-aifc==3.13.0
+    # via
+    #   audioread
+    #   librosa
+standard-chunk==3.13.0
+    # via standard-aifc
+standard-sunau==3.13.0
+    # via
+    #   audioread
+    #   librosa
 starlette==0.50.0
     # via fastapi
 submitit==1.5.4
@@ -467,7 +483,6 @@ typer-slim==0.21.1
     # via huggingface-hub
 typing-extensions==4.15.0
     # via
-    #   anyio
     #   fastapi
     #   google-cloud-aiplatform
     #   google-genai
@@ -479,7 +494,6 @@ typing-extensions==4.15.0
     #   pydantic-core
     #   pydantic-extra-types
     #   rich-toolkit
-    #   starlette
     #   submitit
     #   torch
     #   typer

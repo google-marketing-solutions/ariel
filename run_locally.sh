@@ -14,8 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-uv pip compile pyproject.toml -o requirements.txt.local > /dev/null
-pip install -r requirements.txt.local
+pip install -r requirements.txt
 mkdir -p temp
 
 if [ -f "configuration.yaml" ]; then
