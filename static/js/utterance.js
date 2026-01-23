@@ -268,7 +268,7 @@ export function editUtterance(
     document.getElementById('confirmation-modal'),
   );
 
-  console.log('Editing utterance:', JSON.stringify(utterance, null, 2)); // DEBUG
+
 
   const originalDuration = (
     utterance.original_end_time - utterance.original_start_time
