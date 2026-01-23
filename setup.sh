@@ -29,6 +29,8 @@ else
   rm requirements.txt.tmp
 fi
 
+pip install -q -r requirements.txt
+
 # 1. Get and confirm the current Project ID from gcloud config
 PROJECT_ID=$(gcloud config get-value project)
 

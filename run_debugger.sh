@@ -14,8 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-pip install -r requirements.txt
-mkdir -p temp
+pip install -q -r requirements.txt
 
 if [ -f "configuration.yaml" ]; then
   eval $(python3 -c 'import yaml, sys;
