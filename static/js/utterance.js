@@ -268,7 +268,7 @@ export function editUtterance(
     document.getElementById('confirmation-modal'),
   );
 
-  console.log('Editing utterance:', JSON.stringify(utterance, null, 2)); // DEBUG
+
 
   const originalDuration = (
     utterance.original_end_time - utterance.original_start_time
@@ -486,25 +486,29 @@ export function editUtterance(
   document
     .getElementById('regenerate-translation-btn')
     .addEventListener('click', () => {
+      const inProgressToast = showToast('Regenerating translation...', 'info', 0);
       utterance.original_text =
         document.getElementById('original-text-area').value;
       const instructions = document.querySelector('#gemini-prompt-input').value;
       runRegenerateTranslation(currentVideoData, utterance, index, instructions)
         .then(updatedUtterance => {
+          inProgressToast.remove(); // Dismiss the in-progress toast
           currentVideoData.utterances[index] = updatedUtterance;
           document.getElementById('translated-text-area').value =
             updatedUtterance.translated_text;
-          showToast('Translation regenerated successfully!', 'success');
+          showToast('Translation regenerated successfully!', 'success', 6000);
         })
         .catch(error => {
+          inProgressToast.remove(); // Dismiss the in-progress toast
           console.error('Error regenerating translation:', error);
-          showToast('Failed to regenerate translation.', 'error');
+          showToast('Failed to regenerate translation.', 'error', 6000);
         });
     });
 
   document
     .getElementById('regenerate-dubbing-btn')
     .addEventListener('click', () => {
+      const inProgressToast = showToast('Regenerating dubbing...', 'info', 0);
       const tempUtterance = {};
       Object.assign(tempUtterance, utterance);
       const instructions = document.getElementById(
@@ -518,6 +522,7 @@ export function editUtterance(
       currentVideoData.utterances[index] = tempUtterance;
       runRegenerateDubbing(currentVideoData, utterance, index, instructions)
         .then(updatedUtterance => {
+          inProgressToast.remove(); // Dismiss the in-progress toast
           const duration =
             updatedUtterance.translated_end_time -
             updatedUtterance.translated_start_time;
@@ -529,12 +534,13 @@ export function editUtterance(
           currentDuration = duration; // Update duration
           renderTimeline(currentVideoData, videoDuration, speakers);
           if (duration === 0) {
-            showToast('Dubbing regeneration failed.', 'error');
+            showToast('Dubbing regeneration failed.', 'error', 6000);
           } else {
-            showToast('Dubbing regenerated successfully!', 'success');
+            showToast('Dubbing regenerated successfully!', 'success', 6000);
           }
         })
         .catch(error => {
+          inProgressToast.remove(); // Dismiss the in-progress toast
           console.error('Error regenerating dubbing:', error);
           showToast('Failed to regenerate dubbing.', 'error');
         });

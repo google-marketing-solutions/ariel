@@ -14,7 +14,7 @@
 * under the License.
 */
 
-export function showToast(message, type = 'error') {
+export function showToast(message, type = 'error', duration = 6000) {
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
@@ -27,14 +27,19 @@ export function showToast(message, type = 'error') {
     toast.classList.add('show');
   }, 100);
 
-  // Hide the toast after 3 seconds
-  setTimeout(() => {
-    toast.classList.remove('show');
-    // Remove the element after the transition is complete
+  // Hide the toast after `duration` milliseconds, if duration > 0
+  if (duration > 0) {
     setTimeout(() => {
-      container.removeChild(toast);
-    }, 500);
-  }, 6000);
+      toast.classList.remove('show');
+      // Remove the element after the transition is complete
+      setTimeout(() => {
+        if (container.contains(toast)) { // Check if toast is still in container
+          container.removeChild(toast);
+        }
+      }, 500);
+    }, duration);
+  }
+  return toast;
 }
 
 export function checkOverlap(utterance, allUtterances) {
