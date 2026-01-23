@@ -67,6 +67,7 @@ app = FastAPI()
 # Check if running in Google Cloud Run
 if "K_SERVICE" in os.environ:
   mount_point = "/mnt/ariel"
+  url_prefix = "/mnt/ariel"
   app.mount("/mnt", StaticFiles(directory="/mnt"), name="temp")
 else:
   # Running locally.
@@ -511,11 +512,6 @@ def clean_video_name(filename: str) -> str:
 def get_videos() -> list[dict]:
   videos_list = []
 
-  if "K_SERVICE" in os.environ:
-    url_prefix = "/mnt/ariel"
-  else:
-    url_prefix = "/mnt"
-
   for root, dirs, files in os.walk(mount_point):
     for file in files:
       if file.lower().endswith(".mp4"):
@@ -538,15 +534,18 @@ def get_videos() -> list[dict]:
             try:
                 with open(meta_path, "r") as f:
                     file_data = json.load(f)
+                    raw_from_file = file_data.get("speakers", [])
+                    unique_clean_speakers = list({
+                      s["voice"]: {"voice": s["voice"]} 
+                      for s in raw_from_file 
+                      if s.get("voice")
+                    }.values())
+
+                    file_data["speakers"] = unique_clean_speakers
+
                     meta.update(file_data)
             except Exception as e:
                 print(f"Error reading metadata for {file}: {e}")
-
-        raw_speakers = meta.get("speakers", [])
-        clean_speakers = []
-        for s in raw_speakers:
-            if "voice" in s:
-                clean_speakers.append({"voice": s["voice"]})
 
         videos_list.append({
           "name": clean_video_name(file),
@@ -555,7 +554,7 @@ def get_videos() -> list[dict]:
           "original_language": meta.get("original_language", "Unknown"),
           "translate_language": meta.get("translate_language", "Unknown"),
           "duration": meta.get("duration", 0),
-          "speakers": clean_speakers
+          "speakers": meta.get("speakers", [])
         })
   videos_list.sort(key=lambda x: x['created_at'], reverse=True)
   return videos_list
