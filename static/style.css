@@ -632,7 +632,8 @@ option {
   background-color: var(--success-color);
 }
 
-.toast.warning {
+.toast.warning,
+.toast.info {
   background-color: var(--warning-color);
 }
 
