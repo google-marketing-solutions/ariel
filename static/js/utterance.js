@@ -16,7 +16,7 @@
 
 import {runRegenerateDubbing, runRegenerateTranslation} from './api.js';
 import {renderTimeline} from './timeline.js';
-import {showToast} from './utils.js';
+import { checkOverlap, showToast } from './utils.js';
 
 let activeEditorSession = null;
 
@@ -342,6 +342,16 @@ export function editUtterance(
         <button id="revert-utterance-btn" class="btn btn-warning">Revert</button>
         <button id="clone-utterance-btn" class="btn btn-secondary">Clone</button>
     `;
+
+  // Check for overlap on open
+  const overlapMessages = checkOverlap(utterance, currentVideoData.utterances);
+  const warningBox = document.getElementById('translated-overlap-warning');
+  if (overlapMessages.length > 0) {
+    warningBox.innerHTML = overlapMessages.join('<br>');
+    warningBox.style.display = 'block';
+  } else {
+    warningBox.style.display = 'none';
+  }
 
   // Set up the new editor session
   activeEditorSession = {
