@@ -14,5 +14,5 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-pip install -r requirements.txt
-python3 -m unittest discover -v -s tests
+pip install -q  -r requirements.txt
+python -m unittest discover -v -s tests
