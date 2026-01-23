@@ -25,6 +25,7 @@ describe('Utterance Editor', () => {
   let currentVideoData;
   let speakers;
   let videoDuration;
+  let utteranceEditor;
 
   beforeEach(() => {
     document.body.innerHTML = `
