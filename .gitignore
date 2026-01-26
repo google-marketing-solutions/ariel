@@ -64,6 +64,8 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+coverage/
+coverage_report.txt
 
 # Translations
 *.mo
@@ -189,6 +191,5 @@ GEMINI.md
 # Credentials
 configuration.yaml
 
-# Local requirements
-requirements.txt.local
-requitements.txt.tmp
+!tests/test_data/*.wav
+!tests/test_data/*.mp4

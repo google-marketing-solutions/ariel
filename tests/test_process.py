@@ -18,7 +18,7 @@ import os
 import shutil
 import subprocess
 import tempfile
-from typing import override
+from typing_extensions import override
 import unittest
 import unittest.mock
 from models import Speaker

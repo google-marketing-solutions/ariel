@@ -1,1 +1,4 @@
 temp
+coverage
+.coverage
+coverage_report.txt

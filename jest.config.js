@@ -10,6 +10,14 @@ module.exports = {
     "/node_modules/"
   ],
 
+  // A list of reporter names that Jest uses when writing coverage reports
+  coverageReporters: [
+    "json",
+    "text",
+    "lcov",
+    "clover"
+  ],
+
   // A list of paths to modules that run some code to configure or set up the testing framework before each test
   setupFilesAfterEnv: [],
 
