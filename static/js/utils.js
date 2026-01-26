@@ -43,6 +43,9 @@ export function showToast(message, type = 'error', duration = 6000) {
 }
 
 export function checkOverlap(utterance, allUtterances) {
+  // [Fix] If the utterance itself is removed, it cannot overlap.
+  if (utterance.removed) return [];
+
   for (const other of allUtterances) {
     if (utterance.id === other.id || other.removed) continue;
 
