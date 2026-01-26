@@ -8,14 +8,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "jest",
-    "lint": "gts lint",
-    "clean": "gts clean",
-    "compile": "tsc",
-    "fix": "gts fix",
-    "prepare": "npm run compile",
-    "pretest": "npm run compile",
-    "posttest": "npm run lint"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -31,11 +24,11 @@
   "devDependencies": {
     "@babel/core": "^7.28.5",
     "@babel/preset-env": "^7.28.5",
+    "@types/node": "^22.7.5",
     "babel-jest": "^30.2.0",
+    "gts": "^7.0.0",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
-    "gts": "^7.0.0",
-    "typescript": "^5.6.3",
-    "@types/node": "^22.7.5"
+    "typescript": "^5.9.3"
   }
 }

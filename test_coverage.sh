@@ -14,9 +14,18 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+rm -f coverage_report.txt
+
+echo "Python test coverage" >> coverage_report.txt
 pip install -q -r requirements-dev.txt
 coverage run \
   --source=. \
   --omit="tests/*,.venv/*,*/site-packages/*" \
   -m unittest discover -s tests \
-  && coverage report -m
+  && coverage report -m >> coverage_report.txt
+
+echo "" >> coverage_report.txt
+echo "JavaScript test coverage" >> coverage_report.txt
+npm test -- --coverage >> coverage_report.txt
+
+cat coverage_report.txt
