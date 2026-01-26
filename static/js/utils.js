@@ -43,7 +43,6 @@ export function showToast(message, type = 'error', duration = 6000) {
 }
 
 export function checkOverlap(utterance, allUtterances) {
-  const messages = [];
   for (const other of allUtterances) {
     if (utterance.id === other.id || other.removed) continue;
 
@@ -52,9 +51,8 @@ export function checkOverlap(utterance, allUtterances) {
       utterance.translated_start_time < other.translated_end_time &&
       other.translated_start_time < utterance.translated_end_time
     ) {
-      messages.push('Translated time overlaps with another utterance.');
-      break; // No need to check further
+      return ['Translated time overlaps with another utterance.'];
     }
   }
-  return messages;
+  return [];
 }

@@ -347,7 +347,7 @@ export function editUtterance(
   const overlapMessages = checkOverlap(utterance, currentVideoData.utterances);
   const warningBox = document.getElementById('translated-overlap-warning');
   if (overlapMessages.length > 0) {
-    warningBox.innerHTML = overlapMessages.join('<br>');
+    warningBox.innerHTML = overlapMessages[0];
     warningBox.style.display = 'block';
   } else {
     warningBox.style.display = 'none';
