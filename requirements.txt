@@ -358,7 +358,7 @@ python-dotenv==1.2.1
     #   moviepy
     #   pydantic-settings
     #   uvicorn
-python-multipart==0.0.21
+python-multipart==0.0.22
     # via
     #   ariel (pyproject.toml)
     #   fastapi
