@@ -192,3 +192,6 @@ configuration.yaml
 # Local requirements
 requirements.txt.local
 requitements.txt.tmp
+
+!tests/test_data/*.wav
+!tests/test_data/*.mp4
