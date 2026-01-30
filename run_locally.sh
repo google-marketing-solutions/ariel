@@ -14,8 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-# uv pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
-
 uv sync
 
 if [ -f "configuration.yaml" ]; then
