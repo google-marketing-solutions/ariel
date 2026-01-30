@@ -18,7 +18,7 @@ import io
 import os
 import shutil
 import tempfile
-from typing import override
+from typing_extensions import override
 import unittest
 import unittest.mock
 import wave

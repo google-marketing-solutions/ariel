@@ -14,14 +14,5 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-pip install -q -r requirements.txt
-
-if [ -f "configuration.yaml" ]; then
-  eval $(python -c 'import yaml, sys;
-config = yaml.safe_load(sys.stdin);
-if config:
-  for k, v in config.items():
-    print(f"export {k}=\"{v}\"")' < configuration.yaml)
-fi
-
-uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+pip install -q -r requirements-dev.txt
+python -m unittest discover -v -s tests
