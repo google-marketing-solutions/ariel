@@ -4,7 +4,7 @@
 
 import {editUtterance} from './utterance';
 import {runRegenerateDubbing, runRegenerateTranslation} from './api';
-import {showToast} from './utils';
+import { checkOverlap, showToast } from './utils';
 import {renderTimeline} from './timeline';
 
 jest.mock('./api', () => ({
@@ -14,6 +14,7 @@ jest.mock('./api', () => ({
 
 jest.mock('./utils', () => ({
   showToast: jest.fn(),
+  checkOverlap: jest.fn().mockReturnValue([])
 }));
 
 jest.mock('./timeline', () => ({
