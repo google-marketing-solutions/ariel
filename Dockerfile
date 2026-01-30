@@ -7,11 +7,13 @@ RUN apt-get -y update && \
   apt-get clean
 
 WORKDIR /app
-COPY ./requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+RUN pip install uv
+COPY ./pyproject.toml ./
+COPY ./uv.lock ./
+RUN uv sync --no-dev
 ENV HF_HOME=/app/models
-RUN python -c "from faster_whisper import WhisperModel; WhisperModel('small', device='cpu', compute_type='int8')"
+RUN uv run python -c "from faster_whisper import WhisperModel; WhisperModel('small', device='cpu', compute_type='int8')"
 
 COPY . ./
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uv", "run", "--no-dev", "--no-sync", "--frozen", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]

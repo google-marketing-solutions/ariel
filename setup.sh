@@ -20,16 +20,8 @@
 # Set the name of your Cloud Run service.
 SERVICE_NAME="ariel-v2"
 
-echo "🛠️ Building requirements.txt and installing Python dependencies..."
-uv pip compile pyproject.toml -o requirements.txt.tmp > /dev/null
-
-if [ ! -f requirements.txt ] || ! cmp -s requirements.txt.tmp requirements.txt; then
-  mv requirements.txt.tmp requirements.txt
-else
-  rm requirements.txt.tmp
-fi
-
-pip install -q -r requirements.txt -f https://download.pytorch.org/whl/cpu/
+echo "🛠️ Installing Python dependencies..."
+uv sync
 
 # 1. Get and confirm the current Project ID from gcloud config
 PROJECT_ID=$(gcloud config get-value project)
