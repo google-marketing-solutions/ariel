@@ -42,8 +42,8 @@ describe('Utils', () => {
 
   describe('checkOverlap', () => {
     it('should detect overlaps', () => {
-      const u1 = {id: '1', translated_start_time: 0, translated_end_time: 10};
-      const u2 = {id: '2', translated_start_time: 5, translated_end_time: 15};
+      const u1 = { id: '1', translated_start_time: 0, translated_end_time: 10 };
+      const u2 = { id: '2', translated_start_time: 5, translated_end_time: 15 };
 
       const messages = checkOverlap(u2, [u1, u2]);
       expect(messages.length).toBeGreaterThan(0);
@@ -51,8 +51,8 @@ describe('Utils', () => {
     });
 
     it('should ignore self and removed utterances', () => {
-      const u1 = {id: '1', translated_start_time: 0, translated_end_time: 10};
-      const u2 = {id: '2', translated_start_time: 0, translated_end_time: 10, removed: true};
+      const u1 = { id: '1', translated_start_time: 0, translated_end_time: 10 };
+      const u2 = { id: '2', translated_start_time: 0, translated_end_time: 10, removed: true };
 
       const messages = checkOverlap(u1, [u1, u2]);
       expect(messages.length).toBe(0);
