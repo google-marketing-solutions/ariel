@@ -2,3 +2,6 @@ temp
 coverage
 .coverage
 coverage_report.txt
+.venv
+node_modules
+__pycache__

@@ -3,7 +3,7 @@ name = "ariel"
 version = "2.0.0"
 description = "A tool for dubbing videos."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
     "fastapi[standard]>=0.118.0",
     "google-cloud-aiplatform>=1.119.0",
@@ -21,11 +21,29 @@ dependencies = [
     "google-cloud-texttospeech>=2.33.0",
     "debugpy>=1.8.17",
     "faster-whisper>=1.2.1",
+    "torch>=2.3.1; platform_system != 'Darwin' and python_version < '3.13'",
+    "torch>=2.3.1, <2.4; platform_system == 'Darwin' and python_version < '3.13'", # For Apple Silicon Macs
+    "torchvision>=0.18.1; platform_system != 'Darwin' and python_version < '3.13'",
+    "torchvision>=0.18.1, <0.19; platform_system == 'Darwin' and python_version < '3.13'", # For Apple Silicon Macs
+    "torchaudio>=2.3.1; platform_system != 'Darwin' and python_version < '3.13'",
+    "torchaudio>=2.3.1, <2.4; platform_system == 'Darwin' and python_version < '3.13'", # For Apple Silicon Macs
+    "onnxruntime>=1.18.0; platform_system != 'Darwin'", # For faster-whisper CPU
+    "onnxruntime>=1.18.0, <1.19; platform_system == 'Darwin'", # For faster-whisper CPU
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [[tool.uv.index]]
 url = "https://pypi.org/simple"
 default = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+torchvision = [{ index = "pytorch-cpu" }]
+torchaudio = [{ index = "pytorch-cpu" }]
 
 [dependency-groups]
 dev = [

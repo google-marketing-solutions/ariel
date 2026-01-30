@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-pip install -q -r requirements.txt
+pip install -q -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
 if [ -f "configuration.yaml" ]; then
   eval $(python -c 'import yaml, sys;

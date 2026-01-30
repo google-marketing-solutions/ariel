@@ -29,7 +29,7 @@ else
   rm requirements.txt.tmp
 fi
 
-pip install -q -r requirements.txt
+pip install -q -r requirements.txt -f https://download.pytorch.org/whl/cpu/
 
 # 1. Get and confirm the current Project ID from gcloud config
 PROJECT_ID=$(gcloud config get-value project)
