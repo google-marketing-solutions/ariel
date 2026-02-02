@@ -17,16 +17,13 @@ dependencies = [
     "tenacity>=8.4.1",
     "google-cloud-logging>=3.12.1",
     "librosa>=0.11.0",
-    "torchcodec>=0.8.1",
     "google-cloud-texttospeech>=2.33.0",
     "debugpy>=1.8.17",
     "faster-whisper>=1.2.1",
-    "torch>=2.3.1; platform_system != 'Darwin' and python_version < '3.13'",
-    "torch>=2.3.1, <2.4; platform_system == 'Darwin' and python_version < '3.13'", # For Apple Silicon Macs
-    "torchvision>=0.18.1; platform_system != 'Darwin' and python_version < '3.13'",
-    "torchvision>=0.18.1, <0.19; platform_system == 'Darwin' and python_version < '3.13'", # For Apple Silicon Macs
-    "torchaudio>=2.3.1; platform_system != 'Darwin' and python_version < '3.13'",
-    "torchaudio>=2.3.1, <2.4; platform_system == 'Darwin' and python_version < '3.13'", # For Apple Silicon Macs
+    "torch>=2.5.1",
+    "torchvision>=0.20.1",
+    "torchaudio>=2.5.1",
+    "torchcodec>=0.8.1",
     "onnxruntime>=1.18.0; platform_system != 'Darwin'", # For faster-whisper CPU
     "onnxruntime>=1.18.0, <1.19; platform_system == 'Darwin'", # For faster-whisper CPU
 ]

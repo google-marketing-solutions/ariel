@@ -23,21 +23,21 @@ SERVICE_NAME="ariel-v2"
 echo "🛠️ Validating build and deploy requirements..."
 ffmpeg -version >/dev/null 2>&1
 if [ $? -ne 0 ]; then
-  echo "❌ Error: ffmpeg is not installed."
+  echo "❌ Error: ffmpeg is not installed. Try installing it (e.g. apt-get install ffmpeg) and run the script again."
   exit 1
 fi
 echo "✅ ffmpeg is installed."
 
 uv --version >/dev/null 2>&1
 if [ $? -ne 0 ]; then
-  echo "❌ Error: uv is not installed."
+  echo "❌ Error: uv is not installed. Try installing it (e.g. pip install uv) and run the script again."
   exit 1
 fi
 echo "✅ uv is installed."
 
 gcloud --version >/dev/null 2>&1
 if [ $? -ne 0 ]; then
-  echo "❌ Error: gcloud is not installed."
+  echo "❌ Error: gcloud is not installed. Try installing it (e.g. apt-get install google-cloud-sdk) and run the script again."
   exit 1
 fi
 echo "✅ gcloud is installed."
