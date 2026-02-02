@@ -20,7 +20,7 @@
 # Set the name of your Cloud Run service.
 SERVICE_NAME="ariel-v2"
 
-echo "Checking for ffmpeg..."
+echo "🛠️ Validating build and deploy requirements..."
 ffmpeg -version >/dev/null 2>&1
 if [ $? -ne 0 ]; then
   echo "❌ Error: ffmpeg is not installed."
@@ -28,13 +28,19 @@ if [ $? -ne 0 ]; then
 fi
 echo "✅ ffmpeg is installed."
 
-echo "Checking for uv..."
 uv --version >/dev/null 2>&1
 if [ $? -ne 0 ]; then
   echo "❌ Error: uv is not installed."
   exit 1
 fi
 echo "✅ uv is installed."
+
+gcloud --version >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo "❌ Error: gcloud is not installed."
+  exit 1
+fi
+echo "✅ gcloud is installed."
 
 echo "🛠️ Installing Python dependencies..."
 uv sync
