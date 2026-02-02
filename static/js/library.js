@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                             </p>
                                         </div>
                                         
-                                        <a href="${video.url}" download="${video.name}" class="btn btn-sm btn-primary text-white text-nowrap">
+                                        <a href="${video.download_url}" download="${video.name}" class="btn btn-sm btn-primary text-white text-nowrap">
                                             <i class="bi bi-download"></i> Download
                                         </a>
                                     </div>

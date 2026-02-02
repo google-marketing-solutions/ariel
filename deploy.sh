@@ -57,6 +57,12 @@ if [ "$DOCKER_AVAILABLE" = "true" ]; then
   fi
 fi
 
+echo "🔑 Granting 'Service Account Token Creator' role to the Cloud Run service account..."
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+    --role="roles/iam.serviceAccountTokenCreator"
+
+
 deploy_service() {
   if [ "$DOCKER_AVAILABLE" = "true" ]; then
     echo "  📦 Building Docker image $DOCKER_IMAGE_TAG"
