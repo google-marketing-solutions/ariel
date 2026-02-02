@@ -77,7 +77,7 @@ deploy_service() {
       --add-volume-mount volume=ariel,mount-path="/mnt/ariel" \
       --service-account="$SERVICE_ACCOUNT_EMAIL"
   else
-    echo "--🏗️ Docker is not available. Using Cloud Build..."
+    echo "  🏗️ Docker is not available. Using Cloud Build..."
     gcloud beta run deploy "$SERVICE_NAME" \
       --source . \
       --region="$REGION" \
