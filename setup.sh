@@ -20,16 +20,30 @@
 # Set the name of your Cloud Run service.
 SERVICE_NAME="ariel-v2"
 
-echo "🛠️ Building requirements.txt and installing Python dependencies..."
-uv pip compile pyproject.toml -o requirements.txt.tmp > /dev/null
-
-if [ ! -f requirements.txt ] || ! cmp -s requirements.txt.tmp requirements.txt; then
-  mv requirements.txt.tmp requirements.txt
-else
-  rm requirements.txt.tmp
+echo "🛠️ Validating build and deploy requirements..."
+ffmpeg -version >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo "❌ Error: ffmpeg is not installed. Try installing it (e.g. apt-get install ffmpeg) and run the script again."
+  exit 1
 fi
+echo "✅ ffmpeg is installed."
 
-pip install -q -r requirements.txt
+uv --version >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo "❌ Error: uv is not installed. Try installing it (e.g. pip install uv) and run the script again."
+  exit 1
+fi
+echo "✅ uv is installed."
+
+gcloud --version >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo "❌ Error: gcloud is not installed. Try installing it (e.g. apt-get install google-cloud-sdk) and run the script again."
+  exit 1
+fi
+echo "✅ gcloud is installed."
+
+echo "🛠️ Installing Python dependencies..."
+uv sync
 
 # 1. Get and confirm the current Project ID from gcloud config
 PROJECT_ID=$(gcloud config get-value project)

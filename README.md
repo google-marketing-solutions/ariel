@@ -146,17 +146,10 @@ To update the model, follow these steps:
 
 ## Running Ariel Locally
 
-The first step required to run Ariel locally is to install the dependencies. We
-suggest following Python best practices and using a virtual environment. The
-requirements.txt file can be used with pip, or you can use uv to create the venv
-and install the dependencies. Please see the
-[uv documentation](https://docs.astral.sh/uv/) or the
-(pip documentation)[https://packaging.python.org/en/latest/tutorials/installing-packages/]
-for more information.
-
-Next, running `setup.sh` will create the configuration.yaml file required to set
-the necessary environment variable. Once the file is created, you can also run
-the application locally via the`run_locally.sh` script.
+Running `setup.sh` will install all required dependencies and create  the
+configuration.yaml file required to set the necessary environment variable.
+Once the file is created, you can also run the application locally via the
+`run_locally.sh` script.
 
 After running `run_locally.sh`, the solution will start on localhost, and
 generally on port 8080. You can use the UI just as you would if it were

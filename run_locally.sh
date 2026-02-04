@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-pip install -q -r requirements.txt
+uv sync
 
 if [ -f "configuration.yaml" ]; then
   eval $(python -c 'import yaml, sys;
@@ -24,4 +24,4 @@ if config:
     print(f"export {k}=\"{v}\"")' < configuration.yaml)
 fi
 
-uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+uv run uvicorn main:app --host 0.0.0.0 --port 8080 --reload

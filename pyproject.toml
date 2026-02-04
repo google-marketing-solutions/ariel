@@ -3,7 +3,7 @@ name = "ariel"
 version = "2.0.0"
 description = "A tool for dubbing videos."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
     "fastapi[standard]>=0.118.0",
     "google-cloud-aiplatform>=1.119.0",
@@ -17,15 +17,30 @@ dependencies = [
     "tenacity>=8.4.1",
     "google-cloud-logging>=3.12.1",
     "librosa>=0.11.0",
-    "torchcodec>=0.8.1",
     "google-cloud-texttospeech>=2.33.0",
     "debugpy>=1.8.17",
     "faster-whisper>=1.2.1",
+    "torch>=2.5.1",
+    "torchvision>=0.20.1",
+    "torchaudio>=2.5.1",
+    "torchcodec>=0.8.1",
+    "onnxruntime>=1.18.0; platform_system != 'Darwin'", # For faster-whisper CPU
+    "onnxruntime>=1.18.0, <1.19; platform_system == 'Darwin'", # For faster-whisper CPU
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [[tool.uv.index]]
 url = "https://pypi.org/simple"
 default = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+torchvision = [{ index = "pytorch-cpu" }]
+torchaudio = [{ index = "pytorch-cpu" }]
 
 [dependency-groups]
 dev = [
