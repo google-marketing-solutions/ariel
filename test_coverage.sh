@@ -17,7 +17,7 @@
 rm -f coverage_report.txt
 
 echo "Python test coverage" >> coverage_report.txt
-pip install -q -r requirements-dev.txt
+uv sync --dev
 coverage run \
   --source=. \
   --omit="tests/*,.venv/*,*/site-packages/*" \

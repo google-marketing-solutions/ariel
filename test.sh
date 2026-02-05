@@ -15,6 +15,6 @@
 # under the License.
 set -e
 
-pip install -q -r requirements-dev.txt
+uv sync --dev
 python -m unittest discover -v -s tests
 npm test
