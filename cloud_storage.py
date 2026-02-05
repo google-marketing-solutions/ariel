@@ -91,7 +91,7 @@ def upload_file_to_gcs(
   return target_path
 
 
-def get_url_for_path(bucket_name: str, path: str, download_filename: str = "") -> str:
+def get_url_for_path(bucket_name: str, path: str, download_filename: str = "", service_account_email: str = None, access_token: str = None) -> str:
   """Returns a URL that can be used to fetch the files stored in GCS.
 
   Args:
@@ -104,6 +104,22 @@ def get_url_for_path(bucket_name: str, path: str, download_filename: str = "") -
   """
   storage_client = storage.Client()
 
+  bucket = storage_client.bucket(bucket_name)
+  blob = bucket.blob(path)
+  kwargs = {
+      "version": "v4",
+      "expiration": (60 * 60 * 24),
+      "method": "GET",
+      "service_account_email": service_account_email,
+      "access_token": access_token,
+  }
+  if download_filename:
+      kwargs["response_disposition"] = f'attachment; filename="{download_filename}"'
+  url = blob.generate_signed_url(**kwargs)
+
+  return url
+
+def fetch_service_account_email() -> str:
   service_account_email = None
   try:
       credentials, _ = google.auth.default()
@@ -123,7 +139,10 @@ def get_url_for_path(bucket_name: str, path: str, download_filename: str = "") -
              service_account_email = response.text.strip()
         except Exception:
              logging.warning("Could not determine service account email, signed URL generation might fail.")
+  return service_account_email
 
+def fetch_access_token() -> str:
+  """Fetches the access token for the current request."""
   access_token = None
   try:
       if not credentials.token:
@@ -132,21 +151,7 @@ def get_url_for_path(bucket_name: str, path: str, download_filename: str = "") -
       access_token = credentials.token
   except Exception as e:
       logging.warning(f"Could not refresh credentials: {e}")
-
-  bucket = storage_client.bucket(bucket_name)
-  blob = bucket.blob(path)
-  kwargs = {
-      "version": "v4",
-      "expiration": (60 * 60 * 24),
-      "method": "GET",
-      "service_account_email": service_account_email,
-      "access_token": access_token,
-  }
-  if download_filename:
-      kwargs["response_disposition"] = f'attachment; filename="{download_filename}"'
-  url = blob.generate_signed_url(**kwargs)
-
-  return url
+  return access_token
 
 def clean_video_name(filename: str) -> str:
   """Removes the timestamp and UUID prefix from the filename."""
@@ -173,8 +178,10 @@ def list_all_videos(bucket_name: str) -> list[dict]:
               continue
 
       try:
-        url = get_url_for_path(bucket_name, blob.name)
-        download_url = get_url_for_path(bucket_name, blob.name, download_filename=clean_video_name(blob.name))
+        service_account_email = fetch_service_account_email()
+        access_token = fetch_access_token()
+        url = get_url_for_path(bucket_name, blob.name, service_account_email=service_account_email, access_token=access_token)
+        download_url = get_url_for_path(bucket_name, blob.name, download_filename=clean_video_name(blob.name), service_account_email=service_account_email, access_token=access_token)
       except Exception as e:
         logging.error(f"Error generating signed URL for {blob.name}: {e}")
         url = ""
