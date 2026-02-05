@@ -26,6 +26,7 @@ import re
 from cloud_storage import list_all_videos
 from cloud_storage import upload_file_to_gcs
 from cloud_storage import upload_video_to_gcs
+from cloud_storage import clean_video_name
 from configuration import get_config
 from fastapi import FastAPI
 from fastapi import Form
@@ -498,14 +499,6 @@ def sanitize_filename(orig: str) -> str:
   if not new_name:
     return "video.mp4"
   return new_name
-
-
-def clean_video_name(filename: str) -> str:
-  """Removes the timestamp and UUID prefix from the filename."""
-  name = os.path.basename(filename)
-  pattern = r"^.+?-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-"
-  clean_name = re.sub(pattern, "", name)
-  return clean_name
 
 @app.get("/api/videos")
 def get_videos() -> list[dict]:

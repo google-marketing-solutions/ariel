@@ -103,7 +103,7 @@ def get_url_for_path(bucket_name: str, path: str, download_filename: str = "") -
     A URL that points to the file requested. The URL is valid for 24 hours.
   """
   storage_client = storage.Client()
-  
+
   service_account_email = None
   try:
       credentials, _ = google.auth.default()
@@ -123,7 +123,7 @@ def get_url_for_path(bucket_name: str, path: str, download_filename: str = "") -
              service_account_email = response.text.strip()
         except Exception:
              logging.warning("Could not determine service account email, signed URL generation might fail.")
-  
+
   access_token = None
   try:
       if not credentials.token:
@@ -147,7 +147,6 @@ def get_url_for_path(bucket_name: str, path: str, download_filename: str = "") -
   url = blob.generate_signed_url(**kwargs)
 
   return url
-
 
 def clean_video_name(filename: str) -> str:
   """Removes the timestamp and UUID prefix from the filename."""
@@ -181,7 +180,7 @@ def list_all_videos(bucket_name: str) -> list[dict]:
         url = ""
         download_url = ""
 
-      
+
       folder = os.path.dirname(blob.name)
       metadata_path = f"{folder}/metadata.json"
       meta = {
@@ -215,7 +214,7 @@ def list_all_videos(bucket_name: str) -> list[dict]:
         "duration": meta.get("duration", 0),
         "speakers": clean_speakers
       })
-  
+
   videos.sort(key=lambda x: x['created_at'], reverse=True)
 
   return videos
