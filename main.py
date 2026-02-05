@@ -21,9 +21,12 @@ import os
 import shutil
 from typing import Annotated
 import uuid
+import re
 
+from cloud_storage import list_all_videos
 from cloud_storage import upload_file_to_gcs
 from cloud_storage import upload_video_to_gcs
+from cloud_storage import clean_video_name
 from configuration import get_config
 from fastapi import FastAPI
 from fastapi import Form
@@ -281,6 +284,28 @@ async def process_video(
       tts_model_name=gemini_tts_model,
   )
 
+  duration = 0
+  if utterances:
+      duration = max([u.translated_end_time for u in utterances])
+
+  metadata = {
+      "original_language": original_language,
+      "translate_language": translate_language,
+      "duration": round(duration, 1),
+      "speakers": [{"voice": s.voice} for s in speaker_list]
+  }
+
+  metadata_filename = "metadata.json"
+  local_metadata_path = os.path.join(local_dir, metadata_filename)
+  with open(local_metadata_path, "w") as f:
+      json.dump(metadata, f)
+
+  video_gcs_folder = os.path.dirname(local_video_path.split(mount_point + "/")[-1])
+  gcs_metadata_path = f"{video_gcs_folder}/{metadata_filename}"
+
+  with open(local_metadata_path, "rb") as f:
+      upload_file_to_gcs(gcs_metadata_path, f, config.gcs_bucket_name, mime_type="application/json")
+
   logging.info("Completed processing %s", video.filename)
   return to_return
 
@@ -474,3 +499,68 @@ def sanitize_filename(orig: str) -> str:
   if not new_name:
     return "video.mp4"
   return new_name
+
+@app.get("/api/videos")
+def get_videos() -> list[dict]:
+  """Fetches the list of videos from the appropriate source based on environment."""
+
+  if "K_SERVICE" in os.environ:
+    return list_all_videos(config.gcs_bucket_name)
+
+  videos_list = []
+  try:
+    for root, dirs, files in os.walk(mount_point):
+      for file in files:
+        if file.lower().endswith(".mp4"):
+          folder_name = os.path.basename(root)
+          if file == folder_name:
+            continue
+          full_path = os.path.join(root, file)
+          relative_path = os.path.relpath(full_path, mount_point)
+          web_path = f"/temp/{relative_path}".replace(os.path.sep, "/")
+          creation_time = os.path.getmtime(full_path)
+
+          meta = {
+            "original_language": "Unknown",
+            "translate_language": "Unknown",
+            "duration": 0,
+            "speakers": []
+          }
+          meta_path = os.path.join(root, "metadata.json")
+          if os.path.exists(meta_path):
+            try:
+              with open(meta_path, "r") as f:
+                file_data = json.load(f)
+                raw_from_file = file_data.get("speakers", [])
+                unique_clean_speakers = list({
+                  s["voice"]: {"voice": s["voice"]}
+                  for s in raw_from_file
+                  if s.get("voice")
+                }.values())
+
+                file_data["speakers"] = unique_clean_speakers
+                meta.update(file_data)
+            except Exception as e:
+              print(f"Error reading metadata for {file}: {e}")
+
+          videos_list.append({
+            "name": clean_video_name(file),
+            "url": web_path,
+            "download_url": web_path,
+            "created_at": creation_time,
+            "original_language": meta.get("original_language", "Unknown"),
+            "translate_language": meta.get("translate_language", "Unknown"),
+            "duration": meta.get("duration", 0),
+            "speakers": meta.get("speakers", [])
+          })
+      videos_list.sort(key=lambda x: x['created_at'], reverse=True)
+  except Exception as e:
+    print(f"Error listing videos: {e}")
+  return videos_list
+
+@app.get("/library", response_class=HTMLResponse)
+async def library_page(request: Request):
+  return templates.TemplateResponse("library.html", {"request": request})
+
+
+

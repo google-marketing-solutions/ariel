@@ -121,16 +121,18 @@ class CloudStorageTest(unittest.TestCase):
 
     bucket_name = "test-bucket"
     path = "some/file.txt"
+    service_account_email = "test@service.com"
+    access_token = "test-token"
 
     # Execute
-    result = cloud_storage.get_url_for_path(bucket_name, path)
+    result = cloud_storage.get_url_for_path(bucket_name, path, service_account_email=service_account_email, access_token=access_token)
 
     # Verify
     self.assertEqual(result, expected_url)
     mock_client_instance.bucket.assert_called_once_with(bucket_name)
     mock_bucket.blob.assert_called_once_with(path)
     mock_blob.generate_signed_url.assert_called_once_with(
-        version="v4", expiration=(60 * 60 * 24), method="GET"
+        version="v4", expiration=(60 * 60 * 24), method="GET", service_account_email=service_account_email, access_token=access_token
     )
 
 if __name__ == "__main__":

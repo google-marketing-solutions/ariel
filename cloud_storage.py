@@ -17,9 +17,14 @@
 import datetime
 import logging
 import mimetypes
+import re
 import typing
 import uuid
 from google.cloud import storage
+import json
+import os
+import google.auth
+
 
 
 def upload_video_to_gcs(
@@ -86,22 +91,137 @@ def upload_file_to_gcs(
   return target_path
 
 
-def get_url_for_path(bucket_name: str, path: str) -> str:
+def get_url_for_path(bucket_name: str, path: str, download_filename: str = "", service_account_email: str = None, access_token: str = None) -> str:
   """Returns a URL that can be used to fetch the files stored in GCS.
 
   Args:
     bucket_name: the name of the GCS bucket the files is stored in.
     path: the path to the file the URL will point to.
+    download_filename: optional filename to force download with Content-Disposition.
 
   Returns:
     A URL that points to the file requested. The URL is valid for 24 hours.
   """
   storage_client = storage.Client()
+
   bucket = storage_client.bucket(bucket_name)
   blob = bucket.blob(path)
-
-  url = blob.generate_signed_url(
-      version="v4", expiration=(60 * 60 * 24), method="GET"
-  )
+  kwargs = {
+      "version": "v4",
+      "expiration": (60 * 60 * 24),
+      "method": "GET",
+      "service_account_email": service_account_email,
+      "access_token": access_token,
+  }
+  if download_filename:
+      kwargs["response_disposition"] = f'attachment; filename="{download_filename}"'
+  url = blob.generate_signed_url(**kwargs)
 
   return url
+
+def fetch_service_account_email() -> str:
+  service_account_email = None
+  try:
+      credentials, _ = google.auth.default()
+      if hasattr(credentials, "service_account_email"):
+          service_account_email = credentials.service_account_email
+  except Exception as e:
+      logging.warning(f"Could not get default credentials: {e}")
+
+  if not service_account_email or service_account_email == "default":
+        # Fallback to metadata server if email is not in credentials or is 'default'
+        import requests
+        try:
+             metadata_url = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email"
+             headers = {"Metadata-Flavor": "Google"}
+             response = requests.get(metadata_url, headers=headers, timeout=2)
+             response.raise_for_status()
+             service_account_email = response.text.strip()
+        except Exception:
+             logging.warning("Could not determine service account email, signed URL generation might fail.")
+  return service_account_email
+
+def fetch_access_token() -> str:
+  """Fetches the access token for the current request."""
+  access_token = None
+  try:
+      if not credentials.token:
+          from google.auth.transport.requests import Request
+          credentials.refresh(Request())
+      access_token = credentials.token
+  except Exception as e:
+      logging.warning(f"Could not refresh credentials: {e}")
+  return access_token
+
+def clean_video_name(filename: str) -> str:
+  """Removes the timestamp and UUID prefix from the filename."""
+  name = os.path.basename(filename)
+  pattern = r"^.+?-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-"
+  clean_name = re.sub(pattern, "", name)
+  return clean_name
+
+def list_all_videos(bucket_name: str) -> list[dict]:
+  """Returns a list of translated videos with their metadata."""
+  storage_client = storage.Client()
+  bucket = storage_client.bucket(bucket_name)
+  blobs = storage_client.list_blobs(bucket_name)
+
+  videos = []
+
+  for blob in blobs:
+    if blob.name.lower().endswith(".mp4"):
+      parts = blob.name.split("/")
+      if len(parts) >= 2:
+          folder_name = parts[-2]
+          file_name = parts[-1]
+          if folder_name == file_name:
+              continue
+
+      try:
+        service_account_email = fetch_service_account_email()
+        access_token = fetch_access_token()
+        url = get_url_for_path(bucket_name, blob.name, service_account_email=service_account_email, access_token=access_token)
+        download_url = get_url_for_path(bucket_name, blob.name, download_filename=clean_video_name(blob.name), service_account_email=service_account_email, access_token=access_token)
+      except Exception as e:
+        logging.error(f"Error generating signed URL for {blob.name}: {e}")
+        url = ""
+        download_url = ""
+
+
+      folder = os.path.dirname(blob.name)
+      metadata_path = f"{folder}/metadata.json"
+      meta = {
+          "original_language": "Unknown",
+          "translate_language": "Unknown",
+          "duration": 0,
+          "speakers": []
+      }
+      metadata_blob = bucket.blob(metadata_path)
+      if metadata_blob.exists():
+          try:
+              json_str = metadata_blob.download_as_text()
+              file_data = json.loads(json_str)
+              meta.update(file_data)
+          except Exception as e:
+              logging.error(f"Error fetching metadata for {blob.name}: {e}")
+
+      raw_speakers = meta.get("speakers", [])
+      clean_speakers = []
+      for s in raw_speakers:
+          if "voice" in s:
+              clean_speakers.append({"voice": s["voice"]})
+
+      videos.append({
+        "name": clean_video_name(blob.name),
+        "url": url,
+        "download_url": download_url,
+        "created_at": blob.time_created,
+        "original_language": meta.get("original_language", "Unknown"),
+        "translate_language": meta.get("translate_language", "Unknown"),
+        "duration": meta.get("duration", 0),
+        "speakers": clean_speakers
+      })
+
+  videos.sort(key=lambda x: x['created_at'], reverse=True)
+
+  return videos
