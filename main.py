@@ -70,8 +70,8 @@ if "K_SERVICE" in os.environ:
   app.mount("/mnt", StaticFiles(directory="/mnt"), name="temp")
 else:
   # Running locally.
-  mount_point = "static/temp"
-  app.mount("/temp", StaticFiles(directory="static/temp"), name="temp")
+  mount_point = "temp"
+  app.mount("/temp", StaticFiles(directory="temp"), name="temp")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -301,7 +301,7 @@ async def process_video(
 
   video_gcs_folder = os.path.dirname(local_video_path.split(mount_point + "/")[-1])
   gcs_metadata_path = f"{video_gcs_folder}/{metadata_filename}"
-  
+
   with open(local_metadata_path, "rb") as f:
       upload_file_to_gcs(gcs_metadata_path, f, config.gcs_bucket_name, mime_type="application/json")
 
@@ -540,8 +540,8 @@ def get_videos() -> list[dict]:
                 file_data = json.load(f)
                 raw_from_file = file_data.get("speakers", [])
                 unique_clean_speakers = list({
-                  s["voice"]: {"voice": s["voice"]} 
-                  for s in raw_from_file 
+                  s["voice"]: {"voice": s["voice"]}
+                  for s in raw_from_file
                   if s.get("voice")
                 }.values())
 
