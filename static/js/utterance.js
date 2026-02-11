@@ -573,7 +573,11 @@ export function editUtterance(
   setupAudioPlaybackListeners(utterance, utteranceEditorContent);
 
   const closeEditorBtn = utteranceEditor.querySelector('.btn-close');
-  closeEditorBtn.addEventListener('click', () => {
+  // ---------------------------------------------------------
+  // Fix: Change from addEventListener to onclick.
+  // This prevents piling up event listeners on the close button.
+  // ---------------------------------------------------------
+  closeEditorBtn.onclick = () => {
     if (hasUnsavedChanges()) {
       const modalEl = document.getElementById('confirmation-modal');
       const modalTitle = modalEl.querySelector('.modal-title');
@@ -619,5 +623,17 @@ export function editUtterance(
       if (utteranceCard) utteranceCard.classList.remove('editing');
       activeEditorSession = null; // Clear session
     }
-  });
+  };
+}
+
+export function closeUtteranceEditor() {
+  const utteranceEditor = document.getElementById('utterance-editor');
+  if (utteranceEditor) {
+    utteranceEditor.style.display = 'none';
+  }
+  document.querySelectorAll('.utterance-card.editing').forEach(card => card.classList.remove('editing'));
+  // Update internal session tracker to null
+  if (typeof activeEditorSession !== 'undefined') {
+    activeEditorSession = null;
+  }
 }
