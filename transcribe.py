@@ -146,10 +146,9 @@ def annotate_transcript(
     There are {num_speakers} speakers. If you detect more, assume they are the same person.
 
     For each sentence, make sure to use the provided start and end times from
-    the transcript. This is ABSOLUTELY CRITICAL. Output them in seconds (floats).
+    the transcript. This is ABSOLUTELY CRITICAL. Output them exactly as they were provided.
 
-    For each utterance of the transcript, describe the tone of voice used
-    (e.g., enthusiastic, calm, angry, neutral).
+    For each utterance of the transcript, describe the tone of voice used in a short sentence.
     When assigning speaker_id, use the format "speaker_x", where x is the number
     of the speaker in the order they are first heard in the video, starting at 1.
 
@@ -208,6 +207,8 @@ def transcribe_media(audio_file_path: str, language: str) -> str:
 
   Args:
     audio_file_path: the local path to the file to transcribe.
+    language: the language of the audio. This shoud be the language code
+        (e.g. en or en-US)
 
   Returns:
     A transcript of the audio file.
@@ -217,14 +218,8 @@ def transcribe_media(audio_file_path: str, language: str) -> str:
   if "-" in language:
     language = language.split("-")[0]
 
-  segments, info = whisper_model.transcribe(
-      audio_file_path, language=language, beam_size=5
-  )
-
-  logging.info(
-      "Detected language '%s' with probability %f",
-      info.language,
-      info.language_probability,
+  segments, _ = whisper_model.transcribe(
+      audio_file_path, language=language, task="transcribe", beam_size=7
   )
 
   transcript: list[str] = []
