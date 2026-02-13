@@ -18,16 +18,17 @@ import functools
 import json
 import logging
 import os
+import re
 import shutil
 from typing import Annotated
 import uuid
 import re
 
 
+from cloud_storage import clean_video_name
 from cloud_storage import list_all_videos
 from cloud_storage import upload_file_to_gcs
 from cloud_storage import upload_video_to_gcs
-from cloud_storage import clean_video_name
 from configuration import get_config
 from fastapi import FastAPI
 from fastapi import Form
@@ -182,18 +183,17 @@ async def process_video(
     original_language: the language of speech in the original video.
     translate_language: the language to translate the video to.
     prompt_enhancements: extra instructions to send Gemini during translation
-        and audio generation.
+      and audio generation.
     adjust_speed: whether to automatically match the length of the generated
-        utterances to the original.
+      utterances to the original.
     speakers: a list of the speakers in the video. They must be in the order
-        they speak in the video.
+      they speak in the video.
     use_pro_model: whether to use the pro version of Gemini. If true, the pro
-        model defined in the configuration will be used. Otherwise the flash
-        version is used.
+      model defined in the configuration will be used. Otherwise the flash
+      version is used.
 
   Returns:
     A Video object with the information for the dubbing.
-
   """
   logging.info("Starting Process Video for %s", video.filename)
   local_video_path, _ = save_video(video)
@@ -206,7 +206,7 @@ async def process_video(
 
   logging.info(
       "Uploading original audio, vocals and background music to GCS for %s",
-      video.filename
+      video.filename,
   )
   with open(original_audio_path, "rb") as f:
     upload_file_to_gcs(original_audio_path, f, config.gcs_bucket_name)
@@ -231,7 +231,7 @@ async def process_video(
   speaker_map = {s.speaker_id: s for s in speaker_list}
 
   logging.info("Transcribing %s", video.filename)
-  transcript = transcribe_media(original_audio_path)
+  transcript = transcribe_media(original_audio_path, original_language)
 
   if use_pro_model:
     gemini_model = config.gemini_pro_model
@@ -253,7 +253,7 @@ async def process_video(
   utterances: list[Utterance] = []
   logging.info(
       "Starting to translate utterances and generate audio for %s",
-      video.filename
+      video.filename,
   )
 
   process_func = functools.partial(
@@ -401,8 +401,8 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
   """Regenerates the translation for a given utterance.
 
   Args:
-    req: The request object with the video, utterance index, and
-        additional instructions.
+    req: The request object with the video, utterance index, and additional
+      instructions.
 
   Returns:
     A response with the new translation, updated audio file path,
@@ -446,7 +446,7 @@ def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
 
   Args:
     req: The request with the video, utterance index, and additional
-        instructions.
+      instructions.
 
   Returns:
     A response with the new path to the dubbed audio.
@@ -517,6 +517,7 @@ def sanitize_filename(orig: str) -> str:
     return "video.mp4"
   return new_name
 
+
 @app.get("/api/videos")
 def get_videos() -> list[dict]:
   """Fetches the list of videos from the appropriate source based on environment."""
@@ -538,10 +539,10 @@ def get_videos() -> list[dict]:
           creation_time = os.path.getmtime(full_path)
 
           meta = {
-            "original_language": "Unknown",
-            "translate_language": "Unknown",
-            "duration": 0,
-            "speakers": []
+              "original_language": "Unknown",
+              "translate_language": "Unknown",
+              "duration": 0,
+              "speakers": [],
           }
           meta_path = os.path.join(root, "metadata.json")
           if os.path.exists(meta_path):
@@ -549,11 +550,13 @@ def get_videos() -> list[dict]:
               with open(meta_path, "r") as f:
                 file_data = json.load(f)
                 raw_from_file = file_data.get("speakers", [])
-                unique_clean_speakers = list({
-                  s["voice"]: {"voice": s["voice"]}
-                  for s in raw_from_file
-                  if s.get("voice")
-                }.values())
+                unique_clean_speakers = list(
+                    {
+                        s["voice"]: {"voice": s["voice"]}
+                        for s in raw_from_file
+                        if s.get("voice")
+                    }.values()
+                )
 
                 file_data["speakers"] = unique_clean_speakers
                 meta.update(file_data)
@@ -571,10 +574,11 @@ def get_videos() -> list[dict]:
             "duration": meta.get("duration", 0),
             "speakers": meta.get("speakers", [])
           })
-      videos_list.sort(key=lambda x: x['created_at'], reverse=True)
+      videos_list.sort(key=lambda x: x["created_at"], reverse=True)
   except Exception as e:
     print(f"Error listing videos: {e}")
   return videos_list
+
 
 @app.get("/library", response_class=HTMLResponse)
 async def library_page(request: Request):

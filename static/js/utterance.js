@@ -19,24 +19,94 @@ import {renderTimeline} from './timeline.js';
 import { checkOverlap, showToast } from './utils.js';
 
 let activeEditorSession = null;
+let activeAudioPlayback = null; // { element, utteranceId, type }
+let originalAudioTimeoutId = null; // To clear timeout if original audio is interrupted
+
+function stopCurrentAudio() {
+  if (activeAudioPlayback) {
+    const {element} = activeAudioPlayback;
+    if (element && !element.paused) {
+      element.pause();
+      element.currentTime = 0; // Reset playback position
+    }
+    activeAudioPlayback = null;
+  }
+  // Clear any pending timeout for original audio segment playback
+  if (originalAudioTimeoutId) {
+    clearTimeout(originalAudioTimeoutId);
+    originalAudioTimeoutId = null;
+  }
+}
+
 
 function playTranslatedAudio(utterance) {
+  // If the same button is clicked again, stop playback and exit.
+  if (
+    activeAudioPlayback &&
+    activeAudioPlayback.utteranceId === utterance.id &&
+    activeAudioPlayback.type === 'translated'
+  ) {
+    stopCurrentAudio();
+    return;
+  }
+
+  stopCurrentAudio(); // Stop any other audio
+
   if (utterance.audio_url) {
     const audio = new Audio(utterance.audio_url);
+    activeAudioPlayback = {
+      element: audio,
+      utteranceId: utterance.id,
+      type: 'translated',
+    };
     audio.play();
-    audio.currentTime = 0;
+    audio.onended = () => {
+      // Ensure this specific playback session is still active before clearing
+      if (
+        activeAudioPlayback &&
+        activeAudioPlayback.utteranceId === utterance.id &&
+        activeAudioPlayback.type === 'translated'
+      ) {
+        stopCurrentAudio();
+      }
+    };
   }
 }
 
 function playOriginalAudio(utterance) {
+  // If the same button is clicked again, stop playback and exit.
+  if (
+    activeAudioPlayback &&
+    activeAudioPlayback.utteranceId === utterance.id &&
+    activeAudioPlayback.type === 'original'
+  ) {
+    stopCurrentAudio();
+    return;
+  }
+
+  stopCurrentAudio(); // Stop any other audio
+
   const audioSource = document.querySelector('#results-video-preview');
   if (audioSource) {
+    activeAudioPlayback = {
+      element: audioSource,
+      utteranceId: utterance.id,
+      type: 'original',
+    };
     audioSource.currentTime = utterance.original_start_time;
     audioSource.play();
+
     const duration =
       (utterance.original_end_time - utterance.original_start_time) * 1000;
-    setTimeout(() => {
-      audioSource.pause();
+    originalAudioTimeoutId = setTimeout(() => {
+      // Ensure this specific playback session is still active before stopping
+      if (
+        activeAudioPlayback &&
+        activeAudioPlayback.utteranceId === utterance.id &&
+        activeAudioPlayback.type === 'original'
+      ) {
+        stopCurrentAudio();
+      }
     }, duration);
   }
 }
@@ -573,7 +643,11 @@ export function editUtterance(
   setupAudioPlaybackListeners(utterance, utteranceEditorContent);
 
   const closeEditorBtn = utteranceEditor.querySelector('.btn-close');
-  closeEditorBtn.addEventListener('click', () => {
+  // ---------------------------------------------------------
+  // Fix: Change from addEventListener to onclick.
+  // This prevents piling up event listeners on the close button.
+  // ---------------------------------------------------------
+  closeEditorBtn.onclick = () => {
     if (hasUnsavedChanges()) {
       const modalEl = document.getElementById('confirmation-modal');
       const modalTitle = modalEl.querySelector('.modal-title');
@@ -619,5 +693,17 @@ export function editUtterance(
       if (utteranceCard) utteranceCard.classList.remove('editing');
       activeEditorSession = null; // Clear session
     }
-  });
+  };
+}
+
+export function closeUtteranceEditor() {
+  const utteranceEditor = document.getElementById('utterance-editor');
+  if (utteranceEditor) {
+    utteranceEditor.style.display = 'none';
+  }
+  document.querySelectorAll('.utterance-card.editing').forEach(card => card.classList.remove('editing'));
+  // Update internal session tracker to null
+  if (typeof activeEditorSession !== 'undefined') {
+    activeEditorSession = null;
+  }
 }

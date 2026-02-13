@@ -30,7 +30,11 @@ import { addVoice, handleSpeakerModalClose, renderVoiceList } from './modals.js'
 import { appState } from './state.js';
 import { renderTimeline } from './timeline.js';
 import { showToast } from './utils.js';
-import { checkZeroDurationUtterances, renderUtterances } from './utterance.js';
+import {
+  closeUtteranceEditor,
+  checkZeroDurationUtterances,
+  renderUtterances,
+} from './utterance.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Instantiate templates
@@ -935,9 +939,20 @@ document.addEventListener('DOMContentLoaded', () => {
               return;
             }
 
+            // ---------------------------------------------------------
+            // Fix: Forcefully close the utterance editor before any re-processing begins.
+            // This prevents stale state from remaining in an open editor pane.
+            // ---------------------------------------------------------
+            closeUtteranceEditor();
+
             thinkingPopup.style.display = 'flex';
 
             try {
+              // =========================================================
+              // BRANCH 1: ORIGINAL LANGUAGE CHANGED
+              // =========================================================
+              // If the source language changed, the entire video needs to be
+              // re-transcribed and re-translated from scratch.
               if (originalLangChanged) {
                 console.log('Re-processing entire video...');
                 const formData = new FormData();
@@ -969,6 +984,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 renderTimeline(currentVideoData, videoDuration, speakers);
                 renderUtterances(currentVideoData, speakers, videoDuration);
+
+                // =========================================================
+                // BRANCH 2: ONLY TRANSLATION LANGUAGE CHANGED
+                // =========================================================
+                // If only the target language changed, we keep the original transcription
+                // and batch-regenerate only the translations for each utterance.
               } else if (translateLangChanged) {
                 console.log('Batch regenerating translations...');
                 currentVideoData.translate_language = newTranslateLanguage;
@@ -985,6 +1006,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 await Promise.all(translationPromises);
                 renderTimeline(currentVideoData, videoDuration, speakers);
                 renderUtterances(currentVideoData, speakers, videoDuration);
+
+                // =========================================================
+                // BRANCH 3: ONLY SPEAKERS CHANGED
+                // =========================================================
+                // If text and languages are the same, but voice actors were swapped,
+                // we batch-regenerate only the audio dubbing for the affected utterances.
               } else if (speakersChanged) {
                 console.log(
                   'Batch regenerating dubbings for speaker changes...',

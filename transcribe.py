@@ -33,156 +33,60 @@ whisper_model = WhisperModel("small", device="cpu", compute_type="int8")
 logging.info("Whisper model loaded.")
 
 VOICE_OPTIONS = {
-    "Zephyr": {
-        "gender": "female",
-        "tone": "Bright",
-        "pitch": "Higher"
-    },
-    "Puck": {
-        "gender": "male",
-        "tone": "Upbeat",
-        "pitch": "Middle"
-    },
-    "Charon": {
-        "gender": "male",
-        "tone": "Informative",
-        "pitch": "Lower"
-    },
-    "Kore": {
-        "gender": "female",
-        "tone": "Firm",
-        "pitch": "Middle"
-    },
+    "Zephyr": {"gender": "female", "tone": "Bright", "pitch": "Higher"},
+    "Puck": {"gender": "male", "tone": "Upbeat", "pitch": "Middle"},
+    "Charon": {"gender": "male", "tone": "Informative", "pitch": "Lower"},
+    "Kore": {"gender": "female", "tone": "Firm", "pitch": "Middle"},
     "Fenrir": {
         "gender": "female",
         "tone": "Excitable",
         "pitch": "Lower middle",
     },
-    "Leda": {
-        "gender": "female",
-        "tone": "Youthful",
-        "pitch": "Higher"
-    },
-    "Orus": {
-        "gender": "male",
-        "tone": "Firm",
-        "pitch": "Lower middle"
-    },
-    "Aoede": {
-        "gender": "female",
-        "tone": "Breezy",
-        "pitch": "Middle"
-    },
+    "Leda": {"gender": "female", "tone": "Youthful", "pitch": "Higher"},
+    "Orus": {"gender": "male", "tone": "Firm", "pitch": "Lower middle"},
+    "Aoede": {"gender": "female", "tone": "Breezy", "pitch": "Middle"},
     "Callirrhoe": {
         "gender": "female",
         "tone": "Easy-going",
         "pitch": "Middle",
     },
-    "Autonoe": {
-        "gender": "female",
-        "tone": "Bright",
-        "pitch": "Middle"
-    },
-    "Enceladus": {
-        "gender": "male",
-        "tone": "Breathy",
-        "pitch": "Lower"
-    },
-    "Iapetus": {
-        "gender": "male",
-        "tone": "Clear",
-        "pitch": "Lower middle"
-    },
+    "Autonoe": {"gender": "female", "tone": "Bright", "pitch": "Middle"},
+    "Enceladus": {"gender": "male", "tone": "Breathy", "pitch": "Lower"},
+    "Iapetus": {"gender": "male", "tone": "Clear", "pitch": "Lower middle"},
     "Umbriel": {
         "gender": "male",
         "tone": "Easy-going",
         "pitch": "Lower middle",
     },
-    "Algieba": {
-        "gender": "male",
-        "tone": "Smooth",
-        "pitch": "Lower"
-    },
-    "Despina": {
-        "gender": "female",
-        "tone": "Smooth",
-        "pitch": "Middle"
-    },
-    "Erinome": {
-        "gender": "female",
-        "tone": "Clear",
-        "pitch": "Middle"
-    },
-    "Algenib": {
-        "gender": "male",
-        "tone": "Gravelly",
-        "pitch": "Lower"
-    },
+    "Algieba": {"gender": "male", "tone": "Smooth", "pitch": "Lower"},
+    "Despina": {"gender": "female", "tone": "Smooth", "pitch": "Middle"},
+    "Erinome": {"gender": "female", "tone": "Clear", "pitch": "Middle"},
+    "Algenib": {"gender": "male", "tone": "Gravelly", "pitch": "Lower"},
     "Rasalgethi": {
         "gender": "male",
         "tone": "Informative",
         "pitch": "Middle",
     },
-    "Laomedeia": {
-        "gender": "female",
-        "tone": "Upbeat",
-        "pitch": "Higher"
-    },
-    "Achernar": {
-        "gender": "female",
-        "tone": "Soft",
-        "pitch": "Higher"
-    },
-    "Alnilam": {
-        "gender": "male",
-        "tone": "Firm",
-        "pitch": "Lower middle"
-    },
-    "Schedar": {
-        "gender": "male",
-        "tone": "Even",
-        "pitch": "Lower middle"
-    },
-    "Gacrux": {
-        "gender": "female",
-        "tone": "Mature",
-        "pitch": "Middle"
-    },
-    "Pulcherrima": {
-        "gender": "female",
-        "tone": "Forward",
-        "pitch": "Middle"
-    },
-    "Achird": {
-        "gender": "male",
-        "tone": "Friendly",
-        "pitch": "Lower middle"
-    },
+    "Laomedeia": {"gender": "female", "tone": "Upbeat", "pitch": "Higher"},
+    "Achernar": {"gender": "female", "tone": "Soft", "pitch": "Higher"},
+    "Alnilam": {"gender": "male", "tone": "Firm", "pitch": "Lower middle"},
+    "Schedar": {"gender": "male", "tone": "Even", "pitch": "Lower middle"},
+    "Gacrux": {"gender": "female", "tone": "Mature", "pitch": "Middle"},
+    "Pulcherrima": {"gender": "female", "tone": "Forward", "pitch": "Middle"},
+    "Achird": {"gender": "male", "tone": "Friendly", "pitch": "Lower middle"},
     "Zubenelgenubi": {
         "gender": "female",
         "tone": "Casual",
         "pitch": "Lower middle",
     },
-    "Vindemiatrix": {
-        "gender": "female",
-        "tone": "Gentle",
-        "pitch": "Middle"
-    },
-    "Sadachbia": {
-        "gender": "male",
-        "tone": "Lively",
-        "pitch": "Lower"
-    },
+    "Vindemiatrix": {"gender": "female", "tone": "Gentle", "pitch": "Middle"},
+    "Sadachbia": {"gender": "male", "tone": "Lively", "pitch": "Lower"},
     "Sadaltager": {
         "gender": "male",
         "tone": "Knowledgeable",
         "pitch": "Middle",
     },
-    "Sulafat": {
-        "gender": "female",
-        "tone": "Warm",
-        "pitch": "Middle"
-    },
+    "Sulafat": {"gender": "female", "tone": "Warm", "pitch": "Middle"},
 }
 
 
@@ -196,10 +100,11 @@ class TranscribeSegment:
     transcript: the transcription of the spoken text.
     tone: a textual description of the tone used.
     start_time: the time in seconds from the start of the clip when the segment
-        starts.
+      starts.
     end_time: the time in seconds from the start of the clip when the segment
-        ends.
+      ends.
   """
+
   speaker_id: str
   gender: str
   transcript: str
@@ -241,10 +146,9 @@ def annotate_transcript(
     There are {num_speakers} speakers. If you detect more, assume they are the same person.
 
     For each sentence, make sure to use the provided start and end times from
-    the transcript. This is ABSOLUTELY CRITICAL. Output them in seconds (floats).
+    the transcript. This is ABSOLUTELY CRITICAL. Output them exactly as they were provided.
 
-    For each utterance of the transcript, describe the tone of voice used
-    (e.g., enthusiastic, calm, angry, neutral).
+    For each utterance of the transcript, describe the tone of voice used in a short sentence.
     When assigning speaker_id, use the format "speaker_x", where x is the number
     of the speaker in the order they are first heard in the video, starting at 1.
 
@@ -259,50 +163,42 @@ def annotate_transcript(
         model=model_name,
         contents=[media, prompt],
         config=types.GenerateContentConfig(
-            response_mime_type="application/json", response_json_schema={
+            response_mime_type="application/json",
+            response_json_schema={
                 "type": "array",
                 "items": {
                     "type": "object",
                     "properties": {
-                        "speaker_id": {
-                            "type": "string"
-                        },
-                        "gender": {
-                            "type": "string"
-                        },
-                        "transcript": {
-                            "type": "string"
-                        },
-                        "tone": {
-                            "type": "string"
-                        },
-                        "start_time": {
-                            "type": "number",
-                            "format": "float"
-                        },
-                        "end_time": {
-                            "type": "number",
-                            "format": "float"
-                        }
+                        "speaker_id": {"type": "string"},
+                        "gender": {"type": "string"},
+                        "transcript": {"type": "string"},
+                        "tone": {"type": "string"},
+                        "start_time": {"type": "number", "format": "float"},
+                        "end_time": {"type": "number", "format": "float"},
                     },
                     "required": [
-                        "speaker_id", "gender", "transcript", "tone",
-                        "start_time", "end_time"
-                    ]
-                }
-            }
+                        "speaker_id",
+                        "gender",
+                        "transcript",
+                        "tone",
+                        "start_time",
+                        "end_time",
+                    ],
+                },
+            },
         ),
     )
 
   response = call_gemini()
   logging.info(
       "Gemini Token Count for transcribe_media: %s",
-      response.usage_metadata.total_token_count)
+      response.usage_metadata.total_token_count,
+  )
   response_json = json.loads(response.text)
   return TypeAdapter(list[TranscribeSegment]).validate_python(response_json)
 
 
-def transcribe_media(audio_file_path: str):
+def transcribe_media(audio_file_path: str, language: str) -> str:
   """Uses fasterwhisper to transcribe the given audio.
 
   The returned transcription is a single string with a segment per line. Each
@@ -311,15 +207,19 @@ def transcribe_media(audio_file_path: str):
 
   Args:
     audio_file_path: the local path to the file to transcribe.
+    language: the language of the audio. This shoud be the language code
+        (e.g. en or en-US)
 
   Returns:
     A transcript of the audio file.
   """
-  segments, info = whisper_model.transcribe(audio_file_path, beam_size=5)
 
-  logging.info(
-      "Detected language '%s' with probability %f",
-      info.language, info.language_probability
+  # openwhisper only uses the language part of a language code.
+  if "-" in language:
+    language = language.split("-")[0]
+
+  segments, _ = whisper_model.transcribe(
+      audio_file_path, language=language, task="transcribe", beam_size=7
   )
 
   transcript: list[str] = []
@@ -378,19 +278,18 @@ def match_voice(
         model=model_name,
         contents=[prompt],
         config=types.GenerateContentConfig(
-            response_mime_type="application/json", response_json_schema={
+            response_mime_type="application/json",
+            response_json_schema={
                 "type": "object",
-                "properties": {
-                    "voice_name": {
-                        "type": "string"
-                    }
-                },
-                "required": ["voice_name"]
-            }
+                "properties": {"voice_name": {"type": "string"}},
+                "required": ["voice_name"],
+            },
         ),
     )
-    logging.info("Gemini Token Count for match_voice: %s",
-                 response.usage_metadata.total_token_count)
+    logging.info(
+        "Gemini Token Count for match_voice: %s",
+        response.usage_metadata.total_token_count,
+    )
     response_json = json.loads(response.text)
     voice_map[speaker_id] = response_json["voice_name"]
 
