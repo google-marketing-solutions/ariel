@@ -444,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Scroll to selected voice if editing
     const activeVoiceElement = voiceListModal.querySelector('.active');
     if (activeVoiceElement) {
-      activeVoiceElement.scrollIntoView({behavior: 'smooth', block: 'center'});
+      activeVoiceElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   });
 
@@ -803,16 +803,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h6>Speakers:</h6>
                     <div id="edit-speaker-list">
                         ${speakers
-          .map(
-            s => `
+            .map(
+              s => `
                             <div class="d-flex align-items-center mb-2">
                                 <span class="me-2">${s.name}:</span>
                                 <i class="ms-2 bi ${s.gender === 'Male' ? 'bi-gender-male' : 'bi-gender-female'} text-dark"></i>
                                 <button class="btn btn-outline-secondary edit-speaker-voice-btn" data-speaker-id="${s.id}" data-voice-id="${s.voice}">${s.voiceName}</button>
                             </div>
                         `,
-        )
-          .join('')}
+            )
+            .join('')}
                     </div>
                     <div class="mt-3">
                         <button id="cancel-edit-settings" class="btn btn-secondary">Cancel</button>
@@ -860,7 +860,7 @@ document.addEventListener('DOMContentLoaded', () => {
               newTranslateLanguage !== currentVideoData.translate_language;
             const speakersChanged =
               JSON.stringify(
-                speakers.map(s => ({speaker_id: s.id, voice: s.voice})),
+                speakers.map(s => ({ speaker_id: s.id, voice: s.voice })),
               ) !== JSON.stringify(currentVideoData.speakers);
 
             if (

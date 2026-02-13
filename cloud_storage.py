@@ -219,7 +219,8 @@ def list_all_videos(bucket_name: str) -> list[dict]:
         "original_language": meta.get("original_language", "Unknown"),
         "translate_language": meta.get("translate_language", "Unknown"),
         "duration": meta.get("duration", 0),
-        "speakers": clean_speakers
+        "speakers": clean_speakers,
+        "video_id": folder_name
       })
 
   videos.sort(key=lambda x: x['created_at'], reverse=True)

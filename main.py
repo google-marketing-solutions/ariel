@@ -26,6 +26,7 @@ import re
 
 
 from cloud_storage import clean_video_name
+from cloud_storage import delete_video_from_gcs
 from cloud_storage import list_all_videos
 from cloud_storage import upload_file_to_gcs
 from cloud_storage import upload_video_to_gcs
@@ -606,7 +607,7 @@ async def load_project(video_id: str):
 async def delete_video(video_id: str):
   try:
     if "K_SERVICE" in os.environ:
-      delete_video_from_gcs(video_id, config.gcs_bucket_name)
+      delete_video_from_gcs(config.gcs_bucket_name, video_id)
       return JSONResponse(status_code=200, content={"message": "Video deleted successfully"})
     else:
       local_dir = os.path.join(mount_point, video_id)
