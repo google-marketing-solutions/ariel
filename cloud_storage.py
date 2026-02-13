@@ -230,7 +230,13 @@ def list_all_videos(bucket_name: str) -> list[dict]:
 def delete_video_from_gcs(bucket_name: str, video_id: str):
   storage_client = storage.Client()
   bucket = storage_client.bucket(bucket_name)
-  blobs = bucket.list_blobs(prefix=video_id)
+  blobs = list(bucket.list_blobs(prefix=video_id))
+  
   for blob in blobs:
-    blob.delete()
+    try:
+      blob.delete()
+      logging.info(f"Deleted blob: {blob.name}")
+    except Exception as e:
+      logging.warning(f"Failed to delete blob {blob.name}: {e}")
+  
   logging.info("Deleted video %s from GCS.", video_id)
