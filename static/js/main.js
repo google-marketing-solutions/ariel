@@ -54,6 +54,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  const handleGenerateVideo = async () => {
+    startThinkingAnimation();
+
+    try {
+      const payload = {
+        video: currentVideoData, // The actual Video model data
+        original_video_url: resultsVideoPreview.src // The extra URL
+      };
+
+      const result = await generateVideo(payload);
+
+      thinkingPopup.style.display = 'none';
+      arielLogo.classList.remove('ariel-logo-animated');
+      resultsView.style.display = 'none';
+
+      // Display generated video view
+      generatedVideoView.style.display = 'block';
+      generatedVideoPreview.src = result.video_url;
+
+      // Set up download buttons
+      downloadVideoButton.href = result.video_url;
+      downloadVideoButton.download = `generated_video_${payload.video.video_id}`;
+
+      downloadVocalsButton.href = result.vocals_url;
+      downloadVocalsButton.download = `vocals_only_${payload.video.video_id}.wav`;
+
+      downloadVocalsMusicButton.href = result.merged_audio_url;
+      downloadVocalsMusicButton.download = `vocals_and_music_${payload.video.video_id}.wav`;
+
+    } catch (error) {
+      console.error('Error generating video:', error);
+      showToast('An error occurred while generating the video.', 'error');
+    } finally {
+      stopThinkingAnimation();
+    }
+  };
+
   // Checking if there is video_id in URL, to load video from library andshow edit mode
   const urlParams = new URLSearchParams(window.location.search);
   const videoId = urlParams.get('video_id');
@@ -101,57 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playAudio(currentAudio);
       });
 
-      generateVideoBtn.addEventListener('click', async () => {
-        startThinkingAnimation();
-
-        try {
-          const payload = {
-            video: currentVideoData, // The actual Video model data
-            original_video_url: resultsVideoPreview.src // The extra URL
-          }
-          const result = await generateVideo(payload);
-          console.log(
-            'VIDEO URL: Got the following from the backend:',
-            result.video_url,
-          );
-          console.log(
-            'VOCALS URL: Got the following from the backend:',
-            result.vocals_url,
-          );
-          console.log(
-            'VOCALS + MUSIC URL: Got the following from the backend:',
-            result.vocals_url,
-          );
-
-          thinkingPopup.style.display = 'none';
-          arielLogo.classList.remove('ariel-logo-animated');
-          // Stop animations (dots, phrases) - similar to startProcessingBtn
-
-          resultsView.style.display = 'none'; // Collapse Timeline and Utterances
-
-          // Display generated video view
-          generatedVideoView.style.display = 'block';
-          generatedVideoPreview.src = result.video_url;
-
-          // Set up download button
-          downloadVideoButton.href = result.video_url;
-          downloadVideoButton.download = `generated_video_${payload.video.video_id}`;
-
-          // Set up audio download buttons
-          downloadVocalsButton.href = result.vocals_url;
-          downloadVocalsButton.download = `vocals_only_${payload.video.video_id}.wav`;
-          downloadVocalsMusicButton.href = result.merged_audio_url;
-          downloadVocalsMusicButton.download = `vocals_and_music_${payload.video.video_id}.wav`;
-        } catch (error) {
-          console.error('Error generating video:', error);
-          showToast(
-            'An error occurred while generating the video. Please try again.',
-            'error',
-          );
-        } finally {
-          stopThinkingAnimation();
-        }
-      });
+      generateVideoBtn.addEventListener('click', handleGenerateVideo);
 
     }).catch(error => {
       console.error("Failed to load project:", error);
@@ -666,57 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  generateVideoBtn.addEventListener('click', async () => {
-    startThinkingAnimation();
-
-    try {
-      const payload = {
-        video: currentVideoData, // The actual Video model data
-        original_video_url: resultsVideoPreview.src // The extra URL
-      }
-      const result = await generateVideo(payload);
-      console.log(
-        'VIDEO URL: Got the following from the backend:',
-        result.video_url,
-      );
-      console.log(
-        'VOCALS URL: Got the following from the backend:',
-        result.vocals_url,
-      );
-      console.log(
-        'VOCALS + MUSIC URL: Got the following from the backend:',
-        result.vocals_url,
-      );
-
-      thinkingPopup.style.display = 'none';
-      arielLogo.classList.remove('ariel-logo-animated');
-      // Stop animations (dots, phrases) - similar to startProcessingBtn
-
-      resultsView.style.display = 'none'; // Collapse Timeline and Utterances
-
-      // Display generated video view
-      generatedVideoView.style.display = 'block';
-      generatedVideoPreview.src = result.video_url;
-
-      // Set up download button
-      downloadVideoButton.href = result.video_url;
-      downloadVideoButton.download = `generated_video_${payload.video.video_id}`;
-
-      // Set up audio download buttons
-      downloadVocalsButton.href = result.vocals_url;
-      downloadVocalsButton.download = `vocals_only_${payload.video.video_id}.wav`;
-      downloadVocalsMusicButton.href = result.merged_audio_url;
-      downloadVocalsMusicButton.download = `vocals_and_music_${payload.video.video_id}.wav`;
-    } catch (error) {
-      console.error('Error generating video:', error);
-      showToast(
-        'An error occurred while generating the video. Please try again.',
-        'error',
-      );
-    } finally {
-      stopThinkingAnimation();
-    }
-  });
+  generateVideoBtn.addEventListener('click', handleGenerateVideo);
 
   function makeDraggable(element) {
     let isDragging = false;
@@ -1082,23 +1019,5 @@ document.addEventListener('DOMContentLoaded', () => {
       generatedVideoView.style.display = 'none';
       resultsView.style.display = 'block'; // Show Timeline and Utterances again
     });
-/*
-    completeVideoButton.addEventListener('click', async () => {
-      startThinkingAnimation();
-      try {
-        const result = await completeVideo(currentVideoData);
-        completedVideoVideo.src = result.video_url;
-        completedVideoModal.show();
-      } catch (error) {
-        console.error('Error completing video:', error);
-        showToast(
-          'An error occurred while completing the video. Please try again.',
-          'error',
-        );
-      } finally {
-        stopThinkingAnimation();
-      }
-    });
-    */
   }
 });

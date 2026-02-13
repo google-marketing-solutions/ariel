@@ -225,3 +225,11 @@ def list_all_videos(bucket_name: str) -> list[dict]:
   videos.sort(key=lambda x: x['created_at'], reverse=True)
 
   return videos
+
+def delete_video_from_gcs(bucket_name: str, video_id: str):
+  storage_client = storage.Client()
+  bucket = storage_client.bucket(bucket_name)
+  blobs = bucket.list_blobs(prefix=video_id)
+  for blob in blobs:
+    blob.delete()
+  logging.info("Deleted video %s from GCS.", video_id)

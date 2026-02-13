@@ -602,6 +602,24 @@ async def load_project(video_id: str):
     print(f"Error loading project: {e}")
     return JSONResponse(status_code=404, content={"error": "Error loading project"})
 
+@app.delete("/api/videos/{video_id}")
+async def delete_video(video_id: str):
+  try:
+    if "K_SERVICE" in os.environ:
+      delete_video_from_gcs(video_id, config.gcs_bucket_name)
+      return JSONResponse(status_code=200, content={"message": "Video deleted successfully"})
+    else:
+      local_dir = os.path.join(mount_point, video_id)
+      if os.path.exists(local_dir):
+        shutil.rmtree(local_dir)
+        return JSONResponse(status_code=200, content={"message": "Video deleted successfully"})
+      else:
+        return JSONResponse(status_code=404, content={"error": "Video not found"})
+  except Exception as e:
+    print(f"Error deleting video: {e}")
+    return JSONResponse(status_code=500, content={"error": "Error deleting video"})
+
+
 
 
 

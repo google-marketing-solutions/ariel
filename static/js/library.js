@@ -75,6 +75,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <a href="/?video_id=${video.video_id}" class="btn btn-sm btn-outline-primary">
                     <i class="bi bi-pencil"></i> Edit
                 </a>
+                <a onclick="deleteVideo('${video.video_id}')" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash"></i> Delete
+                </a>
             </div>
         </div>
         
@@ -97,3 +100,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     libraryGrid.innerHTML = `<div class="alert alert-danger">Error loading videos. Check console.</div>`;
   }
 });
+
+window.deleteVideo = async function (videoId) {
+  if (window.confirm(`Are you sure you want to delete this video?`)) {
+    try {
+      const response = await fetch(`/api/videos/${videoId}`, { method: "DELETE" });
+
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        window.alert("Failed to delete video");
+      }
+    } catch (error) {
+      console.error("Error deleting video:", error);
+      window.alert("Error deleting video");
+    }
+  }
+}
