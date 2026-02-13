@@ -56,37 +56,35 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 </video>
                             </div>
                             
-                            <div class="col-md-8 col-sm-7">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <div class="me-3" style="min-width: 0;">
-                                            <h6 class="card-title text-truncate mb-1 fw-bold text-white" title="${video.name}">
-                                                ${video.name}
-                                            </h6>
-                                            <p class="card-text text-white small mb-0">
-                                                <i class="bi bi-clock"></i> ${dateStr}
-                                            </p>
-                                        </div>
-                                        
-                                        <a href="${video.download_url}" download="${video.name}" class="btn btn-sm btn-primary text-white text-nowrap">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
-                                    </div>
-                                    
-                                    <div class="d-flex flex-wrap gap-2">
-                                        <span class="badge bg-secondary border border-secondary text-white" title="Original -> Translated">
-                                            <i class="bi bi-translate"></i> ${video.original_language || '?'} &rarr; ${video.translate_language || '?'}
-                                        </span>
-                                        <span class="badge bg-secondary border border-secondary text-white">
-                                            <i class="bi bi-person"></i> ${speakerDisplay}
-                                        </span>
-                                        <span class="badge bg-secondary border border-secondary text-white">
-                                            <i class="bi bi-stopwatch"></i> ${durationStr}
-                                        </span>
-                                    </div>
-
-                                </div>
-                            </div>
+<div class="col-md-8 col-sm-7">
+    <div class="card-body h-100 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="me-3" style="min-width: 0;">
+                <h6 class="card-title text-truncate mb-1 fw-bold text-white" title="${video.name}">
+                    ${video.name}
+                </h6>
+                <p class="card-text text-white small mb-0">
+                    <i class="bi bi-clock"></i> ${dateStr}
+                </p>
+            </div>
+            
+            <div class="d-grid gap-2" style="min-width: 120px;">
+                <a href="${video.download_url}" download="${video.name}" class="btn btn-sm btn-primary text-white">
+                    <i class="bi bi-download"></i> Download
+                </a>
+                <a href="/?video_id=${video.video_id}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+            </div>
+        </div>
+        
+        <div class="mt-auto d-flex flex-wrap gap-2">
+            <span class="badge bg-secondary border border-secondary text-white">
+                <i class="bi bi-translate"></i> ${video.original_language || '?'} &rarr; ${video.translate_language || '?'}
+            </span>
+            </div>
+    </div>
+</div>
 
                         </div>
                     </div>

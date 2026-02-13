@@ -31,6 +31,8 @@ class Speaker(BaseModel):
 
   speaker_id: str
   voice: str
+  speaker_name: str
+  gender: str
 
 
 class Utterance(BaseModel):
@@ -121,3 +123,7 @@ class RegenerateResponse(BaseModel):
   translated_text: str
   audio_url: str
   duration: float
+
+class GenerateVideoRequest(BaseModel):
+  video: Video
+  original_video_url: str = ""

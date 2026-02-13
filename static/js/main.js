@@ -22,6 +22,8 @@ import {
   processVideo,
   runRegenerateDubbing,
   runRegenerateTranslation,
+  loadProject
+
 } from './api.js';
 import { generateAudio, playAudio } from './audio.js';
 import { addVoice, handleSpeakerModalClose, renderVoiceList } from './modals.js';
@@ -47,6 +49,115 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.appendChild(template.content.cloneNode(true));
     }
   });
+
+  // Checking if there is video_id in URL, to load video from library andshow edit mode
+  const urlParams = new URLSearchParams(window.location.search);
+  const videoId = urlParams.get('video_id');
+
+  if (videoId && videoId !== 'undefined') {
+    loadProject(videoId).then(data => {
+      currentVideoData = data;
+
+      console.log('currentVideoData', currentVideoData);
+
+      // Note: We map 'speaker_id' from backend to 'id' for the frontend
+      speakers = data.speakers.map(s => ({
+        id: s.speaker_id,
+        name: s.speaker_name,
+        voice: s.voice,
+        voiceName: s.voice,
+        gender: s.gender || 'Unknown'
+      }));
+
+      console.log('speakers', speakers);
+
+      mainContent.style.display = 'none';
+      resultsView.style.display = 'block';
+
+      const origLang = originalLanguage.querySelector(`option[value="${data.original_language}"]`)?.text || data.original_language;
+      const transLang = translationLanguage.querySelector(`option[value="${data.translate_language}"]`)?.text || data.translate_language;
+
+      videoSettingsContent.innerHTML = `
+        <p><strong>Original Language:</strong> ${origLang}</p>
+        <p><strong>Translation Language:</strong> ${transLang}</p>
+        <h6>Speakers:</h6>
+        <ul>
+            ${speakers.map(s => `<li><strong>${s.name}:</strong> ${s.voice}</li>`).join('')}
+        </ul>
+      `;
+
+      resultsVideoPreview.src = data.original_video_url;
+      resultsVideoPreview.addEventListener('loadedmetadata', () => {
+        videoDuration = resultsVideoPreview.duration;
+        renderTimeline(currentVideoData, videoDuration, speakers);
+        renderUtterances(currentVideoData, speakers, videoDuration);
+      });
+
+      generateAudioBtn.addEventListener('click', async () => {
+        currentAudio = await generateAudio(currentVideoData);
+      });
+
+      playAudioBtn.addEventListener('click', () => {
+        playAudio(currentAudio);
+      });
+
+      generateVideoBtn.addEventListener('click', async () => {
+        startThinkingAnimation();
+
+        try {
+          const payload = {
+            video: currentVideoData, // The actual Video model data
+            original_video_url: resultsVideoPreview.src // The extra URL
+          }
+          const result = await generateVideo(payload);
+          console.log(
+            'VIDEO URL: Got the following from the backend:',
+            result.video_url,
+          );
+          console.log(
+            'VOCALS URL: Got the following from the backend:',
+            result.vocals_url,
+          );
+          console.log(
+            'VOCALS + MUSIC URL: Got the following from the backend:',
+            result.vocals_url,
+          );
+
+          thinkingPopup.style.display = 'none';
+          arielLogo.classList.remove('ariel-logo-animated');
+          // Stop animations (dots, phrases) - similar to startProcessingBtn
+
+          resultsView.style.display = 'none'; // Collapse Timeline and Utterances
+
+          // Display generated video view
+          generatedVideoView.style.display = 'block';
+          generatedVideoPreview.src = result.video_url;
+
+          // Set up download button
+          downloadVideoButton.href = result.video_url;
+          downloadVideoButton.download = `generated_video_${payload.video.video_id}`;
+
+          // Set up audio download buttons
+          downloadVocalsButton.href = result.vocals_url;
+          downloadVocalsButton.download = `vocals_only_${payload.video.video_id}.wav`;
+          downloadVocalsMusicButton.href = result.merged_audio_url;
+          downloadVocalsMusicButton.download = `vocals_and_music_${payload.video.video_id}.wav`;
+        } catch (error) {
+          console.error('Error generating video:', error);
+          showToast(
+            'An error occurred while generating the video. Please try again.',
+            'error',
+          );
+        } finally {
+          stopThinkingAnimation();
+        }
+      });
+
+    }).catch(error => {
+      console.error("Failed to load project:", error);
+      showToast("Could not load project settings.", "error");
+    });
+  }
 
   // Main elements
   const videoPlaceholder = document.getElementById('video-placeholder');
@@ -559,7 +670,11 @@ document.addEventListener('DOMContentLoaded', () => {
     startThinkingAnimation();
 
     try {
-      const result = await generateVideo(currentVideoData);
+      const payload = {
+        video: currentVideoData, // The actual Video model data
+        original_video_url: resultsVideoPreview.src // The extra URL
+      }
+      const result = await generateVideo(payload);
       console.log(
         'VIDEO URL: Got the following from the backend:',
         result.video_url,
@@ -585,13 +700,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Set up download button
       downloadVideoButton.href = result.video_url;
-      downloadVideoButton.download = `generated_video_${currentVideoData.video_id}`;
+      downloadVideoButton.download = `generated_video_${payload.video.video_id}`;
 
       // Set up audio download buttons
       downloadVocalsButton.href = result.vocals_url;
-      downloadVocalsButton.download = `vocals_only_${currentVideoData.video_id}.wav`;
+      downloadVocalsButton.download = `vocals_only_${payload.video.video_id}.wav`;
       downloadVocalsMusicButton.href = result.merged_audio_url;
-      downloadVocalsMusicButton.download = `vocals_and_music_${currentVideoData.video_id}.wav`;
+      downloadVocalsMusicButton.download = `vocals_and_music_${payload.video.video_id}.wav`;
     } catch (error) {
       console.error('Error generating video:', error);
       showToast(
@@ -751,16 +866,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h6>Speakers:</h6>
                     <div id="edit-speaker-list">
                         ${speakers
-                          .map(
-                            s => `
+          .map(
+            s => `
                             <div class="d-flex align-items-center mb-2">
                                 <span class="me-2">${s.name}:</span>
                                 <i class="ms-2 bi ${s.gender === 'Male' ? 'bi-gender-male' : 'bi-gender-female'} text-dark"></i>
                                 <button class="btn btn-outline-secondary edit-speaker-voice-btn" data-speaker-id="${s.id}" data-voice-id="${s.voice}">${s.voiceName}</button>
                             </div>
                         `,
-                          )
-                          .join('')}
+        )
+          .join('')}
                     </div>
                     <div class="mt-3">
                         <button id="cancel-edit-settings" class="btn btn-secondary">Cancel</button>
@@ -911,8 +1026,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
               currentVideoData.speakers = speakers.map(s => ({
                 speaker_id: s.id,
-                name: s.name,
+                speaker_name: s.name,
                 voice: s.voice,
+                gender: s.gender,
               }));
 
               const originalLanguageName = document.getElementById(
@@ -940,11 +1056,13 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
     goBackToEditingButton.addEventListener('click', () => {
+      console.log('goBackToEditingButton clicked');
       generatedVideoView.style.display = 'none';
       resultsView.style.display = 'block'; // Show Timeline and Utterances again
     });
 
     completeVideoButton.addEventListener('click', async () => {
+      console.log('completeVideoButton clicked');
       startThinkingAnimation();
       try {
         const result = await completeVideo(currentVideoData);

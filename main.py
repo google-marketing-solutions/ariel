@@ -23,6 +23,7 @@ from typing import Annotated
 import uuid
 import re
 
+
 from cloud_storage import list_all_videos
 from cloud_storage import upload_file_to_gcs
 from cloud_storage import upload_video_to_gcs
@@ -54,6 +55,7 @@ from transcribe import annotate_transcript
 from transcribe import transcribe_media
 from transcribe import TranscribeSegment
 from translate import translate_text
+from models import GenerateVideoRequest, Video, Speaker, Utterance
 
 # Set up Google Cloud Logging
 if "K_SERVICE" in os.environ:
@@ -224,7 +226,7 @@ async def process_video(
   )
   speaker_list = json.loads(speakers)
   speaker_list = [
-      Speaker(speaker_id=s["id"], voice=s["voice"]) for s in speaker_list
+      Speaker(speaker_id=s["id"], voice=s["voice"], speaker_name=s["name"], gender=s["gender"]) for s in speaker_list
   ]
   speaker_map = {s.speaker_id: s for s in speaker_list}
 
@@ -284,28 +286,6 @@ async def process_video(
       tts_model_name=gemini_tts_model,
   )
 
-  duration = 0
-  if utterances:
-      duration = max([u.translated_end_time for u in utterances])
-
-  metadata = {
-      "original_language": original_language,
-      "translate_language": translate_language,
-      "duration": round(duration, 1),
-      "speakers": [{"voice": s.voice} for s in speaker_list]
-  }
-
-  metadata_filename = "metadata.json"
-  local_metadata_path = os.path.join(local_dir, metadata_filename)
-  with open(local_metadata_path, "w") as f:
-      json.dump(metadata, f)
-
-  video_gcs_folder = os.path.dirname(local_video_path.split(mount_point + "/")[-1])
-  gcs_metadata_path = f"{video_gcs_folder}/{metadata_filename}"
-
-  with open(local_metadata_path, "rb") as f:
-      upload_file_to_gcs(gcs_metadata_path, f, config.gcs_bucket_name, mime_type="application/json")
-
   logging.info("Completed processing %s", video.filename)
   return to_return
 
@@ -335,7 +315,7 @@ def generate_audio_endpoint(video_data: Video) -> JSONResponse:
 
 
 @app.post("/generate_video")
-def generate_video(video_data: Video) -> JSONResponse:
+def generate_video(request: GenerateVideoRequest) -> JSONResponse:
   """Generates the final, translated video.
 
   Args:
@@ -344,6 +324,9 @@ def generate_video(video_data: Video) -> JSONResponse:
   Returns:
     A JSON object with the URL to the completed video.
   """
+  video_data = request.video
+  original_url = request.original_video_url
+
   logging.info("Generating final video for %s", video_data.video_id)
   local_dir = os.path.join(mount_point, video_data.video_id)
   local_video_path = os.path.join(local_dir, video_data.video_id)
@@ -376,6 +359,40 @@ def generate_video(video_data: Video) -> JSONResponse:
       "vocals_url": f"{public_vocals_path}?v={uuid.uuid4()}",
       "merged_audio_url": f"{public_merged_audio_path}?v={uuid.uuid4()}",
   }
+
+  duration = 0
+  if video_data.utterances:
+      duration = max([u.translated_end_time for u in video_data.utterances])
+
+  metadata = {
+    "original_language": video_data.original_language,
+    "translate_language": video_data.translate_language,
+    "duration": round(duration, 1),
+    "speakers": [{"voice": s.voice} for s in video_data.speakers]
+  }
+
+  metadata_filename = "metadata.json"
+  local_metadata_path = os.path.join(local_dir, metadata_filename)
+  with open(local_metadata_path, "w") as f:
+      json.dump(metadata, f)
+
+  video_gcs_folder = os.path.dirname(local_video_path.split(mount_point + "/")[-1])
+  gcs_metadata_path = f"{video_gcs_folder}/{metadata_filename}"
+
+  with open(local_metadata_path, "rb") as f:
+      upload_file_to_gcs(gcs_metadata_path, f, config.gcs_bucket_name, mime_type="application/json")
+
+  state_data = video_data.model_dump()
+  state_data['original_video_url'] = f"{mount_point}/{video_data.video_id}/{video_data.video_id}"
+
+  with open(os.path.join(local_dir, "state.json"), "w") as f:
+    json.dump(state_data, f)
+    print(f"state.json successfully saved to {local_dir}")
+
+  state_gcs_path = f"{video_gcs_folder}/state.json"
+  with open(os.path.join(local_dir, "state.json"), "rb") as f:
+    upload_file_to_gcs(state_gcs_path, f, config.gcs_bucket_name, mime_type="application/json")
+
   return JSONResponse(content=to_return)
 
 
@@ -544,6 +561,7 @@ def get_videos() -> list[dict]:
               print(f"Error reading metadata for {file}: {e}")
 
           videos_list.append({
+            "video_id": folder_name,
             "name": clean_video_name(file),
             "url": web_path,
             "download_url": web_path,
@@ -561,6 +579,25 @@ def get_videos() -> list[dict]:
 @app.get("/library", response_class=HTMLResponse)
 async def library_page(request: Request):
   return templates.TemplateResponse("library.html", {"request": request})
+
+
+@app.get("/api/projects/{video_id}")
+async def load_project(video_id: str):
+  try:
+    local_dir = os.path.join(mount_point, video_id)
+    state_path = os.path.join(local_dir, "state.json")
+
+    if os.path.exists(state_path):
+      with open(state_path, "r") as f:
+        state = json.load(f)
+      return state
+    else:
+      print(f"The file doesn't exist: {state_path}")
+    return JSONResponse(status_code=404, content={"error": "The file doesn't exist"})
+  except Exception as e:
+    print(f"Error loading project: {e}")
+    return JSONResponse(status_code=404, content={"error": "Error loading project"})
+
 
 
 
