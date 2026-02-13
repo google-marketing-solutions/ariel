@@ -68,7 +68,6 @@ export function processVideo(formData) {
     body: formData,
   }).then(response => {
     if (!response.ok) {
-      console.log(response);
       if (response.status === 413) {
         throw new Error(
           'Video file is too large for the server to process. Please upload a smaller video (limit is typically 32MB).',
@@ -81,7 +80,6 @@ export function processVideo(formData) {
 }
 
 export function regenerateTranslation(videoData, utteranceIndex, instructions) {
-  console.log('regenerateTranslation: ', videoData);
   return fetch('/regenerate_translation', {
     method: 'POST',
     headers: {
@@ -101,7 +99,6 @@ export function regenerateTranslation(videoData, utteranceIndex, instructions) {
 }
 
 export function regenerateDubbing(videoData, utteranceIndex, instructions) {
-  console.log('regenerateDubbing: ', videoData);
   return fetch('/regenerate_dubbing', {
     method: 'POST',
     headers: {
@@ -121,7 +118,6 @@ export function regenerateDubbing(videoData, utteranceIndex, instructions) {
 }
 
 export function generateVideo(requestBody) {
-  console.log('generateVideo: ', requestBody);
   return fetch('/generate_video', {
     method: 'POST',
     headers: {
@@ -137,7 +133,6 @@ export function generateVideo(requestBody) {
 }
 
 export function completeVideo(videoData) {
-  console.log('completeVideo: ', videoData);
   return fetch('/complete_video', {
     method: 'POST',
     headers: {
@@ -153,7 +148,6 @@ export function completeVideo(videoData) {
 }
 
 export function updateVideoSettings(updatedVideoData) {
-  console.log('updateVideoSettings: ', updatedVideoData);
   return fetch('/process', {
     method: 'POST',
     headers: {

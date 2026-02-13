@@ -62,8 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadProject(videoId).then(data => {
       currentVideoData = data;
 
-      console.log('currentVideoData', currentVideoData);
-
       // Note: We map 'speaker_id' from backend to 'id' for the frontend
       speakers = data.speakers.map(s => ({
         id: s.speaker_id,
@@ -72,8 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
         voiceName: s.voice,
         gender: s.gender || 'Unknown'
       }));
-
-      console.log('speakers', speakers);
 
       mainContent.style.display = 'none';
       resultsView.style.display = 'block';
@@ -1083,13 +1079,11 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
     goBackToEditingButton.addEventListener('click', () => {
-      console.log('goBackToEditingButton clicked');
       generatedVideoView.style.display = 'none';
       resultsView.style.display = 'block'; // Show Timeline and Utterances again
     });
-
+/*
     completeVideoButton.addEventListener('click', async () => {
-      console.log('completeVideoButton clicked');
       startThinkingAnimation();
       try {
         const result = await completeVideo(currentVideoData);
@@ -1105,5 +1099,6 @@ document.addEventListener('DOMContentLoaded', () => {
         stopThinkingAnimation();
       }
     });
+    */
   }
 });
