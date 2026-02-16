@@ -15,14 +15,16 @@
 # under the License.
 
 import os
-import subprocess
-
+import pathlib
+# import subprocess
+from audio_separator.separator import Separator
 from models import Utterance
 import moviepy
 
 
-def separate_audio_from_video(video_file_path: str,
-                              output_local_path: str) -> tuple[str, str, str]:
+def separate_audio_from_video(
+    video_file_path: str, output_local_path: str
+) -> tuple[str, str, str]:
   """Separates the music and vocals from the input video file.
 
   Args:
@@ -30,18 +32,17 @@ def separate_audio_from_video(video_file_path: str,
       music.
     output_local_path: Path to save the separated audio files.
 
-
   Returns:
-    original_audio_path: Path to the original audio file.
-    vocals_path: Path to the separated vocals speech file.
-    background_path: Path to the separated music file.
-
+    A tuple with the following three strings:
+       - original_audio_path: Path to the original audio file.
+       - vocals_path: Path to the separated vocals speech file. The file will be
+           named "vocals"
+       - background_path: Path to the separated music file. The file will be
+           named background.
 
   Raises:
-    RuntimeError: If the audio separation process fails to produce the expected
-      output files.
+    RuntimeError: when the audio cannot be extracted.
   """
-  # TODO: b/462682309 - Add support for multiple splitting rounds like in v1.
   original_audio_name = "original_audio"
   original_audio_extension = "wav"
   video = moviepy.VideoFileClip(video_file_path)
@@ -53,26 +54,18 @@ def separate_audio_from_video(video_file_path: str,
     raise RuntimeError(f"Could not extract audio from {video_file_path}")
   audio.write_audiofile(original_audio_path, codec="pcm_s16le")
 
-  command = (
-      "python3 -m demucs --two-stems=vocals -n htdemucs -d cpu"
-      f" --out {output_local_path}"
-      f" {original_audio_path}"
+  separator = Separator(output_dir=output_local_path)
+  output_file_names = {"Vocals": "vocals", "Instrumental": "background"}
+  separator.load_model(model_filename="5_HP-Karaoke-UVR.pth")
+  output_files: list[str] = separator.separate(
+      original_audio_path, output_file_names
   )
-  subprocess.run(command, shell=True, check=True)
 
-  base_htdemucs_path = os.path.join(
-      output_local_path, "htdemucs", original_audio_name
+  return (
+      original_audio_path,
+      os.path.join(output_local_path, output_files[0]),
+      os.path.join(output_local_path, output_files[1]),
   )
-  vocals_path = os.path.join(base_htdemucs_path, "vocals.wav")
-  background_path = os.path.join(base_htdemucs_path, "no_vocals.wav")
-
-  if os.path.exists(vocals_path) and os.path.exists(background_path):
-    return original_audio_path, vocals_path, background_path
-  else:
-    raise RuntimeError(
-        "Audio separation failed. Could not find output files in the expected"
-        + f" path: {vocals_path}"
-    )
 
 
 def merge_background_and_vocals(
@@ -87,19 +80,13 @@ def merge_background_and_vocals(
   """Mixes background music and vocals tracks, normalizes the volume, and exports the result.
 
   Args:
-      background_audio_file: Path to the background audio file.
-      dubbed_vocals_path: Path to the dubbed vocals audio file.
-      output_directory: The base directory where the output file will be saved.
-      target_language: The language to dub the ad into. It must be ISO 3166-1
-        alpha-2 country code.
-      vocals_volume_adjustment: By how much the vocals audio volume should be
-        adjusted, in dB.
-      background_volume_adjustment: By how much the background audio volume
-        should be adjusted, in dB.
-      output_subdirectory: The name of the subdirectory within the output
-        directory to save the file.
-      dubbed_audio_filename: The base name for the output audio file.
-      output_format: The file format for the output audio file (e.g., 'mp3').
+    background_audio_file: Path to the background audio file.
+    dubbed_vocals_path: Path to the dubbed vocals audio file.
+    output_directory: The base directory where the output file will be saved.
+    target_language: The language to dub the ad into. It must be ISO 3166-1
+      alpha-2 country code.
+    dubbed_audio_filename: The base name for the output audio file.
+    output_format: The file format for the output audio file (e.g., 'mp3').
 
   Returns:
     The path to the output audio file with merged dubbed vocals.
@@ -129,27 +116,19 @@ def merge_vocals(
     dubbed_vocals_metadata: list[Utterance],
     output_directory: str,
     target_language: str,
-    vocals_volume_adjustment: float = 0.0,
-    background_volume_adjustment: float = 0.0,
     dubbed_audio_filename: str = "vocals_only",
     output_format: str = "wav",
 ) -> str:
   """Merges dubbed vocal tracks into a single audio file.
 
   Args:
-      dubbed_vocals_metadata: A list of dictionaries, each containing the path
-        to a dubbed vocal chunk and its start time.
-      output_directory: The base directory where the output file will be saved.
-      target_language: The language to dub the ad into. It must be ISO 3166-1
-        alpha-2 country code.
-      vocals_volume_adjustment: By how much the vocals audio volume should be
-        adjusted, in dB.
-      background_volume_adjustment: By how much the background audio volume
-        should be adjusted, in dB.
-      output_subdirectory: The name of the subdirectory within the output
-        directory to save the file.
-      dubbed_audio_filename: The base name for the output audio file.
-      output_format: The file format for the output audio file (e.g., 'mp3').
+    dubbed_vocals_metadata: A list of dictionaries, each containing the path to
+      a dubbed vocal chunk and its start time.
+    output_directory: The base directory where the output file will be saved.
+    target_language: The language to dub the ad into. It must be ISO 3166-1
+      alpha-2 country code.
+    dubbed_audio_filename: The base name for the output audio file.
+    output_format: The file format for the output audio file (e.g., 'mp3').
 
   Returns:
     The path to the output audio file with merged dubbed vocals.
@@ -161,18 +140,18 @@ def merge_vocals(
       continue
     max_end_time = max(max_end_time, utterance.translated_end_time)
 
+  target_language_suffix = "_" + target_language.replace("-", "_").lower()
+  target_file = os.path.join(
+      output_directory,
+      dubbed_audio_filename + target_language_suffix + "." + output_format,
+  )
+
   # Create a silent track with the same duration as the background audio
   if max_end_time == 0:
     # If there are no utterances, create an empty audio file and return
-    target_language_suffix = "_" + target_language.replace("-", "_").lower()
-    empty_audio_file = os.path.join(
-        output_directory,
-        dubbed_audio_filename + target_language_suffix + "." + output_format,
-    )
-    with open(empty_audio_file, "w") as f:
-      pass  # Create an empty file
-    # Return early as there's nothing to merge
-    return empty_audio_file
+    target_path = pathlib.Path(target_file)
+    target_path.touch()
+    return target_file
   silent_audio = moviepy.AudioClip(
       frame_function=lambda t: [0, 0], duration=max_end_time
   )
@@ -204,13 +183,8 @@ def merge_vocals(
   combined_audio: moviepy.CompositeAudioClip = moviepy.CompositeAudioClip(
       audio_parts
   )
-  target_language_suffix = "_" + target_language.replace("-", "_").lower()
-  empty_audio_file = os.path.join(
-      output_directory,
-      dubbed_audio_filename + target_language_suffix + "." + output_format,
-  )
-  combined_audio.write_audiofile(empty_audio_file)
-  return empty_audio_file
+  combined_audio.write_audiofile(target_file)
+  return target_file
 
 
 def combine_video_and_audio(
