@@ -447,7 +447,7 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
     local_video_path = os.path.join(local_dir, video_files[0])
     
     background_sound_path = os.path.join(
-        local_dir, "htdemucs", "original_audio", "no_vocals.wav"
+        local_dir, "background.wav"
     )
     dubbed_vocals_path = merge_vocals(
         dubbed_vocals_metadata=video_data.utterances,

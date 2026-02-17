@@ -2,7 +2,7 @@ FROM python:3.13-slim
 USER root
 
 RUN apt-get -y update && \
-  DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg build-essential && \
   rm -rf /var/cache/apt && \
   apt-get clean
 
