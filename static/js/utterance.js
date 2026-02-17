@@ -242,10 +242,26 @@ export function renderUtterances(currentVideoData, speakers, videoDuration) {
 
     const removeBtn = utteranceCard.querySelector('.remove-utterance-btn');
     removeBtn.addEventListener('click', () => {
-      utterance.removed = !utterance.removed;
+      // 1. Array Lookup Fix! Relying on fresh utterance object from the array,
+      // instead of the one from the closure "utterance".
+      const currentUtterance = currentVideoData.utterances[index];
+
+      // -------------------------------------------------------------
+      // OBSERVING THE BEHAVIOR
+      // -------------------------------------------------------------
+      console.log('🗑️ --- Trashcan Clicked ---');
+      console.log('🗑️ Old v1 closure `utterance` object:', utterance);
+      console.log('🗑️ New v2 array `currentVideoData.utterances[index]` object:', currentUtterance);
+      console.log('🗑️ Are they exactly the same object in memory?', utterance === currentUtterance);
+
+      // We modify the fresh utterance array object, not the closure object
+      currentUtterance.removed = !currentUtterance.removed;
+      console.log('🗑️ Action: Toggled `currentUtterance.removed` to', currentUtterance.removed);
+      // -------------------------------------------------------------
+
       // Ensure mute is cancelled if remove is activated
-      if (utterance.removed && utterance.muted) {
-        utterance.muted = false;
+      if (currentUtterance.removed && currentUtterance.muted) {
+        currentUtterance.muted = false;
       }
       renderUtterances(currentVideoData, speakers, videoDuration);
       renderTimeline(currentVideoData, videoDuration, speakers);
@@ -588,6 +604,11 @@ export function editUtterance(
   document
     .getElementById('regenerate-dubbing-btn')
     .addEventListener('click', () => {
+      // -------------------------------------------------------------
+      // DEMONSTRATING THE CLOSURE BUG (v2)
+      // -------------------------------------------------------------
+      console.log('🔄 --- Regenerate Dubbing Clicked ---');
+
       const inProgressToast = showToast('Regenerating dubbing...', 'info', 0);
       const tempUtterance = {};
       Object.assign(tempUtterance, utterance);
@@ -599,7 +620,12 @@ export function editUtterance(
       tempUtterance.translated_text = document.getElementById(
         'translated-text-area',
       ).value;
+
+      console.log('🔄 Created new utterance object `tempUtterance`:', tempUtterance);
       currentVideoData.utterances[index] = tempUtterance;
+      console.log('🔄 Overwrote Array `currentVideoData.utterances[index]` with `tempUtterance`!');
+      // -------------------------------------------------------------
+
       runRegenerateDubbing(currentVideoData, utterance, index, instructions)
         .then(updatedUtterance => {
           inProgressToast.remove(); // Dismiss the in-progress toast
