@@ -66,6 +66,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <p class="card-text text-white small mb-0">
                     <i class="bi bi-clock"></i> ${dateStr}
                 </p>
+                <span class="badge bg-secondary border border-secondary text-white">
+                    <i class="bi bi-translate"></i> ${video.original_language || '?'} &rarr; ${video.translate_language || '?'}
+                </span>
             </div>
             
             <div class="d-grid gap-2" style="min-width: 120px;">
@@ -80,12 +83,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </a>
             </div>
         </div>
-        
-        <div class="mt-auto d-flex flex-wrap gap-2">
-            <span class="badge bg-secondary border border-secondary text-white">
-                <i class="bi bi-translate"></i> ${video.original_language || '?'} &rarr; ${video.translate_language || '?'}
-            </span>
-            </div>
     </div>
 </div>
 

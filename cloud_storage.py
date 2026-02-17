@@ -130,21 +130,23 @@ def fetch_service_account_email() -> str:
 
   if not service_account_email or service_account_email == "default":
         # Fallback to metadata server if email is not in credentials or is 'default'
-        import requests
         try:
+             # Use a longer timeout and proper error handling
+             import requests
              metadata_url = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email"
              headers = {"Metadata-Flavor": "Google"}
-             response = requests.get(metadata_url, headers=headers, timeout=2)
-             response.raise_for_status()
-             service_account_email = response.text.strip()
-        except Exception:
-             logging.warning("Could not determine service account email, signed URL generation might fail.")
+             response = requests.get(metadata_url, headers=headers, timeout=5)
+             if response.status_code == 200:
+                service_account_email = response.text.strip()
+        except Exception as e:
+             logging.warning(f"Could not determine service account email from metadata server: {e}")
   return service_account_email
 
 def fetch_access_token() -> str:
   """Fetches the access token for the current request."""
   access_token = None
   try:
+      credentials, _ = google.auth.default()
       if not credentials.token:
           from google.auth.transport.requests import Request
           credentials.refresh(Request())
@@ -182,6 +184,12 @@ def list_all_videos(bucket_name: str) -> list[dict]:
         access_token = fetch_access_token()
         url = get_url_for_path(bucket_name, blob.name, service_account_email=service_account_email, access_token=access_token)
         download_url = get_url_for_path(bucket_name, blob.name, download_filename=clean_video_name(blob.name), service_account_email=service_account_email, access_token=access_token)
+        
+        if not url:
+          logging.error(f"Generated empty URL for {blob.name}")
+        else:
+          # Log first 50 chars of URL to verify it's looking correct (starts with https)
+          logging.info(f"Generated URL for {blob.name}: {url[:50]}...")
       except Exception as e:
         logging.error(f"Error generating signed URL for {blob.name}: {e}")
         url = ""

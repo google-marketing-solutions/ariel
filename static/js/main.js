@@ -921,22 +921,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 // =========================================================
                 // BRANCH 2: ONLY TRANSLATION LANGUAGE CHANGED
                 // =========================================================
-                // If only the target language changed, we keep the original transcription
-                // and batch-regenerate only the translations for each utterance.
+                // If target language changed, we now FORK the project into a new folder.
               } else if (translateLangChanged) {
-                console.log('Batch regenerating translations...');
-                currentVideoData.translate_language = newTranslateLanguage;
-                const translationPromises = currentVideoData.utterances.map(
-                  (utterance, index) => {
-                    return runRegenerateTranslation(
-                      currentVideoData,
-                      utterance,
-                      index,
-                      utterance.instructions,
-                    );
-                  },
+                console.log('Forking project for new translation language...');
+                const formData = new FormData();
+                // We use source_video_id to trigger forking
+                formData.append('source_video_id', currentVideoData.video_id);
+                formData.append('original_language', currentVideoData.original_language);
+                formData.append('translate_language', newTranslateLanguage);
+                formData.append(
+                  'prompt_enhancements',
+                  geminiInstructions.value,
                 );
-                await Promise.all(translationPromises);
+                formData.append('adjust_speed', adjustSpeedToggle.checked);
+                const speakersToPost = speakers.map((s, index) => ({
+                  id: `speaker_${(index + 1).toString()}`,
+                  name: s.name,
+                  voice: s.voice,
+                  gender: s.gender,
+                }));
+                formData.append('speakers', JSON.stringify(speakersToPost));
+
+                const result = await processVideo(formData);
+
+                if (result.video_id !== currentVideoData.video_id) {
+                  const newUrl = new URL(window.location.href);
+                  newUrl.searchParams.set('video_id', result.video_id);
+                  window.history.pushState({ path: newUrl.href }, '', newUrl.href);
+                  showToast("New project created for translation.", "success");
+                }
+
+                currentVideoData = result;
+                // Enrich utterances
+                currentVideoData.utterances.forEach(utterance => {
+                  const matchingSpeaker = speakers.find(
+                    s => s.voice === utterance.speaker.voice,
+                  );
+                  if (matchingSpeaker) {
+                    utterance.speaker.gender = matchingSpeaker.gender;
+                  }
+                  utterance.initial_translated_start_time = utterance.translated_start_time;
+                  utterance.initial_translated_end_time = utterance.translated_end_time;
+                });
+
                 renderTimeline(currentVideoData, videoDuration, speakers);
                 renderUtterances(currentVideoData, speakers, videoDuration);
 
