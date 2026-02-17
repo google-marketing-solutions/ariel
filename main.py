@@ -173,6 +173,7 @@ async def process_video(
     use_pro_model: Annotated[bool, Form()] = False,
     video: UploadFile = None,
     source_video_id: Annotated[str, Form()] = None,
+    update_existing: Annotated[bool, Form()] = False,
 ) -> Video:
   """Endpoint to run the initial video processing workflow.
 
@@ -195,6 +196,7 @@ async def process_video(
       version is used.
     video: the original video file. Optional if source_video_id is provided.
     source_video_id: the ID of an existing video to fork/process from.
+    update_existing: if true, updates the existing project in-place instead of forking.
 
   Returns:
     A Video object with the information for the dubbing.
@@ -208,49 +210,50 @@ async def process_video(
   video_name = ""
   local_video_path = ""
   
-  # Logic to handle forking or new upload
+  # Logic to handle forking, update, or new upload
   if source_video_id:
-    logging.info("Forking from source_video_id: %s", source_video_id)
     source_dir = os.path.join(mount_point, source_video_id)
     if not os.path.exists(source_dir):
       raise FileNotFoundError(f"Source video {source_video_id} not found")
 
-    # Generate new ID
+    # Find source video file
     source_files = [f for f in os.listdir(source_dir) if f.endswith(".mp4")]
     if not source_files:
        raise FileNotFoundError("Video file not found in source directory")
-    
     video_filename = source_files[0]
-    now = datetime.datetime.now().isoformat().replace(":", "_")
-    
-    # Try to preserve UUID-filename from source_video_id
-    # Format: YYYY-MM-DDTHH_MM_SS.ssssss-UUID-FILENAME
-    # We split by '-' with maxsplit=3 to separate the date parts from the rest
-    parts = source_video_id.split("-", 3)
-    if len(parts) == 4:
-        new_id = f"{now}-{parts[3]}"
+
+    if update_existing:
+        logging.info("Updating existing project: %s", source_video_id)
+        local_dir = source_dir
+        video_name = source_video_id
+        local_video_path = os.path.join(local_dir, video_filename)
     else:
-        # Fallback if format is unexpected
-        new_id = f"{now}-{str(uuid.uuid4())}-{video_filename}"
-        new_id = new_id.replace(":", "_")
-    
-    local_dir = os.path.join(mount_point, new_id)
-    os.makedirs(local_dir, exist_ok=True)
+        logging.info("Forking from source_video_id: %s", source_video_id)
+        now = datetime.datetime.now().isoformat().replace(":", "_")
+        
+        parts = source_video_id.split("-", 3)
+        if len(parts) == 4:
+            new_id = f"{now}-{parts[3]}"
+        else:
+            new_id = f"{now}-{str(uuid.uuid4())}-{video_filename}"
+            new_id = new_id.replace(":", "_")
+        
+        local_dir = os.path.join(mount_point, new_id)
+        os.makedirs(local_dir, exist_ok=True)
 
-    # Copy video file: Destination MUST be named (new_id) to match generate_video expectation
-    video_filename = source_files[0]
-    local_video_path = os.path.join(local_dir, new_id)
-    shutil.copy2(os.path.join(source_dir, video_filename), local_video_path)
-    video_name = new_id
+        # Copy video file
+        local_video_path = os.path.join(local_dir, new_id)
+        shutil.copy2(os.path.join(source_dir, video_filename), local_video_path)
+        video_name = new_id
 
-    # Copy htdemucs/original_audio if present
-    source_htdemucs = os.path.join(source_dir, "htdemucs")
-    if os.path.exists(source_htdemucs):
-      shutil.copytree(source_htdemucs, os.path.join(local_dir, "htdemucs"))
-    
-    source_original = os.path.join(source_dir, "original_audio")
-    if os.path.exists(source_original):
-      shutil.copytree(source_original, os.path.join(local_dir, "original_audio"))
+        # Copy htdemucs/original_audio if present
+        source_htdemucs = os.path.join(source_dir, "htdemucs")
+        if os.path.exists(source_htdemucs):
+          shutil.copytree(source_htdemucs, os.path.join(local_dir, "htdemucs"))
+        
+        source_original = os.path.join(source_dir, "original_audio")
+        if os.path.exists(source_original):
+          shutil.copytree(source_original, os.path.join(local_dir, "original_audio"))
 
   else:
     logging.info("Processing new video upload: %s", video.filename)
@@ -393,6 +396,19 @@ async def process_video(
       model_name=gemini_model,
       tts_model_name=gemini_tts_model,
   )
+  
+  try:
+      metadata = to_return.model_dump()
+      if to_return.utterances:
+          duration = max([u.translated_end_time for u in to_return.utterances])
+          metadata['duration'] = round(duration, 1)
+      
+      metadata_path = os.path.join(local_dir, "metadata.json")
+      with open(metadata_path, "w") as f:
+          json.dump(metadata, f)
+      logging.info("Saved draft metadata to %s", metadata_path)
+  except Exception as e:
+      logging.warning(f"Failed to save draft metadata: {e}")
 
   logging.info("Completed processing %s", video_name)
   return to_return

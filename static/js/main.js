@@ -58,9 +58,11 @@ document.addEventListener('DOMContentLoaded', () => {
     startThinkingAnimation();
 
     try {
+      appState.isSavedProject = true;
+
       const payload = {
-        video: currentVideoData, // The actual Video model data
-        original_video_url: resultsVideoPreview.src // The extra URL
+        video: currentVideoData,
+        original_video_url: resultsVideoPreview.src
       };
 
       const result = await generateVideo(payload);
@@ -97,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (videoId && videoId !== 'undefined') {
     loadProject(videoId).then(data => {
+      appState.isSavedProject = true;
       currentVideoData = data;
 
       // Note: We map 'speaker_id' from backend to 'id' for the frontend
@@ -574,6 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
     formData.append('speakers', JSON.stringify(speakersToPost));
 
     try {
+      appState.isSavedProject = false;
       const result = await processVideo(formData);
       console.log(
         'Received result from backend:',
@@ -923,9 +927,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 // =========================================================
                 // If target language changed, we now FORK the project into a new folder.
               } else if (translateLangChanged) {
-                console.log('Forking project for new translation language...');
                 const formData = new FormData();
-                // We use source_video_id to trigger forking
+
+                // Check if this is a draft (unsaved) project
+                if (!appState.isSavedProject) {
+                  formData.append('update_existing', 'true');
+                }
+
+                // We use source_video_id to trigger forking or update
                 formData.append('source_video_id', currentVideoData.video_id);
                 formData.append('original_language', currentVideoData.original_language);
                 formData.append('translate_language', newTranslateLanguage);
