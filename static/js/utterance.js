@@ -253,7 +253,6 @@ export function renderUtterances(currentVideoData, speakers, videoDuration) {
 
       // We modify the fresh utterance array object, not the closure object
       currentUtterance.removed = !currentUtterance.removed;
-      console.log('🗑️ Action: Toggled `currentUtterance.removed` to', currentUtterance.removed);
 
       // Ensure mute is cancelled if remove is activated
       if (currentUtterance.removed && currentUtterance.muted) {
@@ -265,19 +264,26 @@ export function renderUtterances(currentVideoData, speakers, videoDuration) {
 
     const muteBtn = utteranceCard.querySelector('.mute-utterance-btn');
     muteBtn.addEventListener('click', () => {
-      utterance.muted = !utterance.muted;
+      const currentUtterance = currentVideoData.utterances[index];
+
+      console.log('🔇 Mute Clicked');
+      console.log('Closure Utterance (stale):', utterance);
+      console.log('Current Utterance (fresh):', currentUtterance);
+      console.log('Are they equal?', utterance === currentUtterance);
+
+      currentUtterance.muted = !currentUtterance.muted;
       // Ensure remove is cancelled if mute is activated
-      if (utterance.muted && utterance.removed) {
-        utterance.removed = false;
+      if (currentUtterance.muted && currentUtterance.removed) {
+        currentUtterance.removed = false;
       }
 
-      if (utterance.muted) {
-        utterance.translated_start_time = utterance.original_start_time;
-        utterance.translated_end_time = utterance.original_end_time;
+      if (currentUtterance.muted) {
+        currentUtterance.translated_start_time = currentUtterance.original_start_time;
+        currentUtterance.translated_end_time = currentUtterance.original_end_time;
       } else {
-        utterance.translated_start_time =
-          utterance.initial_translated_start_time;
-        utterance.translated_end_time = utterance.initial_translated_end_time;
+        currentUtterance.translated_start_time =
+          currentUtterance.initial_translated_start_time;
+        currentUtterance.translated_end_time = currentUtterance.initial_translated_end_time;
       }
       renderUtterances(currentVideoData, speakers, videoDuration);
       renderTimeline(currentVideoData, videoDuration, speakers);
