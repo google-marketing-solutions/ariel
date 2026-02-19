@@ -232,32 +232,28 @@ export function renderUtterances(currentVideoData, speakers, videoDuration) {
     playAudioBtns.forEach(btn => {
       btn.addEventListener('click', e => {
         const textType = e.currentTarget.dataset.textType;
+        const currentUtterance = currentVideoData.utterances[index];
+
+        console.log('▶️ Play Audio Clicked');
+        console.log('Closure Utterance (stale):', utterance);
+        console.log('Current Utterance (fresh):', currentUtterance);
+        console.log('Are they equal?', utterance === currentUtterance);
+
         if (textType === 'original') {
-          playOriginalAudio(utterance);
+          playOriginalAudio(currentUtterance);
         } else if (textType === 'translated') {
-          playTranslatedAudio(utterance);
+          playTranslatedAudio(currentUtterance);
         }
       });
     });
 
     const removeBtn = utteranceCard.querySelector('.remove-utterance-btn');
     removeBtn.addEventListener('click', () => {
-      // 1. Array Lookup Fix! Relying on fresh utterance object from the array,
-      // instead of the one from the closure "utterance".
       const currentUtterance = currentVideoData.utterances[index];
-
-      // -------------------------------------------------------------
-      // OBSERVING THE BEHAVIOR
-      // -------------------------------------------------------------
-      console.log('🗑️ --- Trashcan Clicked ---');
-      console.log('🗑️ Old v1 closure `utterance` object:', utterance);
-      console.log('🗑️ New v2 array `currentVideoData.utterances[index]` object:', currentUtterance);
-      console.log('🗑️ Are they exactly the same object in memory?', utterance === currentUtterance);
 
       // We modify the fresh utterance array object, not the closure object
       currentUtterance.removed = !currentUtterance.removed;
       console.log('🗑️ Action: Toggled `currentUtterance.removed` to', currentUtterance.removed);
-      // -------------------------------------------------------------
 
       // Ensure mute is cancelled if remove is activated
       if (currentUtterance.removed && currentUtterance.muted) {
