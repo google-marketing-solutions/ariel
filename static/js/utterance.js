@@ -234,11 +234,6 @@ export function renderUtterances(currentVideoData, speakers, videoDuration) {
         const textType = e.currentTarget.dataset.textType;
         const currentUtterance = currentVideoData.utterances[index];
 
-        console.log('▶️ Play Audio Clicked');
-        console.log('Closure Utterance (stale):', utterance);
-        console.log('Current Utterance (fresh):', currentUtterance);
-        console.log('Are they equal?', utterance === currentUtterance);
-
         if (textType === 'original') {
           playOriginalAudio(currentUtterance);
         } else if (textType === 'translated') {
@@ -265,11 +260,6 @@ export function renderUtterances(currentVideoData, speakers, videoDuration) {
     const muteBtn = utteranceCard.querySelector('.mute-utterance-btn');
     muteBtn.addEventListener('click', () => {
       const currentUtterance = currentVideoData.utterances[index];
-
-      console.log('🔇 Mute Clicked');
-      console.log('Closure Utterance (stale):', utterance);
-      console.log('Current Utterance (fresh):', currentUtterance);
-      console.log('Are they equal?', utterance === currentUtterance);
 
       currentUtterance.muted = !currentUtterance.muted;
       // Ensure remove is cancelled if mute is activated
@@ -606,11 +596,6 @@ export function editUtterance(
   document
     .getElementById('regenerate-dubbing-btn')
     .addEventListener('click', () => {
-      // -------------------------------------------------------------
-      // DEMONSTRATING THE CLOSURE BUG (v2)
-      // -------------------------------------------------------------
-      console.log('🔄 --- Regenerate Dubbing Clicked ---');
-
       const inProgressToast = showToast('Regenerating dubbing...', 'info', 0);
       const tempUtterance = {};
       Object.assign(tempUtterance, utterance);
@@ -623,18 +608,15 @@ export function editUtterance(
         'translated-text-area',
       ).value;
 
-      console.log('🔄 Created new utterance object `tempUtterance`:', tempUtterance);
-      currentVideoData.utterances[index] = tempUtterance;
-      console.log('🔄 Overwrote Array `currentVideoData.utterances[index]` with `tempUtterance`!');
-      // -------------------------------------------------------------
-
-      runRegenerateDubbing(currentVideoData, utterance, index, instructions)
+      runRegenerateDubbing(currentVideoData, tempUtterance, index, instructions)
         .then(updatedUtterance => {
           inProgressToast.remove(); // Dismiss the in-progress toast
           const duration =
             updatedUtterance.translated_end_time -
             updatedUtterance.translated_start_time;
+
           currentVideoData.utterances[index] = updatedUtterance;
+
           document.getElementById('translated-end-time-input').value =
             updatedUtterance.translated_end_time;
           document.getElementById('translated-duration').innerText =
