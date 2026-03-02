@@ -48,30 +48,24 @@ class ProcessTest(unittest.TestCase):
 
     video_file_path = "tests/test_data/video_with_audio.mp4"
 
-    # Mock audio_separator.separator.Separator
-    with unittest.mock.patch("process.Separator") as mock_separator:
-      instance = mock_separator.return_value
-      instance.separate.return_value = ["vocals.wav", "background.wav"]
+    original_audio_path, vocals_path, background_path = (
+        process.separate_audio_from_video(video_file_path, self.temp_dir)
+    )
 
-      original_audio_path, vocals_path, background_path = (
-          process.separate_audio_from_video(video_file_path, self.temp_dir)
-      )
-
-      self.assertTrue(os.path.exists(original_audio_path))
-      # We cannot check if they exist because we mocked the separator and didn't actually create them
-      # self.assertTrue(os.path.exists(vocals_path))
-      # self.assertTrue(os.path.exists(background_path))
-      self.assertEqual(original_audio_path, f"{self.temp_dir}/original_audio.wav")
-      self.assertEqual(
-          vocals_path,
-          os.path.join(self.temp_dir, "vocals.wav"),
-      )
-      self.assertEqual(
-          background_path,
-          os.path.join(
-              self.temp_dir, "background.wav"
-          ),
-      )
+    self.assertTrue(os.path.exists(original_audio_path))
+    self.assertTrue(os.path.exists(vocals_path))
+    self.assertTrue(os.path.exists(background_path))
+    self.assertEqual(original_audio_path, f"{self.temp_dir}/original_audio.wav")
+    self.assertEqual(
+        vocals_path,
+        os.path.join(self.temp_dir, "htdemucs", "original_audio", "vocals.wav"),
+    )
+    self.assertEqual(
+        background_path,
+        os.path.join(
+            self.temp_dir, "htdemucs", "original_audio", "no_vocals.wav"
+        ),
+    )
 
   def test_separate_audio_from_video_no_audio(self):
     """Tests that `separate_audio_from_video` raises an error if no audio."""
@@ -89,12 +83,11 @@ class ProcessTest(unittest.TestCase):
 
     video_file_path = "tests/test_data/video_with_audio.mp4"
 
-    # To simulate separation failure, mock audio_separator.separator.Separator.separate to raise an exception.
-    with unittest.mock.patch("process.Separator") as mock_separator:
-      instance = mock_separator.return_value
-      instance.separate.side_effect = RuntimeError("Separation failed")
+    # To simulate separation failure, mock subprocess.run to raise an exception.
+    with unittest.mock.patch("process.subprocess.run") as mock_subprocess_run:
+      mock_subprocess_run.side_effect = subprocess.CalledProcessError(1, "cmd")
 
-      with self.assertRaises(RuntimeError):
+      with self.assertRaises(subprocess.CalledProcessError):
         process.separate_audio_from_video(video_file_path, self.temp_dir)
 
 

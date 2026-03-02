@@ -118,13 +118,13 @@ export function regenerateDubbing(videoData, utteranceIndex, instructions) {
   });
 }
 
-export function generateVideo(requestBody) {
+export function generateVideo(videoData) {
   return fetch('/generate_video', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(requestBody),
+    body: JSON.stringify(videoData),
   }).then(response => {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

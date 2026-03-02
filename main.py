@@ -58,7 +58,8 @@ from transcribe import annotate_transcript
 from transcribe import transcribe_media
 from transcribe import TranscribeSegment
 from translate import translate_text
-from models import GenerateVideoRequest, Video, Speaker, Utterance
+from models import GenerateVideoRequest
+import moviepy
 
 # Set up Google Cloud Logging
 if "K_SERVICE" in os.environ:
@@ -217,10 +218,13 @@ async def process_video(
       raise FileNotFoundError(f"Source video {source_video_id} not found")
 
     # Find source video file
-    source_files = [f for f in os.listdir(source_dir) if f.endswith(".mp4")]
-    if not source_files:
-       raise FileNotFoundError("Video file not found in source directory")
-    video_filename = source_files[0]
+    video_filename = source_video_id
+    if not os.path.exists(os.path.join(source_dir, video_filename)):
+       # Fallback to shortest .mp4 file in case of slight naming mismatch in old projects
+       source_files = [f for f in os.listdir(source_dir) if f.endswith(".mp4")]
+       if not source_files:
+           raise FileNotFoundError("Video file not found in source directory")
+       video_filename = min(source_files, key=len)
 
     if update_existing:
         logging.info("Updating existing project: %s", source_video_id)
@@ -399,9 +403,16 @@ async def process_video(
   
   try:
       metadata = to_return.model_dump()
-      if to_return.utterances:
-          duration = max([u.translated_end_time for u in to_return.utterances])
-          metadata['duration'] = round(duration, 1)
+      duration = 0
+      try:
+          video_clip = moviepy.VideoFileClip(local_video_path)
+          duration = video_clip.duration
+          video_clip.close()
+      except Exception:
+          if to_return.utterances:
+              duration = max([u.translated_end_time for u in to_return.utterances])
+      
+      metadata['duration'] = round(duration, 1)
       
       metadata_path = os.path.join(local_dir, "metadata.json")
       with open(metadata_path, "w") as f:
@@ -455,12 +466,14 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
     local_dir = os.path.join(mount_point, video_data.video_id)
     
     # Find the video file dynamically
-    video_files = [f for f in os.listdir(local_dir) if f.endswith(".mp4") and not f.endswith(f".{video_data.translate_language}.mp4")]
-    if not video_files:
-        logging.error(f"No source video file found in {local_dir}")
-        return JSONResponse(status_code=500, content={"error": f"Source video file not found in {local_dir}"})
-    
-    local_video_path = os.path.join(local_dir, video_files[0])
+    local_video_path = os.path.join(local_dir, video_data.video_id)
+    if not os.path.exists(local_video_path):
+        # Fallback to find shortest mp4
+        video_files = [f for f in os.listdir(local_dir) if f.endswith(".mp4") and not f.endswith(f".{video_data.translate_language}.mp4")]
+        if not video_files:
+            logging.error(f"No source video file found in {local_dir}")
+            return JSONResponse(status_code=500, content={"error": f"Source video file not found in {local_dir}"})
+        local_video_path = os.path.join(local_dir, min(video_files, key=len))
     
     background_sound_path = os.path.join(
         local_dir, "background.wav"
@@ -493,8 +506,13 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
     }
 
     duration = 0
-    if video_data.utterances:
-        duration = max([u.translated_end_time for u in video_data.utterances])
+    try:
+        video_clip = moviepy.VideoFileClip(local_video_path)
+        duration = video_clip.duration
+        video_clip.close()
+    except Exception:
+        if video_data.utterances:
+            duration = max([u.translated_end_time for u in video_data.utterances])
 
     metadata = video_data.model_dump()
     metadata['original_video_url'] = f"{mount_point}/{video_data.video_id}/{video_data.video_id}"
@@ -702,12 +720,11 @@ def get_videos() -> list[dict]:
 
 
 @app.get("/library", response_class=HTMLResponse)
-async def library_page(request: Request):
+def library_page(request: Request):
   return templates.TemplateResponse("library.html", {"request": request})
 
-
 @app.get("/api/projects/{video_id}")
-async def load_project(video_id: str):
+def load_project(video_id: str):
   try:
     local_dir = os.path.join(mount_point, video_id)
     metadata_path = os.path.join(local_dir, "metadata.json")
@@ -724,7 +741,7 @@ async def load_project(video_id: str):
     return JSONResponse(status_code=404, content={"error": "Error loading project"})
 
 @app.delete("/api/videos/{video_id}")
-async def delete_video(video_id: str):
+def delete_video(video_id: str):
   try:
     if "K_SERVICE" in os.environ:
       delete_video_from_gcs(config.gcs_bucket_name, video_id)

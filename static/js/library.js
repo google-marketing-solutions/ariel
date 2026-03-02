@@ -75,10 +75,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <a href="${video.download_url}" download="${video.name}" class="btn btn-sm btn-primary text-white">
                     <i class="bi bi-download"></i> Download
                 </a>
-                <a href="/?video_id=${video.video_id}" class="btn btn-sm btn-outline-primary">
+                <a href="/?video_id=${video.video_id}" class="btn btn-sm btn-secondary text-white">
                     <i class="bi bi-pencil"></i> Edit
                 </a>
-                <a onclick="deleteVideo('${video.video_id}')" class="btn btn-sm btn-outline-danger">
+                <a onclick="deleteVideo('${video.video_id}')" class="btn btn-sm btn-danger text-white">
                     <i class="bi bi-trash"></i> Delete
                 </a>
             </div>

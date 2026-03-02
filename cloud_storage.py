@@ -24,6 +24,8 @@ from google.cloud import storage
 import json
 import os
 import google.auth
+import requests
+from models import VideoMetadata
 
 
 
@@ -98,6 +100,8 @@ def get_url_for_path(bucket_name: str, path: str, download_filename: str = "", s
     bucket_name: the name of the GCS bucket the files is stored in.
     path: the path to the file the URL will point to.
     download_filename: optional filename to force download with Content-Disposition.
+    service_account_email: optional service account email to use for authentication.
+    access_token: optional access token to use for authentication.
 
   Returns:
     A URL that points to the file requested. The URL is valid for 24 hours.
@@ -132,7 +136,6 @@ def fetch_service_account_email() -> str:
         # Fallback to metadata server if email is not in credentials or is 'default'
         try:
              # Use a longer timeout and proper error handling
-             import requests
              metadata_url = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email"
              headers = {"Metadata-Flavor": "Google"}
              response = requests.get(metadata_url, headers=headers, timeout=5)
@@ -162,8 +165,23 @@ def clean_video_name(filename: str) -> str:
   clean_name = re.sub(pattern, "", name)
   return clean_name
 
-def list_all_videos(bucket_name: str) -> list[dict]:
-  """Returns a list of translated videos with their metadata."""
+def list_all_videos(bucket_name: str) -> list[VideoMetadata]:
+  """
+  Returns a list of translated videos with their metadata.
+  Args:
+    bucket_name: the name of the GCS bucket to list videos from.
+
+  Returns:
+    A list of VideoMetadata objects, each containing the metadata for a video:
+    name: the name of the video.
+    url: the URL to stream the video from.
+    download_url: the URL to download the video from.
+    created_at: the time the video was created.
+    original_language: the original language of the video.
+    translate_language: the language to translate the video to.
+    duration: the duration of the video.
+    speakers: the speakers in the video.
+  """
   storage_client = storage.Client()
   bucket = storage_client.bucket(bucket_name)
   blobs = storage_client.list_blobs(bucket_name)

@@ -15,6 +15,7 @@
 # under the License.
 
 from pydantic import BaseModel
+from datetime import datetime
 
 
 class Speaker(BaseModel):
@@ -127,3 +128,13 @@ class RegenerateResponse(BaseModel):
 class GenerateVideoRequest(BaseModel):
   video: Video
   original_video_url: str = ""
+
+class VideoMetadata(BaseModel):
+    name: str
+    url: str
+    download_url: str
+    created_at: datetime
+    original_language: str
+    translate_language: str
+    duration: float
+    speakers: list[dict]
