@@ -250,14 +250,11 @@ async def process_video(
         shutil.copy2(os.path.join(source_dir, video_filename), local_video_path)
         video_name = new_id
 
-        # Copy htdemucs/original_audio if present
-        source_htdemucs = os.path.join(source_dir, "htdemucs")
-        if os.path.exists(source_htdemucs):
-          shutil.copytree(source_htdemucs, os.path.join(local_dir, "htdemucs"))
-        
-        source_original = os.path.join(source_dir, "original_audio")
-        if os.path.exists(source_original):
-          shutil.copytree(source_original, os.path.join(local_dir, "original_audio"))
+        # Copy separated audio files if present
+        for fname in ["original_audio.wav", "background.wav", "vocals.wav"]:
+            src_file = os.path.join(source_dir, fname)
+            if os.path.exists(src_file):
+                shutil.copy2(src_file, os.path.join(local_dir, fname))
 
   else:
     logging.info("Processing new video upload: %s", video.filename)
@@ -269,9 +266,9 @@ async def process_video(
   logging.info("Separating vocals and background music from %s", video_name)
   
   # Check if files already exist (e.g. from fork)
-  expected_vocals = os.path.join(local_dir, "htdemucs", "original_audio", "vocals.wav")
-  expected_background = os.path.join(local_dir, "htdemucs", "original_audio", "no_vocals.wav")
-  expected_original = os.path.join(local_dir, "original_audio", "original_audio.wav")
+  expected_vocals = os.path.join(local_dir, "vocals.wav")
+  expected_background = os.path.join(local_dir, "background.wav")
+  expected_original = os.path.join(local_dir, "original_audio.wav")
   
   if os.path.exists(expected_vocals) and os.path.exists(expected_background):
       logging.info("Found existing separated audio, skipping separation.")

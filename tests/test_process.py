@@ -58,12 +58,12 @@ class ProcessTest(unittest.TestCase):
     self.assertEqual(original_audio_path, f"{self.temp_dir}/original_audio.wav")
     self.assertEqual(
         vocals_path,
-        os.path.join(self.temp_dir, "htdemucs", "original_audio", "vocals.wav"),
+        os.path.join(self.temp_dir, "vocals.wav"),
     )
     self.assertEqual(
         background_path,
         os.path.join(
-            self.temp_dir, "htdemucs", "original_audio", "no_vocals.wav"
+            self.temp_dir, "background.wav"
         ),
     )
 
@@ -83,11 +83,11 @@ class ProcessTest(unittest.TestCase):
 
     video_file_path = "tests/test_data/video_with_audio.mp4"
 
-    # To simulate separation failure, mock subprocess.run to raise an exception.
-    with unittest.mock.patch("process.subprocess.run") as mock_subprocess_run:
-      mock_subprocess_run.side_effect = subprocess.CalledProcessError(1, "cmd")
+    # To simulate separation failure, mock the separator output
+    with unittest.mock.patch("process.Separator.separate") as mock_separate:
+      mock_separate.side_effect = Exception("separation failed")
 
-      with self.assertRaises(subprocess.CalledProcessError):
+      with self.assertRaises(Exception):
         process.separate_audio_from_video(video_file_path, self.temp_dir)
 
 
@@ -106,17 +106,14 @@ class MergeVocalsTest(unittest.TestCase):
     self.audio_path_2 = "tests/test_data/two_seconds_tone.wav"
 
     # Create a dummy original vocals file for muted tests
-    self.original_vocals_dir = os.path.join(
-        self.temp_dir, "htdemucs", "original_audio"
-    )
+    self.original_vocals_dir = self.temp_dir
     os.makedirs(self.original_vocals_dir, exist_ok=True)
     self.original_vocals_path = os.path.join(
         self.original_vocals_dir, "vocals.wav"
     )
     # A 3-second silent wav file
-    os.system(
-        "ffmpeg -f lavfi -i anullsrc=r=44100 -t 3 -y"
-        + f" {self.original_vocals_path} > /dev/null 2>&1"
+    shutil.copy(
+        "tests/test_data/three_seconds_silence.wav", self.original_vocals_path
     )
 
   @override
