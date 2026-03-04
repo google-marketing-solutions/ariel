@@ -21,22 +21,13 @@
 SERVICE_NAME="ariel-v2"
 
 echo "🛠️ Validating build and deploy requirements..."
-ffmpeg -version >/dev/null 2>&1
-if [ $? -ne 0 ]; then
-  echo "❌ Error: ffmpeg is not installed. Try installing it (e.g. apt-get install ffmpeg) and run the script again."
-  exit 1
-fi
-echo "✅ ffmpeg is installed."
-
-uv --version >/dev/null 2>&1
-if [ $? -ne 0 ]; then
+if ! uv --version >/dev/null 2>&1; then
   echo "❌ Error: uv is not installed. Try installing it (e.g. pip install uv) and run the script again."
   exit 1
 fi
 echo "✅ uv is installed."
 
-gcloud --version >/dev/null 2>&1
-if [ $? -ne 0 ]; then
+if ! gcloud --version >/dev/null 2>&1; then
   echo "❌ Error: gcloud is not installed. Try installing it (e.g. apt-get install google-cloud-sdk) and run the script again."
   exit 1
 fi
@@ -49,14 +40,14 @@ uv sync
 PROJECT_ID=$(gcloud config get-value project)
 
 if [[ -n "$PROJECT_ID" ]]; then
-  read -p "Is this the correct Project ID: '$PROJECT_ID'? (y/n) " confirm
+  read -r -p "Is this the correct Project ID: '$PROJECT_ID'? (y/n) " confirm
   if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
     PROJECT_ID="" # Clear it so we prompt for a new one
   fi
 fi
 
 if [[ -z "$PROJECT_ID" ]]; then
-  read -p "Enter the Google Cloud Project ID: " NEW_PROJECT_ID
+  read -r -p "Enter the Google Cloud Project ID: " NEW_PROJECT_ID
   if [[ -z "$NEW_PROJECT_ID" ]]; then
     echo "❌ Error: A Project ID is required."
     exit 1
@@ -69,21 +60,30 @@ echo "✅ Using Project ID: $PROJECT_ID"
 
 # Get region from gcloud config, or prompt if not set
 REGION=$(gcloud config get-value compute/region)
+
+if [[ -n "$REGION" ]]; then
+  read -r -p "Is this the correct GCP region: '$REGION'? (y/n) " confirm
+  if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    REGION="" # Clear it so we prompt for a new one
+  fi
+fi
+
 if [[ -z "$REGION" ]]; then
-  read -p "Enter the GCP region for the service (e.g., us-central1): " REGION
-  if [[ -z "$REGION" ]]; then
+  read -r -p "Enter the GCP region for the service (e.g., us-central1): " NEW_REGION
+  if [[ -z "$NEW_REGION" ]]; then
     echo "❌ Error: A region is required."
     exit 1
   fi
   # Set the region in gcloud config for future use
-  gcloud config set compute/region "$REGION"
+  gcloud config set compute/region "$NEW_REGION"
+  REGION=$NEW_REGION
 fi
 
 echo "▶️ Starting permission script for service '$SERVICE_NAME' in region '$REGION'..."
 
 # 3. Prompt for and create the Cloud Storage bucket
 while true; do
-  read -p "Enter the name for the Cloud Storage bucket to be used for analysis: " BUCKET_NAME
+  read -r -p "Enter the name for the Cloud Storage bucket to be used for analysis: " BUCKET_NAME
   BUCKET_URI="gs://$BUCKET_NAME"
 
   echo "🔎 Checking for Cloud Storage bucket: $BUCKET_URI..."
@@ -122,7 +122,7 @@ EOF
       echo "❌ Failed to create bucket. Please try a different name."
     fi
   else
-    echo "❌ Error checking bucket: $LS_OUTPUT"
+    echo "❌ Error checking bucket: $DESCRIBE_OUTPUT"
     echo "Please try a different name."
   fi
 done
