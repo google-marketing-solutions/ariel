@@ -24,6 +24,8 @@ from google.cloud import storage
 import json
 import os
 import google.auth
+import requests
+from models import VideoMetadata
 
 
 
@@ -98,6 +100,8 @@ def get_url_for_path(bucket_name: str, path: str, download_filename: str = "", s
     bucket_name: the name of the GCS bucket the files is stored in.
     path: the path to the file the URL will point to.
     download_filename: optional filename to force download with Content-Disposition.
+    service_account_email: optional service account email to use for authentication.
+    access_token: optional access token to use for authentication.
 
   Returns:
     A URL that points to the file requested. The URL is valid for 24 hours.
@@ -130,21 +134,22 @@ def fetch_service_account_email() -> str:
 
   if not service_account_email or service_account_email == "default":
         # Fallback to metadata server if email is not in credentials or is 'default'
-        import requests
         try:
+             # Use a longer timeout and proper error handling
              metadata_url = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email"
              headers = {"Metadata-Flavor": "Google"}
-             response = requests.get(metadata_url, headers=headers, timeout=2)
-             response.raise_for_status()
-             service_account_email = response.text.strip()
-        except Exception:
-             logging.warning("Could not determine service account email, signed URL generation might fail.")
+             response = requests.get(metadata_url, headers=headers, timeout=5)
+             if response.status_code == 200:
+                service_account_email = response.text.strip()
+        except Exception as e:
+             logging.warning(f"Could not determine service account email from metadata server: {e}")
   return service_account_email
 
 def fetch_access_token() -> str:
   """Fetches the access token for the current request."""
   access_token = None
   try:
+      credentials, _ = google.auth.default()
       if not credentials.token:
           from google.auth.transport.requests import Request
           credentials.refresh(Request())
@@ -160,8 +165,23 @@ def clean_video_name(filename: str) -> str:
   clean_name = re.sub(pattern, "", name)
   return clean_name
 
-def list_all_videos(bucket_name: str) -> list[dict]:
-  """Returns a list of translated videos with their metadata."""
+def list_all_videos(bucket_name: str) -> list[VideoMetadata]:
+  """
+  Returns a list of translated videos with their metadata.
+  Args:
+    bucket_name: the name of the GCS bucket to list videos from.
+
+  Returns:
+    A list of VideoMetadata objects, each containing the metadata for a video:
+    name: the name of the video.
+    url: the URL to stream the video from.
+    download_url: the URL to download the video from.
+    created_at: the time the video was created.
+    original_language: the original language of the video.
+    translate_language: the language to translate the video to.
+    duration: the duration of the video.
+    speakers: the speakers in the video.
+  """
   storage_client = storage.Client()
   bucket = storage_client.bucket(bucket_name)
   blobs = storage_client.list_blobs(bucket_name)
@@ -182,6 +202,12 @@ def list_all_videos(bucket_name: str) -> list[dict]:
         access_token = fetch_access_token()
         url = get_url_for_path(bucket_name, blob.name, service_account_email=service_account_email, access_token=access_token)
         download_url = get_url_for_path(bucket_name, blob.name, download_filename=clean_video_name(blob.name), service_account_email=service_account_email, access_token=access_token)
+        
+        if not url:
+          logging.error(f"Generated empty URL for {blob.name}")
+        else:
+          # Log first 50 chars of URL to verify it's looking correct (starts with https)
+          logging.info(f"Generated URL for {blob.name}: {url[:50]}...")
       except Exception as e:
         logging.error(f"Error generating signed URL for {blob.name}: {e}")
         url = ""
@@ -219,9 +245,24 @@ def list_all_videos(bucket_name: str) -> list[dict]:
         "original_language": meta.get("original_language", "Unknown"),
         "translate_language": meta.get("translate_language", "Unknown"),
         "duration": meta.get("duration", 0),
-        "speakers": clean_speakers
+        "speakers": clean_speakers,
+        "video_id": folder_name
       })
 
   videos.sort(key=lambda x: x['created_at'], reverse=True)
 
   return videos
+
+def delete_video_from_gcs(bucket_name: str, video_id: str):
+  storage_client = storage.Client()
+  bucket = storage_client.bucket(bucket_name)
+  blobs = list(bucket.list_blobs(prefix=video_id))
+  
+  for blob in blobs:
+    try:
+      blob.delete()
+      logging.info(f"Deleted blob: {blob.name}")
+    except Exception as e:
+      logging.warning(f"Failed to delete blob {blob.name}: {e}")
+  
+  logging.info("Deleted video %s from GCS.", video_id)

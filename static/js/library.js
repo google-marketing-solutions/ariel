@@ -56,37 +56,35 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 </video>
                             </div>
                             
-                            <div class="col-md-8 col-sm-7">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <div class="me-3" style="min-width: 0;">
-                                            <h6 class="card-title text-truncate mb-1 fw-bold text-white" title="${video.name}">
-                                                ${video.name}
-                                            </h6>
-                                            <p class="card-text text-white small mb-0">
-                                                <i class="bi bi-clock"></i> ${dateStr}
-                                            </p>
-                                        </div>
-                                        
-                                        <a href="${video.download_url}" download="${video.name}" class="btn btn-sm btn-primary text-white text-nowrap">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
-                                    </div>
-                                    
-                                    <div class="d-flex flex-wrap gap-2">
-                                        <span class="badge bg-secondary border border-secondary text-white" title="Original -> Translated">
-                                            <i class="bi bi-translate"></i> ${video.original_language || '?'} &rarr; ${video.translate_language || '?'}
-                                        </span>
-                                        <span class="badge bg-secondary border border-secondary text-white">
-                                            <i class="bi bi-person"></i> ${speakerDisplay}
-                                        </span>
-                                        <span class="badge bg-secondary border border-secondary text-white">
-                                            <i class="bi bi-stopwatch"></i> ${durationStr}
-                                        </span>
-                                    </div>
-
-                                </div>
-                            </div>
+<div class="col-md-8 col-sm-7">
+    <div class="card-body h-100 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="me-3" style="min-width: 0;">
+                <h6 class="card-title text-truncate mb-1 fw-bold text-white" title="${video.name}">
+                    ${video.name}
+                </h6>
+                <p class="card-text text-white small mb-0">
+                    <i class="bi bi-clock"></i> ${dateStr}
+                </p>
+                <span class="badge bg-secondary border border-secondary text-white">
+                    <i class="bi bi-translate"></i> ${video.original_language || '?'} &rarr; ${video.translate_language || '?'}
+                </span>
+            </div>
+            
+            <div class="d-grid gap-2" style="min-width: 120px;">
+                <a href="${video.download_url}" download="${video.name}" class="btn btn-sm btn-primary text-white">
+                    <i class="bi bi-download"></i> Download
+                </a>
+                <a href="/?video_id=${video.video_id}" class="btn btn-sm btn-secondary text-white">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+                <a onclick="deleteVideo('${video.video_id}')" class="btn btn-sm btn-danger text-white">
+                    <i class="bi bi-trash"></i> Delete
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 
                         </div>
                     </div>
@@ -99,3 +97,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     libraryGrid.innerHTML = `<div class="alert alert-danger">Error loading videos. Check console.</div>`;
   }
 });
+
+window.deleteVideo = async function (videoId) {
+  if (window.confirm(`Are you sure you want to delete this video?`)) {
+    try {
+      const response = await fetch(`/api/videos/${videoId}`, { method: "DELETE" });
+
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        window.alert("Failed to delete video");
+      }
+    } catch (error) {
+      console.error("Error deleting video:", error);
+      window.alert("Error deleting video");
+    }
+  }
+}

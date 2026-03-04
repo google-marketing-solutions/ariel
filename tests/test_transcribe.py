@@ -37,10 +37,10 @@ class TranscribeTest(unittest.TestCase):
     mock_info.language_probability = 0.9
 
     mock_whisper_model.transcribe.return_value = (mock_segments, mock_info)
-    result = transcribe.transcribe_media("dummy_path")
+    result = transcribe.transcribe_media("dummy_path", language="en")
     self.assertEqual(result, "[0.0s -> 1.0s]  Hello world")
     mock_whisper_model.transcribe.assert_called_once_with(
-        "dummy_path", beam_size=5
+        "dummy_path", language="en", task="transcribe", beam_size=7
     )
 
   @unittest.mock.patch("google.genai.Client")
@@ -105,10 +105,10 @@ class TranscribeTest(unittest.TestCase):
     mock_info.language_probability = 0.0
 
     mock_whisper_model.transcribe.return_value = (mock_segments, mock_info)
-    result = transcribe.transcribe_media("dummy_path_no_dialog")
+    result = transcribe.transcribe_media("dummy_path_no_dialog", language="en")
     self.assertEqual(result, "")
     mock_whisper_model.transcribe.assert_called_once_with(
-        "dummy_path_no_dialog", beam_size=5
+        "dummy_path_no_dialog", language="en", task="transcribe", beam_size=7
     )
 
 

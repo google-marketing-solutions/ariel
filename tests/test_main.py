@@ -115,7 +115,7 @@ class MainTest(unittest.TestCase):
                 "original_language": "en",
                 "translate_language": "es",
                 "adjust_speed": "false",
-                "speakers": '[{"id": "spk1", "voice": "voice1"}]',
+                "speakers": '[{"id": "spk1", "voice": "voice1", "name": "Speaker 1", "gender": "male"}]',
                 "prompt_enhancements": "",
                 "use_pro_model": "false"
             }
@@ -159,10 +159,16 @@ class MainTest(unittest.TestCase):
   @unittest.mock.patch("main.merge_vocals")
   @unittest.mock.patch("main.merge_background_and_vocals")
   @unittest.mock.patch("main.combine_video_and_audio")
-  def test_generate_video_endpoint(self, mock_combine, mock_merge_bg, mock_merge_vocals):
+  @unittest.mock.patch("main.os.listdir")
+  @unittest.mock.patch("main.os.path.exists")
+  @unittest.mock.patch("builtins.open", new_callable=unittest.mock.mock_open)
+  @unittest.mock.patch("main.upload_file_to_gcs")
+  def test_generate_video_endpoint(self, mock_upload, mock_open, mock_exists, mock_listdir, mock_combine, mock_merge_bg, mock_merge_vocals):
     """Tests /generate_video endpoint."""
     mock_merge_vocals.return_value = "temp/vid1/vocals.wav"
     mock_merge_bg.return_value = "temp/vid1/merged.wav"
+    mock_listdir.return_value = ["video.mp4"]
+    mock_exists.return_value = True
 
     video_payload = {
         "video_id": "vid1",
@@ -174,8 +180,10 @@ class MainTest(unittest.TestCase):
         "tts_model_name": "flash-tts"
     }
 
-    response = self.client.post("/generate_video", json=video_payload)
+    response = self.client.post("/generate_video", json={"video": video_payload})
 
+    if response.status_code != 200:
+      print(f"Response error: {response.json()}")
     self.assertEqual(response.status_code, 200)
     data = response.json()
     self.assertIn("video_url", data)

@@ -205,3 +205,13 @@ export function runRegenerateDubbing(
     },
   );
 }
+
+export function loadProject(videoId) {
+  return fetch(`/api/projects/${videoId}`)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Project not found! status: ${response.status}`);
+      }
+      return response.json();
+    });
+}

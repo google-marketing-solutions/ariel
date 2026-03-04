@@ -9,6 +9,7 @@ describe('State', () => {
     expect(appState).toEqual({
       editingSpeakerId: null,
       isEditingVideoSettings: false,
+      isSavedProject: false,
     });
   });
 

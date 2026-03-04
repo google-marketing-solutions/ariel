@@ -23,13 +23,13 @@ class ModelsTest(unittest.TestCase):
 
   def test_speaker_model(self):
     """Tests Speaker model creation."""
-    speaker = Speaker(speaker_id="s1", voice="voice1")
+    speaker = Speaker(speaker_id="s1", voice="voice1", speaker_name="Speaker 1", gender="male")
     self.assertEqual(speaker.speaker_id, "s1")
     self.assertEqual(speaker.voice, "voice1")
 
   def test_utterance_model(self):
     """Tests Utterance model creation and defaults."""
-    speaker = Speaker(speaker_id="s1", voice="voice1")
+    speaker = Speaker(speaker_id="s1", voice="voice1", speaker_name="Speaker 1", gender="male")
     utterance = Utterance(
         id="u1",
         original_text="Hello",
@@ -49,7 +49,7 @@ class ModelsTest(unittest.TestCase):
 
   def test_video_model(self):
     """Tests Video model creation and defaults."""
-    speaker = Speaker(speaker_id="s1", voice="voice1")
+    speaker = Speaker(speaker_id="s1", voice="voice1", speaker_name="Speaker 1", gender="male")
     utterance = Utterance(
         id="u1",
         original_text="Hello",
@@ -79,7 +79,7 @@ class ModelsTest(unittest.TestCase):
 
   def test_regenerate_request(self):
     """Tests RegenerateRequest model."""
-    speaker = Speaker(speaker_id="s1", voice="voice1")
+    speaker = Speaker(speaker_id="s1", voice="voice1", speaker_name="Speaker 1", gender="male")
     utterance = Utterance(
         id="u1",
         original_text="Hello",

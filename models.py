@@ -15,6 +15,7 @@
 # under the License.
 
 from pydantic import BaseModel
+from datetime import datetime
 
 
 class Speaker(BaseModel):
@@ -31,6 +32,8 @@ class Speaker(BaseModel):
 
   speaker_id: str
   voice: str
+  speaker_name: str
+  gender: str
 
 
 class Utterance(BaseModel):
@@ -121,3 +124,17 @@ class RegenerateResponse(BaseModel):
   translated_text: str
   audio_url: str
   duration: float
+
+class GenerateVideoRequest(BaseModel):
+  video: Video
+  original_video_url: str = ""
+
+class VideoMetadata(BaseModel):
+    name: str
+    url: str
+    download_url: str
+    created_at: datetime
+    original_language: str
+    translate_language: str
+    duration: float
+    speakers: list[dict]

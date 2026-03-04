@@ -22,6 +22,8 @@ import {
   processVideo,
   runRegenerateDubbing,
   runRegenerateTranslation,
+  loadProject
+
 } from './api.js';
 import { generateAudio, playAudio } from './audio.js';
 import { addVoice, handleSpeakerModalClose, renderVoiceList } from './modals.js';
@@ -51,6 +53,101 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.appendChild(template.content.cloneNode(true));
     }
   });
+
+  const handleGenerateVideo = async () => {
+    startThinkingAnimation();
+
+    try {
+      appState.isSavedProject = true;
+
+      const payload = {
+        video: currentVideoData,
+        original_video_url: resultsVideoPreview.src
+      };
+
+      const result = await generateVideo(payload);
+
+      thinkingPopup.style.display = 'none';
+      arielLogo.classList.remove('ariel-logo-animated');
+      resultsView.style.display = 'none';
+
+      // Display generated video view
+      generatedVideoView.style.display = 'block';
+      generatedVideoPreview.src = result.video_url;
+
+      // Set up download buttons
+      downloadVideoButton.href = result.video_url;
+      downloadVideoButton.download = `generated_video_${payload.video.video_id}`;
+
+      downloadVocalsButton.href = result.vocals_url;
+      downloadVocalsButton.download = `vocals_only_${payload.video.video_id}.wav`;
+
+      downloadVocalsMusicButton.href = result.merged_audio_url;
+      downloadVocalsMusicButton.download = `vocals_and_music_${payload.video.video_id}.wav`;
+
+    } catch (error) {
+      console.error('Error generating video:', error);
+      showToast('An error occurred while generating the video.', 'error');
+    } finally {
+      stopThinkingAnimation();
+    }
+  };
+
+  // Checking if there is video_id in URL, to load video from library andshow edit mode
+  const urlParams = new URLSearchParams(window.location.search);
+  const videoId = urlParams.get('video_id');
+
+  if (videoId && videoId !== 'undefined') {
+    loadProject(videoId).then(data => {
+      appState.isSavedProject = true;
+      currentVideoData = data;
+
+      // Note: We map 'speaker_id' from backend to 'id' for the frontend
+      speakers = data.speakers.map(s => ({
+        id: s.speaker_id,
+        name: s.speaker_name,
+        voice: s.voice,
+        voiceName: s.voice,
+        gender: s.gender || 'Unknown'
+      }));
+
+      mainContent.style.display = 'none';
+      resultsView.style.display = 'block';
+
+      const origLang = originalLanguage.querySelector(`option[value="${data.original_language}"]`)?.text || data.original_language;
+      const transLang = translationLanguage.querySelector(`option[value="${data.translate_language}"]`)?.text || data.translate_language;
+
+      videoSettingsContent.innerHTML = `
+        <p><strong>Original Language:</strong> ${origLang}</p>
+        <p><strong>Translation Language:</strong> ${transLang}</p>
+        <h6>Speakers:</h6>
+        <ul>
+            ${speakers.map(s => `<li><strong>${s.name}:</strong> ${s.voice}</li>`).join('')}
+        </ul>
+      `;
+
+      resultsVideoPreview.src = data.original_video_url;
+      resultsVideoPreview.addEventListener('loadedmetadata', () => {
+        videoDuration = resultsVideoPreview.duration;
+        renderTimeline(currentVideoData, videoDuration, speakers);
+        renderUtterances(currentVideoData, speakers, videoDuration);
+      });
+
+      generateAudioBtn.addEventListener('click', async () => {
+        currentAudio = await generateAudio(currentVideoData);
+      });
+
+      playAudioBtn.addEventListener('click', () => {
+        playAudio(currentAudio);
+      });
+
+      generateVideoBtn.addEventListener('click', handleGenerateVideo);
+
+    }).catch(error => {
+      console.error("Failed to load project:", error);
+      showToast("Could not load project settings.", "error");
+    });
+  }
 
   // Main elements
   const videoPlaceholder = document.getElementById('video-placeholder');
@@ -350,7 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Scroll to selected voice if editing
     const activeVoiceElement = voiceListModal.querySelector('.active');
     if (activeVoiceElement) {
-      activeVoiceElement.scrollIntoView({behavior: 'smooth', block: 'center'});
+      activeVoiceElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   });
 
@@ -480,6 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
     formData.append('speakers', JSON.stringify(speakersToPost));
 
     try {
+      appState.isSavedProject = false;
       const result = await processVideo(formData);
       console.log(
         'Received result from backend:',
@@ -559,53 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  generateVideoBtn.addEventListener('click', async () => {
-    startThinkingAnimation();
-
-    try {
-      const result = await generateVideo(currentVideoData);
-      console.log(
-        'VIDEO URL: Got the following from the backend:',
-        result.video_url,
-      );
-      console.log(
-        'VOCALS URL: Got the following from the backend:',
-        result.vocals_url,
-      );
-      console.log(
-        'VOCALS + MUSIC URL: Got the following from the backend:',
-        result.vocals_url,
-      );
-
-      thinkingPopup.style.display = 'none';
-      arielLogo.classList.remove('ariel-logo-animated');
-      // Stop animations (dots, phrases) - similar to startProcessingBtn
-
-      resultsView.style.display = 'none'; // Collapse Timeline and Utterances
-
-      // Display generated video view
-      generatedVideoView.style.display = 'block';
-      generatedVideoPreview.src = result.video_url;
-
-      // Set up download button
-      downloadVideoButton.href = result.video_url;
-      downloadVideoButton.download = `generated_video_${currentVideoData.video_id}`;
-
-      // Set up audio download buttons
-      downloadVocalsButton.href = result.vocals_url;
-      downloadVocalsButton.download = `vocals_only_${currentVideoData.video_id}.wav`;
-      downloadVocalsMusicButton.href = result.merged_audio_url;
-      downloadVocalsMusicButton.download = `vocals_and_music_${currentVideoData.video_id}.wav`;
-    } catch (error) {
-      console.error('Error generating video:', error);
-      showToast(
-        'An error occurred while generating the video. Please try again.',
-        'error',
-      );
-    } finally {
-      stopThinkingAnimation();
-    }
-  });
+  generateVideoBtn.addEventListener('click', handleGenerateVideo);
 
   function makeDraggable(element) {
     let isDragging = false;
@@ -755,16 +807,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h6>Speakers:</h6>
                     <div id="edit-speaker-list">
                         ${speakers
-                          .map(
-                            s => `
+            .map(
+              s => `
                             <div class="d-flex align-items-center mb-2">
                                 <span class="me-2">${s.name}:</span>
                                 <i class="ms-2 bi ${s.gender === 'Male' ? 'bi-gender-male' : 'bi-gender-female'} text-dark"></i>
                                 <button class="btn btn-outline-secondary edit-speaker-voice-btn" data-speaker-id="${s.id}" data-voice-id="${s.voice}">${s.voiceName}</button>
                             </div>
                         `,
-                          )
-                          .join('')}
+            )
+            .join('')}
                     </div>
                     <div class="mt-3">
                         <button id="cancel-edit-settings" class="btn btn-secondary">Cancel</button>
@@ -812,7 +864,7 @@ document.addEventListener('DOMContentLoaded', () => {
               newTranslateLanguage !== currentVideoData.translate_language;
             const speakersChanged =
               JSON.stringify(
-                speakers.map(s => ({speaker_id: s.id, voice: s.voice})),
+                speakers.map(s => ({ speaker_id: s.id, voice: s.voice })),
               ) !== JSON.stringify(currentVideoData.speakers);
 
             if (
@@ -873,22 +925,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 // =========================================================
                 // BRANCH 2: ONLY TRANSLATION LANGUAGE CHANGED
                 // =========================================================
-                // If only the target language changed, we keep the original transcription
-                // and batch-regenerate only the translations for each utterance.
+                // If target language changed, we now FORK the project into a new folder.
               } else if (translateLangChanged) {
-                console.log('Batch regenerating translations...');
-                currentVideoData.translate_language = newTranslateLanguage;
-                const translationPromises = currentVideoData.utterances.map(
-                  (utterance, index) => {
-                    return runRegenerateTranslation(
-                      currentVideoData,
-                      utterance,
-                      index,
-                      utterance.instructions,
-                    );
-                  },
+                const formData = new FormData();
+
+                // Check if this is a draft (unsaved) project
+                if (!appState.isSavedProject) {
+                  formData.append('update_existing', 'true');
+                }
+
+                // We use source_video_id to trigger forking or update
+                formData.append('source_video_id', currentVideoData.video_id);
+                formData.append('original_language', currentVideoData.original_language);
+                formData.append('translate_language', newTranslateLanguage);
+                formData.append(
+                  'prompt_enhancements',
+                  geminiInstructions.value,
                 );
-                await Promise.all(translationPromises);
+                formData.append('adjust_speed', adjustSpeedToggle.checked);
+                const speakersToPost = speakers.map((s, index) => ({
+                  id: `speaker_${(index + 1).toString()}`,
+                  name: s.name,
+                  voice: s.voice,
+                  gender: s.gender,
+                }));
+                formData.append('speakers', JSON.stringify(speakersToPost));
+
+                const result = await processVideo(formData);
+
+                if (result.video_id !== currentVideoData.video_id) {
+                  const newUrl = new URL(window.location.href);
+                  newUrl.searchParams.set('video_id', result.video_id);
+                  window.history.pushState({ path: newUrl.href }, '', newUrl.href);
+                  showToast("New project created for translation.", "success");
+                }
+
+                currentVideoData = result;
+                // Enrich utterances
+                currentVideoData.utterances.forEach(utterance => {
+                  const matchingSpeaker = speakers.find(
+                    s => s.voice === utterance.speaker.voice,
+                  );
+                  if (matchingSpeaker) {
+                    utterance.speaker.gender = matchingSpeaker.gender;
+                  }
+                  utterance.initial_translated_start_time = utterance.translated_start_time;
+                  utterance.initial_translated_end_time = utterance.translated_end_time;
+                });
+
                 renderTimeline(currentVideoData, videoDuration, speakers);
                 renderUtterances(currentVideoData, speakers, videoDuration);
 
@@ -938,8 +1022,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
               currentVideoData.speakers = speakers.map(s => ({
                 speaker_id: s.id,
-                name: s.name,
+                speaker_name: s.name,
                 voice: s.voice,
+                gender: s.gender,
               }));
 
               const originalLanguageName = document.getElementById(
@@ -969,23 +1054,6 @@ document.addEventListener('DOMContentLoaded', () => {
     goBackToEditingButton.addEventListener('click', () => {
       generatedVideoView.style.display = 'none';
       resultsView.style.display = 'block'; // Show Timeline and Utterances again
-    });
-
-    completeVideoButton.addEventListener('click', async () => {
-      startThinkingAnimation();
-      try {
-        const result = await completeVideo(currentVideoData);
-        completedVideoVideo.src = result.video_url;
-        completedVideoModal.show();
-      } catch (error) {
-        console.error('Error completing video:', error);
-        showToast(
-          'An error occurred while completing the video. Please try again.',
-          'error',
-        );
-      } finally {
-        stopThinkingAnimation();
-      }
     });
   }
 });

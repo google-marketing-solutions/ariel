@@ -60,10 +60,13 @@ def separate_audio_from_video(
       original_audio_path, output_file_names
   )
 
+  vocals_file = next(f for f in output_files if "vocals" in f.lower())
+  background_file = next(f for f in output_files if "background" in f.lower())
+
   return (
       original_audio_path,
-      os.path.join(output_local_path, output_files[0]),
-      os.path.join(output_local_path, output_files[1]),
+      os.path.join(output_local_path, vocals_file),
+      os.path.join(output_local_path, background_file),
   )
 
 
@@ -164,7 +167,7 @@ def merge_vocals(
     vocal_chunk = None
     if utterance.muted:
       original_vocals_path = os.path.join(
-          output_directory, "htdemucs", "original_audio", "vocals.wav"
+          output_directory, "vocals.wav"
       )
       vocal_chunk = moviepy.AudioFileClip(original_vocals_path)
       vocal_chunk = vocal_chunk.subclipped(
