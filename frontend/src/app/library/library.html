@@ -1,0 +1,84 @@
+<div class="max-w-[1000px] mx-auto">
+
+  <!-- Header Section -->
+  <div class="flex items-center justify-start gap-6 mb-10 mt-2">
+    <h2
+      class="text-4xl lg:text-5xl font-bold font-heading bg-gradient-to-r from-primary to-[#8b5cf6] dark:from-[#2563eb] dark:to-[#3b82f6] text-transparent bg-clip-text tracking-tight">
+      Video Library
+    </h2>
+    <a routerLink="/"
+      class="rounded-xl bg-transparent border border-primary/20 dark:border-[#334155] hover:border-primary dark:hover:border-[#60a5fa] hover:bg-primary/5 dark:hover:bg-[#60a5fa]/10 px-4 py-2.5 text-sm font-semibold text-primary dark:text-[#60a5fa] transition-all hidden sm:inline-flex mt-2">
+      Create New Job
+    </a>
+  </div>
+
+  <!-- Videos List -->
+  <div class="flex flex-col items-center">
+    <div class="w-full space-y-6">
+
+      @for (video of videos; track video.id) {
+      <!-- Video Card -->
+      <div
+        class="w-full bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-[12px] border border-[#0000000d] dark:border-[#334155] shadow-glass-light dark:shadow-glass-dark rounded-2xl p-5 flex flex-col md:flex-row items-center gap-6 transition-all hover:border-primary/50 dark:hover:border-[#60a5fa]/50 hover:scale-[1.01]">
+
+        <!-- Video Thumbnail -->
+        <div class="w-full md:w-[280px] bg-black rounded-xl overflow-hidden relative shrink-0 shadow-md">
+          <div class="pt-[56.25%] relative w-full h-full border border-black/10 dark:border-white/5 rounded-xl">
+            <img [src]="video.thumbnailUrl" alt="Video thumbnail"
+              class="absolute inset-0 w-full h-full object-cover opacity-90" />
+            <div
+              class="absolute bottom-0 left-0 right-0 px-3 py-2 flex flex-col justify-end text-white text-xs bg-gradient-to-t from-black/90 to-transparent rounded-b-xl">
+              <!-- Progress Bar -->
+              <div class="w-full h-1 bg-white/30 rounded-full mb-2 relative">
+                <div class="absolute left-0 top-0 bottom-0 bg-white rounded-full" [style.width.%]="video.progress">
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <span
+                    class="material-symbols-outlined text-[18px] cursor-pointer hover:text-primary-light transition-colors">play_arrow</span>
+                  <span class="font-medium text-[13px]">{{ video.duration }}</span>
+                </div>
+                <div class="flex items-center gap-4">
+                  <span
+                    class="material-symbols-outlined text-[18px] cursor-pointer hover:text-primary-light transition-colors">volume_up</span>
+                  <span
+                    class="material-symbols-outlined text-[18px] cursor-pointer hover:text-primary-light transition-colors">fullscreen</span>
+                  <span
+                    class="material-symbols-outlined text-[18px] cursor-pointer hover:text-primary-light transition-colors">more_vert</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Video Info -->
+        <div class="flex-1 flex flex-col items-start gap-1.5 w-full pl-2">
+          <h3
+            class="text-lg font-bold text-slate-800 dark:text-[#f1f5f9] mb-0.5 group-hover:text-primary dark:group-hover:text-[#60a5fa] transition-colors cursor-pointer">
+            {{ video.filename }}</h3>
+          <p class="text-sm font-medium text-slate-500 dark:text-[#94a3b8] mb-3">{{ video.dateCreated }}</p>
+          <span
+            class="inline-flex items-center rounded-lg bg-slate-100 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-[#cbd5e1] shadow-sm">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2" [class.bg-emerald-500]="video.status === 'completed'"
+              [class.bg-blue-500]="video.status === 'processing'"></span>
+            {{ video.sourceLanguage }} &rarr; {{ video.targetLanguage }}
+          </span>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex flex-col sm:flex-row md:flex-col gap-3 shrink-0 w-full pr-2 md:w-36 mt-4 md:mt-0">
+          <button
+            class="w-full rounded-xl bg-gradient-to-br from-[#2563eb] to-[#3b82f6] px-4 py-2 text-sm font-bold text-white shadow-[0_0_10px_rgba(37,99,235,0.2)] hover:shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all">Download</button>
+          <button
+            class="w-full rounded-xl bg-white dark:bg-[#334155] border border-slate-200 dark:border-[#475569] hover:bg-slate-50 dark:hover:bg-[#475569] px-4 py-2 text-sm font-bold text-slate-700 dark:text-white shadow-sm transition-all">Edit</button>
+          <button
+            class="w-full rounded-xl bg-white dark:bg-[#334155] border border-slate-200 dark:border-[#475569] hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:hover:bg-red-500/10 dark:hover:text-red-400 dark:hover:border-red-500/30 px-4 py-2 text-sm font-bold text-slate-700 dark:text-[#cbd5e1] shadow-sm transition-all focus:ring-2 focus:ring-red-500 focus:outline-none">Delete</button>
+        </div>
+      </div>
+      }
+
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,400 @@
+<div class="flex flex-col flex-1 overflow-hidden w-full h-full absolute inset-0">
+  <div class="flex flex-1 overflow-hidden">
+    <!-- Left Column: Video & Global Settings -->
+    <aside
+      class="w-80 border-r border-black/5 dark:border-[#334155] bg-white/40 dark:bg-[#1e293b]/40 backdrop-blur-md flex flex-col overflow-y-auto custom-scrollbar shrink-0 z-10">
+      <div class="p-4">
+        <!-- Video Player Section -->
+        <div class="relative group aspect-video w-full overflow-hidden rounded-xl bg-black shadow-2xl">
+          <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=800&q=80"
+            alt="Video Placeholder" class="absolute inset-0 w-full h-full object-cover opacity-90">
+          <div
+            class="absolute bottom-0 left-0 right-0 p-2 flex items-center justify-between text-white text-xs bg-gradient-to-t from-black/80 to-transparent">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-lg cursor-pointer">play_arrow</span>
+              <span>0:00 / 0:10</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-lg cursor-pointer">volume_up</span>
+              <span class="material-symbols-outlined text-lg cursor-pointer">fullscreen</span>
+            </div>
+          </div>
+        </div>
+        <!-- Global Settings Section -->
+        <div
+          class="mt-6 bg-slate-50/50 dark:bg-[#1e293b]/50 border border-slate-200/60 dark:border-[#334155] rounded-2xl p-4">
+          <div class="mb-4 pb-3 border-b border-black/5 dark:border-[#334155]">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-[#94a3b8]">Video Settings
+            </h3>
+          </div>
+
+          <div class="space-y-6">
+            <!-- Languages -->
+            <div class="space-y-3">
+              <div
+                class="flex justify-between items-center px-4 py-3 rounded-xl bg-white dark:bg-[#0f172a] border border-black/5 dark:border-[#334155] shadow-sm dark:shadow-[0_1px_2px_0_rgba(0,0,0,0.3)]">
+                <span class="text-xs text-slate-400 dark:text-[#94a3b8]">Original</span>
+                <span class="text-xs font-medium dark:text-[#f1f5f9]">English (US)</span>
+              </div>
+              <div
+                class="flex justify-between items-center px-4 py-3 rounded-xl bg-white dark:bg-[#0f172a] border border-black/5 dark:border-[#334155] shadow-sm dark:shadow-[0_1px_2px_0_rgba(0,0,0,0.3)]">
+                <span class="text-xs text-slate-400 dark:text-[#94a3b8]">Translation</span>
+                <span class="text-xs font-medium">Croatian</span>
+              </div>
+            </div>
+
+            <!-- Speakers -->
+            <div>
+              <div class="flex items-center justify-between mb-4 pb-3 border-b border-black/5 dark:border-[#334155]">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-[#94a3b8]">Speakers</h3>
+                <button
+                  class="hidden items-center justify-center gap-1.5 rounded-lg bg-primary/10 dark:bg-[#60a5fa]/10 hover:bg-primary/20 dark:hover:bg-[#60a5fa]/20 px-3 py-1.5 text-xs font-bold text-primary dark:text-[#60a5fa] transition-all">
+                  <span class="material-symbols-outlined text-[16px]">add_circle</span> Add Speaker
+                </button>
+              </div>
+              <div class="space-y-2">
+                <div
+                  class="flex items-center gap-3 p-2 rounded-lg hover:bg-white dark:hover:bg-[#0f172a] cursor-pointer border border-transparent hover:border-black/5 dark:hover:border-[#334155] transition-all shadow-sm">
+                  <div
+                    class="h-8 w-8 rounded bg-primary/20 dark:bg-[#60a5fa]/20 flex items-center justify-center text-primary dark:text-[#60a5fa] font-bold text-xs italic">
+                    S1</div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs font-semibold truncate">Achird (Male)</p>
+                  </div>
+                </div>
+                <div
+                  class="flex items-center gap-3 p-2 rounded-lg hover:bg-white dark:hover:bg-[#0f172a] cursor-pointer border border-transparent hover:border-black/5 dark:hover:border-[#334155] transition-all shadow-sm">
+                  <div
+                    class="h-8 w-8 rounded bg-pink-500/20 flex items-center justify-center text-pink-500 font-bold text-xs italic">
+                    S2</div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs font-semibold truncate">Aoede (Female)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="mt-6 flex justify-end gap-2">
+            <button
+              class="px-4 py-2 text-xs font-bold text-slate-600 dark:text-[#f1f5f9] bg-white dark:bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg border border-slate-200 dark:border-[#334155] transition-colors shadow-sm">Edit</button>
+            <button
+              class="px-4 py-2 text-xs font-bold text-white bg-primary dark:bg-gradient-to-br dark:from-[#2563eb] dark:to-[#3b82f6] hover:bg-blue-700 rounded-lg transition-colors shadow-sm">Submit</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Column: Script Workspace -->
+    <section
+      class="flex-1 flex flex-col bg-transparent overflow-y-auto custom-scrollbar border-r border-black/5 dark:border-[#334155] z-0">
+      <div class="p-6 max-w-full mx-auto w-full">
+        <div
+          class="mb-6 grid grid-cols-2 gap-8 px-4 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-[#94a3b8]">
+          <span>English (United States)</span>
+          <span>Croatian</span>
+        </div>
+        <div class="space-y-4 pb-20">
+
+          <!-- Utterance 1 -->
+          <div class="group border-b border-primary/5 dark:border-[#334155] pb-4 px-4">
+            <div class="flex items-center gap-2 mb-2">
+              <div
+                class="h-6 w-8 rounded-lg bg-slate-100 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] text-[10px] font-bold text-slate-500 dark:text-[#94a3b8] tracking-wide flex items-center justify-center p-1">
+                U1</div>
+              <div
+                class="h-6 px-2 rounded-lg border border-primary dark:border-[#60a5fa] text-[10px] font-bold text-primary dark:text-[#60a5fa] tracking-wide flex items-center justify-center">
+                Speaker 1</div>
+              <span class="text-[10px] text-slate-500 dark:text-[#94a3b8] font-mono">00:01.00 - 00:05.00</span>
+            </div>
+            <div class="grid grid-cols-2 gap-8 items-start">
+              <p class="text-sm leading-relaxed text-slate-400 dark:text-[#94a3b8] italic">For reliable and efficient
+                comfort for your everyday moments, trust Grant to heat your home.</p>
+              <p class="text-sm leading-relaxed text-slate-300 dark:text-[#f1f5f9]">Za pouzdanu i efikasnu udobnost u
+                svakodnevnim trenucima, vjerujte Grantu da zagrije vaš dom.</p>
+            </div>
+          </div>
+
+          <!-- Separator & Actions -->
+          <div
+            class="relative flex items-center justify-center -my-3 z-10 opacity-60 hover:opacity-100 transition-opacity">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-slate-300/50 dark:border-[#334155]"></div>
+            </div>
+            <div class="relative flex gap-2 bg-transparent">
+              <button
+                class="flex items-center justify-center w-8 h-6 rounded border border-slate-300 dark:border-[#334155] bg-white dark:bg-[#1e293b] hover:bg-slate-50 dark:hover:bg-[#0f172a] text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] transition-all shadow-sm dark:shadow-[0_1px_2px_0_rgba(0,0,0,0.3)] group"
+                title="Merge Segments">
+                <span class="material-symbols-outlined text-[16px]">vertical_align_center</span>
+              </button>
+              <button
+                class="flex items-center justify-center w-8 h-6 rounded border border-slate-300 dark:border-[#334155] bg-white dark:bg-[#1e293b] hover:bg-slate-50 dark:hover:bg-[#0f172a] text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] transition-all shadow-sm dark:shadow-[0_1px_2px_0_rgba(0,0,0,0.3)]"
+                title="Add utterance">
+                <span class="material-symbols-outlined text-[16px]">add</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Utterance 2 (Selected) -->
+          <div
+            class="bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-xl border border-primary/20 dark:border-[#60a5fa]/30 rounded-xl p-6 -mx-2 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] relative z-20">
+            <div class="mb-3 px-2">
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <div class="flex items-center gap-2">
+                  <div
+                    class="h-6 w-8 rounded-lg bg-primary/10 dark:bg-[#60a5fa]/10 border border-primary/20 dark:border-[#60a5fa]/20 text-[10px] font-bold text-primary dark:text-[#60a5fa] tracking-wide flex items-center justify-center p-1">
+                    U2</div>
+                  <div
+                    class="h-6 px-2 rounded-lg border border-primary text-[10px] font-bold text-primary tracking-wide flex items-center justify-center">
+                    Speaker 1</div>
+                  <span class="text-[10px] text-slate-500 dark:text-[#94a3b8] font-mono">00:06.00 - 00:08.00</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    title="Regenerate Translation"><span
+                      class="material-symbols-outlined text-[16px]">autorenew</span></button>
+                  <button
+                    class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    title="Regenerate Dubbing"><span
+                      class="material-symbols-outlined text-[16px]">record_voice_over</span></button>
+                  <button
+                    class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    title="Revert to Original"><span
+                      class="material-symbols-outlined text-[16px]">history</span></button>
+                  <button
+                    class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    title="Clone Utterance"><span
+                      class="material-symbols-outlined text-[16px]">content_copy</span></button>
+                  <button
+                    class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    title="Mute Utterance"><span
+                      class="material-symbols-outlined text-[16px]">volume_off</span></button>
+                  <button
+                    class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    title="Delete Utterance"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+                </div>
+              </div>
+              <div class="flex items-center justify-between mb-3 border-b border-primary/10 dark:border-[#334155] pb-3">
+                <div class="flex items-center gap-4">
+                  <div class="flex items-center gap-3 text-[10px] text-slate-400 dark:text-[#94a3b8]">
+                    <button class="flex items-center gap-1 hover:text-primary dark:hover:text-[#60a5fa]"><span
+                        class="material-symbols-outlined text-sm">schedule</span> Adjust timestamps</button>
+                    <button class="flex items-center gap-1 hover:text-primary dark:hover:text-[#60a5fa]"><span
+                        class="material-symbols-outlined text-sm">graphic_eq</span> Change speaker</button>
+                    <button class="flex items-center gap-1 hover:text-primary dark:hover:text-[#60a5fa]"><span
+                        class="material-symbols-outlined text-sm">spellcheck</span> Translation instructions</button>
+                    <button
+                      class="flex items-center gap-1 px-3 py-1 rounded bg-primary/10 dark:bg-[#60a5fa]/10 text-primary dark:text-[#60a5fa] font-semibold"><span
+                        class="material-symbols-outlined text-sm">mood</span> Voice instructions</button>
+                  </div>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-8 items-center px-2">
+                <div class="text-sm leading-relaxed text-slate-400 dark:text-[#94a3b8]">Think heating.</div>
+                <div class="relative flex items-center group">
+                  <input
+                    class="w-full bg-white/50 dark:bg-[#0f172a] border border-black/10 dark:border-[#334155] rounded-xl px-4 py-2.5 text-sm text-slate-800 dark:text-[#f1f5f9] placeholder:text-slate-400 dark:placeholder:text-[#94a3b8] focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-inner"
+                    type="text" value="Mislite grijanje." />
+                  <span
+                    class="material-symbols-outlined absolute right-2 text-primary dark:text-[#60a5fa] text-sm pointer-events-none">play_arrow</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Separator & Actions -->
+          <div
+            class="relative flex items-center justify-center -my-3 z-10 opacity-60 hover:opacity-100 transition-opacity">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-slate-300/50 dark:border-[#334155]"></div>
+            </div>
+            <div class="relative flex gap-2 bg-transparent">
+              <button
+                class="flex items-center justify-center w-8 h-6 rounded border border-slate-300 dark:border-[#334155] bg-white dark:bg-[#1e293b] hover:bg-slate-50 dark:hover:bg-[#0f172a] text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] transition-all shadow-sm dark:shadow-[0_1px_2px_0_rgba(0,0,0,0.3)] group"
+                title="Merge Segments">
+                <span class="material-symbols-outlined text-[16px]">vertical_align_center</span>
+              </button>
+              <button
+                class="flex items-center justify-center w-8 h-6 rounded border border-slate-300 dark:border-[#334155] bg-white  dark:bg-[#1e293b] hover:bg-slate-50 dark:hover:bg-[#0f172a] text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] transition-all shadow-sm"
+                title="Add utterance">
+                <span class="material-symbols-outlined text-[16px]">add</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Utterance 3 -->
+          <div class="group border-b border-primary/5 dark:border-[#334155] pb-4 px-4">
+            <div class="flex items-center gap-2 mb-2">
+              <div
+                class="h-6 w-8 rounded-lg bg-slate-100 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] text-[10px] font-bold text-slate-500 dark:text-[#94a3b8] tracking-wide flex items-center justify-center p-1">
+                U3</div>
+              <div
+                class="h-6 px-2 rounded-lg border border-primary dark:border-[#60a5fa] text-[10px] font-bold text-primary dark:text-[#60a5fa] tracking-wide flex items-center justify-center">
+                Speaker 1</div>
+              <span class="text-[10px] text-slate-500 dark:text-[#94a3b8] font-mono">00:08.00 - 00:10.00</span>
+            </div>
+            <div class="grid grid-cols-2 gap-8 items-start">
+              <p class="text-sm leading-relaxed text-slate-400 dark:text-[#94a3b8] italic">Think Grant.</p>
+              <p class="text-sm leading-relaxed text-slate-300 dark:text-[#f1f5f9]">Mislite Grant.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Advanced Settings -->
+    <aside
+      class="w-80 border-l border-black/5 dark:border-[#334155] bg-white/40 dark:bg-[#1e293b]/40 backdrop-blur-md flex flex-col overflow-y-auto custom-scrollbar shrink-0 z-10">
+      <div class="p-5 flex flex-col h-full">
+        <h3 class="text-sm font-bold mb-6 flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary dark:text-[#60a5fa] text-lg">mood</span> Voice
+          instructions
+        </h3>
+        <div class="space-y-6 flex-1">
+          <!-- Voice Intonation -->
+          <div class="border-t border-primary/5 dark:border-[#334155] pt-4">
+            <button class="w-full flex items-center justify-between group">
+              <span class="text-[11px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wider">Voice
+                Intonation</span>
+              <span
+                class="material-symbols-outlined text-sm text-slate-400 dark:text-[#94a3b8] group-hover:text-primary dark:group-hover:text-[#60a5fa]">expand_more</span>
+            </button>
+            <p class="mt-2 text-xs text-slate-400 dark:text-[#94a3b8] leading-relaxed italic">Maintain professional tone
+              with slight upward inflection at the end of the sentence...</p>
+          </div>
+          <!-- Translation Instructions -->
+          <div class="border-t border-primary/5 dark:border-[#334155] pt-4">
+            <button class="w-full flex items-center justify-between group">
+              <span class="text-[11px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wider">Voice
+                Instructions</span>
+              <span
+                class="material-symbols-outlined text-sm text-slate-400 dark:text-[#94a3b8] group-hover:text-primary dark:group-hover:text-[#60a5fa]">expand_more</span>
+            </button>
+            <textarea
+              class="w-full mt-2 bg-white/50 dark:bg-[#0f172a] border border-black/10 dark:border-[#334155] rounded-xl px-4 py-2.5 text-sm text-slate-800 dark:text-[#f1f5f9] placeholder:text-slate-400 dark:placeholder:text-[#94a3b8] focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-inner"
+              placeholder="Add specific terminology rules..." rows="4"></textarea>
+          </div>
+          <!-- Main Actions -->
+          <div class="space-y-3 pt-4">
+            <button
+              class="w-full flex justify-center items-center gap-2 rounded-xl bg-primary/10 dark:bg-gradient-to-br dark:from-[#2563eb] dark:to-[#3b82f6] hover:bg-[#2563eb] dark:hover:from-[#1d4ed8] dark:hover:to-[#2563eb] hover:text-white px-5 py-2.5 text-sm font-semibold text-[#2563eb] dark:text-[#f1f5f9] transition-all">
+              <span class="material-symbols-outlined text-[18px]">play_circle</span> Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Bottom Row: Timeline -->
+  <footer
+    class="h-56 shrink-0 border-t border-black/5 dark:border-[#334155] bg-white/60 dark:bg-[#1e293b]/60 backdrop-blur-xl flex flex-col w-full z-10">
+    <div class="flex items-center justify-between px-4 py-2 border-b border-primary/10 dark:border-[#334155]">
+      <div class="flex items-center gap-6">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-slate-400 dark:text-[#94a3b8] text-sm">zoom_out</span>
+          <input
+            class="w-32 h-1 bg-slate-700 dark:bg-[#334155] rounded-lg appearance-none cursor-pointer accent-primary dark:accent-[#60a5fa]"
+            type="range" />
+          <span class="material-symbols-outlined text-slate-400 dark:text-[#94a3b8] text-sm">zoom_in</span>
+        </div>
+        <div class="text-xs font-mono font-bold tracking-widest text-primary dark:text-[#60a5fa]">00:06.12 / 02:45.00
+        </div>
+      </div>
+    </div>
+    <div class="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar relative">
+      <!-- Time Markers -->
+      <div class="flex w-[150%] h-6 border-b border-primary/5 dark:border-[#334155] px-2">
+        <div
+          class="flex-shrink-0 w-48 text-[9px] text-slate-500 dark:text-[#94a3b8] flex items-center justify-center border-r border-primary/5 dark:border-[#334155]">
+          00:00.00</div>
+        <div
+          class="flex-shrink-0 w-48 text-[9px] text-slate-500 dark:text-[#94a3b8] flex items-center justify-center border-r border-primary/5 dark:border-[#334155]">
+          00:05.00</div>
+        <div
+          class="flex-shrink-0 w-48 text-[9px] text-primary dark:text-[#60a5fa] font-bold flex items-center justify-center border-r border-primary/5 dark:border-[#334155] bg-primary/5 dark:bg-[#60a5fa]/10">
+          00:10.00</div>
+        <div
+          class="flex-shrink-0 w-48 text-[9px] text-slate-500 dark:text-[#94a3b8] flex items-center justify-center border-r border-primary/5 dark:border-[#334155]">
+          00:15.00</div>
+        <div
+          class="flex-shrink-0 w-48 text-[9px] text-slate-500 dark:text-[#94a3b8] flex items-center justify-center border-r border-primary/5 dark:border-[#334155]">
+          00:20.00</div>
+        <div
+          class="flex-shrink-0 w-48 text-[9px] text-slate-500 dark:text-[#94a3b8] flex items-center justify-center border-r border-primary/5 dark:border-[#334155]">
+          00:25.00</div>
+        <div
+          class="flex-shrink-0 w-48 text-[9px] text-slate-500 dark:text-[#94a3b8] flex items-center justify-center border-r border-primary/5 dark:border-[#334155]">
+          00:30.00</div>
+      </div>
+      <!-- Tracks -->
+      <div class="relative min-w-max h-full px-2 py-1 space-y-1">
+        <!-- Original Track -->
+        <div class="flex items-center gap-2 h-12">
+          <div class="w-32 flex-shrink-0 flex items-center justify-between pr-4 group">
+            <span class="text-[10px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase">Original</span>
+            <button
+              class="w-9 h-9 rounded-full shadow-sm border border-slate-200 dark:border-[#334155] flex items-center justify-center bg-white dark:bg-[#1e293b] hover:bg-slate-50 dark:hover:bg-[#334155]/80 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] transition-all hover:scale-105"
+              title="Play Original">
+              <span class="material-symbols-outlined text-[20px] ml-0.5">play_arrow</span>
+            </button>
+          </div>
+          <div class="flex items-center gap-px flex-1">
+            <div
+              class="h-8 w-80 bg-slate-800 dark:bg-[#334155] rounded flex items-center justify-center px-2 border border-slate-700 dark:border-transparent overflow-hidden relative group">
+              <div class="absolute inset-0 opacity-20 bg-gradient-to-r from-primary/50 to-transparent"></div>
+              <span class="text-[9px] font-medium truncate relative z-10">U1</span>
+            </div>
+            <div
+              class="h-8 w-[28rem] bg-slate-800 dark:bg-[#334155] rounded flex items-center justify-center px-2 border border-slate-700 dark:border-transparent overflow-hidden relative z-0">
+              <span class="text-[9px] font-medium truncate">U2</span>
+            </div>
+            <div
+              class="h-8 w-96 bg-slate-800 dark:bg-[#334155] rounded flex items-center justify-center px-2 border border-slate-700 dark:border-transparent overflow-hidden relative z-0 ml-4">
+              <span class="text-[9px] font-medium truncate">U3</span>
+            </div>
+          </div>
+        </div>
+        <!-- Translated Track -->
+        <div class="flex items-center gap-2 h-12">
+          <div class="w-32 flex-shrink-0 flex items-center justify-between pr-4 group">
+            <span class="text-[10px] font-bold text-primary dark:text-[#60a5fa] uppercase">Translated</span>
+            <button
+              class="w-9 h-9 rounded-full shadow-sm border border-primary/20 dark:border-[#60a5fa]/30 flex items-center justify-center bg-primary/5 dark:bg-[#60a5fa]/5 hover:bg-primary/20 dark:hover:bg-[#60a5fa]/20 text-primary dark:text-[#60a5fa] transition-all hover:scale-105"
+              title="Play Translated">
+              <span class="material-symbols-outlined text-[20px] ml-0.5">play_arrow</span>
+            </button>
+          </div>
+          <div class="flex items-center gap-px flex-1">
+            <div
+              class="h-8 w-64 bg-primary/20 dark:bg-[#60a5fa]/20 rounded flex items-center justify-center px-2 border border-primary/40 dark:border-[#60a5fa]/40 relative">
+              <span class="text-[9px] font-bold text-primary dark:text-[#60a5fa] truncate">U1</span>
+            </div>
+            <!-- Collision Marker -->
+            <div class="relative">
+              <div
+                class="h-10 w-[32rem] bg-primary/30 dark:bg-[#60a5fa]/40 rounded-lg flex items-center justify-center px-2 border-2 border-primary dark:border-[#60a5fa] relative -ml-4 z-10 group cursor-pointer shadow-md dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)] transition-all">
+                <span class="text-[10px] font-extrabold text-primary dark:text-[#f1f5f9] truncate">U2</span>
+                <!-- Bright Red Highlight for Collision -->
+                <div
+                  class="absolute inset-y-0 left-0 w-10 bg-[#f87171]/80 border-r border-[#f87171] flex items-center justify-center animate-pulse rounded-l-md">
+                  <span class="material-symbols-outlined text-white text-[14px]">warning</span>
+                </div>
+                <div
+                  class="absolute -top-6 left-0 bg-[#f87171] text-white text-[8px] px-1.5 py-0.5 rounded shadow-lg hidden group-hover:block whitespace-nowrap z-20">
+                  Overlap Collision detected at 00:06.00</div>
+              </div>
+            </div>
+            <div
+              class="h-8 w-80 bg-primary/20 dark:bg-[#60a5fa]/20 rounded flex items-center justify-center px-2 border border-primary/40 dark:border-[#60a5fa]/40 relative ml-8">
+              <span class="text-[9px] font-bold text-primary dark:text-[#60a5fa] truncate">U3</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>

@@ -1,0 +1,128 @@
+<div class="max-w-5xl mx-auto">
+
+  <h2
+    class="text-4xl lg:text-5xl font-bold font-heading bg-gradient-to-r from-primary to-[#8b5cf6] dark:from-[#2563eb] dark:to-[#3b82f6] text-transparent bg-clip-text mb-8 tracking-tight">
+    New Dubbing Job
+  </h2>
+
+  <!-- Drag & Drop Container -->
+  <div
+    class="w-full bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-[12px] border-2 border-dashed border-primary/20 dark:border-[#334155] hover:border-primary/50 dark:hover:border-[#60a5fa]/50 shadow-glass-light dark:shadow-glass-dark rounded-2xl p-16 flex flex-col items-center justify-center mb-8 transition-colors cursor-pointer group">
+    <div
+      class="w-20 h-20 rounded-full bg-primary/5 dark:bg-[#0f172a] flex items-center justify-center mb-6 group-hover:scale-105 transition-transform border border-primary/10 dark:border-[#334155]">
+      <span
+        class="material-symbols-outlined text-4xl text-slate-400 dark:text-[#94a3b8] group-hover:text-primary dark:group-hover:text-[#60a5fa] transition-colors">movie</span>
+    </div>
+    <h3 class="text-lg font-medium text-slate-700 dark:text-[#f1f5f9] mb-6">Drag & Drop video file here</h3>
+    <button
+      class="rounded-xl bg-gradient-to-br from-[#2563eb] to-[#3b82f6] px-6 py-3 text-sm font-bold text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:shadow-[0_0_20px_rgba(37,99,235,0.5)] hover:scale-[1.02] transition-all">
+      Select Video from Computer
+    </button>
+  </div>
+
+  <!-- Global Settings Container -->
+  <div
+    class="w-full bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-[12px] border border-[#0000000d] dark:border-[#334155] shadow-glass-light dark:shadow-glass-dark rounded-2xl p-8 mb-12">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10">
+
+      <!-- Left Column -->
+      <div class="lg:col-span-9 space-y-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div>
+            <div class="flex items-center gap-1.5 mb-2">
+              <h3 class="text-sm font-bold text-slate-800 dark:text-[#f1f5f9]">Original Language</h3>
+              <span class="material-symbols-outlined text-[14px] text-primary dark:text-[#3b82f6] cursor-help"
+                title="Select the source language of the video">help</span>
+            </div>
+            <div class="relative">
+              <select
+                class="w-full appearance-none bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-slate-800 dark:text-[#f1f5f9] focus:outline-none focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                <option value="" disabled selected>Please select...</option>
+                <option value="en-US">English (United States)</option>
+                <option value="hr">Croatian</option>
+                <option value="es">Spanish</option>
+              </select>
+              <span
+                class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-[#94a3b8] pointer-events-none">expand_more</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center gap-1.5 mb-2">
+              <h3 class="text-sm font-bold text-slate-800 dark:text-[#f1f5f9]">Translation Language</h3>
+              <span class="material-symbols-outlined text-[14px] text-primary dark:text-[#3b82f6] cursor-help"
+                title="Select the target language for dubbing">help</span>
+            </div>
+            <div class="relative">
+              <select
+                class="w-full appearance-none bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-slate-800 dark:text-[#f1f5f9] focus:outline-none focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                <option value="" disabled selected>Please select...</option>
+                <option value="hr">Croatian</option>
+                <option value="en-US">English (United States)</option>
+                <option value="es">Spanish</option>
+              </select>
+              <span
+                class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-[#94a3b8] pointer-events-none">expand_more</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center gap-1.5 mb-2">
+              <h3 class="text-sm font-bold text-slate-800 dark:text-[#f1f5f9]">Speakers</h3>
+            </div>
+            <button
+              class="flex items-center gap-2 rounded-xl bg-transparent border border-primary/20 dark:border-[#334155] hover:border-primary dark:hover:border-[#60a5fa] hover:bg-primary/5 dark:hover:bg-[#60a5fa]/10 px-4 py-3 text-sm font-semibold text-primary dark:text-[#60a5fa] transition-all w-full justify-center">
+              <span class="material-symbols-outlined text-[18px]">add_circle</span>
+              Add Speaker
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-sm font-bold text-slate-800 dark:text-[#f1f5f9] mb-4">Gemini Instructions</h3>
+          <textarea
+            class="w-full bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#f1f5f9] placeholder:text-slate-400 dark:placeholder:text-[#94a3b8] focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none shadow-inner"
+            placeholder="e.g., No dubbing phrases, company name, special instructions..." rows="4"></textarea>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="lg:col-span-3 space-y-6">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-800 dark:text-[#f1f5f9]">Gemini Model</h3>
+          <div class="flex items-center gap-2">
+            <div class="relative inline-block w-10 -mr-2 align-middle select-none transition duration-200 ease-in">
+              <input type="checkbox" name="toggle" id="toggle-model" checked
+                class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transform translate-x-5 border-primary dark:border-[#3b82f6] transition-transform duration-200 ease-in-out" />
+              <label for="toggle-model"
+                class="toggle-label block overflow-hidden h-5 rounded-full bg-primary/20 dark:bg-white/90 cursor-pointer"></label>
+            </div>
+            <span class="text-sm font-medium text-slate-700 dark:text-[#f1f5f9] ml-2">Flash</span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-800 dark:text-[#f1f5f9]">Adjust speed</h3>
+          <div class="flex items-center gap-2">
+            <div class="relative inline-block w-10 -mr-2 align-middle select-none transition duration-200 ease-in">
+              <input type="checkbox" name="toggle-speed" id="toggle-speed"
+                class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-slate-300 dark:border-[#94a3b8] appearance-none cursor-pointer transition-transform duration-200 ease-in-out" />
+              <label for="toggle-speed"
+                class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-200 dark:bg-white/90 cursor-pointer"></label>
+            </div>
+            <span class="text-sm font-medium text-slate-700 dark:text-[#f1f5f9] ml-2 w-8">No</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="flex justify-end">
+    <button
+      class="rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 px-8 py-3.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] hover:scale-[1.02] transition-all">
+      Start Processing
+    </button>
+  </div>
+</div>

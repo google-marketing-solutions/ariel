@@ -1,0 +1,44 @@
+<div class="max-w-4xl w-full mx-auto">
+  <h2 class="text-2xl font-bold font-sans text-slate-800 dark:text-white mb-6">
+    Generated Video
+  </h2>
+
+  <!-- Video Player -->
+  <div class="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative mb-6">
+    <video class="w-full h-full object-contain" controls
+      poster="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=800&q=80">
+      <source src="" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+    <!-- Download Actions -->
+    <div class="flex gap-4 w-full sm:w-auto">
+      <button
+        class="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold text-primary dark:text-[#60a5fa] border border-primary dark:border-[#60a5fa] rounded-lg hover:bg-primary/5 dark:hover:bg-[#60a5fa]/10 transition-colors">
+        Download Video
+      </button>
+      <div class="relative group flex-1 sm:flex-none">
+        <button
+          class="w-full flex justify-center items-center gap-1 px-4 py-2 text-sm font-semibold text-primary dark:text-[#60a5fa] border border-primary dark:border-[#60a5fa] rounded-lg hover:bg-primary/5 dark:hover:bg-[#60a5fa]/10 transition-colors">
+          Download Audio
+          <span class="material-symbols-outlined text-[18px]">arrow_drop_down</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- System Actions -->
+    <div class="flex gap-4 w-full sm:w-auto">
+      <button
+        class="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold text-white bg-slate-500 dark:bg-[#64748b] hover:bg-slate-600 dark:hover:bg-[#475569] rounded-lg transition-colors">
+        Go back to editing
+      </button>
+      <button
+        class="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold text-white bg-[#ef4444] hover:bg-[#dc2626] rounded-lg transition-colors">
+        Start Over
+      </button>
+    </div>
+  </div>
+</div>
