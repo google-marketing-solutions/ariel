@@ -1,0 +1,101 @@
+<!-- Overlay -->
+<div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9998] transition-opacity" (click)="closeModal()"></div>
+
+<!-- Modal -->
+<div class="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 pointer-events-none">
+  <div
+    class="w-full max-w-2xl bg-white dark:bg-[#1e293b] rounded-2xl shadow-2xl border border-slate-200 dark:border-[#334155] overflow-hidden flex flex-col max-h-[90vh] pointer-events-auto transform transition-all">
+
+    <!-- Header -->
+    <div
+      class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-[#334155] bg-slate-50/50 dark:bg-[#0f172a]/50">
+      <h3 class="text-lg font-bold text-slate-800 dark:text-white">Select Speaker Voice</h3>
+      <button (click)="closeModal()"
+        class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
+
+      <!-- Speaker Name Input -->
+      <div class="mb-6">
+        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Speaker Name</label>
+        <input type="text" [(ngModel)]="speakerName" placeholder="e.g., Narrator"
+          class="w-full bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#f1f5f9] placeholder:text-slate-400 dark:placeholder:text-[#94a3b8] focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-inner" />
+      </div>
+
+      <div class="h-px bg-slate-200 dark:bg-[#334155] w-full mb-6"></div>
+
+      <!-- Search & Filters -->
+      <div class="flex flex-col sm:flex-row gap-4 mb-6">
+        <div class="relative flex-1">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+          <input type="text" [(ngModel)]="searchQuery" placeholder="Search voices..."
+            class="w-full bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-800 dark:text-[#f1f5f9] placeholder:text-slate-400 dark:placeholder:text-[#94a3b8] focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-inner" />
+        </div>
+
+        <!-- Segmented Toggle for Gender -->
+        <div
+          class="flex rounded-lg p-1 bg-slate-100 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] h-fit">
+          <button (click)="genderFilter.set('all')" [class.bg-white]="genderFilter() === 'all'"
+            [class.dark:bg-[#1e293b]]="genderFilter() === 'all'" [class.shadow-sm]="genderFilter() === 'all'"
+            [class.text-primary]="genderFilter() === 'all'" [class.dark:text-[#60a5fa]]="genderFilter() === 'all'"
+            [class.text-slate-600]="genderFilter() !== 'all'" [class.dark:text-slate-400]="genderFilter() !== 'all'"
+            class="px-4 py-1.5 text-sm font-medium rounded-md transition-all">All</button>
+          <button (click)="genderFilter.set('Male')" [class.bg-white]="genderFilter() === 'Male'"
+            [class.dark:bg-[#1e293b]]="genderFilter() === 'Male'" [class.shadow-sm]="genderFilter() === 'Male'"
+            [class.text-primary]="genderFilter() === 'Male'" [class.dark:text-[#60a5fa]]="genderFilter() === 'Male'"
+            [class.text-slate-600]="genderFilter() !== 'Male'" [class.dark:text-slate-400]="genderFilter() !== 'Male'"
+            class="px-4 py-1.5 text-sm font-medium rounded-md transition-all">Male</button>
+          <button (click)="genderFilter.set('Female')" [class.bg-white]="genderFilter() === 'Female'"
+            [class.dark:bg-[#1e293b]]="genderFilter() === 'Female'" [class.shadow-sm]="genderFilter() === 'Female'"
+            [class.text-primary]="genderFilter() === 'Female'" [class.dark:text-[#60a5fa]]="genderFilter() === 'Female'"
+            [class.text-slate-600]="genderFilter() !== 'Female'"
+            [class.dark:text-slate-400]="genderFilter() !== 'Female'"
+            class="px-4 py-1.5 text-sm font-medium rounded-md transition-all">Female</button>
+        </div>
+      </div>
+
+      <!-- Voice List -->
+      <div class="space-y-2">
+        @for (voice of filteredVoices(); track voice.name) {
+        <div
+          class="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-[#334155]/50 bg-slate-50/50 dark:bg-[#0f172a]/30 hover:bg-slate-50 dark:hover:bg-[#0f172a] hover:border-slate-200 dark:hover:border-[#334155] transition-colors">
+
+          <div class="flex items-center gap-3">
+            <span class="font-medium text-slate-800 dark:text-white text-sm">{{ voice.name }}</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <span
+              class="px-2 py-0.5 rounded-full bg-slate-200/50 dark:bg-[#1e293b] text-slate-600 dark:text-slate-400 text-xs font-medium border border-slate-200 dark:border-[#334155]">
+              {{ voice.gender }}
+            </span>
+
+            @if (voice.url) {
+            <button (click)="togglePlay(voice, $event)"
+              class="w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 dark:bg-[#1e293b] hover:bg-slate-200 dark:hover:bg-[#334155] text-slate-700 dark:text-slate-300 transition-colors">
+              <span class="material-symbols-outlined text-[16px]">{{ currentlyPlayingVoiceName() === voice.name ? 'stop'
+                : 'play_arrow' }}</span>
+            </button>
+            }
+
+            <button (click)="selectVoice(voice)"
+              class="px-4 py-1.5 rounded-lg bg-primary dark:bg-primary/90 hover:bg-primary/90 dark:hover:bg-primary text-white text-sm font-semibold transition-colors shadow-sm">
+              Select
+            </button>
+          </div>
+
+        </div>
+        } @empty {
+        <div class="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
+          No voices found matching your criteria.
+        </div>
+        }
+      </div>
+
+    </div>
+  </div>
+</div>
