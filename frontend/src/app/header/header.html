@@ -1,31 +1,33 @@
 <header
   class="h-16 shrink-0 border-b border-[#0000000d] dark:border-[#334155] bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-[12px] flex items-center justify-between px-6 shadow-glass-light dark:shadow-glass-dark z-10 relative">
-  <div class="flex items-center gap-2">
-    <img src="Image/Ariel_Logo.png" alt="Ariel Logo" class="logo-img me-3 h-8" />
-    <h2
-      class="text-xl font-heading font-bold tracking-tight bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] dark:from-[#2563eb] dark:to-[#3b82f6] bg-clip-text text-transparent">
-      Ariel v2
-    </h2>
-  </div>
+  <div class="flex items-center gap-8 h-full">
+    <div class="flex items-center gap-2 mr-8">
+      <img src="Image/Ariel_Logo.png" alt="Ariel Logo" class="logo-img me-3 h-8" />
+      <h2
+        class="text-2xl font-heading font-bold tracking-tight bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] dark:from-[#2563eb] dark:to-[#3b82f6] bg-clip-text text-transparent">
+        Ariel v2
+      </h2>
+    </div>
 
-  <!-- Navigation Menu -->
-  <div class="flex items-center gap-8 absolute left-1/2 -translate-x-1/2 h-full">
-    <a routerLink="/" routerLinkActive="text-primary dark:text-[#60a5fa]" [routerLinkActiveOptions]="{exact: true}"
-      class="h-full flex items-center relative text-sm font-semibold text-slate-500 dark:text-[#94a3b8] hover:text-slate-800 dark:hover:text-[#f1f5f9] transition-colors group">
-      Home
-      <!-- Active Indicator -->
-      <div
-        class="absolute bottom-0 left-0 right-0 h-[2px] bg-primary dark:bg-[#60a5fa] rounded-t-full opacity-0 [a.text-primary_&]:opacity-100 dark:[a.text-\[\#60a5fa\]_&]:opacity-100">
-      </div>
-    </a>
-    <a routerLink="/library" routerLinkActive="text-primary dark:text-[#60a5fa]"
-      class="h-full flex items-center relative text-sm font-medium text-slate-500 dark:text-[#94a3b8] hover:text-slate-800 dark:hover:text-[#f1f5f9] transition-colors group">
-      Library
-      <!-- Active Indicator -->
-      <div
-        class="absolute bottom-0 left-0 right-0 h-[2px] bg-primary dark:bg-[#60a5fa] rounded-t-full opacity-0 [a.text-primary_&]:opacity-100 dark:[a.text-\[\#60a5fa\]_&]:opacity-100">
-      </div>
-    </a>
+    <!-- Navigation Menu -->
+    <div class="flex items-center gap-8 h-full">
+      <a routerLink="/" routerLinkActive="text-primary dark:text-[#60a5fa]" [routerLinkActiveOptions]="{exact: true}"
+        class="h-full flex items-center relative text-sm font-semibold text-slate-500 dark:text-[#94a3b8] hover:text-slate-800 dark:hover:text-[#f1f5f9] transition-colors group">
+        Home
+        <!-- Active Indicator -->
+        <div
+          class="absolute bottom-0 left-0 right-0 h-[2px] bg-primary dark:bg-[#60a5fa] rounded-t-full opacity-0 [a.text-primary_&]:opacity-100 dark:[a.text-\[\#60a5fa\]_&]:opacity-100">
+        </div>
+      </a>
+      <a routerLink="/library" routerLinkActive="text-primary dark:text-[#60a5fa]"
+        class="h-full flex items-center relative text-sm font-medium text-slate-500 dark:text-[#94a3b8] hover:text-slate-800 dark:hover:text-[#f1f5f9] transition-colors group">
+        Library
+        <!-- Active Indicator -->
+        <div
+          class="absolute bottom-0 left-0 right-0 h-[2px] bg-primary dark:bg-[#60a5fa] rounded-t-full opacity-0 [a.text-primary_&]:opacity-100 dark:[a.text-\[\#60a5fa\]_&]:opacity-100">
+        </div>
+      </a>
+    </div>
   </div>
 
   <!-- Actions Menu -->

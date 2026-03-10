@@ -1,0 +1,27 @@
+{
+  "/process": {
+    "target": "http://127.0.0.1:8080",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/generate_audio": {
+    "target": "http://127.0.0.1:8080",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/generate_video": {
+    "target": "http://127.0.0.1:8080",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/api": {
+    "target": "http://127.0.0.1:8080",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/temp": {
+    "target": "http://127.0.0.1:8080",
+    "secure": false,
+    "changeOrigin": true
+  }
+}
