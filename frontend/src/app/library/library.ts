@@ -1,16 +1,23 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-interface VideoJob {
+interface VideoSpeaker {
   id: string;
-  filename: string;
-  dateCreated: string;
-  sourceLanguage: string;
-  targetLanguage: string;
-  thumbnailUrl: string;
-  progress: number;
-  duration: string;
-  status: 'processing' | 'completed' | 'failed';
+  name: string;
+  voice: string;
+  gender: string;
+}
+
+interface VideoJob {
+  video_id: string;
+  name: string;
+  url: string;
+  download_url: string;
+  created_at: number;
+  original_language: string;
+  translate_language: string;
+  duration: number;
+  speakers: VideoSpeaker[];
 }
 
 @Component({
@@ -19,53 +26,66 @@ interface VideoJob {
   templateUrl: './library.html',
   styleUrl: './library.scss'
 })
-export class Library {
+export class Library implements OnInit {
+  videos = signal<VideoJob[]>([]);
+  isLoading = signal(true);
+  error = signal<string | null>(null);
 
-  videos: VideoJob[] = [
-    {
-      id: '1',
-      filename: 'grant.mp4.pl-PL.mp4',
-      dateCreated: '3/3/2026, 11:27:45 AM',
-      sourceLanguage: 'en-US',
-      targetLanguage: 'pl-PL',
-      thumbnailUrl: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=800&q=80',
-      progress: 33,
-      duration: '0:00',
-      status: 'processing'
-    },
-    {
-      id: '2',
-      filename: 'grant.mp4.it-IT.mp4',
-      dateCreated: '2/27/2026, 2:53:49 PM',
-      sourceLanguage: 'en-US',
-      targetLanguage: 'it-IT',
-      thumbnailUrl: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=800&q=80',
-      progress: 0,
-      duration: '0:00',
-      status: 'processing'
-    },
-    {
-      id: '3',
-      filename: 'grant.mp4.pt-BR.mp4',
-      dateCreated: '2/16/2026, 1:49:52 PM',
-      sourceLanguage: 'en-US',
-      targetLanguage: 'pt-BR',
-      thumbnailUrl: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=800&q=80',
-      progress: 40,
-      duration: '0:00',
-      status: 'processing'
-    },
-    {
-      id: '4',
-      filename: 'grant.mp4.de-DE.mp4',
-      dateCreated: '2/16/2026, 1:29:19 PM',
-      sourceLanguage: 'en-US',
-      targetLanguage: 'de-DE',
-      thumbnailUrl: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=800&q=80',
-      progress: 20,
-      duration: '0:00',
-      status: 'processing'
+  ngOnInit() {
+    this.fetchVideos();
+  }
+
+  async fetchVideos() {
+    this.isLoading.set(true);
+    try {
+      const response = await fetch('/api/videos');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      this.videos.set(data);
+    } catch (err: any) {
+      console.error('Failed to load videos:', err);
+      this.error.set(err.message || 'Failed to load videos');
+    } finally {
+      this.isLoading.set(false);
     }
-  ];
+  }
 
+  formatDate(timestamp: number): string {
+    if (!timestamp) return 'Date unknown';
+    // The Python backend might send seconds or ms, usually seconds from GCS
+    const date = new Date(timestamp > 1e11 ? timestamp : timestamp * 1000);
+    return date.toLocaleString();
+  }
+
+  formatDuration(duration: number): string {
+    const safeDuration = duration || 0;
+    const minutes = Math.floor(safeDuration / 60);
+    const seconds = Math.floor(safeDuration % 60);
+    return `${minutes}m ${seconds}s`;
+  }
+
+  getSpeakersString(speakers: VideoSpeaker[]): string {
+    if (!speakers || speakers.length === 0) return 'Unknown';
+    const uniqueVoices = [...new Set(speakers.map(s => s.voice).filter(v => v))];
+    return uniqueVoices.length > 0 ? uniqueVoices.join(', ') : 'Unknown';
+  }
+
+  async deleteVideo(videoId: string) {
+    if (!confirm('Are you sure you want to delete this video?')) return;
+
+    try {
+      const response = await fetch(`/api/videos/${videoId}`, { method: 'DELETE' });
+      if (response.ok) {
+        // Refresh the list
+        await this.fetchVideos();
+      } else {
+        alert('Failed to delete video');
+      }
+    } catch (err) {
+      console.error('Error deleting video:', err);
+      alert('Error deleting video');
+    }
+  }
 }
