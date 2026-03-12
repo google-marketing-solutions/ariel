@@ -26,6 +26,9 @@ interface VideoUtterance {
   speaker: VideoSpeaker;
   audio_url?: string;
   duration?: number;
+  // UI Only Derived bounds for cloned utterance tracks
+  ui_original_start_time?: number;
+  ui_original_end_time?: number;
 }
 
 interface VideoJob {
@@ -113,7 +116,15 @@ export class Editor implements OnInit {
   ngOnInit() {
     const updateTimeLoop = () => {
       if (this.isPlayingOriginal()) {
-        this.currentTime.set(this.originalAudio.currentTime);
+        let currentVisualTime = this.originalAudio.currentTime;
+        if (this.activeAudioPlayback?.type === 'original') {
+          const activeU = this.videoData()?.utterances.find(u => u.id === this.activeAudioPlayback!.id);
+          if (activeU && activeU.ui_original_start_time !== undefined) {
+            const offset = activeU.ui_original_start_time - activeU.original_start_time;
+            currentVisualTime += offset;
+          }
+        }
+        this.currentTime.set(currentVisualTime);
       } else if (this.isPlayingTranslated()) {
         this.currentTime.set(this.translatedAudio.currentTime);
       } else if (this.isPlayingSnippet()) {
@@ -628,6 +639,39 @@ export class Editor implements OnInit {
         )
       };
     });
+  }
+
+  cloneUtterance(utteranceId: string) {
+    this.videoData.update(prev => {
+      if (!prev) return prev;
+
+      const currentIndex = prev.utterances.findIndex(u => u.id === utteranceId);
+      if (currentIndex === -1) return prev;
+
+      const utterance = prev.utterances[currentIndex];
+      const newUtterance = JSON.parse(JSON.stringify(utterance)); // Deep copy
+
+      newUtterance.id = `utterance_${Date.now()}`; // Simple unique ID
+      const duration = utterance.translated_end_time - utterance.translated_start_time;
+      newUtterance.translated_start_time = utterance.translated_end_time;
+      newUtterance.translated_end_time = utterance.translated_end_time + duration;
+
+      const originalDuration = utterance.original_end_time - utterance.original_start_time;
+      const refOriginalEnd = utterance.ui_original_end_time !== undefined ? utterance.ui_original_end_time : utterance.original_end_time;
+      newUtterance.ui_original_start_time = refOriginalEnd;
+      newUtterance.ui_original_end_time = refOriginalEnd + originalDuration;
+
+      const newUtterances = [...prev.utterances];
+      newUtterances.splice(currentIndex + 1, 0, newUtterance);
+
+      return {
+        ...prev,
+        utterances: newUtterances
+      };
+    });
+
+    // Close active panel when cloning
+    this.activePanelMode.set(null);
   }
 
   get activeUtterance(): VideoUtterance | null {
