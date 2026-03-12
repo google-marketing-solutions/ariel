@@ -159,6 +159,10 @@ export class Editor implements OnInit, OnDestroy {
   isEditingSettings = signal(false);
   initialUtteranceState = signal<VideoUtterance | null>(null);
 
+  // Custom Modal State
+  showDiscardModal = signal(false);
+  pendingDiscardAction: (() => void) | null = null;
+
   canUndoActiveUtterance = computed(() => {
     const activeId = this.activeUtteranceId();
     const data = this.videoData();
@@ -539,33 +543,86 @@ export class Editor implements OnInit, OnDestroy {
 
   // --- Right Panel Interactions ---
 
-  focusUtterance(utteranceId: string) {
-    if (this.activeUtteranceId() !== utteranceId) {
-      this.activeUtteranceId.set(utteranceId);
-      this.activePanelMode.set(null);
-      this.clearDrafts();
-      // Create a snapshot for reverting later
-      const data = this.videoData();
-      if (data) {
-        const u = data.utterances.find(utt => utt.id === utteranceId);
-        if (u) {
-          this.initialUtteranceState.set(JSON.parse(JSON.stringify(u)));
-        }
+  executeWithDirtyCheck(action: () => void) {
+    if (this.isVoiceDirty() || this.isTranslationDirty() || this.isTimestampsDirty() || this.isSpeakerDirty()) {
+      this.pendingDiscardAction = action;
+      this.showDiscardModal.set(true);
+    } else {
+      action();
+    }
+  }
+
+  onSaveAndProceed() {
+    if (this.isTimestampsDirty()) {
+      this.saveTimestamps();
+      if (this.timestampError()) {
+        this.showDiscardModal.set(false);
+        return; // Halt if save validation failed
+      }
+    }
+
+    if (this.isVoiceDirty()) this.saveVoiceInstructions();
+    if (this.isTranslationDirty()) this.saveTranslationInstructions();
+    if (this.isSpeakerDirty()) this.saveSpeaker();
+
+    this.showDiscardModal.set(false);
+    if (this.pendingDiscardAction) {
+      this.pendingDiscardAction();
+      this.pendingDiscardAction = null;
+    }
+  }
+
+  onConfirmDiscard() {
+    this.showDiscardModal.set(false);
+    if (this.pendingDiscardAction) {
+      this.pendingDiscardAction();
+      this.pendingDiscardAction = null;
+    }
+  }
+
+  onCancelDiscard() {
+    this.showDiscardModal.set(false);
+    this.pendingDiscardAction = null;
+  }
+
+  private _focusUtteranceLogic(utteranceId: string) {
+    this.activeUtteranceId.set(utteranceId);
+    this.activePanelMode.set(null);
+    this.clearDrafts();
+    const data = this.videoData();
+    if (data) {
+      const u = data.utterances.find(utt => utt.id === utteranceId);
+      if (u) {
+        this.initialUtteranceState.set(JSON.parse(JSON.stringify(u)));
       }
     }
   }
 
+  focusUtterance(utteranceId: string) {
+    if (this.activeUtteranceId() !== utteranceId) {
+      this.executeWithDirtyCheck(() => {
+        this._focusUtteranceLogic(utteranceId);
+      });
+    }
+  }
+
   setActivePanel(utteranceId: string, mode: PanelMode) {
-    this.clearDrafts();
     if (this.activeUtteranceId() === utteranceId && this.activePanelMode() === mode) {
       // Toggle off the panel if clicking the same button again
-      this.activePanelMode.set(null);
-    } else {
-      if (this.activeUtteranceId() !== utteranceId) {
-        this.focusUtterance(utteranceId);
+      if (this.activePanelMode() !== null) {
+        this.executeWithDirtyCheck(() => {
+          this.activePanelMode.set(null);
+          this.clearDrafts();
+        });
       }
-      // Set to new active pane
-      this.activePanelMode.set(mode);
+    } else {
+      this.executeWithDirtyCheck(() => {
+        if (this.activeUtteranceId() !== utteranceId) {
+          this._focusUtteranceLogic(utteranceId);
+        }
+        this.clearDrafts();
+        this.activePanelMode.set(mode);
+      });
     }
   }
 
@@ -1308,6 +1365,38 @@ export class Editor implements OnInit, OnDestroy {
       this.isDragging.set(false);
       this.draggedUtteranceId.set(null);
     }
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    if (!this.activeUtteranceId()) return;
+
+    const targetElement = event.target as HTMLElement;
+
+    // Ignore clicks inside any utterance card
+    if (targetElement.closest('[id^="utterance-"]')) return;
+
+    // Ignore clicks inside the right Advanced Settings panel
+    if (targetElement.closest('aside')) return;
+
+    // Ignore clicks inside the timeline footer (avoids closing when clicking play/pause or timeblocks)
+    if (targetElement.closest('footer')) return;
+
+    // Ignore clicks inside the header container
+    if (targetElement.closest('header')) return;
+
+    // Ignore clicks on custom overlays, speaker modal, or the discard modal itself
+    if (targetElement.closest('app-speaker-modal') || targetElement.closest('.cdk-overlay-container') || targetElement.closest('#discard-modal')) return;
+
+    // Ignore clicks if the discard modal is already open
+    if (this.showDiscardModal()) return;
+
+    // Check for unsaved changes before deselecting
+    this.executeWithDirtyCheck(() => {
+      this.clearDrafts();
+      this.activeUtteranceId.set(null);
+      this.activePanelMode.set(null);
+    });
   }
 
 }
