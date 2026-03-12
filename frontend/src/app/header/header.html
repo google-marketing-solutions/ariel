@@ -34,6 +34,15 @@
   <div class="flex items-center gap-4">
 
     @if (isEditorRoute) {
+    <!-- Unregenerated Warning -->
+    @if ((videoGenerationService.unregeneratedCount$ | async) ?? 0; as count) {
+    <div class="flex items-center gap-1.5 mr-2 cursor-help"
+      matTooltip="You have {{count}} utterance(s) with changed text or voices that have not been regenerated yet. These changes will NOT be included in the final video until you click Regenerate on the respective utterance cards.">
+      <span class="text-sm font-semibold text-amber-600 dark:text-amber-400">{{ count }} change(s) need regeneration</span>
+      <span class="material-symbols-outlined text-amber-500 text-[16px]">info</span>
+    </div>
+    }
+
     <button
       (click)="generateVideo()"
       class="flex items-center gap-2 rounded-xl bg-[#2563eb] dark:bg-gradient-to-br dark:from-[#2563eb] dark:to-[#3b82f6] px-5 py-2 text-sm font-semibold text-white shadow-[0_0_15px_-3px_rgba(37,99,235,0.3)] hover:translate-y-[-1px] transition-all active:scale-95">

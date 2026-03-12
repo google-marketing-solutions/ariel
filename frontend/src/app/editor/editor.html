@@ -178,7 +178,7 @@
       class="flex-1 flex flex-col bg-transparent overflow-y-auto custom-scrollbar border-r border-black/5 dark:border-[#334155] z-0">
       <div class="p-6 max-w-full mx-auto w-full">
         <div
-          class="mb-6 grid grid-cols-2 gap-8 px-4 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-[#94a3b8]">
+          class="mb-6 grid grid-cols-2 gap-8 px-4 pb-3 border-b-2 border-slate-200 dark:border-[#334155] text-sm font-extrabold uppercase tracking-widest text-slate-700 dark:text-slate-300">
           <span>{{ getLanguageName(isEditingSettings() ? editOriginalLanguage() : videoData()?.original_language) }}</span>
           <span>{{ getLanguageName(isEditingSettings() ? editTranslateLanguage() : videoData()?.translate_language) }}</span>
         </div>
@@ -214,7 +214,7 @@
                 <span>Muted - original audio will be used</span>
                 <button
                   class="flex items-center justify-center gap-1 bg-white text-slate-800 dark:bg-slate-600 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-500 rounded-full px-3 py-1 transition-colors pointer-events-auto shadow-sm"
-                  title="Unmute" (click)="toggleMuteUtterance(utterance.id); $event.stopPropagation()">
+                  matTooltip="Unmute" (click)="toggleMuteUtterance(utterance.id); $event.stopPropagation()">
                   <span class="material-symbols-outlined text-[14px]">volume_up</span>
                   <span>Unmute</span>
                 </button>
@@ -230,7 +230,7 @@
                 <span>Deleted - no audio will be generated</span>
                 <button
                   class="flex items-center justify-center gap-1 bg-white text-red-600 dark:bg-slate-800 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full px-3 py-1 transition-colors pointer-events-auto shadow-sm"
-                  title="Restore Utterance" (click)="toggleRemoveUtterance(utterance.id); $event.stopPropagation()">
+                  matTooltip="Restore Utterance" (click)="toggleRemoveUtterance(utterance.id); $event.stopPropagation()">
                   <span class="material-symbols-outlined text-[14px]">settings_backup_restore</span>
                   <span>Restore</span>
                 </button>
@@ -266,26 +266,26 @@
                   <span class="text-[10px] text-slate-500 dark:text-[#94a3b8] font-mono">
                     {{ formatTime(utterance.translated_start_time) }} - {{ formatTime(utterance.translated_end_time) }}
                   </span>
-                  @if (utterance.needs_translation_regen && utterance.needs_dubbing_regen) {
-                  <span
-                    class="text-[10px] text-fuchsia-600 dark:text-fuchsia-400 font-bold px-2 py-0.5 bg-fuchsia-50 dark:bg-fuchsia-900/20 rounded border border-fuchsia-200 dark:border-fuchsia-800 animate-pulse">
-                    Translation & Voice changed
-                  </span>
-                  } @else if (utterance.needs_translation_regen) {
-                  <span
-                    class="text-[10px] text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 animate-pulse">
-                    Translation changed
-                  </span>
-                  } @else if (utterance.needs_dubbing_regen) {
-                  <span
-                    class="text-[10px] text-blue-600 dark:text-blue-400 font-bold px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800 animate-pulse">
-                    Voice changed
-                  </span>
-                  }
                   </div>
                   
                   @if (activeUtteranceId() === utterance.id) {
                   <div class="flex items-center gap-4 transition-opacity">
+                    @if (utterance.needs_translation_regen && utterance.needs_dubbing_regen) {
+                    <span
+                      class="text-[10px] text-fuchsia-600 dark:text-fuchsia-400 font-bold px-2 py-0.5 bg-fuchsia-50 dark:bg-fuchsia-900/20 rounded border border-fuchsia-200 dark:border-fuchsia-800 animate-pulse whitespace-nowrap">
+                      Translation & Voice changed
+                    </span>
+                    } @else if (utterance.needs_translation_regen) {
+                    <span
+                      class="text-[10px] text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 animate-pulse whitespace-nowrap">
+                      Translation changed
+                    </span>
+                    } @else if (utterance.needs_dubbing_regen) {
+                    <span
+                      class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 rounded border border-emerald-200 dark:border-emerald-800 animate-pulse whitespace-nowrap">
+                      Voice changed
+                    </span>
+                    }
                     <!-- Regenerate Actions -->
                     <div class="flex items-center gap-1">
                     <button
@@ -313,7 +313,7 @@
                       [class.focus:ring-amber-500/20]="utterance.needs_translation_regen"
                       [class.animate-pulse]="utterance.needs_translation_regen"
                       [class.shadow-[0_0_10px_2px_rgba(245,158,11,0.2)]]="utterance.needs_translation_regen"
-                      title="Regenerate Translation"
+                      matTooltip="Regenerate Translation"
                       [disabled]="utterance.muted || utterance.removed"
                       (click)="regenerateTranslation(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">autorenew</span>
@@ -332,18 +332,18 @@
                       [class.dark:border-[#334155]]="!utterance.needs_dubbing_regen"
                       [class.hover:border-primary/20]="!utterance.needs_dubbing_regen"
                       [class.focus:ring-primary/20]="!utterance.needs_dubbing_regen"
-                      [class.bg-blue-100]="utterance.needs_dubbing_regen"
-                      [class.dark:bg-blue-900/40]="utterance.needs_dubbing_regen"
-                      [class.hover:bg-blue-200]="utterance.needs_dubbing_regen"
-                      [class.dark:hover:bg-blue-800/60]="utterance.needs_dubbing_regen"
-                      [class.text-blue-700]="utterance.needs_dubbing_regen"
-                      [class.dark:text-blue-400]="utterance.needs_dubbing_regen"
-                      [class.border-blue-400]="utterance.needs_dubbing_regen"
-                      [class.dark:border-blue-500/50]="utterance.needs_dubbing_regen"
-                      [class.focus:ring-blue-500/20]="utterance.needs_dubbing_regen"
+                      [class.bg-emerald-100]="utterance.needs_dubbing_regen"
+                      [class.dark:bg-emerald-900/40]="utterance.needs_dubbing_regen"
+                      [class.hover:bg-emerald-200]="utterance.needs_dubbing_regen"
+                      [class.dark:hover:bg-emerald-800/60]="utterance.needs_dubbing_regen"
+                      [class.text-emerald-700]="utterance.needs_dubbing_regen"
+                      [class.dark:text-emerald-400]="utterance.needs_dubbing_regen"
+                      [class.border-emerald-400]="utterance.needs_dubbing_regen"
+                      [class.dark:border-emerald-500/50]="utterance.needs_dubbing_regen"
+                      [class.focus:ring-emerald-500/20]="utterance.needs_dubbing_regen"
                       [class.animate-pulse]="utterance.needs_dubbing_regen"
-                      [class.shadow-[0_0_10px_2px_rgba(59,130,246,0.2)]]="utterance.needs_dubbing_regen"
-                      title="Regenerate Dubbing"
+                      [class.shadow-[0_0_10px_2px_rgba(16,185,129,0.2)]]="utterance.needs_dubbing_regen"
+                      matTooltip="Regenerate Dubbing"
                       [disabled]="utterance.muted || utterance.removed"
                       (click)="regenerateDubbing(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">record_voice_over</span>
@@ -354,14 +354,14 @@
                     <div class="flex items-center gap-1">
                     <button
                       class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Undo"
-                      [disabled]="utterance.muted || utterance.removed"
+                      matTooltip="Undo"
+                      [disabled]="utterance.muted || utterance.removed || !canUndoActiveUtterance()"
                       (click)="revertUtterance(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">history</span>
                     </button>
                     <button
                       class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Clone Utterance"
+                      matTooltip="Clone Utterance"
                       [disabled]="utterance.muted || utterance.removed"
                       (click)="cloneUtterance(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">content_copy</span>
@@ -372,19 +372,38 @@
                     <div class="flex items-center gap-1">
                     <button
                       class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                      [title]="utterance.muted ? 'Unmute Utterance' : 'Mute Utterance'"
+                      [matTooltip]="utterance.muted ? 'Unmute Utterance' : 'Mute Utterance'"
                       [disabled]="utterance.muted || utterance.removed"
                       (click)="toggleMuteUtterance(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">{{ utterance.muted ? 'mic' : 'mic_off' }}</span>
                     </button>
                     <button
                       class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-500 dark:text-[#94a3b8] hover:text-red-500 border border-slate-200 dark:border-[#334155] hover:border-red-200 transition-all focus:outline-none focus:ring-2 focus:ring-red-500/20 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[#0f172a] disabled:hover:text-[#94a3b8] disabled:border-[#334155]"
-                      [title]="utterance.removed ? 'Restore Utterance' : 'Remove Utterance'"
+                      [matTooltip]="utterance.removed ? 'Restore Utterance' : 'Remove Utterance'"
                       [disabled]="utterance.muted || utterance.removed"
                       (click)="toggleRemoveUtterance(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">{{ utterance.removed ? 'settings_backup_restore' : 'delete' }}</span>
                     </button>
                     </div>
+                  </div>
+                  } @else {
+                  <div class="flex items-center gap-2 transition-opacity">
+                    @if (utterance.needs_translation_regen && utterance.needs_dubbing_regen) {
+                    <span
+                      class="text-[10px] text-fuchsia-600 dark:text-fuchsia-400 font-bold px-2 py-0.5 bg-fuchsia-50 dark:bg-fuchsia-900/20 rounded border border-fuchsia-200 dark:border-fuchsia-800 animate-pulse whitespace-nowrap">
+                      Translation & Voice changed
+                    </span>
+                    } @else if (utterance.needs_translation_regen) {
+                    <span
+                      class="text-[10px] text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 animate-pulse whitespace-nowrap">
+                      Translation changed
+                    </span>
+                    } @else if (utterance.needs_dubbing_regen) {
+                    <span
+                      class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 rounded border border-emerald-200 dark:border-emerald-800 animate-pulse whitespace-nowrap">
+                      Voice changed
+                    </span>
+                    }
                   </div>
                   }
               </div>
@@ -467,7 +486,7 @@
                 @if (activeUtteranceId() === utterance.id) {
                 <span
                   class="material-symbols-outlined absolute top-2.5 right-3 text-slate-400 dark:text-[#94a3b8] peer-focus:text-primary dark:peer-focus:text-[#60a5fa] text-[18px] opacity-60 hover:opacity-100 transition-all hover:scale-110 cursor-pointer z-10"
-                  title="{{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'original' ? 'Stop original audio' : 'Play original audio' }}" (click)="playOriginalUtterance(utterance, $event)">
+                  matTooltip="{{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'original' ? 'Stop original audio' : 'Play original audio' }}" (click)="playOriginalUtterance(utterance, $event)">
                   {{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'original' ? 'stop_circle' : 'play_circle' }}
                 </span>
                 }
@@ -502,7 +521,7 @@
   @if (activeUtteranceId() === utterance.id && utterance.audio_url) {
   <span
     class="material-symbols-outlined absolute top-2.5 right-3 text-slate-400 dark:text-[#94a3b8] peer-focus:text-primary dark:peer-focus:text-[#60a5fa] text-[18px] opacity-60 hover:opacity-100 transition-all hover:scale-110 cursor-pointer z-10"
-    title="{{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'translated' ? 'Stop translated audio' : 'Play translated audio' }}"
+    matTooltip="{{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'translated' ? 'Stop translated audio' : 'Play translated audio' }}"
     (click)="playTranslatedUtterance(utterance, $event)">
     {{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'translated' ? 'stop_circle' :
     'play_circle' }}
@@ -749,7 +768,7 @@
               <button
                 (click)="toggleOriginalAudio()"
                 class="w-9 h-9 rounded-full shadow-sm border border-slate-200 dark:border-[#334155] flex items-center justify-center bg-white dark:bg-[#1e293b] hover:bg-slate-50 dark:hover:bg-[#334155]/80 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] transition-all hover:scale-105"
-                title="Play Original">
+                matTooltip="Play Original">
                 <span class="material-symbols-outlined text-[20px] ml-0.5">{{ isPlayingOriginal() ? 'stop' : 'play_arrow' }}</span>
                 </button>
                 </div>
@@ -777,7 +796,7 @@
                 (click)="toggleTranslatedAudio()"
                 [disabled]="isGeneratingAudio()"
                 class="w-9 h-9 rounded-full shadow-sm border border-primary/20 dark:border-[#60a5fa]/30 flex items-center justify-center bg-primary/5 dark:bg-[#60a5fa]/5 hover:bg-primary/20 dark:hover:bg-[#60a5fa]/20 text-primary dark:text-[#60a5fa] transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Play Translated">
+                matTooltip="Play Translated">
                 <span class="material-symbols-outlined text-[20px] ml-0.5">
                   @if (isGeneratingAudio()) {
                   hourglass_empty

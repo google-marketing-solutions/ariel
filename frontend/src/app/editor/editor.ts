@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy, signal, computed, HostListener, ViewChild, ElementRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, HostListener, ViewChild, ElementRef, inject, effect } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { VideoGenerationService } from '../services/video-generation.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatTooltipModule, MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
 import { SpeakerModal } from '../_components/speaker-modal/speaker-modal';
 import { Speaker } from '../home/home';
 
@@ -66,7 +67,10 @@ export type PanelMode = 'timestamps' | 'speaker' | 'translation' | 'voice' | nul
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, SpeakerModal],
+  imports: [CommonModule, FormsModule, SpeakerModal, MatTooltipModule],
+  providers: [
+    { provide: MAT_TOOLTIP_DEFAULT_OPTIONS, useValue: { showDelay: 300, hideDelay: 0, touchendHideDelay: 1500 } }
+  ],
   templateUrl: './editor.html',
   styleUrl: './editor.scss'
 })
@@ -153,7 +157,26 @@ export class Editor implements OnInit, OnDestroy {
 
   // Video Settings Editing State
   isEditingSettings = signal(false);
-  private initialUtteranceState: VideoUtterance | null = null;
+  initialUtteranceState = signal<VideoUtterance | null>(null);
+
+  canUndoActiveUtterance = computed(() => {
+    const activeId = this.activeUtteranceId();
+    const data = this.videoData();
+    const initialState = this.initialUtteranceState();
+
+    if (!activeId || !data || !initialState) return false;
+
+    const currentU = data.utterances.find(u => u.id === activeId);
+    if (!currentU) return false;
+
+    return currentU.original_text !== initialState.original_text ||
+      currentU.translated_text !== initialState.translated_text ||
+      (currentU.instructions || '') !== (initialState.instructions || '') ||
+      (currentU.voice_instructions || '') !== (initialState.voice_instructions || '') ||
+      currentU.translated_start_time !== initialState.translated_start_time ||
+      currentU.translated_end_time !== initialState.translated_end_time ||
+      currentU.speaker.speaker_id !== initialState.speaker.speaker_id;
+  });
   editOriginalLanguage = signal<string>('');
   editTranslateLanguage = signal<string>('');
   editSpeakers = signal<VideoSpeaker[]>([]);
@@ -167,7 +190,17 @@ export class Editor implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private router: Router
-  ) { }
+  ) {
+    effect(() => {
+      const data = this.videoData();
+      if (data) {
+        const count = data.utterances.filter(u => u.needs_translation_regen || u.needs_dubbing_regen).length;
+        this.videoGenerationService.updateUnregeneratedCount(count);
+      } else {
+        this.videoGenerationService.updateUnregeneratedCount(0);
+      }
+    });
+  }
 
   animationFrameId: number | null = null;
 
@@ -516,7 +549,7 @@ export class Editor implements OnInit, OnDestroy {
       if (data) {
         const u = data.utterances.find(utt => utt.id === utteranceId);
         if (u) {
-          this.initialUtteranceState = JSON.parse(JSON.stringify(u));
+          this.initialUtteranceState.set(JSON.parse(JSON.stringify(u)));
         }
       }
     }
@@ -529,7 +562,7 @@ export class Editor implements OnInit, OnDestroy {
       this.activePanelMode.set(null);
     } else {
       if (this.activeUtteranceId() !== utteranceId) {
-        this.activeUtteranceId.set(utteranceId);
+        this.focusUtterance(utteranceId);
       }
       // Set to new active pane
       this.activePanelMode.set(mode);
@@ -593,18 +626,43 @@ export class Editor implements OnInit, OnDestroy {
     this.draftSpeaker.set(spk);
   }
 
+  checkTranslationRegen(u: VideoUtterance, initialState: VideoUtterance | null): boolean {
+    if (!initialState || initialState.id !== u.id) return true;
+    const isDirty = (
+      u.original_text !== initialState.original_text ||
+      u.translated_text !== initialState.translated_text ||
+      (u.instructions || '') !== (initialState.instructions || '')
+    );
+    return !!initialState.needs_translation_regen || isDirty;
+  }
+
+  checkDubbingRegen(u: VideoUtterance, initialState: VideoUtterance | null): boolean {
+    if (!initialState || initialState.id !== u.id) return true;
+    const isDirty = (
+      u.speaker.speaker_id !== initialState.speaker.speaker_id ||
+      (u.voice_instructions || '') !== (initialState.voice_instructions || '')
+    );
+    return !!initialState.needs_dubbing_regen || isDirty;
+  }
+
   changeSpeaker(newSpeaker: VideoSpeaker) {
     const data = this.videoData();
     const activeId = this.activeUtteranceId();
+    const initialState = this.initialUtteranceState();
     if (!data || !activeId) return;
 
     this.videoData.update(prev => {
       if (!prev) return prev;
       return {
         ...prev,
-        utterances: prev.utterances.map(u =>
-          u.id === activeId ? { ...u, speaker: newSpeaker, needs_dubbing_regen: true } : u
-        )
+        utterances: prev.utterances.map(u => {
+          if (u.id === activeId) {
+            const updated = { ...u, speaker: newSpeaker };
+            updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
+            return updated;
+          }
+          return u;
+        })
       };
     });
   }
@@ -614,15 +672,21 @@ export class Editor implements OnInit, OnDestroy {
     if (draft === null) return;
     const data = this.videoData();
     const activeId = this.activeUtteranceId();
+    const initialState = this.initialUtteranceState();
     if (!data || !activeId) return;
 
     this.videoData.update(prev => {
       if (!prev) return prev;
       return {
         ...prev,
-        utterances: prev.utterances.map(u =>
-          u.id === activeId ? { ...u, instructions: draft, needs_translation_regen: true } : u
-        )
+        utterances: prev.utterances.map(u => {
+          if (u.id === activeId) {
+            const updated = { ...u, instructions: draft };
+            updated.needs_translation_regen = this.checkTranslationRegen(updated, initialState);
+            return updated;
+          }
+          return u;
+        })
       };
     });
     this.draftTranslationInstructions.set(null);
@@ -633,15 +697,21 @@ export class Editor implements OnInit, OnDestroy {
     if (draft === null) return;
     const data = this.videoData();
     const activeId = this.activeUtteranceId();
+    const initialState = this.initialUtteranceState();
     if (!data || !activeId) return;
 
     this.videoData.update(prev => {
       if (!prev) return prev;
       return {
         ...prev,
-        utterances: prev.utterances.map(u =>
-          u.id === activeId ? { ...u, voice_instructions: draft, needs_dubbing_regen: true } : u
-        )
+        utterances: prev.utterances.map(u => {
+          if (u.id === activeId) {
+            const updated = { ...u, voice_instructions: draft };
+            updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
+            return updated;
+          }
+          return u;
+        })
       };
     });
     this.draftVoiceInstructions.set(null);
@@ -675,25 +745,37 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   updateOriginalText(utteranceId: string, newText: string) {
+    const initialState = this.initialUtteranceState();
     this.videoData.update(prev => {
       if (!prev) return prev;
       return {
         ...prev,
-        utterances: prev.utterances.map(u =>
-          u.id === utteranceId ? { ...u, original_text: newText, needs_translation_regen: true } : u
-        )
+        utterances: prev.utterances.map(u => {
+          if (u.id === utteranceId) {
+            const updated = { ...u, original_text: newText };
+            updated.needs_translation_regen = this.checkTranslationRegen(updated, initialState);
+            return updated;
+          }
+          return u;
+        })
       };
     });
   }
 
   updateTranslatedText(utteranceId: string, newText: string) {
+    const initialState = this.initialUtteranceState();
     this.videoData.update(prev => {
       if (!prev) return prev;
       return {
         ...prev,
-        utterances: prev.utterances.map(u =>
-          u.id === utteranceId ? { ...u, translated_text: newText, needs_translation_regen: true } : u
-        )
+        utterances: prev.utterances.map(u => {
+          if (u.id === utteranceId) {
+            const updated = { ...u, translated_text: newText };
+            updated.needs_translation_regen = this.checkTranslationRegen(updated, initialState);
+            return updated;
+          }
+          return u;
+        })
       };
     });
   }
@@ -803,7 +885,8 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   revertUtterance(utteranceId: string) {
-    if (!this.initialUtteranceState || this.initialUtteranceState.id !== utteranceId) return;
+    const initialState = this.initialUtteranceState();
+    if (!initialState || initialState.id !== utteranceId) return;
 
     this.videoData.update(prev => {
       if (!prev) return prev;
@@ -811,7 +894,7 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u =>
           u.id === utteranceId
-            ? JSON.parse(JSON.stringify(this.initialUtteranceState))
+            ? JSON.parse(JSON.stringify(initialState))
             : u
         )
       };
