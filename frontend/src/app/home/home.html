@@ -217,5 +217,6 @@
 </div>
 <!-- Modals -->
 @if (isSpeakerModalOpen()) {
-<app-speaker-modal (close)="closeSpeakerModal()" (speakerAdded)="onSpeakerAdded($event)"></app-speaker-modal>
+<app-speaker-modal (close)="closeSpeakerModal()" (speakerAdded)="onSpeakerAdded($event)"
+  [speakerCount]="speakers().length"></app-speaker-modal>
 }

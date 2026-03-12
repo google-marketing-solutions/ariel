@@ -1,5 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { SpeakerModal } from '../_components/speaker-modal/speaker-modal';
 
 export interface Language {
@@ -41,6 +42,8 @@ export class Home implements OnInit {
   geminiInstructions = signal<string>('');
 
   isProcessing = signal(false);
+
+  constructor(private router: Router) { }
 
   ngOnInit() {
     this.fetchLanguages();
@@ -163,8 +166,10 @@ export class Home implements OnInit {
       const result = await response.json();
       console.log('Received result from backend:', result);
 
-      // Additional navigation or UI updates would go here
-      // For now, we mirror the old UI's silent update pattern
+      // Redirect to the Editor page
+      if (result.video_id) {
+        this.router.navigate(['/editor'], { queryParams: { video_id: result.video_id } });
+      }
     } catch (error) {
       console.error('Failed to process video:', error);
     } finally {

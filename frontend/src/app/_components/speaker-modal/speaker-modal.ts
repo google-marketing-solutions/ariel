@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, Output, signal, computed } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output, Input, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Speaker } from '../../home/home';
@@ -19,6 +19,7 @@ export interface Voice {
 export class SpeakerModal implements OnInit {
   @Output() close = new EventEmitter<void>();
   @Output() speakerAdded = new EventEmitter<Speaker>();
+  @Input() speakerCount = 0;
 
   speakerName = signal('');
   searchQuery = signal('');
@@ -91,7 +92,7 @@ export class SpeakerModal implements OnInit {
   selectVoice(voice: Voice) {
     this.stopPlaying();
 
-    const customName = this.speakerName().trim() || `Speaker`;
+    const customName = this.speakerName().trim() || `Speaker ${this.speakerCount + 1}`;
 
     const newSpeaker: Speaker = {
       id: `speaker_${Date.now()}`,

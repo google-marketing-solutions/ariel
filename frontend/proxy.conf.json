@@ -14,6 +14,16 @@
     "secure": false,
     "changeOrigin": true
   },
+  "/regenerate_translation": {
+    "target": "http://127.0.0.1:8080",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/regenerate_dubbing": {
+    "target": "http://127.0.0.1:8080",
+    "secure": false,
+    "changeOrigin": true
+  },
   "/api": {
     "target": "http://127.0.0.1:8080",
     "secure": false,
