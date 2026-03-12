@@ -285,7 +285,9 @@
                   </div>
                   
                   @if (activeUtteranceId() === utterance.id) {
-                  <div class="flex items-center gap-2 transition-opacity">
+                  <div class="flex items-center gap-4 transition-opacity">
+                    <!-- Regenerate Actions -->
+                    <div class="flex items-center gap-1">
                     <button
                       class="flex items-center justify-center w-7 h-7 rounded border transition-all focus:outline-none focus:ring-2 disabled:opacity-30 disabled:cursor-not-allowed"
                       [class.bg-white]="!utterance.needs_translation_regen"
@@ -346,6 +348,10 @@
                       (click)="regenerateDubbing(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">record_voice_over</span>
                     </button>
+                    </div>
+                    
+                    <!-- Editor Actions -->
+                    <div class="flex items-center gap-1">
                     <button
                       class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Undo"
@@ -360,6 +366,10 @@
                       (click)="cloneUtterance(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">content_copy</span>
                     </button>
+                    </div>
+                    
+                    <!-- State Actions -->
+                    <div class="flex items-center gap-1">
                     <button
                       class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
                       [title]="utterance.muted ? 'Unmute Utterance' : 'Mute Utterance'"
@@ -374,6 +384,7 @@
                       (click)="toggleRemoveUtterance(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">{{ utterance.removed ? 'settings_backup_restore' : 'delete' }}</span>
                     </button>
+                    </div>
                   </div>
                   }
               </div>
