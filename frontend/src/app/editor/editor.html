@@ -811,39 +811,47 @@
             <div class="flex-1 relative h-full mr-6" #timelineContainer>
               @for (utterance of videoData()?.utterances; track utterance.id; let i = $index) {
               <div
-                  class="absolute top-1 h-10 bg-primary/20 dark:bg-[#60a5fa]/20 rounded-lg flex items-center justify-center px-2 border-2 cursor-pointer transition-all hover:bg-primary/30 group"
-                  [class.border-primary]="activeUtteranceId() === utterance.id"
-                  [class.border-primary_40]="activeUtteranceId() !== utterance.id"
-                  [class.z-20]="activeUtteranceId() === utterance.id"
+                  class="absolute top-1 h-10 rounded-lg flex items-center justify-center px-2 border-2 cursor-pointer transition-all group"
+                  [class.z-30]="activeUtteranceId() === utterance.id"
                   [class.z-10]="activeUtteranceId() !== utterance.id"
                   [class.shadow-md]="activeUtteranceId() === utterance.id"
                   [class.opacity-50]="utterance.muted || utterance.removed"
                   [class.grayscale]="utterance.muted || utterance.removed"
+                  [ngClass]="getUtteranceOverlap(utterance) 
+                    ? (activeUtteranceId() === utterance.id 
+                        ? 'bg-red-500/20 dark:bg-red-900/40 border-red-500 hover:bg-red-500/30' 
+                        : 'bg-red-500/10 dark:bg-red-900/30 border-red-400 dark:border-red-500 hover:bg-red-500/20')
+                    : (activeUtteranceId() === utterance.id 
+                        ? 'bg-primary/20 dark:bg-[#60a5fa]/20 border-primary hover:bg-primary/30' 
+                        : 'bg-primary/20 dark:bg-[#60a5fa]/20 border-primary/40 dark:border-[#60a5fa]/40 hover:bg-primary/30 dark:hover:bg-[#60a5fa]/30')"
                   [style.left.%]="getLeftPercent(utterance.translated_start_time)"
                   [style.width.%]="getWidthPercent(utterance.translated_start_time, utterance.translated_end_time)"
                   (mousedown)="onDragStart($event, utterance)">
                   
-                  <span class="text-xs font-bold text-primary truncate pointer-events-none">U{{ i + 1 }}</span>
+                  <span class="text-xs font-bold truncate pointer-events-none"
+                    [ngClass]="getUtteranceOverlap(utterance) ? 'text-red-600 dark:text-red-400' : 'text-primary dark:text-[#60a5fa]'">
+                    U{{ i + 1 }}
+                  </span>
                   @if (utterance.muted && !utterance.removed) {
                   <div
-                    class="ml-1 w-5 h-5 rounded flex items-center justify-center bg-slate-800 dark:bg-slate-700 shadow-sm border border-slate-600 pointer-events-none">
-                    <span class="material-symbols-outlined text-[12px] text-white">volume_off</span>
+                    class="ml-1 w-5 h-5 rounded flex items-center justify-center bg-slate-800 dark:bg-slate-700 shadow-sm border border-slate-600 pointer-events-none text-white">
+                    <span class="material-symbols-outlined text-[12px]">volume_off</span>
                   </div>
                   }
                   @if (utterance.removed) {
                   <div
-                    class="ml-1 w-5 h-5 rounded flex items-center justify-center bg-red-600 dark:bg-red-800 shadow-sm border border-red-500 pointer-events-none">
-                    <span class="material-symbols-outlined text-[12px] text-white">delete</span>
+                    class="ml-1 w-5 h-5 rounded flex items-center justify-center bg-red-600 dark:bg-red-800 shadow-sm border border-red-500 pointer-events-none text-white">
+                    <span class="material-symbols-outlined text-[12px]">delete</span>
                   </div>
                   }
                   
                   @if (getUtteranceOverlap(utterance)) {
-                    <div class="absolute inset-y-0 left-0 w-10 bg-[#f87171]/80 border-r border-[#f87171] flex items-center justify-center animate-pulse rounded-l-md pointer-events-none">
-                      <span class="material-symbols-outlined text-white text-[14px]">warning</span>
+                    <div class="ml-1 flex items-center justify-center text-red-500 dark:text-red-400 pointer-events-none">
+                      <span class="material-symbols-outlined text-[18px]">warning</span>
                     </div>
                     <div
-                      class="absolute -top-6 left-0 bg-[#f87171] text-white text-[8px] px-1.5 py-0.5 rounded shadow-lg hidden group-hover:block whitespace-nowrap z-30">
-                      Overlap Collision detected
+                      class="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 dark:bg-slate-700 text-white text-[10px] px-2 py-1 rounded shadow-lg hidden group-hover:block whitespace-nowrap z-50 pointer-events-none font-medium">
+                      Overlap detected
                     </div>
                   }
                 </div>
