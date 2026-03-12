@@ -95,7 +95,7 @@
             class="w-full inline-flex justify-center items-center gap-2 rounded-xl bg-white dark:bg-[#334155] border border-slate-200 dark:border-[#475569] hover:bg-slate-50 dark:hover:bg-[#475569] px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-white shadow-sm transition-all focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-600 focus:outline-none">
             <span class="material-symbols-outlined text-[18px]">edit</span> Edit
           </a>
-          <button (click)="deleteVideo(video.video_id)"
+          <button (click)="promptDelete(video.video_id)"
             class="w-full inline-flex justify-center items-center gap-2 rounded-xl bg-white dark:bg-[#334155] border border-slate-200 dark:border-[#475569] hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:hover:bg-red-500/10 dark:hover:text-red-400 dark:hover:border-red-500/30 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-[#cbd5e1] shadow-sm transition-all focus:ring-2 focus:ring-red-500 dark:focus:ring-red-500/50 focus:outline-none">
             <span class="material-symbols-outlined text-[18px]">delete</span> Delete
           </button>
@@ -108,3 +108,39 @@
   </div>
 
 </div>
+@if (isDeleteModalOpen()) {
+<div
+  class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm pointer-events-auto transition-opacity"
+  (click)="cancelDelete()">
+  <div
+    class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8 flex flex-col max-w-sm w-[90%] border border-slate-200 dark:border-slate-700 transform transition-all scale-100"
+    (click)="$event.stopPropagation()">
+
+    <div class="flex items-center gap-4 mb-4">
+      <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-red-600 dark:text-red-400 text-2xl">delete_forever</span>
+      </div>
+      <div>
+        <h2 class="text-xl font-bold text-slate-800 dark:text-white mb-1">Delete Video?</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">This action cannot be undone. This will permanently delete
+          the video and its data.</p>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-end gap-3 mt-6">
+      <button [disabled]="isDeleting()" (click)="cancelDelete()"
+        class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-600 disabled:opacity-50">
+        Cancel
+      </button>
+      <button [disabled]="isDeleting()" (click)="deleteVideo()"
+        class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 transition-colors shadow-sm shadow-red-500/20 focus:outline-none focus:ring-2 focus:ring-red-500/50 flex items-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed">
+        @if (isDeleting()) {
+        <span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Deleting...
+        } @else {
+        Delete Video
+        }
+      </button>
+    </div>
+  </div>
+</div>
+}

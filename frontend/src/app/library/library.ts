@@ -72,20 +72,40 @@ export class Library implements OnInit {
     return uniqueVoices.length > 0 ? uniqueVoices.join(', ') : 'Unknown';
   }
 
-  async deleteVideo(videoId: string) {
-    if (!confirm('Are you sure you want to delete this video?')) return;
+  isDeleteModalOpen = signal(false);
+  pendingDeleteVideoId = signal<string | null>(null);
+  isDeleting = signal(false);
 
+  promptDelete(videoId: string) {
+    this.pendingDeleteVideoId.set(videoId);
+    this.isDeleteModalOpen.set(true);
+  }
+
+  cancelDelete() {
+    this.isDeleteModalOpen.set(false);
+    this.pendingDeleteVideoId.set(null);
+  }
+
+  async deleteVideo() {
+    const videoId = this.pendingDeleteVideoId();
+    if (!videoId) return;
+
+    this.isDeleting.set(true);
     try {
       const response = await fetch(`/api/videos/${videoId}`, { method: 'DELETE' });
       if (response.ok) {
         // Refresh the list
         await this.fetchVideos();
+        this.isDeleteModalOpen.set(false);
+        this.pendingDeleteVideoId.set(null);
       } else {
-        alert('Failed to delete video');
+        console.error('Failed to delete video');
+        // A toast or inline error could be added here later if needed
       }
     } catch (err) {
       console.error('Error deleting video:', err);
-      alert('Error deleting video');
+    } finally {
+      this.isDeleting.set(false);
     }
   }
 }

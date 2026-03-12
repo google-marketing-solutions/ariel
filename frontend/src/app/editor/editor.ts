@@ -155,6 +155,12 @@ export class Editor implements OnInit, OnDestroy {
     return draft.speaker_id !== active.speaker?.speaker_id;
   });
 
+  durationWarningCount = computed(() => {
+    const data = this.videoData();
+    if (!data || !data.duration) return 0;
+    return data.utterances.filter(u => u.translated_end_time > data.duration && !u.removed).length;
+  });
+
   // Video Settings Editing State
   isEditingSettings = signal(false);
   initialUtteranceState = signal<VideoUtterance | null>(null);
@@ -1349,14 +1355,22 @@ export class Editor implements OnInit, OnDestroy {
     // Bounds check
     if (newStartTime < 0) newStartTime = 0;
 
-    const data = this.videoData();
-    if (!data) return;
-    const utterance = data.utterances.find(u => u.id === this.draggedUtteranceId());
-    if (utterance) {
-      const uDuration = utterance.translated_end_time - utterance.translated_start_time;
-      utterance.translated_start_time = Number(newStartTime.toFixed(2));
-      utterance.translated_end_time = Number((newStartTime + uDuration).toFixed(2));
-    }
+    this.videoData.update(prev => {
+      if (!prev) return prev;
+      const index = prev.utterances.findIndex(u => u.id === this.draggedUtteranceId());
+      if (index === -1) return prev;
+
+      const newUtterances = [...prev.utterances];
+      const u = { ...newUtterances[index] };
+      const uDuration = u.translated_end_time - u.translated_start_time;
+
+      u.translated_start_time = Number(newStartTime.toFixed(2));
+      u.translated_end_time = Number((newStartTime + uDuration).toFixed(2));
+
+      newUtterances[index] = u;
+
+      return { ...prev, utterances: newUtterances };
+    });
   }
 
   @HostListener('document:mouseup', ['$event'])
