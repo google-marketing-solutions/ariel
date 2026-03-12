@@ -35,6 +35,7 @@
 
     @if (isEditorRoute) {
     <button
+      (click)="generateVideo()"
       class="flex items-center gap-2 rounded-xl bg-[#2563eb] dark:bg-gradient-to-br dark:from-[#2563eb] dark:to-[#3b82f6] px-5 py-2 text-sm font-semibold text-white shadow-[0_0_15px_-3px_rgba(37,99,235,0.3)] hover:translate-y-[-1px] transition-all active:scale-95">
       Generate Video
     </button>

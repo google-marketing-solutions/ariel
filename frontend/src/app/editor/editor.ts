@@ -1,5 +1,7 @@
-import { Component, OnInit, signal, computed, HostListener, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, HostListener, ViewChild, ElementRef, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { VideoGenerationService } from '../services/video-generation.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SpeakerModal } from '../_components/speaker-modal/speaker-modal';
@@ -64,12 +66,16 @@ export type PanelMode = 'timestamps' | 'speaker' | 'translation' | 'voice' | nul
   templateUrl: './editor.html',
   styleUrl: './editor.scss'
 })
-export class Editor implements OnInit {
+export class Editor implements OnInit, OnDestroy {
   videoId = signal<string | null>(null);
   videoUrl = signal<string | null>(null);
   videoData = signal<VideoJob | null>(null);
   isLoading = signal(true);
   error = signal<string | null>(null);
+  isGeneratingVideo = signal(false);
+
+  private videoGenerationService = inject(VideoGenerationService);
+  private videoGenSub?: Subscription;
 
   // Audio elements for timeline
   originalAudio = new Audio();
@@ -141,6 +147,34 @@ export class Editor implements OnInit {
       this.animationFrameId = requestAnimationFrame(updateTimeLoop);
     };
     this.animationFrameId = requestAnimationFrame(updateTimeLoop);
+
+    this.videoGenSub = this.videoGenerationService.generateVideo$.subscribe(async () => {
+      if (!this.videoData() || !this.videoUrl()) return;
+      this.isGeneratingVideo.set(true);
+      try {
+        const payload = {
+          video: this.videoData(),
+          original_video_url: this.videoUrl()
+        };
+        const response = await fetch('/generate_video', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error('Failed to generate video');
+        const result = await response.json();
+
+        // Navigate to results page and pass the generated data via Router state
+        this.router.navigate(['/result'], { state: { finalVideoData: result, originalVideoData: this.videoData() } });
+      } catch (err) {
+        console.error("Error generating video:", err);
+        alert("Failed to generate video");
+      } finally {
+        this.isGeneratingVideo.set(false);
+      }
+    });
 
     this.fetchLanguages();
     this.route.queryParams.subscribe(params => {
@@ -241,6 +275,13 @@ export class Editor implements OnInit {
       this.initEditState();
       this.isEditingSettings.set(true);
     }
+  }
+
+  ngOnDestroy() {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+    }
+    this.videoGenSub?.unsubscribe();
   }
 
   // --- Speaker Modal Logic ---

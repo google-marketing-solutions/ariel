@@ -729,3 +729,20 @@
 <app-speaker-modal [speakerCount]="editSpeakers().length" (close)="closeSpeakerModal()"
   (speakerAdded)="onSpeakerAddedOrEdited($event)"></app-speaker-modal>
 }
+@if (isGeneratingVideo()) {
+<div
+  class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm pointer-events-auto">
+  <div
+    class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 flex flex-col items-center max-w-sm w-full border border-slate-200 dark:border-slate-700">
+    <div class="relative w-20 h-20 mb-6">
+      <div class="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
+      <div class="absolute inset-0 border-4 border-primary rounded-full border-t-transparent animate-spin"></div>
+      <span
+        class="absolute inset-0 flex items-center justify-center material-symbols-outlined text-primary text-3xl">movie_edit</span>
+    </div>
+    <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-2">Generating Video</h3>
+    <p class="text-sm text-center text-slate-500 dark:text-slate-400">Spinning the gears and flexing Gemini... This may
+      take a few moments.</p>
+  </div>
+</div>
+}
