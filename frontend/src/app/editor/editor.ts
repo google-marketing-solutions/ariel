@@ -39,6 +39,10 @@ interface VideoUtterance {
 
   // Deleted State flag
   removed?: boolean;
+
+  // Regeneration flags
+  needs_translation_regen?: boolean;
+  needs_dubbing_regen?: boolean;
 }
 
 interface VideoJob {
@@ -106,6 +110,46 @@ export class Editor implements OnInit, OnDestroy {
   // UI State
   activeUtteranceId = signal<string | null>(null);
   activePanelMode = signal<PanelMode | null>(null);
+
+  // Draft State for active panel
+  draftVoiceInstructions = signal<string | null>(null);
+  draftTranslationInstructions = signal<string | null>(null);
+  draftTimestamps = signal<{ start: string, end: string } | null>(null);
+  timestampError = signal<string | null>(null);
+  draftSpeaker = signal<VideoSpeaker | null>(null);
+
+  isVoiceDirty = computed(() => {
+    const active = this.activeUtterance;
+    if (!active) return false;
+    const draft = this.draftVoiceInstructions();
+    if (draft === null) return false;
+    return draft !== (active.voice_instructions || '');
+  });
+
+  isTranslationDirty = computed(() => {
+    const active = this.activeUtterance;
+    if (!active) return false;
+    const draft = this.draftTranslationInstructions();
+    if (draft === null) return false;
+    return draft !== (active.instructions || '');
+  });
+
+  isTimestampsDirty = computed(() => {
+    const active = this.activeUtterance;
+    if (!active) return false;
+    const draft = this.draftTimestamps();
+    if (draft === null) return false;
+    return draft.start !== this.formatTime(active.translated_start_time) ||
+      draft.end !== this.formatTime(active.translated_end_time);
+  });
+
+  isSpeakerDirty = computed(() => {
+    const active = this.activeUtterance;
+    if (!active) return false;
+    const draft = this.draftSpeaker();
+    if (draft === null) return false;
+    return draft.speaker_id !== active.speaker?.speaker_id;
+  });
 
   // Video Settings Editing State
   isEditingSettings = signal(false);
@@ -183,8 +227,7 @@ export class Editor implements OnInit, OnDestroy {
         this.videoId.set(id);
         this.loadProject(id);
       } else {
-        this.error.set('No video ID provided in URL');
-        this.isLoading.set(false);
+        this.router.navigate(['/']);
       }
     });
   }
@@ -467,6 +510,7 @@ export class Editor implements OnInit, OnDestroy {
     if (this.activeUtteranceId() !== utteranceId) {
       this.activeUtteranceId.set(utteranceId);
       this.activePanelMode.set(null);
+      this.clearDrafts();
       // Create a snapshot for reverting later
       const data = this.videoData();
       if (data) {
@@ -479,14 +523,74 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   setActivePanel(utteranceId: string, mode: PanelMode) {
+    this.clearDrafts();
     if (this.activeUtteranceId() === utteranceId && this.activePanelMode() === mode) {
       // Toggle off the panel if clicking the same button again
       this.activePanelMode.set(null);
     } else {
+      if (this.activeUtteranceId() !== utteranceId) {
+        this.activeUtteranceId.set(utteranceId);
+      }
       // Set to new active pane
-      this.activeUtteranceId.set(utteranceId);
       this.activePanelMode.set(mode);
     }
+  }
+
+  clearDrafts() {
+    this.draftVoiceInstructions.set(null);
+    this.draftTranslationInstructions.set(null);
+    this.draftTimestamps.set(null);
+    this.timestampError.set(null);
+    this.draftSpeaker.set(null);
+  }
+
+  onVoiceInput(val: string) {
+    this.draftVoiceInstructions.set(val);
+  }
+
+  onTranslationInput(val: string) {
+    this.draftTranslationInstructions.set(val);
+  }
+
+  onStartTimestampInput(startStr: string, endInput: HTMLInputElement) {
+    const active = this.activeUtterance;
+    if (!active) return;
+    const currentDuration = active.translated_end_time - active.translated_start_time;
+
+    let newStart = this.parseTime(startStr);
+    if (!isNaN(newStart) && startStr.includes(':')) {
+      const newEnd = newStart + currentDuration;
+      const newEndStr = this.formatTime(newEnd);
+      endInput.value = newEndStr;
+      this.draftTimestamps.set({ start: startStr, end: newEndStr });
+      this.timestampError.set(null);
+    } else {
+      this.draftTimestamps.set({ start: startStr, end: endInput.value });
+      this.timestampError.set(null);
+    }
+  }
+
+  onEndTimestampInput(startInput: HTMLInputElement, endStr: string) {
+    const active = this.activeUtterance;
+    if (!active) return;
+    const currentDuration = active.translated_end_time - active.translated_start_time;
+
+    let newEnd = this.parseTime(endStr);
+    if (!isNaN(newEnd) && endStr.includes(':')) {
+      let newStart = newEnd - currentDuration;
+
+      const newStartStr = this.formatTime(newStart);
+      startInput.value = newStartStr;
+      this.draftTimestamps.set({ start: newStartStr, end: endStr });
+      this.timestampError.set(null);
+    } else {
+      this.draftTimestamps.set({ start: startInput.value, end: endStr });
+      this.timestampError.set(null);
+    }
+  }
+
+  onSpeakerSelect(spk: VideoSpeaker) {
+    this.draftSpeaker.set(spk);
   }
 
   changeSpeaker(newSpeaker: VideoSpeaker) {
@@ -499,13 +603,15 @@ export class Editor implements OnInit, OnDestroy {
       return {
         ...prev,
         utterances: prev.utterances.map(u =>
-          u.id === activeId ? { ...u, speaker: newSpeaker } : u
+          u.id === activeId ? { ...u, speaker: newSpeaker, needs_dubbing_regen: true } : u
         )
       };
     });
   }
 
-  saveTranslationInstructions(instructions: string) {
+  saveTranslationInstructions() {
+    const draft = this.draftTranslationInstructions();
+    if (draft === null) return;
     const data = this.videoData();
     const activeId = this.activeUtteranceId();
     if (!data || !activeId) return;
@@ -515,13 +621,16 @@ export class Editor implements OnInit, OnDestroy {
       return {
         ...prev,
         utterances: prev.utterances.map(u =>
-          u.id === activeId ? { ...u, instructions } : u
+          u.id === activeId ? { ...u, instructions: draft, needs_translation_regen: true } : u
         )
       };
     });
+    this.draftTranslationInstructions.set(null);
   }
 
-  saveVoiceInstructions(voice_instructions: string) {
+  saveVoiceInstructions() {
+    const draft = this.draftVoiceInstructions();
+    if (draft === null) return;
     const data = this.videoData();
     const activeId = this.activeUtteranceId();
     if (!data || !activeId) return;
@@ -531,10 +640,38 @@ export class Editor implements OnInit, OnDestroy {
       return {
         ...prev,
         utterances: prev.utterances.map(u =>
-          u.id === activeId ? { ...u, voice_instructions } : u
+          u.id === activeId ? { ...u, voice_instructions: draft, needs_dubbing_regen: true } : u
         )
       };
     });
+    this.draftVoiceInstructions.set(null);
+  }
+
+  saveSpeaker() {
+    const draft = this.draftSpeaker();
+    if (draft === null) return;
+    this.changeSpeaker(draft);
+    this.draftSpeaker.set(null);
+  }
+
+  cancelTimestamps() {
+    this.draftTimestamps.set(null);
+    this.timestampError.set(null);
+  }
+
+  saveTimestamps() {
+    const draft = this.draftTimestamps();
+    if (draft === null) return;
+
+    // Validate negative timestamps on save
+    if (this.parseTime(draft.start) < 0) {
+      this.timestampError.set("Start time cannot be negative. To change duration of utterance, try changing the speed or shortening the text.");
+      return;
+    }
+
+    this.timestampError.set(null);
+    this.applyTimestamps(this.activeUtteranceId()!, draft.start, draft.end);
+    this.draftTimestamps.set(null);
   }
 
   updateOriginalText(utteranceId: string, newText: string) {
@@ -543,7 +680,7 @@ export class Editor implements OnInit, OnDestroy {
       return {
         ...prev,
         utterances: prev.utterances.map(u =>
-          u.id === utteranceId ? { ...u, original_text: newText } : u
+          u.id === utteranceId ? { ...u, original_text: newText, needs_translation_regen: true } : u
         )
       };
     });
@@ -555,31 +692,7 @@ export class Editor implements OnInit, OnDestroy {
       return {
         ...prev,
         utterances: prev.utterances.map(u =>
-          u.id === utteranceId ? { ...u, translated_text: newText } : u
-        )
-      };
-    });
-  }
-
-  updateTranslationInstructions(utteranceId: string, text: string) {
-    this.videoData.update(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        utterances: prev.utterances.map(u =>
-          u.id === utteranceId ? { ...u, instructions: text } : u
-        )
-      };
-    });
-  }
-
-  updateVoiceInstructions(utteranceId: string, text: string) {
-    this.videoData.update(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        utterances: prev.utterances.map(u =>
-          u.id === utteranceId ? { ...u, voice_instructions: text } : u
+          u.id === utteranceId ? { ...u, translated_text: newText, needs_translation_regen: true } : u
         )
       };
     });
@@ -622,7 +735,9 @@ export class Editor implements OnInit, OnDestroy {
               translated_text: result.translated_text,
               audio_url: result.audio_url,
               duration: result.duration,
-              translated_end_time: u.translated_start_time + result.duration
+              translated_end_time: u.translated_start_time + result.duration,
+              needs_translation_regen: false,
+              needs_dubbing_regen: false
             } : u
           )
         };
@@ -672,7 +787,8 @@ export class Editor implements OnInit, OnDestroy {
               ...u,
               audio_url: result.audio_url,
               duration: result.duration,
-              translated_end_time: u.translated_start_time + result.duration
+              translated_end_time: u.translated_start_time + result.duration,
+              needs_dubbing_regen: false
             } : u
           )
         };
@@ -831,10 +947,61 @@ export class Editor implements OnInit, OnDestroy {
 
   // Utility to format seconds to MM:SS.ms format for presentation
   formatTime(seconds: number): string {
-    const min = Math.floor(seconds / 60);
-    const sec = Math.floor(seconds % 60);
-    const ms = Math.floor((seconds % 1) * 100);
-    return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+    const isNegative = seconds < 0;
+    const absSeconds = Math.abs(seconds);
+    const min = Math.floor(absSeconds / 60);
+    const sec = Math.floor(absSeconds % 60);
+    const ms = Math.floor((absSeconds % 1) * 100);
+    const timeStr = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+    return isNegative ? `-${timeStr}` : timeStr;
+  }
+
+  // Parse time back from MM:SS.ms (e.g., 01:15.50 -> 75.5)
+  parseTime(timeStr: string): number {
+    try {
+      const isNegative = timeStr.trim().startsWith('-');
+      if (isNegative) timeStr = timeStr.trim().substring(1);
+
+      const parts = timeStr.split(':');
+      if (parts.length !== 2) return 0;
+      const min = parseInt(parts[0], 10) || 0;
+      const secParts = parts[1].split('.');
+      const sec = parseInt(secParts[0], 10) || 0;
+      let ms = 0;
+      if (secParts.length > 1) {
+        // Pad to ensure .5 is .50, etc.
+        let msStr = secParts[1];
+        if (msStr.length === 1) msStr += '0';
+        ms = parseInt(msStr.substring(0, 2), 10) || 0;
+      }
+      const val = (min * 60) + sec + (ms / 100);
+      return isNegative ? -val : val;
+    } catch {
+      return 0; // Fallback
+    }
+  }
+
+  applyTimestamps(id: string | undefined, startStr: string, endStr: string) {
+    if (!id) return;
+
+    let newStart = this.parseTime(startStr);
+    let newEnd = this.parseTime(endStr);
+
+    if (newEnd < newStart) {
+      alert("End time cannot be earlier than start time.");
+      return;
+    }
+
+    this.videoData.update((data) => {
+      if (!data) return data;
+      const newData = JSON.parse(JSON.stringify(data));
+      const utterance = newData.utterances.find((u: any) => u.id === id);
+      if (utterance) {
+        utterance.translated_start_time = newStart;
+        utterance.translated_end_time = newEnd;
+      }
+      return newData;
+    });
   }
 
   // --- Audio Interactions ---

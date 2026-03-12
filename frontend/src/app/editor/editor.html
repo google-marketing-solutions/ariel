@@ -30,9 +30,32 @@
         <!-- Global Settings Section -->
         <div
           class="mt-6 bg-slate-50/50 dark:bg-[#1e293b]/50 border border-slate-200/60 dark:border-[#334155] rounded-2xl p-4">
-          <div class="mb-4 pb-3 border-b border-black/5 dark:border-[#334155]">
+          <div class="flex items-center justify-between mb-4 pb-3 border-b border-black/5 dark:border-[#334155]">
             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-[#94a3b8]">Video Settings
             </h3>
+            <div class="flex gap-2">
+              @if (isEditingSettings()) {
+              @if (!isGeneratingAudio()) {
+              <button (click)="toggleEditSettings()"
+                class="px-3 py-1 text-[10px] font-bold text-slate-600 dark:text-[#f1f5f9] bg-white dark:bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 rounded border border-slate-200 dark:border-[#334155] transition-colors shadow-sm">Cancel</button>
+              }
+              <button (click)="saveVideoSettings()" [disabled]="isGeneratingAudio()"
+                class="px-3 py-1 text-[10px] font-bold text-white bg-primary dark:bg-gradient-to-br dark:from-[#2563eb] dark:to-[#3b82f6] hover:bg-blue-700 rounded transition-colors shadow-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                @if (isGeneratingAudio()) {
+                <span class="material-symbols-outlined text-[14px] animate-spin">refresh</span>
+                Processing
+                } @else {
+                Submit
+                }
+              </button>
+              } @else {
+              <button (click)="toggleEditSettings()"
+                class="flex items-center gap-1 px-3 py-1.5 text-[11px] font-bold text-primary dark:text-[#60a5fa] bg-primary/10 dark:bg-[#60a5fa]/10 hover:bg-primary/20 dark:hover:bg-[#60a5fa]/20 rounded-lg transition-colors ring-1 ring-primary/20">
+                <span class="material-symbols-outlined text-[14px]">edit</span>
+                Edit Settings
+              </button>
+              }
+            </div>
           </div>
 
           <div class="space-y-6">
@@ -42,9 +65,10 @@
               <div
                 class="flex justify-between items-center px-4 py-3 rounded-xl bg-white dark:bg-[#0f172a] border border-black/5 dark:border-[#334155] shadow-sm">
                 <span class="text-xs text-slate-400 dark:text-[#94a3b8]">Original</span>
-                <select [(ngModel)]="editOriginalLanguage"
-                  class="bg-transparent text-xs font-medium dark:text-[#f1f5f9] outline-none">
-                  <optgroup label="GA">
+                <div class="relative flex items-center">
+                  <select [(ngModel)]="editOriginalLanguage"
+                    class="appearance-none bg-transparent text-xs font-medium text-slate-800 dark:text-[#f1f5f9] outline-none pr-5 cursor-pointer hover:text-primary dark:hover:text-[#60a5fa] transition-colors max-w-[150px] truncate text-right">
+                    <optgroup label="GA">
                     @for (lang of gaLanguages(); track lang.code) {
                     <option [value]="lang.code">{{ lang.name }}</option>
                     }
@@ -55,11 +79,16 @@
                     }
                   </optgroup>
                 </select>
+                <span
+                  class="material-symbols-outlined absolute right-0 text-slate-400 pointer-events-none text-[16px] -mt-0.5">expand_more</span>
+                </div>
               </div>
               <div
                 class="flex justify-between items-center px-4 py-3 rounded-xl bg-white dark:bg-[#0f172a] border border-black/5 dark:border-[#334155] shadow-sm">
                 <span class="text-xs text-slate-400 dark:text-[#94a3b8]">Translation</span>
-                <select [(ngModel)]="editTranslateLanguage" class="bg-transparent text-xs font-medium outline-none">
+                <div class="relative flex items-center">
+                  <select [(ngModel)]="editTranslateLanguage"
+                    class="appearance-none bg-transparent text-xs font-medium text-slate-800 dark:text-[#f1f5f9] outline-none pr-5 cursor-pointer hover:text-primary dark:hover:text-[#60a5fa] transition-colors max-w-[150px] truncate text-right">
                   <optgroup label="GA">
                     @for (lang of gaLanguages(); track lang.code) {
                     <option [value]="lang.code">{{ lang.name }}</option>
@@ -71,6 +100,9 @@
                     }
                   </optgroup>
                 </select>
+                <span
+                  class="material-symbols-outlined absolute right-0 text-slate-400 pointer-events-none text-[16px] -mt-0.5">expand_more</span>
+                </div>
               </div>
               } @else {
                 <div
@@ -122,7 +154,7 @@
                         } @else {
                         @for (speaker of videoData()?.speakers; track speaker.speaker_id || speaker.name; let i = $index) {
                   <div
-                    class="flex items-center gap-3 p-2 rounded-lg hover:bg-white dark:hover:bg-[#0f172a] cursor-pointer border border-transparent hover:border-black/5 dark:hover:border-[#334155] transition-all shadow-sm">
+                    class="flex items-center gap-3 p-2 rounded-lg border border-transparent shadow-sm">
                     <div
                       [class]="'h-8 w-8 rounded flex items-center justify-center font-bold text-xs italic ' + (speaker.gender === 'Female' ? 'bg-pink-500/20 text-pink-500' : 'bg-primary/20 dark:bg-[#60a5fa]/20 text-primary dark:text-[#60a5fa]')" >
                       S{{ i + 1 }}</div>
@@ -137,26 +169,6 @@
             </div>
           </div>
 
-          <!-- Action Buttons -->
-          <div class="mt-6 flex justify-end gap-2">
-            @if (isEditingSettings()) {
-              <button
-                (click)="toggleEditSettings()"
-                class="px-4 py-2 text-xs font-bold text-slate-600 dark:text-[#f1f5f9] bg-white dark:bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg border border-slate-200 dark:border-[#334155] transition-colors shadow-sm">Cancel</button>
-              <button
-                (click)="saveVideoSettings()"
-                class="px-4 py-2 text-xs font-bold text-white bg-primary dark:bg-gradient-to-br dark:from-[#2563eb] dark:to-[#3b82f6] hover:bg-blue-700 rounded-lg transition-colors shadow-sm flex items-center gap-1">
-                @if (isGeneratingAudio()) {
-                    <span class="material-symbols-outlined text-[14px] animate-spin">refresh</span>
-                }
-                Submit
-              </button>
-            } @else {
-              <button
-                (click)="toggleEditSettings()"
-                class="px-4 py-2 text-xs font-bold text-slate-600 dark:text-[#f1f5f9] bg-white dark:bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg border border-slate-200 dark:border-[#334155] transition-colors shadow-sm w-full">Edit Settings</button>
-            }
-          </div>
         </div>
       </div>
     </aside>
@@ -167,8 +179,8 @@
       <div class="p-6 max-w-full mx-auto w-full">
         <div
           class="mb-6 grid grid-cols-2 gap-8 px-4 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-[#94a3b8]">
-          <span>English (United States)</span>
-          <span>Croatian</span>
+          <span>{{ getLanguageName(isEditingSettings() ? editOriginalLanguage() : videoData()?.original_language) }}</span>
+          <span>{{ getLanguageName(isEditingSettings() ? editTranslateLanguage() : videoData()?.translate_language) }}</span>
         </div>
         <div class="space-y-4 pb-20">
 
@@ -230,30 +242,105 @@
               <div class="flex items-center justify-between gap-2 mb-3">
                 <div class="flex items-center gap-2">
                   <div
-                    class="h-6 w-8 rounded-lg bg-primary/10 dark:bg-[#60a5fa]/10 border border-primary/20 dark:border-[#60a5fa]/20 text-[10px] font-bold text-primary dark:text-[#60a5fa] tracking-wide flex items-center justify-center p-1">
+                    class="h-6 w-8 rounded-lg border text-[10px] font-bold tracking-wide flex items-center justify-center p-1"
+                    [class.bg-primary/10]="utterance.speaker.gender !== 'Female'"
+                    [class.dark:bg-[#60a5fa]/10]="utterance.speaker.gender !== 'Female'"
+                    [class.border-primary/20]="utterance.speaker.gender !== 'Female'"
+                    [class.dark:border-[#60a5fa]/20]="utterance.speaker.gender !== 'Female'"
+                    [class.text-primary]="utterance.speaker.gender !== 'Female'"
+                    [class.dark:text-[#60a5fa]]="utterance.speaker.gender !== 'Female'"
+                    [class.bg-pink-500/10]="utterance.speaker.gender === 'Female'"
+                    [class.border-pink-500/20]="utterance.speaker.gender === 'Female'"
+                    [class.text-pink-500]="utterance.speaker.gender === 'Female'">
                     U{{ i + 1 }}
                     </div>
                   <div
-                    class="h-6 px-2 rounded-lg border border-primary text-[10px] font-bold text-primary tracking-wide flex items-center justify-center">
+                    class="h-6 px-2 rounded-lg border text-[10px] font-bold tracking-wide flex items-center justify-center"
+                    [class.border-primary]="utterance.speaker.gender !== 'Female'"
+                    [class.text-primary]="utterance.speaker.gender !== 'Female'"
+                    [class.border-pink-500]="utterance.speaker.gender === 'Female'"
+                    [class.text-pink-500]="utterance.speaker.gender === 'Female'">
                     {{ (utterance.speaker.speaker_name || utterance.speaker.name) === 'Speaker' ? utterance.speaker.voice :
                     (utterance.speaker.speaker_name || utterance.speaker.name) }}
                     </div>
                   <span class="text-[10px] text-slate-500 dark:text-[#94a3b8] font-mono">
                     {{ formatTime(utterance.translated_start_time) }} - {{ formatTime(utterance.translated_end_time) }}
                   </span>
+                  @if (utterance.needs_translation_regen && utterance.needs_dubbing_regen) {
+                  <span
+                    class="text-[10px] text-fuchsia-600 dark:text-fuchsia-400 font-bold px-2 py-0.5 bg-fuchsia-50 dark:bg-fuchsia-900/20 rounded border border-fuchsia-200 dark:border-fuchsia-800 animate-pulse">
+                    Translation & Voice changed
+                  </span>
+                  } @else if (utterance.needs_translation_regen) {
+                  <span
+                    class="text-[10px] text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 animate-pulse">
+                    Translation changed
+                  </span>
+                  } @else if (utterance.needs_dubbing_regen) {
+                  <span
+                    class="text-[10px] text-blue-600 dark:text-blue-400 font-bold px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800 animate-pulse">
+                    Voice changed
+                  </span>
+                  }
                   </div>
                   
                   @if (activeUtteranceId() === utterance.id) {
                   <div class="flex items-center gap-2 transition-opacity">
                     <button
-                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                      class="flex items-center justify-center w-7 h-7 rounded border transition-all focus:outline-none focus:ring-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                      [class.bg-white]="!utterance.needs_translation_regen"
+                      [class.dark:bg-[#0f172a]]="!utterance.needs_translation_regen"
+                      [class.hover:bg-primary/10]="!utterance.needs_translation_regen"
+                      [class.dark:hover:bg-[#60a5fa]/10]="!utterance.needs_translation_regen"
+                      [class.text-slate-500]="!utterance.needs_translation_regen"
+                      [class.dark:text-[#94a3b8]]="!utterance.needs_translation_regen"
+                      [class.hover:text-primary]="!utterance.needs_translation_regen"
+                      [class.dark:hover:text-[#60a5fa]]="!utterance.needs_translation_regen"
+                      [class.border-slate-200]="!utterance.needs_translation_regen"
+                      [class.dark:border-[#334155]]="!utterance.needs_translation_regen"
+                      [class.hover:border-primary/20]="!utterance.needs_translation_regen"
+                      [class.focus:ring-primary/20]="!utterance.needs_translation_regen"
+                      [class.bg-amber-100]="utterance.needs_translation_regen"
+                      [class.dark:bg-amber-900/40]="utterance.needs_translation_regen"
+                      [class.hover:bg-amber-200]="utterance.needs_translation_regen"
+                      [class.dark:hover:bg-amber-800/60]="utterance.needs_translation_regen"
+                      [class.text-amber-700]="utterance.needs_translation_regen"
+                      [class.dark:text-amber-400]="utterance.needs_translation_regen"
+                      [class.border-amber-400]="utterance.needs_translation_regen"
+                      [class.dark:border-amber-500/50]="utterance.needs_translation_regen"
+                      [class.focus:ring-amber-500/20]="utterance.needs_translation_regen"
+                      [class.animate-pulse]="utterance.needs_translation_regen"
+                      [class.shadow-[0_0_10px_2px_rgba(245,158,11,0.2)]]="utterance.needs_translation_regen"
                       title="Regenerate Translation"
                       [disabled]="utterance.muted || utterance.removed"
                       (click)="regenerateTranslation(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">autorenew</span>
                     </button>
                     <button
-                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                      class="flex items-center justify-center w-7 h-7 rounded border transition-all focus:outline-none focus:ring-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                      [class.bg-white]="!utterance.needs_dubbing_regen"
+                      [class.dark:bg-[#0f172a]]="!utterance.needs_dubbing_regen"
+                      [class.hover:bg-primary/10]="!utterance.needs_dubbing_regen"
+                      [class.dark:hover:bg-[#60a5fa]/10]="!utterance.needs_dubbing_regen"
+                      [class.text-slate-500]="!utterance.needs_dubbing_regen"
+                      [class.dark:text-[#94a3b8]]="!utterance.needs_dubbing_regen"
+                      [class.hover:text-primary]="!utterance.needs_dubbing_regen"
+                      [class.dark:hover:text-[#60a5fa]]="!utterance.needs_dubbing_regen"
+                      [class.border-slate-200]="!utterance.needs_dubbing_regen"
+                      [class.dark:border-[#334155]]="!utterance.needs_dubbing_regen"
+                      [class.hover:border-primary/20]="!utterance.needs_dubbing_regen"
+                      [class.focus:ring-primary/20]="!utterance.needs_dubbing_regen"
+                      [class.bg-blue-100]="utterance.needs_dubbing_regen"
+                      [class.dark:bg-blue-900/40]="utterance.needs_dubbing_regen"
+                      [class.hover:bg-blue-200]="utterance.needs_dubbing_regen"
+                      [class.dark:hover:bg-blue-800/60]="utterance.needs_dubbing_regen"
+                      [class.text-blue-700]="utterance.needs_dubbing_regen"
+                      [class.dark:text-blue-400]="utterance.needs_dubbing_regen"
+                      [class.border-blue-400]="utterance.needs_dubbing_regen"
+                      [class.dark:border-blue-500/50]="utterance.needs_dubbing_regen"
+                      [class.focus:ring-blue-500/20]="utterance.needs_dubbing_regen"
+                      [class.animate-pulse]="utterance.needs_dubbing_regen"
+                      [class.shadow-[0_0_10px_2px_rgba(59,130,246,0.2)]]="utterance.needs_dubbing_regen"
                       title="Regenerate Dubbing"
                       [disabled]="utterance.muted || utterance.removed"
                       (click)="regenerateDubbing(utterance.id); $event.stopPropagation()">
@@ -433,42 +520,27 @@
 } @else {
 
 @if (activePanelMode() === 'voice') {
-            <h3 class="text-sm font-bold mb-6 flex items-center gap-2">
+            <h3 class="text-sm font-bold flex items-center gap-2 mb-6">
               <span class="material-symbols-outlined text-primary dark:text-[#60a5fa] text-lg">mood</span> Voice
               instructions
             </h3>
             <div class="space-y-6 flex-1">
-              <!-- Voice Intonation -->
               <div class="border-t border-primary/5 dark:border-[#334155] pt-4">
-                <button class="w-full flex items-center justify-between group">
-                  <span class="text-[11px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wider">Voice
-                    Intonation</span>
-                  <span
-                    class="material-symbols-outlined text-sm text-slate-400 dark:text-[#94a3b8] group-hover:text-primary dark:group-hover:text-[#60a5fa]">expand_more</span>
-                </button>
-                <p class="mt-2 text-xs text-slate-400 dark:text-[#94a3b8] leading-relaxed italic">Maintain professional tone
-                  with slight upward inflection at the end of the sentence...</p>
-              </div>
-              <!-- Translation Instructions -->
-              <div class="border-t border-primary/5 dark:border-[#334155] pt-4">
-                <button class="w-full flex items-center justify-between group">
-                  <span class="text-[11px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wider">Voice
-                    Instructions</span>
-                  <span
-                    class="material-symbols-outlined text-sm text-slate-400 dark:text-[#94a3b8] group-hover:text-primary dark:group-hover:text-[#60a5fa]">expand_more</span>
-                </button>
+                <p class="mt-2 text-xs text-slate-400 dark:text-[#94a3b8] leading-relaxed italic mb-4">Add performance notes (e.g.,
+                  "speak
+                  faster," "with a happy tone," or "emphasize the first word") to control how the AI delivers the dubbed audio.</p>
                 <textarea
                   #voiceInstructionsRef
                   [value]="activeUtterance?.voice_instructions || ''"
-                  (input)="activeUtterance ? updateVoiceInstructions(activeUtterance.id, $any($event.target).value) : null"
+                  (input)="onVoiceInput(voiceInstructionsRef.value)"
                   class="w-full mt-2 bg-white/50 dark:bg-[#0f172a] border border-black/10 dark:border-[#334155] rounded-xl px-4 py-2.5 text-sm text-slate-800 dark:text-[#f1f5f9] placeholder:text-slate-400 dark:placeholder:text-[#94a3b8] focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-inner"
                   placeholder="Add specific terminology rules..." rows="4"></textarea>
               </div>
-              <!-- Main Actions -->
               <div class="space-y-3 pt-4">
                 <button
-                  (click)="saveVoiceInstructions(voiceInstructionsRef.value)"
-                  class="w-full flex justify-center items-center gap-2 rounded-xl bg-primary/10 dark:bg-gradient-to-br dark:from-[#2563eb] dark:to-[#3b82f6] hover:bg-[#2563eb] dark:hover:from-[#1d4ed8] dark:hover:to-[#2563eb] hover:text-white px-5 py-2.5 text-sm font-semibold text-[#2563eb] dark:text-[#f1f5f9] transition-all">
+                  [disabled]="!isVoiceDirty()"
+                  (click)="saveVoiceInstructions()"
+                  class="w-full flex justify-center items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all disabled:opacity-100 disabled:bg-slate-100 disabled:dark:bg-slate-800/50 disabled:dark:bg-none disabled:text-slate-400 disabled:dark:text-slate-500 disabled:cursor-not-allowed bg-primary/10 dark:bg-gradient-to-br dark:from-[#2563eb] dark:to-[#3b82f6] hover:bg-[#2563eb] dark:hover:from-[#1d4ed8] dark:hover:to-[#2563eb] hover:text-white text-[#2563eb] dark:text-[#f1f5f9]">
                   <span class="material-symbols-outlined text-[18px]">save</span> Save
                 </button>
               </div>
@@ -476,26 +548,24 @@
           }
           
           @if (activePanelMode() === 'translation') {
-          <h3 class="text-sm font-bold mb-6 flex items-center gap-2">
+          <h3 class="text-sm font-bold flex items-center gap-2 mb-6">
             <span class="material-symbols-outlined text-primary dark:text-[#60a5fa] text-lg">spellcheck</span> Translation
             instructions
           </h3>
           <div class="space-y-6 flex-1">
             <div class="border-t border-primary/5 dark:border-[#334155] pt-4">
-              <button class="w-full flex items-center justify-between group">
-                <span class="text-[11px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wider">Context &
-                  Rules</span>
-                <span
-                  class="material-symbols-outlined text-sm text-slate-400 dark:text-[#94a3b8] group-hover:text-primary dark:group-hover:text-[#60a5fa]">expand_more</span>
-              </button>
+              <p class="mt-2 text-xs text-slate-400 dark:text-[#94a3b8] leading-relaxed italic mb-4">Provide specific guidance for
+                Gemini
+                (e.g., "translate more formally" or "keep technical terms in English") to improve the accuracy or tone of the
+                rewritten script.</p>
               <textarea #translationInstructions [value]="activeUtterance?.instructions || ''"
-                (input)="activeUtterance ? updateTranslationInstructions(activeUtterance.id, $any($event.target).value) : null"
+                (input)="onTranslationInput(translationInstructions.value)"
                 class="w-full mt-2 bg-white/50 dark:bg-[#0f172a] border border-black/10 dark:border-[#334155] rounded-xl px-4 py-2.5 text-sm text-slate-800 dark:text-[#f1f5f9] placeholder:text-slate-400 dark:placeholder:text-[#94a3b8] focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-inner"
                 placeholder="E.g. Keep terminology consistent with marketing material." rows="6"></textarea>
             </div>
             <div class="space-y-3 pt-4">
-              <button (click)="saveTranslationInstructions(translationInstructions.value)"
-                class="w-full flex justify-center items-center gap-2 rounded-xl bg-primary/10 dark:bg-gradient-to-br dark:from-[#2563eb] dark:to-[#3b82f6] hover:bg-[#2563eb] dark:hover:from-[#1d4ed8] dark:hover:to-[#2563eb] hover:text-white px-5 py-2.5 text-sm font-semibold text-[#2563eb] dark:text-[#f1f5f9] transition-all">
+              <button [disabled]="!isTranslationDirty()" (click)="saveTranslationInstructions()"
+                class="w-full flex justify-center items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all disabled:opacity-100 disabled:bg-slate-100 disabled:dark:bg-slate-800/50 disabled:dark:bg-none disabled:text-slate-400 disabled:dark:text-slate-500 disabled:cursor-not-allowed bg-primary/10 dark:bg-gradient-to-br dark:from-[#2563eb] dark:to-[#3b82f6] hover:bg-[#2563eb] dark:hover:from-[#1d4ed8] dark:hover:to-[#2563eb] hover:text-white text-[#2563eb] dark:text-[#f1f5f9]">
                 <span class="material-symbols-outlined text-[18px]">save</span> Save
               </button>
             </div>
@@ -503,82 +573,106 @@
           }
           
           @if (activePanelMode() === 'timestamps') {
-          <h3 class="text-sm font-bold mb-6 flex items-center gap-2">
+          <h3 class="text-sm font-bold flex items-center gap-2 mb-6">
             <span class="material-symbols-outlined text-primary dark:text-[#60a5fa] text-lg">schedule</span> Adjust timestamps
           </h3>
           <div class="space-y-6 flex-1">
-            <div class="grid grid-cols-2 gap-4 pt-4 border-t border-primary/5 dark:border-[#334155]">
-              <div>
-                <label
-                  class="flex items-end min-h-[2rem] text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wide mb-2">Original
-                  Start Time</label>
-                <input type="text" [value]="activeUtterance ? formatTime(activeUtterance.original_start_time) : '00:00.00'"
-                  disabled
-                  class="w-full bg-slate-100 dark:bg-[#1e293b] border border-black/5 dark:border-[#334155] rounded-xl px-4 py-2 text-sm text-center text-slate-500 dark:text-[#94a3b8] outline-none transition-all cursor-not-allowed">
+            <div class="border-t border-primary/5 dark:border-[#334155] pt-4">
+              <p class="mt-2 text-xs text-slate-400 dark:text-[#94a3b8] leading-relaxed italic mb-4">Fine-tune when the dubbed audio
+                starts
+                and ends to ensure it aligns perfectly with the visuals and doesn't overlap with other speakers.</p>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    class="flex items-end min-h-[2rem] text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wide mb-2">Original
+                    Start Time</label>
+                  <input type="text" [value]="activeUtterance ? formatTime(activeUtterance.original_start_time) : '00:00.00'"
+                    disabled
+                    class="w-full bg-slate-100 dark:bg-[#1e293b] border border-black/5 dark:border-[#334155] rounded-xl px-4 py-2 text-sm text-center text-slate-500 dark:text-[#94a3b8] outline-none transition-all cursor-not-allowed">
+                </div>
+                <div>
+                  <label
+                    class="flex items-end min-h-[2rem] text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wide mb-2">Original
+                    End Time</label>
+                  <input type="text" [value]="activeUtterance ? formatTime(activeUtterance.original_end_time) : '00:00.00'" disabled
+                    class="w-full bg-slate-100 dark:bg-[#1e293b] border border-black/5 dark:border-[#334155] rounded-xl px-4 py-2 text-sm text-center text-slate-500 dark:text-[#94a3b8] outline-none transition-all cursor-not-allowed">
+                </div>
               </div>
-              <div>
-                <label
-                  class="flex items-end min-h-[2rem] text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wide mb-2">Original
-                  End Time</label>
-                <input type="text" [value]="activeUtterance ? formatTime(activeUtterance.original_end_time) : '00:00.00'" disabled
-                  class="w-full bg-slate-100 dark:bg-[#1e293b] border border-black/5 dark:border-[#334155] rounded-xl px-4 py-2 text-sm text-center text-slate-500 dark:text-[#94a3b8] outline-none transition-all cursor-not-allowed">
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4 pt-2 border-primary/5 dark:border-[#334155]">
-              <div>
-                <label
-                  class="flex items-end min-h-[2rem] text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wide mb-2">Translated
-                  Start Time</label>
-                <input type="text" [value]="activeUtterance ? formatTime(activeUtterance.translated_start_time) : '00:00.00'"
-                  class="w-full bg-white/50 dark:bg-[#0f172a] border border-black/10 dark:border-[#334155] rounded-xl px-4 py-2 text-sm text-center text-slate-800 dark:text-[#f1f5f9] focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all">
-              </div>
-              <div>
-                <label
-                  class="flex items-end min-h-[2rem] text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wide mb-2">Translated
-                  End Time</label>
-                <input type="text" [value]="activeUtterance ? formatTime(activeUtterance.translated_end_time) : '00:00.00'"
-                  class="w-full bg-white/50 dark:bg-[#0f172a] border border-black/10 dark:border-[#334155] rounded-xl px-4 py-2 text-sm text-center text-slate-800 dark:text-[#f1f5f9] focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all">
-              </div>
+              <div class="grid grid-cols-2 gap-4 pt-4">
+                <div>
+                  <label
+                    class="flex items-end min-h-[2rem] text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wide mb-2">Translated
+                    Start Time</label>
+                  <input #transStart type="text"
+                    [value]="draftTimestamps()?.start || (activeUtterance ? formatTime(activeUtterance.translated_start_time) : '00:00.00')"
+                    (input)="onStartTimestampInput(transStart.value, transEnd)"
+                    class="w-full bg-white/50 dark:bg-[#0f172a] border border-black/10 dark:border-[#334155] rounded-xl px-4 py-2 text-sm text-center text-slate-800 dark:text-[#f1f5f9] focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all">
+                  </div>
+                  <div>
+                    <label
+                      class="flex items-end min-h-[2rem] text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wide mb-2">Translated End
+                      Time</label>
+                    <input #transEnd type="text" 
+                      [value]="draftTimestamps()?.end || (activeUtterance ? formatTime(activeUtterance.translated_end_time) : '00:00.00')"
+                      (input)="onEndTimestampInput(transStart, transEnd.value)"
+                      class="w-full bg-white/50 dark:bg-[#0f172a] border border-black/10 dark:border-[#334155] rounded-xl px-4 py-2 text-sm text-center text-slate-800 dark:text-[#f1f5f9] focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all">
+                    </div>
+                </div>
             </div>
             <div class="space-y-3 pt-4 border-t border-primary/5 dark:border-[#334155]">
-              <button
-                class="w-full flex justify-center items-center gap-2 rounded-xl bg-primary/10 dark:bg-gradient-to-br dark:from-[#2563eb] dark:to-[#3b82f6] hover:bg-[#2563eb] dark:hover:from-[#1d4ed8] dark:hover:to-[#2563eb] hover:text-white px-5 py-2.5 text-sm font-semibold text-[#2563eb] dark:text-[#f1f5f9] transition-all">
-                <span class="material-symbols-outlined text-[18px]">check</span> Apply Timestamps
+              <div class="flex items-center gap-2">
+                @if (isTimestampsDirty() || timestampError()) {
+                  <button
+                    (click)="cancelTimestamps()"
+                    class="flex-1 flex justify-center items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all bg-slate-100 dark:bg-[#1e293b] hover:bg-slate-200 dark:hover:bg-[#334155] text-slate-700 dark:text-[#94a3b8]">
+                    <span class="material-symbols-outlined text-[18px]">undo</span> Undo
+                  </button>
+                }
+                <button
+                  [disabled]="!isTimestampsDirty() && !timestampError()"
+                  (click)="saveTimestamps()"
+                  class="flex-[2] flex justify-center items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all disabled:opacity-100 disabled:bg-slate-100 disabled:dark:bg-slate-800/50 disabled:dark:bg-none disabled:text-slate-400 disabled:dark:text-slate-500 disabled:cursor-not-allowed bg-primary/10 dark:bg-gradient-to-br dark:from-[#2563eb] dark:to-[#3b82f6] hover:bg-[#2563eb] dark:hover:from-[#1d4ed8] dark:hover:to-[#2563eb] hover:text-white text-[#2563eb] dark:text-[#f1f5f9]">
+                  <span class="material-symbols-outlined text-[18px]">save</span> Save
                 </button>
-                </div>
-                </div>
+              </div>
+              @if (timestampError()) {
+              <p class="text-[11px] text-red-500 dark:text-red-400 font-medium text-left">{{ timestampError() }}</p>
+              }
+              </div>
+            </div>
                 }
                 
                 @if (activePanelMode() === 'speaker') {
-                <h3 class="text-sm font-bold mb-6 flex items-center gap-2">
+                <h3 class="text-sm font-bold flex items-center gap-2 mb-6">
                   <span class="material-symbols-outlined text-primary dark:text-[#60a5fa] text-lg">graphic_eq</span> Change speaker
                 </h3>
                 <div class="space-y-6 flex-1">
                   <div class="pt-4 border-t border-primary/5 dark:border-[#334155] flex flex-col gap-2">
-                    <span class="text-[11px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wider mb-2">Select
-                      Speaker</span>
+                    <p class="mt-2 text-xs text-slate-400 dark:text-[#94a3b8] leading-relaxed italic mb-4">Select a different voice for this
+                      segment
+                      from the available list of AI voice actors to better match the character or tone of the original speaker.</p>
                 
                     @for (spk of videoData()?.speakers; track spk.speaker_id) {
                     <button class="flex items-center gap-3 p-3 rounded-xl border transition-all text-left"
-                      [class.border-slate-200]="activeUtterance?.speaker?.speaker_id !== spk.speaker_id"
-                      [class.dark:border-[#334155]]="activeUtterance?.speaker?.speaker_id !== spk.speaker_id"
-                      [class.hover:border-primary/50]="activeUtterance?.speaker?.speaker_id !== spk.speaker_id"
-                      [class.hover:bg-primary/5]="activeUtterance?.speaker?.speaker_id !== spk.speaker_id"
-                      [class.dark:hover:bg-[#60a5fa]/10]="activeUtterance?.speaker?.speaker_id !== spk.speaker_id"
-                      [class.border-primary]="activeUtterance?.speaker?.speaker_id === spk.speaker_id"
-                      [class.bg-primary/5]="activeUtterance?.speaker?.speaker_id === spk.speaker_id"
-                      [class.dark:border-[#60a5fa]]="activeUtterance?.speaker?.speaker_id === spk.speaker_id"
-                      [class.dark:bg-[#60a5fa]/10]="activeUtterance?.speaker?.speaker_id === spk.speaker_id"
-                      (click)="changeSpeaker(spk)">
+                      [class.border-slate-200]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) !== spk.speaker_id"
+                      [class.dark:border-[#334155]]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) !== spk.speaker_id"
+                      [class.hover:border-primary/50]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) !== spk.speaker_id"
+                      [class.hover:bg-primary/5]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) !== spk.speaker_id"
+                      [class.dark:hover:bg-[#60a5fa]/10]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) !== spk.speaker_id"
+                      [class.border-primary]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) === spk.speaker_id"
+                      [class.bg-primary/5]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) === spk.speaker_id"
+                      [class.dark:border-[#60a5fa]]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) === spk.speaker_id"
+                      [class.dark:bg-[#60a5fa]/10]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) === spk.speaker_id"
+                      (click)="onSpeakerSelect(spk)">
                       <div class="h-8 w-8 rounded-lg flex items-center justify-center transition-colors"
-                        [class.bg-primary/10]="activeUtterance?.speaker?.speaker_id !== spk.speaker_id"
-                        [class.dark:bg-[#60a5fa]/10]="activeUtterance?.speaker?.speaker_id !== spk.speaker_id"
-                        [class.bg-primary]="activeUtterance?.speaker?.speaker_id === spk.speaker_id"
-                        [class.dark:bg-[#60a5fa]]="activeUtterance?.speaker?.speaker_id === spk.speaker_id">
+                        [class.bg-primary/10]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) !== spk.speaker_id"
+                        [class.dark:bg-[#60a5fa]/10]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) !== spk.speaker_id"
+                        [class.bg-primary]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) === spk.speaker_id"
+                        [class.dark:bg-[#60a5fa]]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) === spk.speaker_id">
                         <span class="material-symbols-outlined text-sm transition-colors"
-                          [class.text-primary]="activeUtterance?.speaker?.speaker_id !== spk.speaker_id"
-                          [class.dark:text-[#60a5fa]]="activeUtterance?.speaker?.speaker_id !== spk.speaker_id"
-                          [class.text-white]="activeUtterance?.speaker?.speaker_id === spk.speaker_id">
+                          [class.text-primary]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) !== spk.speaker_id"
+                          [class.dark:text-[#60a5fa]]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) !== spk.speaker_id"
+                          [class.text-white]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) === spk.speaker_id">
                           {{ spk.gender === 'MALE' ? 'man' : 'woman' }}
                         </span>
                       </div>
@@ -587,9 +681,15 @@
                         <div class="text-xs text-slate-500 dark:text-[#94a3b8]">{{ spk.voice }}</div>
                       </div>
                     </button>
-              }
-            </div>
-            </div>
+                    }
+                    </div>
+                  <div class="space-y-3 pt-4 border-t border-primary/5 dark:border-[#334155]">
+                    <button [disabled]="!isSpeakerDirty()" (click)="saveSpeaker()"
+                      class="w-full flex justify-center items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all disabled:opacity-100 disabled:bg-slate-100 disabled:dark:bg-slate-800/50 disabled:dark:bg-none disabled:text-slate-400 disabled:dark:text-slate-500 disabled:cursor-not-allowed bg-primary/10 dark:bg-gradient-to-br dark:from-[#2563eb] dark:to-[#3b82f6] hover:bg-[#2563eb] dark:hover:from-[#1d4ed8] dark:hover:to-[#2563eb] hover:text-white text-[#2563eb] dark:text-[#f1f5f9]">
+                      <span class="material-symbols-outlined text-[18px]">save</span> Save
+                    </button>
+                  </div>
+                </div>
           }
           
           }
@@ -741,8 +841,6 @@
         class="absolute inset-0 flex items-center justify-center material-symbols-outlined text-primary text-3xl">movie_edit</span>
     </div>
     <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-2">Generating Video</h3>
-    <p class="text-sm text-center text-slate-500 dark:text-slate-400">Spinning the gears and flexing Gemini... This may
-      take a few moments.</p>
   </div>
 </div>
 }

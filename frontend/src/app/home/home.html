@@ -37,8 +37,8 @@
         class="max-h-[300px] rounded-2xl shadow-glass-light dark:shadow-glass-dark object-contain bg-black/5 dark:bg-[#0f172a]"
         [class.opacity-50]="isProcessing()"></video>
       @if (!isProcessing()) {
-      <button (click)="videoPreviewUrl.set(null); selectedVideoFile.set(null)"
-        class="absolute top-3 right-3 bg-black/50 hover:bg-red-500 text-white p-2 rounded-full backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all z-10">
+      <button (click)="removeVideo()"
+        class="absolute top-3 right-3 flex justify-center items-center w-8 h-8 bg-black/50 hover:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all z-10">
         <span class="material-symbols-outlined text-[18px]">close</span>
       </button>
       }

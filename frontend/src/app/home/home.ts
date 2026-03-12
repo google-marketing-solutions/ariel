@@ -121,6 +121,16 @@ export class Home implements OnInit {
     reader.readAsDataURL(file);
   }
 
+  removeVideo() {
+    this.videoPreviewUrl.set(null);
+    this.selectedVideoFile.set(null);
+    // Reset file input so selecting the same file triggers 'change' event again
+    const fileInput = document.getElementById('video-input') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  }
+
   isFormValid(): boolean {
     return !!this.selectedVideoFile() &&
       this.originalLanguage() !== '' &&
