@@ -29,6 +29,14 @@ interface VideoUtterance {
   // UI Only Derived bounds for cloned utterance tracks
   ui_original_start_time?: number;
   ui_original_end_time?: number;
+
+  // Mute State flag and cached timestamps
+  muted?: boolean;
+  initial_translated_start_time?: number;
+  initial_translated_end_time?: number;
+
+  // Deleted State flag
+  removed?: boolean;
 }
 
 interface VideoJob {
@@ -174,6 +182,18 @@ export class Editor implements OnInit {
         throw new Error(`Project not found! status: ${response.status}`);
       }
       const data: VideoJob = await response.json();
+
+      // The backend puts Gemini generated voice hints into the 'instructions' property by default
+      // Map these to the more specific 'voice_instructions' frontend property instead so they appear in the correct tab
+      if (data.utterances) {
+        data.utterances.forEach(u => {
+          if (u.instructions && !u.voice_instructions) {
+            u.voice_instructions = u.instructions;
+            u.instructions = ''; // Clear translation instructions to be clean by default
+          }
+        });
+      }
+
       this.videoData.set(data);
       this.initEditState();
 
@@ -637,6 +657,79 @@ export class Editor implements OnInit {
             ? JSON.parse(JSON.stringify(this.initialUtteranceState))
             : u
         )
+      };
+    });
+  }
+
+  toggleMuteUtterance(utteranceId: string) {
+    this.videoData.update(prev => {
+      if (!prev) return prev;
+
+      const utteranceIndex = prev.utterances.findIndex(u => u.id === utteranceId);
+      if (utteranceIndex === -1) return prev;
+
+      const utterance = prev.utterances[utteranceIndex];
+      const newMutedState = !utterance.muted;
+
+      // Update the utterance
+      const updatedUtterance = { ...utterance, muted: newMutedState };
+
+      if (newMutedState) {
+        // Cache initial times before muting if not cached
+        if (updatedUtterance.initial_translated_start_time === undefined) {
+          updatedUtterance.initial_translated_start_time = updatedUtterance.translated_start_time;
+          updatedUtterance.initial_translated_end_time = updatedUtterance.translated_end_time;
+        }
+
+        // Reset translated times to match original
+        updatedUtterance.translated_start_time = updatedUtterance.original_start_time;
+        updatedUtterance.translated_end_time = updatedUtterance.original_end_time;
+
+      } else {
+        // Restore initial times on unmute
+        if (updatedUtterance.initial_translated_start_time !== undefined) {
+          updatedUtterance.translated_start_time = updatedUtterance.initial_translated_start_time;
+        }
+        if (updatedUtterance.initial_translated_end_time !== undefined) {
+          updatedUtterance.translated_end_time = updatedUtterance.initial_translated_end_time;
+        }
+      }
+
+      const newUtterances = [...prev.utterances];
+      newUtterances[utteranceIndex] = updatedUtterance;
+
+      return {
+        ...prev,
+        utterances: newUtterances
+      };
+    });
+  }
+
+  toggleRemoveUtterance(utteranceId: string) {
+    this.videoData.update(prev => {
+      if (!prev) return prev;
+
+      const utteranceIndex = prev.utterances.findIndex(u => u.id === utteranceId);
+      if (utteranceIndex === -1) return prev;
+
+      const utterance = prev.utterances[utteranceIndex];
+      const newRemovedState = !utterance.removed;
+
+      const updatedUtterance = { ...utterance, removed: newRemovedState };
+
+      // Ensure mute is cancelled if remove is activated, matching legacy UI logic
+      if (updatedUtterance.removed && updatedUtterance.muted) {
+        updatedUtterance.muted = false;
+        // Optionally, one could instantly restore translated_start_time here as well, 
+        // but since it's "removed" it won't generate dubbing regardless.
+      }
+
+      const newUtterances = [...prev.utterances];
+      newUtterances[utteranceIndex] = updatedUtterance;
+
+      return {
+        ...prev,
+        utterances: newUtterances
       };
     });
   }

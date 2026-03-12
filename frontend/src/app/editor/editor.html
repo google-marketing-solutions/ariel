@@ -177,6 +177,8 @@
           @for (utterance of videoData()?.utterances; track utterance.id; let i = $index) {
           <div
             class="group pb-6 pt-4 px-4 mb-4 relative transition-all rounded-xl cursor-pointer border"
+            [class.opacity-60]="utterance.muted || utterance.removed"
+            [class.grayscale]="utterance.muted || utterance.removed"
             [class.bg-white]="activeUtteranceId() === utterance.id"
             [class.dark:bg-[#1e293b]]="activeUtteranceId() === utterance.id"
             [class.shadow-md]="activeUtteranceId() === utterance.id"
@@ -191,6 +193,38 @@
             [class.hover:bg-white/50]="activeUtteranceId() !== utterance.id"
             [class.dark:hover:bg-[#1e293b]/50]="activeUtteranceId() !== utterance.id"
             (click)="focusUtterance(utterance.id)" [id]="'utterance-' + utterance.id">
+
+            @if (utterance.muted) {
+            <div
+              class="absolute inset-0 z-10 bg-slate-50/40 dark:bg-slate-900/40 rounded-xl flex items-center justify-center pointer-events-none backdrop-blur-[0.5px]">
+              <div
+                class="bg-slate-800 dark:bg-slate-700 text-white text-xs font-bold pl-3 pr-1.5 py-1.5 rounded-full shadow-lg flex items-center gap-3">
+                <span>Muted - original audio will be used</span>
+                <button
+                  class="flex items-center justify-center gap-1 bg-white text-slate-800 dark:bg-slate-600 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-500 rounded-full px-3 py-1 transition-colors pointer-events-auto shadow-sm"
+                  title="Unmute" (click)="toggleMuteUtterance(utterance.id); $event.stopPropagation()">
+                  <span class="material-symbols-outlined text-[14px]">volume_up</span>
+                  <span>Unmute</span>
+                </button>
+              </div>
+            </div>
+            }
+            
+            @if (utterance.removed) {
+            <div
+              class="absolute inset-0 z-10 bg-slate-50/40 dark:bg-slate-900/40 rounded-xl flex items-center justify-center pointer-events-none backdrop-blur-[0.5px]">
+              <div
+                class="bg-red-600 dark:bg-red-800 text-white text-xs font-bold pl-3 pr-1.5 py-1.5 rounded-full shadow-lg flex items-center gap-3">
+                <span>Deleted - no audio will be generated</span>
+                <button
+                  class="flex items-center justify-center gap-1 bg-white text-red-600 dark:bg-slate-800 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full px-3 py-1 transition-colors pointer-events-auto shadow-sm"
+                  title="Restore Utterance" (click)="toggleRemoveUtterance(utterance.id); $event.stopPropagation()">
+                  <span class="material-symbols-outlined text-[14px]">settings_backup_restore</span>
+                  <span>Restore</span>
+                </button>
+              </div>
+            </div>
+            }
 
             <div class="mb-3 px-2">
               <div class="flex items-center justify-between gap-2 mb-3">
@@ -212,40 +246,46 @@
                   @if (activeUtteranceId() === utterance.id) {
                   <div class="flex items-center gap-2 transition-opacity">
                     <button
-                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Regenerate Translation"
+                      [disabled]="utterance.muted || utterance.removed"
                       (click)="regenerateTranslation(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">autorenew</span>
                     </button>
                     <button
-                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Regenerate Dubbing"
+                      [disabled]="utterance.muted || utterance.removed"
                       (click)="regenerateDubbing(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">record_voice_over</span>
                     </button>
                     <button
-                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Undo"
+                      [disabled]="utterance.muted || utterance.removed"
                       (click)="revertUtterance(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">history</span>
                     </button>
                     <button
-                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Clone Utterance"
+                      [disabled]="utterance.muted || utterance.removed"
                       (click)="cloneUtterance(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">content_copy</span>
                     </button>
                     <button
-                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      title="Mute Utterance"
-                      (click)="$event.stopPropagation()">
-                      <span class="material-symbols-outlined text-[16px]">volume_off</span>
+                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                      [title]="utterance.muted ? 'Unmute Utterance' : 'Mute Utterance'"
+                      [disabled]="utterance.muted || utterance.removed"
+                      (click)="toggleMuteUtterance(utterance.id); $event.stopPropagation()">
+                      <span class="material-symbols-outlined text-[16px]">{{ utterance.muted ? 'mic' : 'mic_off' }}</span>
                     </button>
                     <button
-                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-500 dark:text-[#94a3b8] hover:text-red-500 border border-slate-200 dark:border-[#334155] hover:border-red-200 transition-all focus:outline-none focus:ring-2 focus:ring-red-500/20"
-                      title="Delete Utterance"
-                      (click)="$event.stopPropagation()">
-                      <span class="material-symbols-outlined text-[16px]">delete</span>
+                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-500 dark:text-[#94a3b8] hover:text-red-500 border border-slate-200 dark:border-[#334155] hover:border-red-200 transition-all focus:outline-none focus:ring-2 focus:ring-red-500/20 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[#0f172a] disabled:hover:text-[#94a3b8] disabled:border-[#334155]"
+                      [title]="utterance.removed ? 'Restore Utterance' : 'Remove Utterance'"
+                      [disabled]="utterance.muted || utterance.removed"
+                      (click)="toggleRemoveUtterance(utterance.id); $event.stopPropagation()">
+                      <span class="material-symbols-outlined text-[16px]">{{ utterance.removed ? 'settings_backup_restore' : 'delete' }}</span>
                     </button>
                   </div>
                   }
@@ -647,11 +687,25 @@
                   [class.z-20]="activeUtteranceId() === utterance.id"
                   [class.z-10]="activeUtteranceId() !== utterance.id"
                   [class.shadow-md]="activeUtteranceId() === utterance.id"
+                  [class.opacity-50]="utterance.muted || utterance.removed"
+                  [class.grayscale]="utterance.muted || utterance.removed"
                   [style.left.%]="getLeftPercent(utterance.translated_start_time)"
                   [style.width.%]="getWidthPercent(utterance.translated_start_time, utterance.translated_end_time)"
                   (mousedown)="onDragStart($event, utterance)">
                   
                   <span class="text-xs font-bold text-primary truncate pointer-events-none">U{{ i + 1 }}</span>
+                  @if (utterance.muted && !utterance.removed) {
+                  <div
+                    class="ml-1 w-5 h-5 rounded flex items-center justify-center bg-slate-800 dark:bg-slate-700 shadow-sm border border-slate-600 pointer-events-none">
+                    <span class="material-symbols-outlined text-[12px] text-white">volume_off</span>
+                  </div>
+                  }
+                  @if (utterance.removed) {
+                  <div
+                    class="ml-1 w-5 h-5 rounded flex items-center justify-center bg-red-600 dark:bg-red-800 shadow-sm border border-red-500 pointer-events-none">
+                    <span class="material-symbols-outlined text-[12px] text-white">delete</span>
+                  </div>
+                  }
                   
                   @if (getUtteranceOverlap(utterance)) {
                     <div class="absolute inset-y-0 left-0 w-10 bg-[#f87171]/80 border-r border-[#f87171] flex items-center justify-center animate-pulse rounded-l-md pointer-events-none">
