@@ -30,4 +30,5 @@ export class Header {
       this.videoGenerationService.triggerGenerateVideo();
     }
   }
+
 }

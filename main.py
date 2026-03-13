@@ -558,7 +558,7 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
       req.video.model_name,
       req.instructions,
   )
-  target_dir = os.path.dirname(utterance.audio_url)
+  target_dir = os.path.join(mount_point, req.video.video_id)
   new_file_name = (
       f"audio_{req.utterance}-" + str(uuid.uuid1()) + ".wav"
   )  # cache busting
@@ -588,7 +588,7 @@ def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
     A response with the new path to the dubbed audio.
   """
   utterance = req.video.utterances[req.utterance]
-  target_dir = os.path.dirname(utterance.audio_url)
+  target_dir = os.path.join(mount_point, req.video.video_id)
   new_file_name = (
       f"audio_{req.utterance}-" + str(uuid.uuid1()) + ".wav"
   )  # cache busting

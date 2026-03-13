@@ -44,6 +44,7 @@ interface VideoUtterance {
   // Regeneration flags
   needs_translation_regen?: boolean;
   needs_dubbing_regen?: boolean;
+  isNew?: boolean;
 }
 
 interface VideoJob {
@@ -82,6 +83,12 @@ export class Editor implements OnInit, OnDestroy {
   error = signal<string | null>(null);
   isGeneratingVideo = signal(false);
 
+  // Track specific utterance being processed
+  processingUtteranceId = signal<string | null>(null);
+  processingAction = signal<'translation' | 'dubbing' | null>(null);
+  successUtteranceId = signal<string | null>(null);
+  successAction = signal<'translation' | 'dubbing' | null>(null);
+
   private videoGenerationService = inject(VideoGenerationService);
   private videoGenSub?: Subscription;
 
@@ -114,6 +121,11 @@ export class Editor implements OnInit, OnDestroy {
   // UI State
   activeUtteranceId = signal<string | null>(null);
   activePanelMode = signal<PanelMode | null>(null);
+  showValidationModal = signal(false);
+  validationModalTitle = signal('');
+  validationModalMessage = signal('');
+  showProceedButton = signal(true);
+
 
   // Draft State for active panel
   draftVoiceInstructions = signal<string | null>(null);
@@ -236,30 +248,9 @@ export class Editor implements OnInit, OnDestroy {
     this.animationFrameId = requestAnimationFrame(updateTimeLoop);
 
     this.videoGenSub = this.videoGenerationService.generateVideo$.subscribe(async () => {
-      if (!this.videoData() || !this.videoUrl()) return;
-      this.isGeneratingVideo.set(true);
-      try {
-        const payload = {
-          video: this.videoData(),
-          original_video_url: this.videoUrl()
-        };
-        const response = await fetch('/generate_video', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
-        });
-        if (!response.ok) throw new Error('Failed to generate video');
-        const result = await response.json();
-
-        // Navigate to results page and pass the generated data via Router state
-        this.router.navigate(['/result'], { state: { finalVideoData: result, originalVideoData: this.videoData() } });
-      } catch (err) {
-        console.error("Error generating video:", err);
-        alert("Failed to generate video");
-      } finally {
-        this.isGeneratingVideo.set(false);
+      console.log("generateVideo$ triggered");
+      if (this.validateForGeneration()) {
+        this.generateVideo();
       }
     });
 
@@ -592,12 +583,28 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   private _focusUtteranceLogic(utteranceId: string) {
+    const prevId = this.activeUtteranceId();
+    const data = this.videoData();
+    if (prevId && data) {
+      this.videoData.update(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          utterances: prev.utterances.map(u =>
+            u.id === prevId && u.isNew && (u.original_text || u.translated_text)
+              ? { ...u, isNew: false }
+              : u
+          )
+        };
+      });
+    }
+
     this.activeUtteranceId.set(utteranceId);
     this.activePanelMode.set(null);
     this.clearDrafts();
-    const data = this.videoData();
-    if (data) {
-      const u = data.utterances.find(utt => utt.id === utteranceId);
+    const dataCurrent = this.videoData(); // Use a different name to avoid shadowing?
+    if (dataCurrent) {
+      const u = dataCurrent.utterances.find(utt => utt.id === utteranceId);
       if (u) {
         this.initialUtteranceState.set(JSON.parse(JSON.stringify(u)));
       }
@@ -720,7 +727,7 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u => {
           if (u.id === activeId) {
-            const updated = { ...u, speaker: newSpeaker };
+            const updated = { ...u, speaker: newSpeaker, isNew: false };
             updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
             return updated;
           }
@@ -744,7 +751,7 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u => {
           if (u.id === activeId) {
-            const updated = { ...u, instructions: draft };
+            const updated = { ...u, instructions: draft, isNew: false };
             updated.needs_translation_regen = this.checkTranslationRegen(updated, initialState);
             return updated;
           }
@@ -769,7 +776,7 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u => {
           if (u.id === activeId) {
-            const updated = { ...u, voice_instructions: draft };
+            const updated = { ...u, voice_instructions: draft, isNew: false };
             updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
             return updated;
           }
@@ -854,6 +861,11 @@ export class Editor implements OnInit, OnDestroy {
 
     try {
       this.isGeneratingAudio.set(true);
+      this.processingUtteranceId.set(utteranceId);
+      this.processingAction.set('translation');
+      this.successUtteranceId.set(null);
+      this.successAction.set(null);
+
       const response = await fetch('/regenerate_translation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -867,6 +879,17 @@ export class Editor implements OnInit, OnDestroy {
       if (!response.ok) {
         throw new Error('Failed to regenerate translation.');
       }
+
+      this.successUtteranceId.set(utteranceId);
+      this.successAction.set('translation');
+
+      // Clear success state after 3 seconds
+      setTimeout(() => {
+        if (this.successUtteranceId() === utteranceId && this.successAction() === 'translation') {
+          this.successUtteranceId.set(null);
+          this.successAction.set(null);
+        }
+      }, 3000);
 
       const result = await response.json();
 
@@ -882,7 +905,8 @@ export class Editor implements OnInit, OnDestroy {
               duration: result.duration,
               translated_end_time: u.translated_start_time + result.duration,
               needs_translation_regen: false,
-              needs_dubbing_regen: false
+              needs_dubbing_regen: false,
+              isNew: false
             } : u
           )
         };
@@ -893,6 +917,8 @@ export class Editor implements OnInit, OnDestroy {
       alert('Failed to regenerate translation');
     } finally {
       this.isGeneratingAudio.set(false);
+      this.processingUtteranceId.set(null);
+      this.processingAction.set(null);
     }
   }
 
@@ -907,6 +933,11 @@ export class Editor implements OnInit, OnDestroy {
 
     try {
       this.isGeneratingAudio.set(true);
+      this.processingUtteranceId.set(utteranceId);
+      this.processingAction.set('dubbing');
+      this.successUtteranceId.set(null);
+      this.successAction.set(null);
+
       const response = await fetch('/regenerate_dubbing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -921,6 +952,17 @@ export class Editor implements OnInit, OnDestroy {
         throw new Error('Failed to regenerate dubbing.');
       }
 
+      this.successUtteranceId.set(utteranceId);
+      this.successAction.set('dubbing');
+
+      // Clear success state after 3 seconds
+      setTimeout(() => {
+        if (this.successUtteranceId() === utteranceId && this.successAction() === 'dubbing') {
+          this.successUtteranceId.set(null);
+          this.successAction.set(null);
+        }
+      }, 3000);
+
       const result = await response.json();
 
       this.videoData.update(prev => {
@@ -933,7 +975,8 @@ export class Editor implements OnInit, OnDestroy {
               audio_url: result.audio_url,
               duration: result.duration,
               translated_end_time: u.translated_start_time + result.duration,
-              needs_dubbing_regen: false
+              needs_dubbing_regen: false,
+              isNew: false
             } : u
           )
         };
@@ -944,6 +987,8 @@ export class Editor implements OnInit, OnDestroy {
       alert('Failed to regenerate dubbing');
     } finally {
       this.isGeneratingAudio.set(false);
+      this.processingUtteranceId.set(null);
+      this.processingAction.set(null);
     }
   }
 
@@ -1016,15 +1061,21 @@ export class Editor implements OnInit, OnDestroy {
       if (utteranceIndex === -1) return prev;
 
       const utterance = prev.utterances[utteranceIndex];
-      const newRemovedState = !utterance.removed;
 
+      const isNew = utterance.id.startsWith('utterance_') || utterance.isNew;
+      const isEmpty = !utterance.translated_text && !utterance.original_text;
+
+      if (isNew && isEmpty) {
+        const newUtterances = prev.utterances.filter(u => u.id !== utteranceId);
+        return { ...prev, utterances: newUtterances };
+      }
+
+      const newRemovedState = !utterance.removed;
       const updatedUtterance = { ...utterance, removed: newRemovedState };
 
       // Ensure mute is cancelled if remove is activated, matching legacy UI logic
       if (updatedUtterance.removed && updatedUtterance.muted) {
         updatedUtterance.muted = false;
-        // Optionally, one could instantly restore translated_start_time here as well, 
-        // but since it's "removed" it won't generate dubbing regardless.
       }
 
       const newUtterances = [...prev.utterances];
@@ -1145,6 +1196,7 @@ export class Editor implements OnInit, OnDestroy {
       if (utterance) {
         utterance.translated_start_time = newStart;
         utterance.translated_end_time = newEnd;
+        utterance.isNew = false;
       }
       return newData;
     });
@@ -1278,7 +1330,11 @@ export class Editor implements OnInit, OnDestroy {
     this.activeAudioPlayback = { id: utterance.id, type: 'translated' };
 
     if (utterance.audio_url) {
-      this.snippetAudio.src = utterance.audio_url;
+      let url = utterance.audio_url;
+      if (!url.startsWith('http') && !url.startsWith('/')) {
+        url = '/' + url;
+      }
+      this.snippetAudio.src = url;
       this.snippetStartTime = utterance.translated_start_time;
       this.snippetAudio.play().then(() => {
         this.isPlayingSnippet.set(true);
@@ -1320,11 +1376,102 @@ export class Editor implements OnInit, OnDestroy {
     return ((endTime - startTime) / duration) * 100;
   }
 
+  async generateVideo() {
+    if (!this.videoData() || !this.videoUrl()) return;
+    this.isGeneratingVideo.set(true);
+    try {
+      const payload = {
+        video: this.videoData(),
+        original_video_url: this.videoUrl()
+      };
+      const response = await fetch('/generate_video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error('Failed to generate video');
+      const result = await response.json();
+
+      // Navigate to results page and pass the generated data via Router state
+      this.router.navigate(['/result'], { state: { finalVideoData: result, originalVideoData: this.videoData() } });
+    } catch (err) {
+      console.error("Error generating video:", err);
+      alert("Failed to generate video");
+    } finally {
+      this.isGeneratingVideo.set(false);
+    }
+  }
+
+  validateForGeneration(): boolean {
+    const hasUnregenerated = this.hasUnregeneratedChanges();
+    const exceedsLength = this.checkExceedsLength();
+
+    if (hasUnregenerated || exceedsLength) {
+      this.showValidationModal.set(true);
+
+      let title = '';
+      let message = '';
+      let showProceed = true;
+
+      if (hasUnregenerated && exceedsLength) {
+        title = 'Multiple Issues Found';
+        message = 'You have unregenerated changes that will NOT be included in the final video. Also, one or more utterances exceed the original video length. If you proceed, the final video will be extended to match the audio, and the last frame will likely be frozen during the extended part.';
+      } else if (hasUnregenerated) {
+        title = 'Unregenerated Changes';
+        message = 'You have unchanged text or voices that have not been regenerated yet. These changes will NOT be included in the final video. Do you want to proceed anyway?';
+      } else if (exceedsLength) {
+        title = 'Utterances Exceed Length';
+        message = 'One or more utterances exceed the original video length. If you proceed, the final video will be extended to match the audio, and the last frame will likely be frozen during the extended part. Do you want to proceed?';
+      }
+
+      this.validationModalTitle.set(title);
+      this.validationModalMessage.set(message);
+      this.showProceedButton.set(showProceed);
+
+      return false;
+    }
+    return true;
+  }
+
+  hasUnregeneratedChanges(): boolean {
+    const data = this.videoData();
+    if (!data) return false;
+    return data.utterances.some(u => u.needs_translation_regen || u.needs_dubbing_regen);
+  }
+
+  checkExceedsLength(): boolean {
+    const data = this.videoData();
+    if (!data || !data.duration || data.utterances.length === 0) {
+      return false;
+    }
+    const maxEndTime = Math.max(...data.utterances.map(u => u.translated_end_time));
+    const exceeds = maxEndTime > data.duration;
+    return exceeds;
+  }
+
+  onConfirmValidation() {
+    this.showValidationModal.set(false);
+    this.generateVideo();
+  }
+
+  onCancelValidation() {
+    this.showValidationModal.set(false);
+  }
+
+  getMaxEndTime(): number {
+    const data = this.videoData();
+    if (!data || data.utterances.length === 0) return 0;
+    return Math.max(...data.utterances.map(u => u.translated_end_time));
+  }
+
   getUtteranceOverlap(utterance: VideoUtterance): VideoUtterance | null {
+    if (utterance.muted || utterance.removed) return null;
     const data = this.videoData();
     if (!data || data.utterances.length <= 1) return null;
     return data.utterances.find(u =>
-      u.id !== utterance.id &&
+      u.id !== utterance.id && !u.muted && !u.removed &&
       ((utterance.translated_start_time >= u.translated_start_time && utterance.translated_start_time < u.translated_end_time) ||
         (utterance.translated_end_time > u.translated_start_time && utterance.translated_end_time <= u.translated_end_time) ||
         (utterance.translated_start_time <= u.translated_start_time && utterance.translated_end_time >= u.translated_end_time))
@@ -1381,14 +1528,120 @@ export class Editor implements OnInit, OnDestroy {
     }
   }
 
+  createNewUtterance(index: number, event: Event) {
+    event.stopPropagation();
+
+    this.executeWithDirtyCheck(() => {
+      this.videoData.update(prev => {
+        if (!prev) return prev;
+
+        const isAbove = index === -1;
+        const currentUtterance = prev.utterances[isAbove ? 0 : index];
+        if (!currentUtterance) return prev;
+
+        let newStartTime = currentUtterance.translated_end_time;
+        if (isAbove) {
+          newStartTime = Math.max(0, currentUtterance.translated_start_time - 1.0);
+        }
+        let newEndTime = isAbove ? currentUtterance.translated_start_time : newStartTime + 1.0;
+
+        if (isAbove && newEndTime <= newStartTime) {
+          newStartTime = 0;
+          newEndTime = 1.0;
+        }
+
+        const newUtterance: VideoUtterance = {
+          id: crypto.randomUUID(),
+          original_text: '',
+          translated_text: '',
+          original_start_time: isAbove ? 0 : currentUtterance.original_end_time,
+          original_end_time: isAbove ? 1.0 : currentUtterance.original_end_time + 1.0,
+          translated_start_time: newStartTime,
+          translated_end_time: newEndTime,
+          speaker: currentUtterance.speaker,
+          instructions: currentUtterance.instructions,
+          voice_instructions: currentUtterance.voice_instructions,
+          audio_url: '',
+          needs_dubbing_regen: true,
+          needs_translation_regen: true,
+          muted: false,
+          removed: false,
+          isNew: true
+        };
+
+        const newUtterances = [...prev.utterances];
+        if (isAbove) {
+          newUtterances.unshift(newUtterance);
+        } else {
+          newUtterances.splice(index + 1, 0, newUtterance);
+        }
+
+        return { ...prev, utterances: newUtterances };
+      });
+
+      const data = this.videoData();
+      if (data) {
+        const focusIndex = index === -1 ? 0 : index + 1;
+        this.focusUtterance(data.utterances[focusIndex].id);
+      }
+    });
+  }
+  mergeUtterances(index: number, event: Event) {
+    event.stopPropagation();
+
+    this.executeWithDirtyCheck(() => {
+      this.videoData.update(prev => {
+        if (!prev || index >= prev.utterances.length - 1) return prev;
+
+        const topUtterance = prev.utterances[index];
+        const bottomUtterance = prev.utterances[index + 1];
+
+        const mergedUtterance: VideoUtterance = {
+          ...topUtterance,
+          id: crypto.randomUUID(), // Create a new ID so the UI refreshes properly
+          original_text: `${topUtterance.original_text} ${bottomUtterance.original_text}`.trim(),
+          translated_text: `${topUtterance.translated_text} ${bottomUtterance.translated_text}`.trim(),
+          original_end_time: bottomUtterance.original_end_time,
+          translated_end_time: bottomUtterance.translated_end_time,
+          // Since the text fundamentally changes by joining them, flag it for generation
+          needs_translation_regen: true,
+          needs_dubbing_regen: true,
+          audio_url: '' // Audio is no longer valid
+        };
+
+        const newUtterances = [...prev.utterances];
+        // Remove both top and bottom, and insert the newly merged one
+        newUtterances.splice(index, 2, mergedUtterance);
+
+        return { ...prev, utterances: newUtterances };
+      });
+
+      // Focus the new merged utterance
+      const data = this.videoData();
+      if (data) {
+        this.focusUtterance(data.utterances[index].id);
+      }
+    });
+  }
+
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
-    if (!this.activeUtteranceId()) return;
+    if (!this.activeUtteranceId() && !this.activePanelMode()) return;
 
+    // We need to carefully define the click-away boundary.
     const targetElement = event.target as HTMLElement;
+
+    // Ignore clicks inside the video settings form specifically
+    if (targetElement.closest('form')) return;
+
+    // Ignore clicks on header toggle buttons (e.g. edit settings button itself)
+    if (targetElement.closest('.border-b.border-black\\/5')) return;
 
     // Ignore clicks inside any utterance card
     if (targetElement.closest('[id^="utterance-"]')) return;
+
+    // Ignore clicks on creation/merge inter-utterance buttons
+    if (targetElement.closest('.utterance-insert-divider')) return;
 
     // Ignore clicks inside the right Advanced Settings panel
     if (targetElement.closest('aside')) return;
@@ -1412,5 +1665,13 @@ export class Editor implements OnInit, OnDestroy {
       this.activePanelMode.set(null);
     });
   }
+
+
+
+
+
+
+
+
 
 }
