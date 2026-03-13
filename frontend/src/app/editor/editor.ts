@@ -585,19 +585,7 @@ export class Editor implements OnInit, OnDestroy {
   private _focusUtteranceLogic(utteranceId: string) {
     const prevId = this.activeUtteranceId();
     const data = this.videoData();
-    if (prevId && data) {
-      this.videoData.update(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          utterances: prev.utterances.map(u =>
-            u.id === prevId && u.isNew && (u.original_text || u.translated_text)
-              ? { ...u, isNew: false }
-              : u
-          )
-        };
-      });
-    }
+
 
     this.activeUtteranceId.set(utteranceId);
     this.activePanelMode.set(null);
@@ -727,7 +715,7 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u => {
           if (u.id === activeId) {
-            const updated = { ...u, speaker: newSpeaker, isNew: false };
+            const updated = { ...u, speaker: newSpeaker };
             updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
             return updated;
           }
@@ -751,7 +739,7 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u => {
           if (u.id === activeId) {
-            const updated = { ...u, instructions: draft, isNew: false };
+            const updated = { ...u, instructions: draft };
             updated.needs_translation_regen = this.checkTranslationRegen(updated, initialState);
             return updated;
           }
@@ -776,7 +764,7 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u => {
           if (u.id === activeId) {
-            const updated = { ...u, voice_instructions: draft, isNew: false };
+            const updated = { ...u, voice_instructions: draft };
             updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
             return updated;
           }
@@ -906,8 +894,7 @@ export class Editor implements OnInit, OnDestroy {
               duration: result.duration,
               translated_end_time: u.translated_start_time + result.duration,
               needs_translation_regen: false,
-              needs_dubbing_regen: true,
-              isNew: false
+              needs_dubbing_regen: true
             } : u
           )
         };
@@ -976,8 +963,7 @@ export class Editor implements OnInit, OnDestroy {
               audio_url: result.audio_url,
               duration: result.duration,
               translated_end_time: u.translated_start_time + result.duration,
-              needs_dubbing_regen: false,
-              isNew: false
+              needs_dubbing_regen: false
             } : u
           )
         };
@@ -1090,16 +1076,19 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   cloneUtterance(utteranceId: string) {
+    console.log('cloneUtterance with ID:', utteranceId);
     this.videoData.update(prev => {
       if (!prev) return prev;
 
       const currentIndex = prev.utterances.findIndex(u => u.id === utteranceId);
+      console.log('cloneUtterance: currentIndex =', currentIndex);
       if (currentIndex === -1) return prev;
 
       const utterance = prev.utterances[currentIndex];
       const newUtterance = JSON.parse(JSON.stringify(utterance)); // Deep copy
 
       newUtterance.id = `utterance_${Date.now()}`; // Simple unique ID
+      newUtterance.isNew = true; // Set isNew to true for cloned utterances
       const duration = utterance.translated_end_time - utterance.translated_start_time;
       newUtterance.translated_start_time = utterance.translated_end_time;
       newUtterance.translated_end_time = utterance.translated_end_time + duration;
@@ -1197,7 +1186,6 @@ export class Editor implements OnInit, OnDestroy {
       if (utterance) {
         utterance.translated_start_time = newStart;
         utterance.translated_end_time = newEnd;
-        utterance.isNew = false;
       }
       return newData;
     });
@@ -1283,6 +1271,7 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   playOriginalUtterance(utterance: VideoUtterance, event: Event) {
+    console.log('playOriginalUtterance with ID:', utterance.id);
     event.stopPropagation();
 
     if (this.activeAudioPlayback?.id === utterance.id && this.activeAudioPlayback?.type === 'original') {
