@@ -300,6 +300,12 @@
                   <span class="text-[10px] text-slate-500 dark:text-[#94a3b8] font-mono">
                     {{ formatTime(utterance.translated_start_time) }} - {{ formatTime(utterance.translated_end_time) }}
                   </span>
+                  @if (utterance.isNew) {
+                  <span class="material-symbols-outlined text-slate-400 dark:text-[#94a3b8] text-[16px] cursor-help"
+                    matTooltip="This utterance is created additionally, and therefore is not part of the original video. It will not show in the original timeline.">
+                    info
+                  </span>
+                  }
                   </div>
                   
                   @if (activeUtteranceId() === utterance.id) {
@@ -316,18 +322,24 @@
                     </span>
                     } @else if (utterance.needs_translation_regen && utterance.needs_dubbing_regen) {
                     <span
-                      class="text-[10px] text-fuchsia-600 dark:text-fuchsia-400 font-bold px-2 py-0.5 bg-fuchsia-50 dark:bg-fuchsia-900/20 rounded border border-fuchsia-200 dark:border-fuchsia-800 animate-pulse whitespace-nowrap">
-                      Translation & Voice changed
+                      class="text-[10px] text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 whitespace-nowrap cursor-help inline-flex items-center gap-1"
+                      matTooltip="Original text or timings have changed. Translation and Dubbing are out of sync. Please click on the buttons to regenerate translation and dubbing.">
+                      Please regenerate translation and dubbing
+                      <span class="material-symbols-outlined text-[14px]">info</span>
                     </span>
                     } @else if (utterance.needs_translation_regen) {
                     <span
-                      class="text-[10px] text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 animate-pulse whitespace-nowrap">
-                      Translation changed
+                      class="text-[10px] text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 whitespace-nowrap cursor-help inline-flex items-center gap-1"
+                      matTooltip="Original text or timings have changed. Translation is out of sync. Please click on the button to regenerate translation.">
+                      Please regenerate translation
+                      <span class="material-symbols-outlined text-[14px]">info</span>
                     </span>
                     } @else if (utterance.needs_dubbing_regen) {
                     <span
-                      class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 rounded border border-emerald-200 dark:border-emerald-800 animate-pulse whitespace-nowrap">
-                      Voice changed
+                      class="text-[10px] text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 whitespace-nowrap cursor-help inline-flex items-center gap-1"
+                      matTooltip="Translated text has changed. Dubbing is out of sync. Please click on the button to regenerate dubbing.">
+                      Please regenerate dubbing
+                      <span class="material-symbols-outlined text-[14px]">info</span>
                     </span>
                     }
                     <!-- Regenerate Actions -->
@@ -380,17 +392,17 @@
                       [class.dark:border-[#334155]]="!utterance.needs_dubbing_regen"
                       [class.hover:border-primary/20]="!utterance.needs_dubbing_regen"
                       [class.focus:ring-primary/20]="!utterance.needs_dubbing_regen"
-                      [class.bg-emerald-100]="utterance.needs_dubbing_regen"
-                      [class.dark:bg-emerald-900/40]="utterance.needs_dubbing_regen"
-                      [class.hover:bg-emerald-200]="utterance.needs_dubbing_regen"
-                      [class.dark:hover:bg-emerald-800/60]="utterance.needs_dubbing_regen"
-                      [class.text-emerald-700]="utterance.needs_dubbing_regen"
-                      [class.dark:text-emerald-400]="utterance.needs_dubbing_regen"
-                      [class.border-emerald-400]="utterance.needs_dubbing_regen"
-                      [class.dark:border-emerald-500/50]="utterance.needs_dubbing_regen"
-                      [class.focus:ring-emerald-500/20]="utterance.needs_dubbing_regen"
+                      [class.bg-amber-100]="utterance.needs_dubbing_regen"
+                      [class.dark:bg-amber-900/40]="utterance.needs_dubbing_regen"
+                      [class.hover:bg-amber-200]="utterance.needs_dubbing_regen"
+                      [class.dark:hover:bg-amber-800/60]="utterance.needs_dubbing_regen"
+                      [class.text-amber-700]="utterance.needs_dubbing_regen"
+                      [class.dark:text-amber-400]="utterance.needs_dubbing_regen"
+                      [class.border-amber-400]="utterance.needs_dubbing_regen"
+                      [class.dark:border-amber-500/50]="utterance.needs_dubbing_regen"
+                      [class.focus:ring-amber-500/20]="utterance.needs_dubbing_regen"
                       [class.animate-pulse]="utterance.needs_dubbing_regen"
-                      [class.shadow-[0_0_10px_2px_rgba(16,185,129,0.2)]]="utterance.needs_dubbing_regen"
+                      [class.shadow-[0_0_10px_2px_rgba(245,158,11,0.2)]]="utterance.needs_dubbing_regen"
                       matTooltip="Regenerate Dubbing"
                       [disabled]="utterance.muted || utterance.removed || (processingUtteranceId() === utterance.id && processingAction() === 'dubbing')"
                       (click)="regenerateDubbing(utterance.id); $event.stopPropagation()">
@@ -446,18 +458,24 @@
                     <span class="text-[10px] text-green-500 font-medium whitespace-nowrap animate-pulse">Success!</span>
                     } @else if (utterance.needs_translation_regen && utterance.needs_dubbing_regen) {
                     <span
-                      class="text-[10px] text-fuchsia-600 dark:text-fuchsia-400 font-bold px-2 py-0.5 bg-fuchsia-50 dark:bg-fuchsia-900/20 rounded border border-fuchsia-200 dark:border-fuchsia-800 animate-pulse whitespace-nowrap">
-                      Translation & Voice changed
+                      class="text-[10px] text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 whitespace-nowrap cursor-help inline-flex items-center gap-1"
+                      matTooltip="Original text or timings have changed. Translation and Dubbing are out of sync. Please click on the buttons to regenerate translation and dubbing.">
+                      Please regenerate translation and dubbing
+                      <span class="material-symbols-outlined text-[14px]">info</span>
                     </span>
                     } @else if (utterance.needs_translation_regen) {
                     <span
-                      class="text-[10px] text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 animate-pulse whitespace-nowrap">
-                      Translation changed
+                      class="text-[10px] text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 whitespace-nowrap cursor-help inline-flex items-center gap-1"
+                      matTooltip="Original text or timings have changed. Translation is out of sync. Please click on the button to regenerate translation.">
+                      Please regenerate translation
+                      <span class="material-symbols-outlined text-[14px]">info</span>
                     </span>
                     } @else if (utterance.needs_dubbing_regen) {
                     <span
-                      class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 rounded border border-emerald-200 dark:border-emerald-800 animate-pulse whitespace-nowrap">
-                      Voice changed
+                      class="text-[10px] text-amber-600 dark:text-amber-400 font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800 whitespace-nowrap cursor-help inline-flex items-center gap-1"
+                      matTooltip="Translated text has changed. Dubbing is out of sync. Please click on the button to regenerate dubbing.">
+                      Please regenerate dubbing
+                      <span class="material-symbols-outlined text-[14px]">info</span>
                     </span>
                     }
                   </div>
@@ -541,11 +559,21 @@
                   (click)="$event.stopPropagation()"></textarea>
             
                 @if (activeUtteranceId() === utterance.id) {
-                <span
-                  class="material-symbols-outlined absolute top-2.5 right-3 text-slate-400 dark:text-[#94a3b8] peer-focus:text-primary dark:peer-focus:text-[#60a5fa] text-[18px] opacity-60 hover:opacity-100 transition-all hover:scale-110 cursor-pointer z-10"
-                  matTooltip="{{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'original' ? 'Stop original audio' : 'Play original audio' }}" (click)="playOriginalUtterance(utterance, $event)">
-                  {{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'original' ? 'stop_circle' : 'play_circle' }}
-                </span>
+                  @if (utterance.isNew) {
+                  <span
+                    class="material-symbols-outlined absolute top-2.5 right-3 text-slate-400 dark:text-[#94a3b8] peer-focus:text-primary dark:peer-focus:text-[#60a5fa] text-[20px] opacity-60 hover:opacity-100 transition-all hover:scale-110 cursor-pointer z-10 pointer-events-auto"
+                    matTooltip="This is a newly created utterance. It does not have original audio.">
+                    info
+                  </span>
+                  } @else {
+                  <span
+                    class="material-symbols-outlined absolute top-2.5 right-3 text-slate-400 dark:text-[#94a3b8] peer-focus:text-primary dark:peer-focus:text-[#60a5fa] text-[20px] opacity-60 hover:opacity-100 transition-all hover:scale-110 cursor-pointer z-10"
+                    matTooltip="{{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'original' ? 'Stop original audio' : 'Play original audio' }}"
+                    (click)="playOriginalUtterance(utterance, $event)">
+                    {{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'original' ? 'stop_circle' :
+                    'play_circle' }}
+                  </span>
+                  }
                 }
               </div>
 <!-- Translated Text (Editable) -->
@@ -577,7 +605,7 @@
     (click)="$event.stopPropagation()"></textarea>
   @if (activeUtteranceId() === utterance.id && utterance.audio_url) {
   <span
-    class="material-symbols-outlined absolute top-2.5 right-3 text-slate-400 dark:text-[#94a3b8] peer-focus:text-primary dark:peer-focus:text-[#60a5fa] text-[18px] opacity-60 hover:opacity-100 transition-all hover:scale-110 cursor-pointer z-10"
+    class="material-symbols-outlined absolute top-2.5 right-3 text-slate-400 dark:text-[#94a3b8] peer-focus:text-primary dark:peer-focus:text-[#60a5fa] text-[20px] opacity-60 hover:opacity-100 transition-all hover:scale-110 cursor-pointer z-10"
     matTooltip="{{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'translated' ? 'Stop translated audio' : 'Play translated audio' }}"
     (click)="playTranslatedUtterance(utterance, $event)">
     {{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'translated' ? 'stop_circle' :
@@ -858,6 +886,7 @@
               
 
           @for (utterance of videoData()?.utterances; track utterance.id; let i = $index) {
+            @if (!utterance.isNew) {
               <div
                   class="absolute top-1 h-10 bg-slate-800 dark:bg-[#334155] rounded-lg flex items-center justify-center border-2 overflow-hidden cursor-pointer transition-all hover:bg-slate-700 dark:hover:bg-[#475569]" [class.opacity-50]="utterance.removed" [class.grayscale]="utterance.removed"
                   [class.border-primary]="activeUtteranceId() === utterance.id"
@@ -868,16 +897,15 @@
                   (click)="focusUtterance(utterance.id)">
                   <div class="absolute inset-0 opacity-20 bg-gradient-to-r from-primary/50 to-transparent pointer-events-none"></div>
                   <span class="text-xs font-bold truncate relative z-10 text-white pointer-events-none">U{{ i + 1 }}</span>
-@if
-(utterance.removed) {
-<div
-  class="ml-1 w-5 h-5 rounded flex items-center justify-center bg-red-600 dark:bg-red-800 shadow-sm border border-red-500 pointer-events-none text-white z-10">
-
-  <span class="material-symbols-outlined text-[12px]">delete</span>
-</div>
-}
-                  </div>
-              }
+                  @if (utterance.removed) {
+                  <div
+                    class="ml-1 w-5 h-5 rounded flex items-center justify-center bg-red-600 dark:bg-red-800 shadow-sm border border-red-500 pointer-events-none text-white z-10">
+                    <span class="material-symbols-outlined text-[12px]">delete</span>
+                    </div>
+                    }
+                    </div>
+                    }
+          }
               </div>
               </div>
               <!-- Translated Track -->

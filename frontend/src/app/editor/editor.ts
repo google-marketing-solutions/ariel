@@ -842,6 +842,7 @@ export class Editor implements OnInit, OnDestroy {
           if (u.id === utteranceId) {
             const updated = { ...u, translated_text: newText };
             updated.needs_translation_regen = this.checkTranslationRegen(updated, initialState);
+            updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
             return updated;
           }
           return u;
@@ -905,7 +906,7 @@ export class Editor implements OnInit, OnDestroy {
               duration: result.duration,
               translated_end_time: u.translated_start_time + result.duration,
               needs_translation_regen: false,
-              needs_dubbing_regen: false,
+              needs_dubbing_regen: true,
               isNew: false
             } : u
           )
@@ -1554,8 +1555,8 @@ export class Editor implements OnInit, OnDestroy {
           id: crypto.randomUUID(),
           original_text: '',
           translated_text: '',
-          original_start_time: isAbove ? 0 : currentUtterance.original_end_time,
-          original_end_time: isAbove ? 1.0 : currentUtterance.original_end_time + 1.0,
+          original_start_time: 0,
+          original_end_time: 0,
           translated_start_time: newStartTime,
           translated_end_time: newEndTime,
           speaker: currentUtterance.speaker,
