@@ -175,23 +175,8 @@
 
     <!-- Center Column: Script Workspace -->
     <section
-      class="flex-1 flex flex-col bg-transparent overflow-y-auto custom-scrollbar border-r border-black/5 dark:border-[#334155] z-0">
-      <div class="p-6 max-w-full mx-auto w-full">
-        @if (durationWarningCount() > 0) {
-        <div
-          class="mb-5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3 shadow-sm">
-          <span class="material-symbols-outlined text-amber-500 mt-0.5 pointer-events-none">warning</span>
-          <div>
-            <h4 class="text-sm font-bold text-amber-800 dark:text-amber-400">Audio Exceeds Video Duration</h4>
-            <p class="text-xs text-amber-700 dark:text-amber-300 mt-1 leading-relaxed">
-              One or more translated utterances extend beyond the original video's end. Generating the video will result in a
-              frozen
-              final frame while the remaining audio finishes playing. To avoid this, try shortening the translated text or
-              adjusting the timestamps manually.
-            </p>
-          </div>
-        </div>
-        }
+      class="flex-1 flex flex-col bg-transparent relative border-r border-black/5 dark:border-[#334155] z-0">
+      <div class="p-6 max-w-full mx-auto w-full flex-1 overflow-y-auto custom-scrollbar">
         <div
           class="mb-6 grid grid-cols-2 gap-8 px-4 pb-3 border-b-2 border-slate-200 dark:border-[#334155] text-sm font-extrabold uppercase tracking-widest text-slate-700 dark:text-slate-300">
           <span>{{ getLanguageName(isEditingSettings() ? editOriginalLanguage() : videoData()?.original_language) }}</span>
@@ -640,7 +625,24 @@
 
         </div>
       </div>
-    </section>
+      <div class="absolute bottom-0 left-0 right-0 p-0 pointer-events-none">
+        @if (durationWarningCount() > 0) {
+        <div
+          class="bg-amber-100 dark:bg-slate-900 border-t border-b border-amber-200 dark:border-amber-800 p-4 flex items-start gap-3 shadow-sm w-full">
+          <span class="material-symbols-outlined text-amber-500 mt-0.5 pointer-events-none">warning</span>
+          <div>
+            <h4 class="text-sm font-bold text-amber-800 dark:text-amber-400">Audio Exceeds Video Duration</h4>
+            <p class="text-xs text-amber-700 dark:text-amber-300 mt-1 leading-relaxed">
+              One or more translated utterances extend beyond the original video's end. Generating the video will result in a
+              frozen
+              final frame while the remaining audio finishes playing. To avoid this, try shortening the translated text or
+              adjusting the timestamps manually.
+            </p>
+          </div>
+        </div>
+        }
+      </div>
+      </section>
 
     <!-- Right Column: Advanced Settings -->
     <aside
