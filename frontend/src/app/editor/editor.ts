@@ -175,6 +175,12 @@ export class Editor implements OnInit, OnDestroy {
 
   // Video Settings Editing State
   isEditingSettings = signal(false);
+
+  // Overlap Popup State
+  showOverlapPopup = signal(false);
+  overlappingUtterances = signal<VideoUtterance[]>([]);
+  popupPosition = signal<{ x: number, y: number }>({ x: 0, y: 0 });
+  popupCloseTimeout: any;
   initialUtteranceState = signal<VideoUtterance | null>(null);
 
   // Custom Modal State
@@ -1454,6 +1460,54 @@ export class Editor implements OnInit, OnDestroy {
     const data = this.videoData();
     if (!data || data.utterances.length === 0) return 0;
     return Math.max(...data.utterances.map(u => u.translated_end_time));
+  }
+
+  getOverlappingUtterances(utterance: VideoUtterance): VideoUtterance[] {
+    const data = this.videoData();
+    if (!data) return [];
+    return data.utterances.filter(u =>
+      !u.removed &&
+      (u.id === utterance.id || // Include self
+        (utterance.translated_start_time <= u.translated_end_time && utterance.translated_end_time >= u.translated_start_time))
+    );
+  }
+
+  showPopup(event: MouseEvent, utterance: VideoUtterance) {
+    const overlaps = this.getOverlappingUtterances(utterance);
+    if (overlaps.length > 1) {
+      this.overlappingUtterances.set(overlaps);
+      this.popupPosition.set({ x: event.clientX, y: event.clientY });
+      this.showOverlapPopup.set(true);
+      clearTimeout(this.popupCloseTimeout);
+    }
+  }
+
+  hidePopup(event: MouseEvent) {
+    // Delay closing to allow moving to popup
+    this.popupCloseTimeout = setTimeout(() => {
+      this.showOverlapPopup.set(false);
+      this.overlappingUtterances.set([]);
+    }, 100);
+  }
+
+  keepPopupOpen() {
+    clearTimeout(this.popupCloseTimeout);
+  }
+
+  closePopup() {
+    this.showOverlapPopup.set(false);
+    this.overlappingUtterances.set([]);
+  }
+
+  selectFromPopup(u: VideoUtterance) {
+    this.focusUtterance(u.id);
+    this.closePopup();
+  }
+
+  getUtteranceIndex(u: VideoUtterance): number {
+    const data = this.videoData();
+    if (!data) return -1;
+    return data.utterances.findIndex(item => item.id === u.id);
   }
 
   getUtteranceOverlap(utterance: VideoUtterance): VideoUtterance | null {

@@ -948,22 +948,22 @@
           @for (utterance of videoData()?.utterances; track utterance.id; let i = $index) {
               <div
                   class="absolute top-1 h-10 rounded-lg flex items-center justify-center px-2 border-2 cursor-pointer transition-all group"
+                  (mouseenter)="showPopup($event, utterance)"
+                  (mouseleave)="hidePopup($event)"
                   [class.z-30]="activeUtteranceId() === utterance.id"
                   [class.z-10]="activeUtteranceId() !== utterance.id"
                   [class.shadow-md]="activeUtteranceId() === utterance.id"
                   [class.opacity-50]="utterance.muted || utterance.removed"
                   [class.grayscale]="utterance.muted || utterance.removed"
-                  [ngClass]="(utterance.isNew && !utterance.original_text) 
-                    ? (activeUtteranceId() === utterance.id 
-                        ? 'bg-yellow-500/20 border-yellow-500 border-dotted hover:bg-yellow-500/30' 
-                        : 'bg-yellow-500/10 border-yellow-500/40 border-dotted hover:bg-yellow-500/20')
-                    : (getUtteranceOverlap(utterance)
-                        ? (activeUtteranceId() === utterance.id 
-                            ? 'bg-red-500/20 dark:bg-red-900/40 border-red-500 hover:bg-red-500/30' 
-                            : 'bg-red-500/10 dark:bg-red-900/30 border-red-400 dark:border-red-500 hover:bg-red-500/20')
-                        : (activeUtteranceId() === utterance.id 
-                            ? 'bg-primary/20 dark:bg-[#60a5fa]/20 border-primary hover:bg-primary/30' 
-                            : 'bg-primary/20 dark:bg-[#60a5fa]/20 border-primary/40 dark:border-[#60a5fa]/40 hover:bg-primary/30 dark:hover:bg-[#60a5fa]/30'))"
+                  [ngClass]="{
+                    'bg-yellow-500/20 border-yellow-500 border-dotted': utterance.isNew && !utterance.original_text && activeUtteranceId() === utterance.id,
+                    'bg-yellow-500/10 border-yellow-500/40 border-dotted hover:bg-yellow-500/20': utterance.isNew && !utterance.original_text && activeUtteranceId() !== utterance.id,
+                    'bg-red-500/20 dark:bg-red-900/40 border-red-500': !utterance.isNew && getUtteranceOverlap(utterance) && activeUtteranceId() === utterance.id,
+                    'bg-red-500/10 dark:bg-red-900/30 border-red-400 dark:border-red-500 hover:bg-red-500/20': !utterance.isNew && getUtteranceOverlap(utterance) && activeUtteranceId() !== utterance.id,
+                    'bg-primary/30 dark:bg-[#60a5fa]/30 border-primary dark:border-[#60a5fa]': !utterance.isNew && !getUtteranceOverlap(utterance) && activeUtteranceId() === utterance.id,
+                    'bg-primary/20 dark:bg-[#60a5fa]/20 border-primary/40 dark:border-[#60a5fa]/40 hover:bg-primary/30 dark:hover:bg-[#60a5fa]/30': !utterance.isNew && !getUtteranceOverlap(utterance) && activeUtteranceId() !== utterance.id,
+                    'scale-[1.01] shadow-lg border-[3px]': activeUtteranceId() === utterance.id
+                  }"
                   [style.left.%]="getLeftPercent(utterance.translated_start_time)"
                   [style.width.%]="getWidthPercent(utterance.translated_start_time, utterance.translated_end_time)"
                   (mousedown)="onDragStart($event, utterance)">
@@ -997,6 +997,21 @@
                 </div>
               }
             </div>
+<!-- Overlap Popup -->
+@if (showOverlapPopup()) {
+<div [style.left.px]="popupPosition().x" [style.top.px]="popupPosition().y"
+  class="fixed bg-red-500 text-white border-4 border-black rounded-lg shadow-lg p-2 z-[1000] flex flex-col gap-1 pointer-events-auto"
+  (mouseenter)="keepPopupOpen()" (mouseleave)="closePopup()">
+  <div class="text-xs font-bold text-white px-2 pb-1 border-b border-red-400">Overlapping (DEBUG)</div>
+  @for (u of overlappingUtterances(); track u.id) {
+  <button (click)="selectFromPopup(u)"
+    class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-red-600 focus:outline-none transition-colors">
+    <span class="w-2 h-2 rounded-full bg-white"></span>
+    <span>U{{ getUtteranceIndex(u) + 1 }}</span>
+  </button>
+  }
+</div>
+}
           </div>
         </div>
       </div>
