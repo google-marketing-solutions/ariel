@@ -14,9 +14,14 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from pydantic import BaseModel
+from enum import Enum
+from pydantic import BaseModel, Field
 from datetime import datetime
 
+class GenderEnum(str, Enum):
+    MALE = "male"
+    FEMALE = "female"
+    NEUTRAL = "neutral"
 
 class Speaker(BaseModel):
   """A speaker in a video.
@@ -30,11 +35,17 @@ class Speaker(BaseModel):
       utterances.
   """
 
-  speaker_id: str
-  voice: str
-  speaker_name: str
-  gender: str
+  speaker_id: str = Field(description="A unique ID for the speaker in the video, created sequentially in the order the speakers speak.")
+  voice: str = Field(description="The name of the voice taken from the list of available Gemini TTS voices.")
+  speaker_name: str = Field(description="A human readable name for the speaker.")
+  gender: GenderEnum = Field(description="The gender of the speaker. Must be one of the predefined options.")
 
+class VoiceData(BaseModel):
+  """Specifies the data related to spoken text during preprocessing.
+  """
+
+  language: str = Field(description="The ISO code of the language.")
+  voices: list[Speaker] = Field(description="A list of Speaker objects from the video.")
 
 class Utterance(BaseModel):
   """One spoken utterance from a video.
@@ -84,7 +95,7 @@ class Video(BaseModel):
     utterances: a list of the individual utterances for the video.
     model_name: either flash or pro, which signals which version of Gemini to
         use.
-    tts_mo
+    tts_model_name: The model used for Text-to-speech
   """
 
   video_id: str
