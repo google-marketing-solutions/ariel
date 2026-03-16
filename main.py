@@ -81,14 +81,8 @@ else:
   app.mount("/temp", StaticFiles(directory="temp"), name="temp")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
 
 config = get_config()
-
-
-@app.get("/", response_class=HTMLResponse)
-async def read_item(request: Request):
-  return templates.TemplateResponse("index.html", {"request": request})
 
 
 def _process_utterance(
@@ -716,10 +710,6 @@ def get_videos() -> list[dict]:
   return videos_list
 
 
-@app.get("/library", response_class=HTMLResponse)
-def library_page(request: Request):
-  return templates.TemplateResponse("library.html", {"request": request})
-
 @app.get("/api/projects/{video_id}")
 def load_project(video_id: str):
   try:
@@ -753,6 +743,28 @@ def delete_video(video_id: str):
   except Exception as e:
     print(f"Error deleting video: {e}")
     return JSONResponse(status_code=500, content={"error": "Error deleting video"})
+@app.get("/{catchall:path}")
+async def catch_all(request: Request, catchall: str):
+    from fastapi.responses import FileResponse
+    from fastapi.responses import JSONResponse
+    from fastapi.responses import HTMLResponse
+    import os
+    
+    if catchall.startswith("mnt/") or catchall.startswith("temp/") or catchall.startswith("static/"):
+         return HTMLResponse(status_code=404, content="Not found")
+         
+    file_path = os.path.join("frontend/dist/frontend/browser", catchall)
+    if os.path.isfile(file_path):
+        return FileResponse(file_path)
+    
+    if catchall.startswith("api/"):
+         return JSONResponse(status_code=404, content={"detail": "Not found"})
+         
+    index_path = os.path.join("frontend/dist/frontend/browser", "index.html")
+    if os.path.isfile(index_path):
+        return FileResponse(index_path)
+        
+    return HTMLResponse(status_code=404, content="Frontend not found")
 
 
 

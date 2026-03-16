@@ -17,7 +17,7 @@
 uv sync
 
 if [ -f "configuration.yaml" ]; then
-  eval $(python -c 'import yaml, sys;
+  eval $(uv run python -c 'import yaml, sys;
 config = yaml.safe_load(sys.stdin);
 if config:
   for k, v in config.items():
