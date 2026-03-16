@@ -1,5 +1,5 @@
 <div
-  class="bg-slate-50 dark:bg-[#0f172a] text-slate-800 dark:text-[#f1f5f9] font-sans antialiased flex flex-col transition-colors duration-300"
+  class="bg-slate-50 dark:bg-[#0f172a] text-slate-800 dark:text-[#f1f5f9] font-sans antialiased flex flex-col transition-colors duration-300 relative"
   [class.h-screen]="isEditorRoute" [class.overflow-hidden]="isEditorRoute" [class.min-h-screen]="!isEditorRoute">
 
   <app-header [isDarkMode]="isDarkMode()" (toggleTheme)="toggleTheme()"></app-header>
@@ -10,4 +10,7 @@
     <router-outlet></router-outlet>
   </main>
 
+  <div class="fixed bottom-4 right-1 text-xs text-slate-500 dark:text-slate-400 z-50">
+  v2.2
+</div>
 </div>

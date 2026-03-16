@@ -1,4 +1,4 @@
-"""Entry point into the Ariel v2 solution."""
+"""Entry point into the Ariel v2.2 solution."""
 
 # Copyright 2025 Google LLC
 
@@ -404,6 +404,7 @@ async def process_video(
               duration = max([u.translated_end_time for u in to_return.utterances])
       
       metadata['duration'] = round(duration, 1)
+      metadata['original_video_url'] = f"{mount_point}/{to_return.video_id}/{to_return.video_id}"
       
       metadata_path = os.path.join(local_dir, "metadata.json")
       with open(metadata_path, "w") as f:

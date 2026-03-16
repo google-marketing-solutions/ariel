@@ -99,6 +99,7 @@ export class Editor implements OnInit, OnDestroy {
   isPlayingTranslated = signal(false);
   isPlayingSnippet = signal(false);
   isGeneratingAudio = signal(false);
+  isProcessingGlobalChanges = signal(false);
   currentTime = signal(0);
   snippetStartTime = 0;
 
@@ -317,8 +318,21 @@ export class Editor implements OnInit, OnDestroy {
       let rawUrl = (data as any).original_video_url;
 
       if (!rawUrl && data.video_id) {
-        // Fallback if missing, though it should be there.
-        rawUrl = `temp/${data.video_id}/${data.video_id}`;
+        // Fallback: try to deduce from utterances if available
+        const u = data.utterances.find(utt => utt.audio_url);
+        if (u && u.audio_url) {
+          let url = u.audio_url;
+          if (!url.startsWith('http') && !url.startsWith('/')) {
+            url = '/' + url;
+          }
+          const lastSlash = url.lastIndexOf('/');
+          if (lastSlash !== -1) {
+            rawUrl = url.substring(0, lastSlash + 1) + data.video_id;
+          }
+        } else {
+          // Absolute fallback
+          rawUrl = `temp/${data.video_id}/${data.video_id}`;
+        }
       }
 
       if (rawUrl) {
@@ -432,6 +446,7 @@ export class Editor implements OnInit, OnDestroy {
       return;
     }
 
+    this.isProcessingGlobalChanges.set(true);
     this.isGeneratingAudio.set(true);
 
     try {
@@ -540,6 +555,7 @@ export class Editor implements OnInit, OnDestroy {
       console.error(e);
       alert('Failed to update video settings');
     } finally {
+      this.isProcessingGlobalChanges.set(false);
       this.isGeneratingAudio.set(false);
     }
   }
@@ -1207,7 +1223,7 @@ export class Editor implements OnInit, OnDestroy {
     } else {
       const data = this.videoData();
       if (data && data.video_id) {
-        this.originalAudio.src = `/temp/${data.video_id}/original_audio.wav`;
+        this.originalAudio.src = this.getOriginalAudioSrc(data);
         this.originalAudio.play().then(() => {
           this.isPlayingOriginal.set(true);
         }).catch(err => {
@@ -1290,27 +1306,37 @@ export class Editor implements OnInit, OnDestroy {
 
     const data = this.videoData();
     if (data && data.video_id) {
-      // Ensure the source is set
-      if (!this.originalAudio.src.includes(`/temp/${data.video_id}/original_audio.wav`)) {
-        this.originalAudio.src = `/temp/${data.video_id}/original_audio.wav`;
-      }
+      const expectedSrc = this.getOriginalAudioSrc(data);
+      
+      const playSnippet = () => {
+        this.originalAudio.currentTime = utterance.original_start_time;
+        this.originalAudio.play().then(() => {
+          this.isPlayingOriginal.set(true);
+        }).catch(err => {
+          console.error("Error playing original utterance snippet", err);
+        });
 
-      this.originalAudio.currentTime = utterance.original_start_time;
-      this.originalAudio.play().then(() => {
-        this.isPlayingOriginal.set(true);
-      }).catch(err => {
-        console.error("Error playing original utterance snippet", err);
-      });
+        const duration = (utterance.original_end_time - utterance.original_start_time) * 1000;
+        this.utteranceTimeoutId = setTimeout(() => {
+          this.originalAudio.pause();
+          this.isPlayingOriginal.set(false);
+          this.currentTime.set(0);
+          if (this.activeAudioPlayback?.id === utterance.id && this.activeAudioPlayback?.type === 'original') {
+            this.activeAudioPlayback = null;
+          }
+        }, duration);
+      };
 
-      const duration = (utterance.original_end_time - utterance.original_start_time) * 1000;
-      this.utteranceTimeoutId = setTimeout(() => {
-        this.originalAudio.pause();
-        this.isPlayingOriginal.set(false);
-        this.currentTime.set(0);
-        if (this.activeAudioPlayback?.id === utterance.id && this.activeAudioPlayback?.type === 'original') {
-          this.activeAudioPlayback = null;
+      if (!this.originalAudio.src.includes(expectedSrc)) {
+        this.originalAudio.src = expectedSrc;
+        this.originalAudio.addEventListener('canplay', playSnippet, { once: true });
+      } else {
+        if (this.originalAudio.readyState >= 3) { // HAVE_FUTURE_DATA or higher
+          playSnippet();
+        } else {
+          this.originalAudio.addEventListener('canplay', playSnippet, { once: true });
         }
-      }, duration);
+      }
     }
   }
 
@@ -1718,4 +1744,19 @@ export class Editor implements OnInit, OnDestroy {
 
 
 
+private getOriginalAudioSrc(data: VideoJob): string {
+    const u = data.utterances.find(utt => utt.audio_url);
+    let expectedSrc = `/temp/${data.video_id}/original_audio.wav`; // Fallback
+    if (u && u.audio_url) {
+      let url = u.audio_url;
+      if (!url.startsWith('http') && !url.startsWith('/')) {
+        url = '/' + url;
+      }
+      const lastSlash = url.lastIndexOf('/');
+      if (lastSlash !== -1) {
+        expectedSrc = url.substring(0, lastSlash + 1) + 'original_audio.wav';
+      }
+    }
+    return expectedSrc;
+  }
 }
