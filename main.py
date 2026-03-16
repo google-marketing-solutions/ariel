@@ -19,45 +19,47 @@ import functools
 import json
 import logging
 import os
+import re
 import shutil
-import uuid
 from typing import Annotated
+import uuid
+import re
 
-import google.cloud.logging
-import moviepy
-from fastapi import FastAPI, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+
+from cloud_storage import clean_video_name
+from cloud_storage import delete_video_from_gcs
+from cloud_storage import list_all_videos
+from cloud_storage import upload_file_to_gcs
+from cloud_storage import upload_video_to_gcs
+from configuration import get_config
+from fastapi import FastAPI
+from fastapi import Form
+from fastapi import Request
+from fastapi import UploadFile
+from fastapi.responses import HTMLResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from generate_audio import generate_audio
+from generate_audio import shorten_audio
 from google import genai
+import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
-
-from cloud_storage import (
-  clean_video_name,
-  delete_video_from_gcs,
-  list_all_videos,
-  upload_file_to_gcs,
-  upload_video_to_gcs,
-)
-from configuration import get_config
-from generate_audio import generate_audio, shorten_audio
-from models import (
-  GenerateVideoRequest,
-  RegenerateRequest,
-  RegenerateResponse,
-  Speaker,
-  Utterance,
-  Video,
-)
-from preprocess import extract_video_details
-from process import (
-  combine_video_and_audio,
-  merge_background_and_vocals,
-  merge_vocals,
-  separate_audio_from_video,
-)
-from transcribe import TranscribeSegment, annotate_transcript, transcribe_media
+from models import RegenerateRequest
+from models import RegenerateResponse
+from models import Speaker
+from models import Utterance
+from models import Video
+from process import combine_video_and_audio
+from process import merge_background_and_vocals
+from process import merge_vocals
+from process import separate_audio_from_video
+from transcribe import annotate_transcript
+from transcribe import transcribe_media
+from transcribe import TranscribeSegment
 from translate import translate_text
+from models import GenerateVideoRequest
+import moviepy
 
 # Set up Google Cloud Logging
 if "K_SERVICE" in os.environ:
@@ -79,51 +81,9 @@ else:
   app.mount("/temp", StaticFiles(directory="temp"), name="temp")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
 
 config = get_config()
 
-
-@app.get("/", response_class=HTMLResponse)
-async def read_item(request: Request):
-  return templates.TemplateResponse("index.html", {"request": request})
-
-
-@app.post("/preprocess")
-def preprocess(video: UploadFile, use_pro_model: bool) -> Video:
-  """Preprocesses a video to extract metadata.
-
-  This function sends the uploaded video to Gemini for analysis. The
-  original language, number of speakers, and speaker voices are dertermined.
-  A partial Video object is returned with the extracted data.
-
-  Args:
-    video: the uploaded video file to process.
-    use_pro_model: Use the defined pro model if true. Otherwise use the flash model.
-
-  Returns:
-    A partially completed video object with the information extracted by Gemini.
-  """
-  local_dir, gcs_path = save_video(video)
-  gemini_client = genai.Client(vertexai=True, project=config.gcp_project_id, location="global")
-  model_string = config.gemini_flash_model
-  tts_model_string = config.gemini_flash_tts_model
-  if use_pro_model:
-    model_string = config.gemini_pro_model
-    tts_model_string = config.gemini_pro_tts_model
-
-  voice_data = extract_video_details(gcs_path, gemini_client, model_string)
-  video_id = os.path.basename(local_dir)
-  return Video(
-      video_id=video_id,
-      original_language=voice_data.language,
-      translate_language="",
-      prompt_enhancements="",
-      speakers=voice_data.voices,
-      utterances=[],
-      model_name=model_string,
-      tts_model_name=tts_model_string,
-  )
 
 def _process_utterance(
     i: int,
@@ -204,10 +164,10 @@ async def process_video(
     translate_language: Annotated[str, Form()],
     adjust_speed: Annotated[bool, Form()],
     speakers: Annotated[str, Form()],
-    video: UploadFile,
-    source_video_id: Annotated[str, Form()],
     prompt_enhancements: Annotated[str, Form()] = "",
     use_pro_model: Annotated[bool, Form()] = False,
+    video: UploadFile = None,
+    source_video_id: Annotated[str, Form()] = None,
     update_existing: Annotated[bool, Form()] = False,
 ) -> Video:
   """Endpoint to run the initial video processing workflow.
@@ -750,10 +710,6 @@ def get_videos() -> list[dict]:
   return videos_list
 
 
-@app.get("/library", response_class=HTMLResponse)
-def library_page(request: Request):
-  return templates.TemplateResponse("library.html", {"request": request})
-
 @app.get("/api/projects/{video_id}")
 def load_project(video_id: str):
   try:
@@ -787,6 +743,28 @@ def delete_video(video_id: str):
   except Exception as e:
     print(f"Error deleting video: {e}")
     return JSONResponse(status_code=500, content={"error": "Error deleting video"})
+@app.get("/{catchall:path}")
+async def catch_all(request: Request, catchall: str):
+    from fastapi.responses import FileResponse
+    from fastapi.responses import JSONResponse
+    from fastapi.responses import HTMLResponse
+    import os
+    
+    if catchall.startswith("mnt/") or catchall.startswith("temp/") or catchall.startswith("static/"):
+         return HTMLResponse(status_code=404, content="Not found")
+         
+    file_path = os.path.join("frontend/dist/frontend/browser", catchall)
+    if os.path.isfile(file_path):
+        return FileResponse(file_path)
+    
+    if catchall.startswith("api/"):
+         return JSONResponse(status_code=404, content={"detail": "Not found"})
+         
+    index_path = os.path.join("frontend/dist/frontend/browser", "index.html")
+    if os.path.isfile(index_path):
+        return FileResponse(index_path)
+        
+    return HTMLResponse(status_code=404, content="Frontend not found")
 
 
 

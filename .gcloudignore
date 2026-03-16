@@ -1,2 +1,3 @@
 #!include:.gitignore
 !configuration.yaml
+!frontend/dist/

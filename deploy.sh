@@ -97,6 +97,14 @@ deploy_service() {
   fi
 }
 
+# Build frontend
+echo "🏗️ Building frontend..."
+if [ -d "frontend" ]; then
+  (cd frontend && npm run build) || exit 1
+else
+  echo "⚠️ frontend directory not found, skipping build."
+fi
+
 # First deployment attempt
 echo "🚀 Deploying service..."
 if deploy_service; then
