@@ -37,41 +37,34 @@
 
   @if (step() === 1) {
   <!-- Step 1 Area -->
-  <div class="w-full flex justify-center mb-12">
-    <div
-      class="flex flex-col sm:flex-row items-center gap-6 bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-[12px] border border-[#0000000d] dark:border-[#334155] shadow-glass-light dark:shadow-glass-dark rounded-2xl p-6">
-  
-      <div class="flex items-center gap-4">
-        <h3 class="text-sm font-bold text-slate-800 dark:text-[#f1f5f9]">Gemini Model</h3>
-        <div class="flex items-center gap-2" [class.opacity-50]="isPreprocessing()"
-          [class.pointer-events-none]="isPreprocessing()">
-          <div class="relative inline-block w-10 -mr-2 align-middle select-none transition duration-200 ease-in">
-            <input type="checkbox" name="toggle-model-step1" id="toggle-model-step1" [checked]="useProModel()"
-              (change)="useProModel.set(!useProModel())" [disabled]="isPreprocessing()"
-              class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transform transition-transform duration-200 ease-in-out"
-              [ngClass]="useProModel() ? 'translate-x-5 border-primary dark:border-[#3b82f6]' : 'border-slate-300 dark:border-[#94a3b8]'" />
-            <label for="toggle-model-step1" class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"
-              [ngClass]="useProModel() ? 'bg-primary/20 dark:bg-white/90' : 'bg-slate-200 dark:bg-white/90'"></label>
+  <div class="settings-container">
+    <div class="settings-grid">
+      <div class="left-column">
+        <div class="toggle-row">
+          <h3>Gemini Model</h3>
+          <div class="toggle-widget" [class.opacity-50]="isPreprocessing()">
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-model-step1" [checked]="useProModel()"
+                (change)="useProModel.set(!useProModel())" [disabled]="isPreprocessing()">
+              <span class="slider"></span>
+            </label>
+            <span class="toggle-label-text">{{ useProModel() ? 'Pro' : 'Flash' }}</span>
           </div>
-          <span class="text-sm font-medium text-slate-700 dark:text-[#f1f5f9] ml-2 w-10">{{ useProModel() ? 'Pro' :
-            'Flash' }}</span>
         </div>
       </div>
-  
-      @if (videoPreviewUrl()) {
-      <div class="h-8 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
-  
-      <button (click)="preprocessVideo()" [disabled]="isPreprocessing()"
-        class="rounded-xl bg-gradient-to-br from-primary to-[#8b5cf6] dark:from-[#2563eb] dark:to-[#3b82f6] px-6 py-2.5 text-sm font-bold text-white shadow-md hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-        @if (isPreprocessing()) {
-        <span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
-        Preprocessing...
-        } @else {
-        <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
-        Pre-process Video
+      <div class="right-column">
+        @if (videoPreviewUrl()) {
+        <button (click)="preprocessVideo()" [disabled]="isPreprocessing()" class="action-btn">
+          @if (isPreprocessing()) {
+          <span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+          Preprocessing...
+          } @else {
+          <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+          Pre-process Video
+          }
+        </button>
         }
-      </button>
-      }
+      </div>
     </div>
   </div>
   }
