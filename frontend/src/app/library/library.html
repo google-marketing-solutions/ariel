@@ -41,24 +41,21 @@
       </div>
 
       <!-- Video Info -->
-      <div class="flex-1 flex flex-col items-start gap-1 w-full pl-2">
-        <h3
-          class="text-lg font-bold text-slate-800 dark:text-[#f1f5f9] mb-0 inline-block w-full text-ellipsis overflow-hidden whitespace-nowrap"
-          [title]="video.name">
+      <div class="video-info">
+        <h3 [title]="video.name">
           {{ video.name }}
         </h3>
-        <p class="text-sm font-medium text-slate-500 dark:text-[#94a3b8] mb-1 flex items-center gap-1.5">
+        <p>
           <span class="material-symbols-outlined text-[16px]">schedule</span>
           {{ formatDate(video.created_at) }}
         </p>
-        <p class="text-sm font-medium text-slate-500 dark:text-[#94a3b8] mb-3 flex items-center gap-1.5">
+        <p>
           <span class="material-symbols-outlined text-[16px]">record_voice_over</span>
           {{ getSpeakersString(video.speakers) }}
         </p>
-
-        <div class="flex items-center gap-3">
-          <span
-            class="inline-flex items-center rounded-lg bg-slate-100 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-[#cbd5e1] shadow-sm">
+        
+        <div class="badges-row">
+          <span class="card-badge">
             <span class="material-symbols-outlined text-[14px] mr-1.5 text-primary dark:text-[#60a5fa]">translate</span>
             {{ video.original_language || '?' }} &rarr; {{ video.translate_language || '?' }}
           </span>
@@ -75,8 +72,7 @@
           <span class="material-symbols-outlined text-[18px]">download</span> Download
         </a>
         @if (video.has_metadata) {
-        <a [routerLink]="['/editor']" [queryParams]="{ video_id: video.video_id }"
-          class="w-full inline-flex justify-center items-center gap-2 rounded-xl bg-white dark:bg-[#334155] border border-slate-200 dark:border-[#475569] hover:bg-slate-50 dark:hover:bg-[#475569] px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-white shadow-sm transition-all focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-600 focus:outline-none">
+        <a [routerLink]="['/editor']" [queryParams]="{ video_id: video.video_id }" class="edit-btn">
           <span class="material-symbols-outlined text-[18px]">edit</span> Edit
         </a>
         } @else {
