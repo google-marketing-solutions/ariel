@@ -168,6 +168,14 @@ if [[ -z "$PROJECT_NUMBER" ]]; then
   exit 1
 fi
 
+# Grant the current user permissions to upload to Artifact Registry
+echo "🔑 Granting 'Artifact Registry Writer' role to $CURRENT_USER..."
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="user:$CURRENT_USER" \
+    --role="roles/artifactregistry.writer" \
+    --quiet
+echo "✅ Artifact Registry permissions granted to user."
+
 # Grant the official Cloud Build service account the necessary roles
 BUILD_SERVICE_ACCOUNT="${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
 echo "🔑 Granting 'Storage Object Viewer' and 'Logs Writer' roles to the Cloud Build service account..."
