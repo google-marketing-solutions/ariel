@@ -1,4 +1,4 @@
-import { Component, Inject, PLATFORM_ID, signal, inject } from '@angular/core';
+import { Component, PLATFORM_ID, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
 import { Header } from './header/header';
 import { isPlatformBrowser } from '@angular/common';
@@ -7,13 +7,15 @@ import { isPlatformBrowser } from '@angular/common';
   selector: 'app-root',
   imports: [RouterOutlet, Header],
   templateUrl: './app.html',
-  styleUrl: './app.scss'
+  styleUrl: './app.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class App {
   isDarkMode = signal(false);
   private router = inject(Router);
+  private platformId = inject(PLATFORM_ID);
 
-  constructor(@Inject(PLATFORM_ID) private platformId: Object) {
+  constructor() {
     this.initTheme();
   }
 

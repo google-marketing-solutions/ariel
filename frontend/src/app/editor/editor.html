@@ -67,7 +67,8 @@
                 <span class="text-xs text-slate-400 dark:text-[#94a3b8]">Original</span>
                 <div class="relative flex items-center">
                   <select [(ngModel)]="editOriginalLanguage"
-                    class="appearance-none bg-transparent text-xs font-medium text-slate-800 dark:text-[#f1f5f9] outline-none pr-5 cursor-pointer hover:text-primary dark:hover:text-[#60a5fa] transition-colors max-w-[150px] truncate text-right">
+                    [disabled]="isGeneratingAudio()"
+                    class="appearance-none bg-transparent text-xs font-medium text-slate-800 dark:text-[#f1f5f9] outline-none pr-5 cursor-pointer hover:text-primary dark:hover:text-[#60a5fa] transition-colors max-w-[150px] truncate text-right disabled:opacity-50 disabled:cursor-not-allowed">
                     <optgroup label="GA">
                     @for (lang of gaLanguages(); track lang.code) {
                     <option [value]="lang.code">{{ lang.name }}</option>
@@ -88,7 +89,8 @@
                 <span class="text-xs text-slate-400 dark:text-[#94a3b8]">Translation</span>
                 <div class="relative flex items-center">
                   <select [(ngModel)]="editTranslateLanguage"
-                    class="appearance-none bg-transparent text-xs font-medium text-slate-800 dark:text-[#f1f5f9] outline-none pr-5 cursor-pointer hover:text-primary dark:hover:text-[#60a5fa] transition-colors max-w-[150px] truncate text-right">
+                    [disabled]="isGeneratingAudio()"
+                    class="appearance-none bg-transparent text-xs font-medium text-slate-800 dark:text-[#f1f5f9] outline-none pr-5 cursor-pointer hover:text-primary dark:hover:text-[#60a5fa] transition-colors max-w-[150px] truncate text-right disabled:opacity-50 disabled:cursor-not-allowed">
                   <optgroup label="GA">
                     @for (lang of gaLanguages(); track lang.code) {
                     <option [value]="lang.code">{{ lang.name }}</option>
@@ -125,7 +127,8 @@
                 @if (isEditingSettings()) {
                   <button
                     (click)="openAddSpeakerModal()"
-                    class="flex items-center justify-center gap-1.5 rounded-lg bg-primary/10 dark:bg-[#60a5fa]/10 hover:bg-primary/20 dark:hover:bg-[#60a5fa]/20 px-3 py-1.5 text-xs font-bold text-primary dark:text-[#60a5fa] transition-all">
+                    [disabled]="isGeneratingAudio()"
+                    class="flex items-center justify-center gap-1.5 rounded-lg bg-primary/10 dark:bg-[#60a5fa]/10 hover:bg-primary/20 dark:hover:bg-[#60a5fa]/20 px-3 py-1.5 text-xs font-bold text-primary dark:text-[#60a5fa] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                     <span class="material-symbols-outlined text-[16px]">add_circle</span> Add Speaker
                   </button>
                 }
@@ -143,10 +146,13 @@
                     <div class="flex-1 min-w-0">
                             <p class="text-xs font-bold truncate text-slate-800 dark:text-[#f1f5f9]">{{ speaker.speaker_name || speaker.name }}</p>
                             <button (click)="openEditSpeakerVoiceModal(speaker.speaker_id)"
-                              class="text-[10px] text-primary hover:underline truncate">{{ speaker.voice }} ({{ speaker.gender }})</button>
+                              [disabled]="isGeneratingAudio()"
+                              class="text-[10px] text-primary hover:underline truncate disabled:opacity-50 disabled:cursor-not-allowed">{{ speaker.voice }} ({{ speaker.gender }})</button>
                             </div>
                             </div>
-                        <button (click)="removeEditSpeaker(speaker.speaker_id)" class="text-slate-400 hover:text-red-500 transition-colors">
+                        <button (click)="removeEditSpeaker(speaker.speaker_id)"
+                          [disabled]="isGeneratingAudio()"
+                          class="text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                           <span class="material-symbols-outlined text-[16px]">close</span>
                         </button>
                         </div>
@@ -176,6 +182,14 @@
     <!-- Center Column: Script Workspace -->
     <section
       class="flex-1 flex flex-col bg-transparent relative border-r border-black/5 dark:border-[#334155] z-0">
+      
+      @if (isProcessingGlobalChanges()) {
+      <div class="absolute inset-0 bg-slate-900/50 dark:bg-[#0f172a]/50 z-50 flex flex-col items-center justify-center pointer-events-auto" style="backdrop-filter: blur(2px);">
+        <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-4">progress_activity</span>
+        <p class="text-sm font-medium text-white dark:text-[#cbd5e1]">Processing changes...</p>
+      </div>
+      }
+
       <div class="p-6 max-w-full mx-auto w-full flex-1 overflow-y-auto custom-scrollbar">
         <div
           class="mb-6 grid grid-cols-2 gap-8 px-4 pb-3 border-b-2 border-slate-200 dark:border-[#334155] text-sm font-extrabold uppercase tracking-widest text-slate-700 dark:text-slate-300">
@@ -408,13 +422,7 @@
                       (click)="revertUtterance(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">history</span>
                     </button>
-                    <button
-                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                      matTooltip="Clone Utterance"
-                      [disabled]="utterance.muted || utterance.removed"
-                      (click)="cloneUtterance(utterance.id); $event.stopPropagation()">
-                      <span class="material-symbols-outlined text-[16px]">content_copy</span>
-                    </button>
+
                     </div>
                     
                     <!-- State Actions -->
@@ -848,8 +856,10 @@
 
   <!-- Bottom Row: Timeline -->
   <footer
-    class="h-48 shrink-0 border-t-2 border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-[#0f172a]/90 backdrop-blur-xl flex flex-col w-full z-10 shadow-[0_-4px_10px_0_rgba(0,0,0,0.02)] dark:shadow-none">
-    <div class="flex items-center justify-between px-4 py-2 border-b border-primary/10 dark:border-[#334155]">
+    [class.pointer-events-none]="isProcessingGlobalChanges()"
+    [class.opacity-70]="isProcessingGlobalChanges()"
+    class="h-48 shrink-0 border-t-2 border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-[#0f172a]/90 backdrop-blur-xl flex flex-col w-full z-10 shadow-[0_-4px_10px_0_rgba(0,0,0,0.02)] dark:shadow-none transition-opacity">
+    <div class="flex items-center justify-between px-6 py-2 border-b border-primary/10 dark:border-[#334155]">
       <div class="flex items-center gap-6">
 <div class="text-xs font-mono font-bold tracking-widest text-primary dark:text-[#60a5fa]">{{ formatTime(currentTime())
   }} / {{ formatTime(timelineDuration) }}
@@ -891,9 +901,10 @@
               <span class="text-[10px] font-bold text-slate-500 dark:text-[#94a3b8] uppercase">Original</span>
               <button
                 (click)="toggleOriginalAudio()"
-                class="w-9 h-9 rounded-full shadow-sm border border-slate-200 dark:border-[#334155] flex items-center justify-center bg-white dark:bg-[#1e293b] hover:bg-slate-50 dark:hover:bg-[#334155]/80 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] transition-all hover:scale-105"
+                [disabled]="isGeneratingAudio()"
+                class="w-9 h-9 rounded-full shadow-sm border border-slate-200 dark:border-[#334155] flex items-center justify-center bg-white dark:bg-[#1e293b] hover:bg-slate-50 dark:hover:bg-[#334155]/80 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 matTooltip="Play Original">
-                <span class="material-symbols-outlined text-[20px] ml-0.5">{{ isPlayingOriginal() ? 'stop' : 'play_arrow' }}</span>
+                <span class="material-symbols-outlined text-[20px] ml-0.5">{{ isGeneratingAudio() ? 'hourglass_empty' : isPlayingOriginal() ? 'stop' : 'play_arrow' }}</span>
                 </button>
                 </div>
             <div class="flex-1 relative h-full mr-6">
@@ -906,8 +917,8 @@
                   [class.border-primary]="activeUtteranceId() === utterance.id"
                   [class.border-slate-100]="activeUtteranceId() !== utterance.id"
                   [class.dark:border-[#0f172a]]="activeUtteranceId() !== utterance.id"
-                  [style.left.%]="getLeftPercent(utterance.ui_original_start_time ?? utterance.original_start_time)"
-                  [style.width.%]="getWidthPercent(utterance.ui_original_start_time ?? utterance.original_start_time, utterance.ui_original_end_time ?? utterance.original_end_time)"
+                  [style.left.%]="getLeftPercent(utterance.original_start_time)"
+                  [style.width.%]="getWidthPercent(utterance.original_start_time, utterance.original_end_time)"
                   (click)="focusUtterance(utterance.id)">
                   <div class="absolute inset-0 opacity-20 bg-gradient-to-r from-primary/50 to-transparent pointer-events-none"></div>
                   <span class="text-xs font-bold truncate relative z-10 text-white pointer-events-none">U{{ i + 1 }}</span>

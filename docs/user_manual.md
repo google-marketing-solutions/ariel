@@ -20,7 +20,7 @@
 
 # Introduction
 
-Ariel v2.0 is an AI-powered video dubbing tool designed to translate video voice
+Ariel is an AI-powered video dubbing tool designed to translate video voice
 tracks seamlessly. It utilizes Google's Gemini models to transcribe, translate,
 and re-dub videos into different languages while preserving background music and
 sound effects. The tool provides a web-based interface for uploading videos,
@@ -32,7 +32,7 @@ managing speakers, editing translations, and fine-tuning audio timing.
 
 # Getting Started
 
-To access Ariel v2.0, navigate to the URL provided by your deployment
+To access Ariel, navigate to the URL provided by your deployment
 administrator. The application runs in a web browser and does not require local
 installation for the end-user.
 

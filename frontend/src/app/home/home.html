@@ -186,10 +186,16 @@
                     </span>
                   </div>
                 </div>
-                <button (click)="removeSpeaker(speaker.id)" [disabled]="isProcessing()"
-                  class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed">
-                  <span class="material-symbols-outlined text-[18px]">close</span>
-                </button>
+                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button (click)="editSpeaker(speaker)" [disabled]="isProcessing()"
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors disabled:opacity-0 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined text-[18px]">edit</span>
+                  </button>
+                  <button (click)="removeSpeaker(speaker.id)" [disabled]="isProcessing()"
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-0 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                  </button>
+                </div>
               </div>
               }
             </div>
@@ -266,5 +272,5 @@
 <!-- Modals -->
 @if (isSpeakerModalOpen()) {
 <app-speaker-modal (close)="closeSpeakerModal()" (speakerAdded)="onSpeakerAdded($event)"
-  [speakerCount]="speakers().length"></app-speaker-modal>
+  [speakerCount]="speakers().length" [initialSpeaker]="speakerToEdit()"></app-speaker-modal>
 }

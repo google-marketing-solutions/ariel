@@ -5,7 +5,7 @@
       <img src="Image/Ariel_Logo.png" alt="Ariel Logo" class="logo-img me-3 h-8" />
       <h2
         class="text-2xl font-heading font-bold tracking-tight bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] dark:from-[#2563eb] dark:to-[#3b82f6] bg-clip-text text-transparent">
-        Ariel v2
+        Ariel - AI Voiceover Studio
       </h2>
     </div>
 
@@ -35,7 +35,7 @@
 
     @if (isEditorRoute) {
     <!-- Unregenerated Warning -->
-    @if ((videoGenerationService.unregeneratedCount$ | async) ?? 0; as count) {
+    @if (videoGenerationService.unregeneratedCount(); as count) {
     <div class="flex items-center gap-1.5 mr-2 cursor-help"
       matTooltip="You have {{count}} utterance(s) with changed text or voices that have not been regenerated yet. These changes will NOT be included in the final video until you click Regenerate on the respective utterance cards.">
       <span class="text-sm font-semibold text-amber-600 dark:text-amber-400">{{ count }} change(s) need regeneration</span>
@@ -54,7 +54,7 @@
     <button (click)="onToggleTheme()"
       class="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100 dark:bg-[#0f172a] hover:bg-slate-200 dark:hover:bg-black/20 text-slate-600 dark:text-[#94a3b8] transition-colors border border-black/5 dark:border-[#334155]">
       <span class="material-symbols-outlined text-xl">
-        {{ isDarkMode ? 'light_mode' : 'dark_mode' }}
+        {{ isDarkMode() ? 'light_mode' : 'dark_mode' }}
       </span>
     </button>
 

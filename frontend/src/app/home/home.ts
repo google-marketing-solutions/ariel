@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -24,13 +24,17 @@ export interface Speaker {
   imports: [CommonModule, FormsModule, SpeakerModal],
   templateUrl: './home.html',
   styleUrl: './home.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Home implements OnInit {
+  private router = inject(Router);
+
   gaLanguages = signal<Language[]>([]);
   previewLanguages = signal<Language[]>([]);
 
   speakers = signal<Speaker[]>([]);
   isSpeakerModalOpen = signal(false);
+  speakerToEdit = signal<Speaker | null>(null);
 
   useProModel = signal(false);
   adjustSpeed = signal(false);
@@ -66,17 +70,28 @@ export class Home implements OnInit {
   }
 
   openSpeakerModal() {
-    console.log('Opening speaker modal...');
+    this.speakerToEdit.set(null);
+    this.isSpeakerModalOpen.set(true);
+  }
+
+  editSpeaker(speaker: Speaker) {
+    this.speakerToEdit.set(speaker);
     this.isSpeakerModalOpen.set(true);
   }
 
   closeSpeakerModal() {
-    console.log('Closing speaker modal...');
     this.isSpeakerModalOpen.set(false);
+    this.speakerToEdit.set(null);
   }
 
   onSpeakerAdded(speaker: Speaker) {
-    this.speakers.update(speakers => [...speakers, speaker]);
+    const target = this.speakerToEdit();
+    if (target) {
+      this.speakers.update(speakers => speakers.map(s => s.id === target.id ? speaker : s));
+    } else {
+      this.speakers.update(speakers => [...speakers, speaker]);
+    }
+    this.speakerToEdit.set(null);
   }
 
   removeSpeaker(speakerId: string) {

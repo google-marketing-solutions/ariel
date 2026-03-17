@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, HostListener, ViewChild, ElementRef, inject, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef, inject, effect, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { VideoGenerationService } from '../services/video-generation.service';
@@ -29,9 +29,7 @@ interface VideoUtterance {
   speaker: VideoSpeaker;
   audio_url?: string;
   duration?: number;
-  // UI Only Derived bounds for cloned utterance tracks
-  ui_original_start_time?: number;
-  ui_original_end_time?: number;
+
 
   // Mute State flag and cached timestamps
   muted?: boolean;
@@ -67,15 +65,23 @@ export type PanelMode = 'timestamps' | 'speaker' | 'translation' | 'voice' | nul
 
 @Component({
   selector: 'app-editor',
-  standalone: true,
   imports: [CommonModule, FormsModule, SpeakerModal, MatTooltipModule],
   providers: [
     { provide: MAT_TOOLTIP_DEFAULT_OPTIONS, useValue: { showDelay: 300, hideDelay: 0, touchendHideDelay: 1500 } }
   ],
   templateUrl: './editor.html',
-  styleUrl: './editor.scss'
+  styleUrl: './editor.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(document:mousemove)': 'onDragMove($event)',
+    '(document:mouseup)': 'onDragEnd($event)',
+    '(document:click)': 'onDocumentClick($event)'
+  }
 })
 export class Editor implements OnInit, OnDestroy {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+
   videoId = signal<string | null>(null);
   videoUrl = signal<string | null>(null);
   videoData = signal<VideoJob | null>(null);
@@ -99,12 +105,13 @@ export class Editor implements OnInit, OnDestroy {
   isPlayingTranslated = signal(false);
   isPlayingSnippet = signal(false);
   isGeneratingAudio = signal(false);
+  isProcessingGlobalChanges = signal(false);
   currentTime = signal(0);
   snippetStartTime = 0;
 
   // Audio elements for individual utterance snippet playback
   snippetAudio = new Audio();
-  utteranceTimeoutId: any = null;
+  utteranceTimeoutId: ReturnType<typeof setTimeout> | undefined;
   activeAudioPlayback: { id: string; type: 'original' | 'translated' } | null = null;
 
   // Timeline dragging
@@ -180,7 +187,7 @@ export class Editor implements OnInit, OnDestroy {
   showOverlapPopup = signal(false);
   overlappingUtterances = signal<VideoUtterance[]>([]);
   popupPosition = signal<{ x: number, y: number }>({ x: 0, y: 0 });
-  popupCloseTimeout: any;
+  popupCloseTimeout: ReturnType<typeof setTimeout> | undefined;
   initialUtteranceState = signal<VideoUtterance | null>(null);
 
   // Custom Modal State
@@ -205,8 +212,8 @@ export class Editor implements OnInit, OnDestroy {
       currentU.translated_end_time !== initialState.translated_end_time ||
       currentU.speaker.speaker_id !== initialState.speaker.speaker_id;
   });
-  editOriginalLanguage = signal<string>('');
-  editTranslateLanguage = signal<string>('');
+  editOriginalLanguage = signal('');
+  editTranslateLanguage = signal('');
   editSpeakers = signal<VideoSpeaker[]>([]);
   gaLanguages = signal<Language[]>([]);
   previewLanguages = signal<Language[]>([]);
@@ -215,10 +222,7 @@ export class Editor implements OnInit, OnDestroy {
   isSpeakerModalOpen = signal(false);
   speakerToEditId = signal<string | null>(null);
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router
-  ) {
+  constructor() {
     effect(() => {
       const data = this.videoData();
       if (data) {
@@ -237,11 +241,7 @@ export class Editor implements OnInit, OnDestroy {
       if (this.isPlayingOriginal()) {
         let currentVisualTime = this.originalAudio.currentTime;
         if (this.activeAudioPlayback?.type === 'original') {
-          const activeU = this.videoData()?.utterances.find(u => u.id === this.activeAudioPlayback!.id);
-          if (activeU && activeU.ui_original_start_time !== undefined) {
-            const offset = activeU.ui_original_start_time - activeU.original_start_time;
-            currentVisualTime += offset;
-          }
+          // Time matches originalAudio directly
         }
         this.currentTime.set(currentVisualTime);
       } else if (this.isPlayingTranslated()) {
@@ -314,11 +314,24 @@ export class Editor implements OnInit, OnDestroy {
       this.videoData.set(data);
       this.initEditState();
 
-      let rawUrl = (data as any).original_video_url;
+      let rawUrl = (data as VideoJob & { original_video_url?: string }).original_video_url;
 
       if (!rawUrl && data.video_id) {
-        // Fallback if missing, though it should be there.
-        rawUrl = `temp/${data.video_id}/${data.video_id}`;
+        // Fallback: try to deduce from utterances if available
+        const u = data.utterances.find(utt => utt.audio_url);
+        if (u && u.audio_url) {
+          let url = u.audio_url;
+          if (!url.startsWith('http') && !url.startsWith('/')) {
+            url = '/' + url;
+          }
+          const lastSlash = url.lastIndexOf('/');
+          if (lastSlash !== -1) {
+            rawUrl = url.substring(0, lastSlash + 1) + data.video_id;
+          }
+        } else {
+          // Absolute fallback
+          rawUrl = `temp/${data.video_id}/${data.video_id}`;
+        }
       }
 
       if (rawUrl) {
@@ -331,9 +344,10 @@ export class Editor implements OnInit, OnDestroy {
       } else {
         this.error.set('No video URL found in project data');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load project:', err);
-      this.error.set(err.message || 'Failed to load project details');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load project details';
+      this.error.set(errorMessage);
     } finally {
       this.isLoading.set(false);
     }
@@ -432,6 +446,7 @@ export class Editor implements OnInit, OnDestroy {
       return;
     }
 
+    this.isProcessingGlobalChanges.set(true);
     this.isGeneratingAudio.set(true);
 
     try {
@@ -540,6 +555,7 @@ export class Editor implements OnInit, OnDestroy {
       console.error(e);
       alert('Failed to update video settings');
     } finally {
+      this.isProcessingGlobalChanges.set(false);
       this.isGeneratingAudio.set(false);
     }
   }
@@ -694,7 +710,6 @@ export class Editor implements OnInit, OnDestroy {
     if (!initialState || initialState.id !== u.id) return true;
     const isDirty = (
       u.original_text !== initialState.original_text ||
-      u.translated_text !== initialState.translated_text ||
       (u.instructions || '') !== (initialState.instructions || '')
     );
     return !!initialState.needs_translation_regen || isDirty;
@@ -704,7 +719,10 @@ export class Editor implements OnInit, OnDestroy {
     if (!initialState || initialState.id !== u.id) return true;
     const isDirty = (
       u.speaker.speaker_id !== initialState.speaker.speaker_id ||
-      (u.voice_instructions || '') !== (initialState.voice_instructions || '')
+      (u.voice_instructions || '') !== (initialState.voice_instructions || '') ||
+      u.translated_text !== initialState.translated_text ||
+      u.original_text !== initialState.original_text ||
+      (u.instructions || '') !== (initialState.instructions || '')
     );
     return !!initialState.needs_dubbing_regen || isDirty;
   }
@@ -747,6 +765,7 @@ export class Editor implements OnInit, OnDestroy {
           if (u.id === activeId) {
             const updated = { ...u, instructions: draft };
             updated.needs_translation_regen = this.checkTranslationRegen(updated, initialState);
+            updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
             return updated;
           }
           return u;
@@ -818,6 +837,7 @@ export class Editor implements OnInit, OnDestroy {
           if (u.id === utteranceId) {
             const updated = { ...u, original_text: newText };
             updated.needs_translation_regen = this.checkTranslationRegen(updated, initialState);
+            updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
             return updated;
           }
           return u;
@@ -1081,41 +1101,7 @@ export class Editor implements OnInit, OnDestroy {
     });
   }
 
-  cloneUtterance(utteranceId: string) {
-    console.log('cloneUtterance with ID:', utteranceId);
-    this.videoData.update(prev => {
-      if (!prev) return prev;
 
-      const currentIndex = prev.utterances.findIndex(u => u.id === utteranceId);
-      console.log('cloneUtterance: currentIndex =', currentIndex);
-      if (currentIndex === -1) return prev;
-
-      const utterance = prev.utterances[currentIndex];
-      const newUtterance = JSON.parse(JSON.stringify(utterance)); // Deep copy
-
-      newUtterance.id = `utterance_${Date.now()}`; // Simple unique ID
-      newUtterance.isNew = true; // Set isNew to true for cloned utterances
-      const duration = utterance.translated_end_time - utterance.translated_start_time;
-      newUtterance.translated_start_time = utterance.translated_end_time;
-      newUtterance.translated_end_time = utterance.translated_end_time + duration;
-
-      const originalDuration = utterance.original_end_time - utterance.original_start_time;
-      const refOriginalEnd = utterance.ui_original_end_time !== undefined ? utterance.ui_original_end_time : utterance.original_end_time;
-      newUtterance.ui_original_start_time = refOriginalEnd;
-      newUtterance.ui_original_end_time = refOriginalEnd + originalDuration;
-
-      const newUtterances = [...prev.utterances];
-      newUtterances.splice(currentIndex + 1, 0, newUtterance);
-
-      return {
-        ...prev,
-        utterances: newUtterances
-      };
-    });
-
-    // Close active panel when cloning
-    this.activePanelMode.set(null);
-  }
 
   get activeUtterance(): VideoUtterance | null {
     const data = this.videoData();
@@ -1188,7 +1174,7 @@ export class Editor implements OnInit, OnDestroy {
     this.videoData.update((data) => {
       if (!data) return data;
       const newData = JSON.parse(JSON.stringify(data));
-      const utterance = newData.utterances.find((u: any) => u.id === id);
+      const utterance = newData.utterances.find((u: VideoUtterance) => u.id === id);
       if (utterance) {
         utterance.translated_start_time = newStart;
         utterance.translated_end_time = newEnd;
@@ -1207,7 +1193,7 @@ export class Editor implements OnInit, OnDestroy {
     } else {
       const data = this.videoData();
       if (data && data.video_id) {
-        this.originalAudio.src = `/temp/${data.video_id}/original_audio.wav`;
+        this.originalAudio.src = this.getOriginalAudioSrc(data);
         this.originalAudio.play().then(() => {
           this.isPlayingOriginal.set(true);
         }).catch(err => {
@@ -1270,7 +1256,7 @@ export class Editor implements OnInit, OnDestroy {
     this.isPlayingSnippet.set(false);
     if (this.utteranceTimeoutId) {
       clearTimeout(this.utteranceTimeoutId);
-      this.utteranceTimeoutId = null;
+      this.utteranceTimeoutId = undefined;
     }
     this.currentTime.set(0);
     this.activeAudioPlayback = null;
@@ -1290,27 +1276,37 @@ export class Editor implements OnInit, OnDestroy {
 
     const data = this.videoData();
     if (data && data.video_id) {
-      // Ensure the source is set
-      if (!this.originalAudio.src.includes(`/temp/${data.video_id}/original_audio.wav`)) {
-        this.originalAudio.src = `/temp/${data.video_id}/original_audio.wav`;
-      }
+      const expectedSrc = this.getOriginalAudioSrc(data);
+      
+      const playSnippet = () => {
+        this.originalAudio.currentTime = utterance.original_start_time;
+        this.originalAudio.play().then(() => {
+          this.isPlayingOriginal.set(true);
+        }).catch(err => {
+          console.error("Error playing original utterance snippet", err);
+        });
 
-      this.originalAudio.currentTime = utterance.original_start_time;
-      this.originalAudio.play().then(() => {
-        this.isPlayingOriginal.set(true);
-      }).catch(err => {
-        console.error("Error playing original utterance snippet", err);
-      });
+        const duration = (utterance.original_end_time - utterance.original_start_time) * 1000;
+        this.utteranceTimeoutId = setTimeout(() => {
+          this.originalAudio.pause();
+          this.isPlayingOriginal.set(false);
+          this.currentTime.set(0);
+          if (this.activeAudioPlayback?.id === utterance.id && this.activeAudioPlayback?.type === 'original') {
+            this.activeAudioPlayback = null;
+          }
+        }, duration);
+      };
 
-      const duration = (utterance.original_end_time - utterance.original_start_time) * 1000;
-      this.utteranceTimeoutId = setTimeout(() => {
-        this.originalAudio.pause();
-        this.isPlayingOriginal.set(false);
-        this.currentTime.set(0);
-        if (this.activeAudioPlayback?.id === utterance.id && this.activeAudioPlayback?.type === 'original') {
-          this.activeAudioPlayback = null;
+      if (!this.originalAudio.src.includes(expectedSrc)) {
+        this.originalAudio.src = expectedSrc;
+        this.originalAudio.addEventListener('canplay', playSnippet, { once: true });
+      } else {
+        if (this.originalAudio.readyState >= 3) { // HAVE_FUTURE_DATA or higher
+          playSnippet();
+        } else {
+          this.originalAudio.addEventListener('canplay', playSnippet, { once: true });
         }
-      }, duration);
+      }
     }
   }
 
@@ -1532,7 +1528,6 @@ export class Editor implements OnInit, OnDestroy {
     this.dragInitialStartTime = utterance.translated_start_time;
   }
 
-  @HostListener('document:mousemove', ['$event'])
   onDragMove(event: MouseEvent) {
     if (!this.isDragging() || !this.draggedUtteranceId() || !this.timelineContainer) return;
 
@@ -1564,7 +1559,6 @@ export class Editor implements OnInit, OnDestroy {
     });
   }
 
-  @HostListener('document:mouseup', ['$event'])
   onDragEnd(event: MouseEvent) {
     if (this.isDragging()) {
       this.isDragging.set(false);
@@ -1668,7 +1662,6 @@ export class Editor implements OnInit, OnDestroy {
     });
   }
 
-  @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
     if (!this.activeUtteranceId() && !this.activePanelMode()) return;
 
@@ -1718,4 +1711,19 @@ export class Editor implements OnInit, OnDestroy {
 
 
 
+private getOriginalAudioSrc(data: VideoJob): string {
+    const u = data.utterances.find(utt => utt.audio_url);
+    let expectedSrc = `/temp/${data.video_id}/original_audio.wav`; // Fallback
+    if (u && u.audio_url) {
+      let url = u.audio_url;
+      if (!url.startsWith('http') && !url.startsWith('/')) {
+        url = '/' + url;
+      }
+      const lastSlash = url.lastIndexOf('/');
+      if (lastSlash !== -1) {
+        expectedSrc = url.substring(0, lastSlash + 1) + 'original_audio.wav';
+      }
+    }
+    return expectedSrc;
+  }
 }
