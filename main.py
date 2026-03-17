@@ -453,12 +453,12 @@ async def process_video(
       if to_return.utterances:
         duration = max([u.translated_end_time for u in to_return.utterances])
 
-        metadata['duration'] = round(duration, 1)
+    metadata['duration'] = round(duration, 1)
 
-        metadata_path = os.path.join(local_dir, "metadata.json")
-        with open(metadata_path, "w") as f:
-          json.dump(metadata, f)
-          logging.info("Saved draft metadata to %s", metadata_path)
+    metadata_path = os.path.join(local_dir, "metadata.json")
+    with open(metadata_path, "w") as f:
+      json.dump(metadata, f)
+    logging.info("Saved draft metadata to %s", metadata_path)
 
   except Exception as e:
     logging.warning(f"Failed to save draft metadata: {e}")
@@ -825,20 +825,9 @@ def delete_video(video_id: str):
 
 @app.get("/{catchall:path}")
 async def catch_all(request: Request, catchall: str):
-
-  if (
-    catchall.startswith("mnt/")
-    or catchall.startswith("temp/")
-    or catchall.startswith("static/")
-  ):
-    return HTMLResponse(status_code=404, content="Not found")
-
   file_path = os.path.join("frontend/dist/frontend/browser", catchall)
   if os.path.isfile(file_path):
     return FileResponse(file_path)
-
-  if catchall.startswith("api/"):
-    return JSONResponse(status_code=404, content={"detail": "Not found"})
 
   index_path = os.path.join("frontend/dist/frontend/browser", "index.html")
   if os.path.isfile(index_path):
