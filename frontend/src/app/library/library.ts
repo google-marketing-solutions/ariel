@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 interface VideoSpeaker {
@@ -24,12 +24,22 @@ interface VideoJob {
   selector: 'app-library',
   imports: [RouterLink],
   templateUrl: './library.html',
-  styleUrl: './library.scss'
+  styleUrl: './library.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class Library implements OnInit {
   videos = signal<VideoJob[]>([]);
   isLoading = signal(true);
   error = signal<string | null>(null);
+
+  formattedVideos = computed(() => {
+    return this.videos().map(video => ({
+      ...video,
+      formattedDate: this.formatDate(video.created_at),
+      formattedDuration: this.formatDuration(video.duration),
+      speakersString: this.getSpeakersString(video.speakers)
+    }));
+  });
 
   ngOnInit() {
     this.fetchVideos();
@@ -44,29 +54,30 @@ export class Library implements OnInit {
       }
       const data = await response.json();
       this.videos.set(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load videos:', err);
-      this.error.set(err.message || 'Failed to load videos');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load videos';
+      this.error.set(errorMessage);
     } finally {
       this.isLoading.set(false);
     }
   }
 
-  formatDate(timestamp: number): string {
+  private formatDate(timestamp: number): string {
     if (!timestamp) return 'Date unknown';
     // The Python backend might send seconds or ms, usually seconds from GCS
     const date = new Date(timestamp > 1e11 ? timestamp : timestamp * 1000);
     return date.toLocaleString();
   }
 
-  formatDuration(duration: number): string {
+  private formatDuration(duration: number): string {
     const safeDuration = duration || 0;
     const minutes = Math.floor(safeDuration / 60);
     const seconds = Math.floor(safeDuration % 60);
     return `${minutes}m ${seconds}s`;
   }
 
-  getSpeakersString(speakers: VideoSpeaker[]): string {
+  private getSpeakersString(speakers: VideoSpeaker[]): string {
     if (!speakers || speakers.length === 0) return 'Unknown';
     const uniqueVoices = [...new Set(speakers.map(s => s.voice).filter(v => v))];
     return uniqueVoices.length > 0 ? uniqueVoices.join(', ') : 'Unknown';

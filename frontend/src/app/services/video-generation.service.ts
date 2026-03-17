@@ -1,16 +1,16 @@
-import { Injectable } from '@angular/core';
-import { Subject, BehaviorSubject } from 'rxjs';
+import { Injectable, signal } from '@angular/core';
+import { Subject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class VideoGenerationService {
   private generateVideoSource = new Subject<void>();
-  private unregeneratedCountSource = new BehaviorSubject<number>(0);
+  private _unregeneratedCount = signal(0);
 
   // Observable string streams
   generateVideo$ = this.generateVideoSource.asObservable();
-  unregeneratedCount$ = this.unregeneratedCountSource.asObservable();
+  unregeneratedCount = this._unregeneratedCount.asReadonly();
 
   // Service message commands
   triggerGenerateVideo() {
@@ -18,6 +18,6 @@ export class VideoGenerationService {
   }
 
   updateUnregeneratedCount(count: number) {
-    this.unregeneratedCountSource.next(count);
+    this._unregeneratedCount.set(count);
   }
 }

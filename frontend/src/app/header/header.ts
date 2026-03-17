@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, input, output, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { VideoGenerationService } from '../services/video-generation.service';
@@ -8,11 +8,12 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   selector: 'app-header',
   imports: [CommonModule, RouterLink, RouterLinkActive, MatTooltipModule],
   templateUrl: './header.html',
-  styleUrl: './header.scss'
+  styleUrl: './header.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class Header {
-  @Input() isDarkMode = false;
-  @Output() toggleTheme = new EventEmitter<void>();
+  isDarkMode = input(false);
+  toggleTheme = output<void>();
 
   private router = inject(Router);
   videoGenerationService = inject(VideoGenerationService);

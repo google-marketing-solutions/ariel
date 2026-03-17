@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, HostListener, ViewChild, ElementRef, inject, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef, inject, effect, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { VideoGenerationService } from '../services/video-generation.service';
@@ -67,15 +67,23 @@ export type PanelMode = 'timestamps' | 'speaker' | 'translation' | 'voice' | nul
 
 @Component({
   selector: 'app-editor',
-  standalone: true,
   imports: [CommonModule, FormsModule, SpeakerModal, MatTooltipModule],
   providers: [
     { provide: MAT_TOOLTIP_DEFAULT_OPTIONS, useValue: { showDelay: 300, hideDelay: 0, touchendHideDelay: 1500 } }
   ],
   templateUrl: './editor.html',
-  styleUrl: './editor.scss'
+  styleUrl: './editor.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(document:mousemove)': 'onDragMove($event)',
+    '(document:mouseup)': 'onDragEnd($event)',
+    '(document:click)': 'onDocumentClick($event)'
+  }
 })
 export class Editor implements OnInit, OnDestroy {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+
   videoId = signal<string | null>(null);
   videoUrl = signal<string | null>(null);
   videoData = signal<VideoJob | null>(null);
@@ -105,7 +113,7 @@ export class Editor implements OnInit, OnDestroy {
 
   // Audio elements for individual utterance snippet playback
   snippetAudio = new Audio();
-  utteranceTimeoutId: any = null;
+  utteranceTimeoutId: ReturnType<typeof setTimeout> | undefined;
   activeAudioPlayback: { id: string; type: 'original' | 'translated' } | null = null;
 
   // Timeline dragging
@@ -181,7 +189,7 @@ export class Editor implements OnInit, OnDestroy {
   showOverlapPopup = signal(false);
   overlappingUtterances = signal<VideoUtterance[]>([]);
   popupPosition = signal<{ x: number, y: number }>({ x: 0, y: 0 });
-  popupCloseTimeout: any;
+  popupCloseTimeout: ReturnType<typeof setTimeout> | undefined;
   initialUtteranceState = signal<VideoUtterance | null>(null);
 
   // Custom Modal State
@@ -206,8 +214,8 @@ export class Editor implements OnInit, OnDestroy {
       currentU.translated_end_time !== initialState.translated_end_time ||
       currentU.speaker.speaker_id !== initialState.speaker.speaker_id;
   });
-  editOriginalLanguage = signal<string>('');
-  editTranslateLanguage = signal<string>('');
+  editOriginalLanguage = signal('');
+  editTranslateLanguage = signal('');
   editSpeakers = signal<VideoSpeaker[]>([]);
   gaLanguages = signal<Language[]>([]);
   previewLanguages = signal<Language[]>([]);
@@ -216,10 +224,7 @@ export class Editor implements OnInit, OnDestroy {
   isSpeakerModalOpen = signal(false);
   speakerToEditId = signal<string | null>(null);
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router
-  ) {
+  constructor() {
     effect(() => {
       const data = this.videoData();
       if (data) {
@@ -315,7 +320,7 @@ export class Editor implements OnInit, OnDestroy {
       this.videoData.set(data);
       this.initEditState();
 
-      let rawUrl = (data as any).original_video_url;
+      let rawUrl = (data as VideoJob & { original_video_url?: string }).original_video_url;
 
       if (!rawUrl && data.video_id) {
         // Fallback: try to deduce from utterances if available
@@ -345,9 +350,10 @@ export class Editor implements OnInit, OnDestroy {
       } else {
         this.error.set('No video URL found in project data');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load project:', err);
-      this.error.set(err.message || 'Failed to load project details');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load project details';
+      this.error.set(errorMessage);
     } finally {
       this.isLoading.set(false);
     }
@@ -1204,7 +1210,7 @@ export class Editor implements OnInit, OnDestroy {
     this.videoData.update((data) => {
       if (!data) return data;
       const newData = JSON.parse(JSON.stringify(data));
-      const utterance = newData.utterances.find((u: any) => u.id === id);
+      const utterance = newData.utterances.find((u: VideoUtterance) => u.id === id);
       if (utterance) {
         utterance.translated_start_time = newStart;
         utterance.translated_end_time = newEnd;
@@ -1286,7 +1292,7 @@ export class Editor implements OnInit, OnDestroy {
     this.isPlayingSnippet.set(false);
     if (this.utteranceTimeoutId) {
       clearTimeout(this.utteranceTimeoutId);
-      this.utteranceTimeoutId = null;
+      this.utteranceTimeoutId = undefined;
     }
     this.currentTime.set(0);
     this.activeAudioPlayback = null;
@@ -1558,7 +1564,6 @@ export class Editor implements OnInit, OnDestroy {
     this.dragInitialStartTime = utterance.translated_start_time;
   }
 
-  @HostListener('document:mousemove', ['$event'])
   onDragMove(event: MouseEvent) {
     if (!this.isDragging() || !this.draggedUtteranceId() || !this.timelineContainer) return;
 
@@ -1590,7 +1595,6 @@ export class Editor implements OnInit, OnDestroy {
     });
   }
 
-  @HostListener('document:mouseup', ['$event'])
   onDragEnd(event: MouseEvent) {
     if (this.isDragging()) {
       this.isDragging.set(false);
@@ -1694,7 +1698,6 @@ export class Editor implements OnInit, OnDestroy {
     });
   }
 
-  @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
     if (!this.activeUtteranceId() && !this.activePanelMode()) return;
 

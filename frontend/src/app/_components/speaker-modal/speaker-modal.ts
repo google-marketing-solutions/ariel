@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, Output, Input, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Speaker } from '../../home/home';
@@ -11,15 +11,16 @@ export interface Voice {
 
 @Component({
   selector: 'app-speaker-modal',
-  standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './speaker-modal.html',
   styleUrl: './speaker-modal.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SpeakerModal implements OnInit {
-  @Output() close = new EventEmitter<void>();
-  @Output() speakerAdded = new EventEmitter<Speaker>();
-  @Input() speakerCount = 0;
+  close = output<void>();
+  speakerAdded = output<Speaker>();
+  speakerCount = input(0);
+  initialSpeaker = input<Speaker | null>(null);
 
   speakerName = signal('');
   searchQuery = signal('');
@@ -43,6 +44,10 @@ export class SpeakerModal implements OnInit {
 
   ngOnInit() {
     this.fetchVoices();
+    const initSpeaker = this.initialSpeaker();
+    if (initSpeaker) {
+      this.speakerName.set(initSpeaker.name);
+    }
   }
 
   async fetchVoices() {
@@ -92,10 +97,12 @@ export class SpeakerModal implements OnInit {
   selectVoice(voice: Voice) {
     this.stopPlaying();
 
-    const customName = this.speakerName().trim() || `Speaker ${this.speakerCount + 1}`;
+    const initSpeaker = this.initialSpeaker();
+    const fallbackName = initSpeaker ? initSpeaker.name : `Speaker ${this.speakerCount() + 1}`;
+    const customName = this.speakerName().trim() || fallbackName;
 
     const newSpeaker: Speaker = {
-      id: `speaker_${Date.now()}`,
+      id: initSpeaker ? initSpeaker.id : `speaker_${Date.now()}`,
       name: customName,
       voice: voice.name,
       voiceName: voice.name,

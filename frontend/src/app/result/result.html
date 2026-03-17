@@ -5,7 +5,7 @@
 
   <!-- Video Player -->
   <div class="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative mb-6">
-    <video class="w-full h-full object-contain" controls [src]="finalVideoData?.video_url">
+    <video class="w-full h-full object-contain" controls [src]="finalVideoData()?.video_url">
       Your browser does not support the video tag.
     </video>
   </div>
@@ -14,15 +14,15 @@
   <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
     <!-- Download Actions -->
     <div class="flex gap-4 w-full sm:w-auto">
-      <a [href]="finalVideoData?.video_url" [download]="'generated_video_' + originalVideoData?.video_id + '.mp4'"
+      <a [href]="finalVideoData()?.video_url" [download]="'generated_video_' + originalVideoData()?.video_id + '.mp4'"
         class="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold text-center text-primary dark:text-[#60a5fa] border border-primary dark:border-[#60a5fa] rounded-lg hover:bg-primary/5 dark:hover:bg-[#60a5fa]/10 transition-colors">
         Download Video
       </a>
-      <a [href]="finalVideoData?.merged_audio_url" [download]="'vocals_and_music_' + originalVideoData?.video_id + '.wav'"
+      <a [href]="finalVideoData()?.merged_audio_url" [download]="'vocals_and_music_' + originalVideoData()?.video_id + '.wav'"
         class="flex-1 sm:flex-none shadow-sm px-4 py-2 text-sm font-semibold text-center text-primary dark:text-[#60a5fa] border border-primary dark:border-[#60a5fa] rounded-lg hover:bg-primary/5 dark:hover:bg-[#60a5fa]/10 transition-colors">
         Download Final Audio
       </a>
-      <a [href]="finalVideoData?.vocals_url" [download]="'vocals_only_' + originalVideoData?.video_id + '.wav'"
+      <a [href]="finalVideoData()?.vocals_url" [download]="'vocals_only_' + originalVideoData()?.video_id + '.wav'"
         class="flex-1 sm:flex-none shadow-sm px-4 py-2 text-sm font-semibold text-center text-primary dark:text-[#60a5fa] border border-primary dark:border-[#60a5fa] rounded-lg hover:bg-primary/5 dark:hover:bg-[#60a5fa]/10 transition-colors">
         Download Vocals
       </a>

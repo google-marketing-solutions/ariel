@@ -1,12 +1,9 @@
 import { Routes } from '@angular/router';
-import { Home } from './home/home';
-import { Library } from './library/library';
-import { Editor } from './editor/editor';
-import { Result } from './result/result';
+
 
 export const routes: Routes = [
-  { path: '', component: Home, title: 'Ariel - Home' },
-  { path: 'library', component: Library, title: 'Ariel - Library' },
-  { path: 'editor', component: Editor, title: 'Ariel - Editor' },
-  { path: 'result', component: Result, title: 'Ariel - Result' }
+  { path: '', loadComponent: () => import('./home/home').then(m => m.Home), title: 'Ariel - Home' },
+  { path: 'library', loadComponent: () => import('./library/library').then(m => m.Library), title: 'Ariel - Library' },
+  { path: 'editor', loadComponent: () => import('./editor/editor').then(m => m.Editor), title: 'Ariel - Editor' },
+  { path: 'result', loadComponent: () => import('./result/result').then(m => m.Result), title: 'Ariel - Result' }
 ];
