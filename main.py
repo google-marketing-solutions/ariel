@@ -443,24 +443,23 @@ async def process_video(
   )
 
   try:
-==== BASE ====
-      metadata = to_return.model_dump()
-      duration = 0
-      try:
-          video_clip = moviepy.VideoFileClip(local_video_path)
-          duration = video_clip.duration
-          video_clip.close()
-      except Exception:
-          if to_return.utterances:
-              duration = max([u.translated_end_time for u in to_return.utterances])
-      
-      metadata['duration'] = round(duration, 1)
-      
-      metadata_path = os.path.join(local_dir, "metadata.json")
-      with open(metadata_path, "w") as f:
+    metadata = to_return.model_dump()
+    duration = 0
+    try:
+      video_clip = moviepy.VideoFileClip(local_video_path)
+      duration = video_clip.duration
+      video_clip.close()
+    except Exception:
+      if to_return.utterances:
+        duration = max([u.translated_end_time for u in to_return.utterances])
+
+        metadata['duration'] = round(duration, 1)
+
+        metadata_path = os.path.join(local_dir, "metadata.json")
+        with open(metadata_path, "w") as f:
           json.dump(metadata, f)
-      logging.info("Saved draft metadata to %s", metadata_path)
-==== BASE ====
+          logging.info("Saved draft metadata to %s", metadata_path)
+
   except Exception as e:
     logging.warning(f"Failed to save draft metadata: {e}")
 
