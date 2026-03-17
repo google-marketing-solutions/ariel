@@ -1,75 +1,57 @@
-<div class="max-w-5xl mx-auto">
+<div class="home-container">
 
-  <h2
-    class="text-4xl lg:text-5xl font-bold font-heading bg-gradient-to-r from-primary to-[#8b5cf6] dark:from-[#2563eb] dark:to-[#3b82f6] text-transparent bg-clip-text mb-8 tracking-tight pb-2">
+  <h2 class="home-title">
     New Dubbing Job
   </h2>
 
   <!-- Drag & Drop Container -->
   @if (!videoPreviewUrl()) {
   <div (dragover)="!isProcessing() && onDragOver($event)" (drop)="!isProcessing() && onDrop($event)"
-    (click)="!isProcessing() && triggerFileInput()"
-    class="w-full bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-[12px] border-2 border-dashed border-primary/20 dark:border-[#334155] shadow-glass-light dark:shadow-glass-dark rounded-2xl p-16 flex flex-col items-center justify-center mb-8 transition-colors group"
-    [class.hover:border-primary]="!isProcessing()" [class.dark:hover:border-[#60a5fa]]="!isProcessing()"
-    [class.cursor-pointer]="!isProcessing()" [class.pointer-events-none]="isProcessing()"
-    [class.opacity-50]="isProcessing()">
-    <div
-      class="w-20 h-20 rounded-full bg-primary/5 dark:bg-[#0f172a] flex items-center justify-center mb-6 transition-transform border border-primary/10 dark:border-[#334155]"
-      [class.group-hover:scale-105]="!isProcessing()">
-      <span
-        class="material-symbols-outlined text-4xl text-slate-400 dark:text-[#94a3b8] transition-colors"
-        [class.group-hover:text-primary]="!isProcessing()"
-        [class.dark:group-hover:text-[#60a5fa]]="!isProcessing()">movie</span>
+    (click)="!isProcessing() && triggerFileInput()" class="upload-box" [class.pointer-events-none]="isProcessing()">
+    <div class="upload-icon-wrapper">
+      <span class="material-symbols-outlined">movie</span>
     </div>
-    <h3 class="text-lg font-medium text-slate-700 dark:text-[#f1f5f9] mb-6">Drag & Drop video file here</h3>
-    <button (click)="$event.stopPropagation(); triggerFileInput()" [disabled]="isProcessing()"
-      class="rounded-xl bg-gradient-to-br from-[#2563eb] to-[#3b82f6] px-6 py-3 text-sm font-bold text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:shadow-[0_0_20px_rgba(37,99,235,0.5)] hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+    <h3>Drag & Drop video file here</h3>
+    <button (click)="$event.stopPropagation(); triggerFileInput()" [disabled]="isProcessing()">
       Select Video from Computer
     </button>
   </div>
   }
-  
+
   @if (videoPreviewUrl()) {
   <!-- Video Preview Container -->
-  <div class="w-full flex justify-center mb-8">
-    <div class="relative group inline-block max-w-full">
-      <video [src]="videoPreviewUrl()" controls
-        class="max-h-[300px] rounded-2xl shadow-glass-light dark:shadow-glass-dark object-contain bg-black/5 dark:bg-[#0f172a]"
-        [class.opacity-50]="isProcessing()"></video>
+  <div class="video-preview-wrapper">
+    <div class="preview-container">
+      <video [src]="videoPreviewUrl()" controls [class.opacity-50]="isProcessing()"></video>
       @if (!isProcessing()) {
-      <button (click)="removeVideo()"
-        class="absolute top-3 right-3 flex justify-center items-center w-8 h-8 bg-black/50 hover:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all z-10">
+      <button (click)="removeVideo()" class="close-btn">
         <span class="material-symbols-outlined text-[18px]">close</span>
       </button>
       }
     </div>
   </div>
   }
-  
+
   <!-- Hidden File Input -->
   <input type="file" id="video-input" accept="video/*" class="hidden" (change)="onFileSelected($event)" />
 
   <!-- Global Settings Container -->
-  <div
-    class="w-full bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-[12px] border border-[#0000000d] dark:border-[#334155] shadow-glass-light dark:shadow-glass-dark rounded-2xl p-8 mb-12">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10">
-
+  <div class="settings-container">
+    <div class="settings-grid">
       <!-- Left Column -->
-      <div class="lg:col-span-9 space-y-8">
+      <div class="left-column">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div>
-            <div class="flex items-center gap-1.5 mb-2">
-              <h3 class="text-sm font-bold text-slate-800 dark:text-[#f1f5f9]">Original Language</h3>
+          <div class="form-group">
+            <div class="form-label-wrapper">
+              <h3>Original Language</h3>
               <a href="https://docs.cloud.google.com/text-to-speech/docs/gemini-tts#available_languages" target="_blank"
-                class="flex items-center">
-                <span
-                  class="material-symbols-outlined text-[14px] text-primary dark:text-[#3b82f6] hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
+                class="help-link">
+                <span class="material-symbols-outlined text-[14px]"
                   title="Select the source language of the video">help</span>
               </a>
             </div>
-            <div class="relative">
-              <select (change)="originalLanguage.set($any($event.target).value)" [disabled]="isProcessing()"
-                class="w-full appearance-none bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-slate-800 dark:text-[#f1f5f9] focus:outline-none focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+            <div class="select-wrapper">
+              <select (change)="originalLanguage.set($any($event.target).value)" [disabled]="isProcessing()">
                 <option value="" disabled selected>Please select...</option>
                 <optgroup label="GA">
                   @for (lang of gaLanguages(); track lang.code) {
@@ -82,24 +64,21 @@
                   }
                 </optgroup>
               </select>
-              <span
-                class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-[#94a3b8] pointer-events-none">expand_more</span>
+              <span class="material-symbols-outlined select-arrow">expand_more</span>
             </div>
           </div>
 
-          <div>
-            <div class="flex items-center gap-1.5 mb-2">
-              <h3 class="text-sm font-bold text-slate-800 dark:text-[#f1f5f9]">Translation Language</h3>
+          <div class="form-group">
+            <div class="form-label-wrapper">
+              <h3>Translation Language</h3>
               <a href="https://docs.cloud.google.com/text-to-speech/docs/gemini-tts#available_languages" target="_blank"
-                class="flex items-center">
-                <span
-                  class="material-symbols-outlined text-[14px] text-primary dark:text-[#3b82f6] hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
+                class="help-link">
+                <span class="material-symbols-outlined text-[14px]"
                   title="Select the target language for dubbing">help</span>
               </a>
             </div>
-            <div class="relative">
-              <select (change)="translationLanguage.set($any($event.target).value)" [disabled]="isProcessing()"
-                class="w-full appearance-none bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-slate-800 dark:text-[#f1f5f9] focus:outline-none focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+            <div class="select-wrapper">
+              <select (change)="translationLanguage.set($any($event.target).value)" [disabled]="isProcessing()">
                 <option value="" disabled selected>Please select...</option>
                 <optgroup label="GA">
                   @for (lang of gaLanguages(); track lang.code) {
@@ -112,47 +91,35 @@
                   }
                 </optgroup>
               </select>
-              <span
-                class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-[#94a3b8] pointer-events-none">expand_more</span>
+              <span class="material-symbols-outlined select-arrow">expand_more</span>
             </div>
           </div>
 
-          <div>
-            <div class="flex items-center gap-1.5 mb-2">
-              <h3 class="text-sm font-bold text-slate-800 dark:text-[#f1f5f9]">Speakers</h3>
+          <div class="form-group">
+            <div class="form-label-wrapper">
+              <h3>Speakers</h3>
             </div>
-            <!-- Add button -->
-            <button (click)="openSpeakerModal()" [disabled]="isProcessing()"
-              class="flex items-center gap-2 rounded-xl bg-transparent border border-primary/20 dark:border-[#334155] hover:border-primary dark:hover:border-[#60a5fa] hover:bg-primary/5 dark:hover:bg-[#60a5fa]/10 px-4 py-3 text-sm font-semibold text-primary dark:text-[#60a5fa] transition-all w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-primary/20 disabled:hover:bg-transparent">
+            <button (click)="openSpeakerModal()" [disabled]="isProcessing()" class="add-speaker-btn">
               <span class="material-symbols-outlined text-[18px]">add_circle</span>
               Add Speaker
             </button>
 
-            <!-- List of selected speakers -->
             @if (speakers().length > 0) {
-            <div class="space-y-2 mt-3 block">
+            <div class="speaker-list-mini">
               @for (speaker of speakers(); track speaker.id) {
-              <div
-                class="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-[#0f172a] group transition-colors">
-                <div class="flex flex-col">
-                  <span class="text-sm font-semibold text-slate-800 dark:text-white">{{ speaker.name }}</span>
-                  <div class="flex items-center gap-2 mt-1">
-                    <span class="text-xs text-slate-500 dark:text-slate-400">{{ speaker.voiceName }}</span>
-                    <span class="material-symbols-outlined text-[14px] text-slate-400">
+              <div class="speaker-pill">
+                <div class="speaker-details">
+                  <span class="name">{{ speaker.name }}</span>
+                  <div class="voice-info">
+                    <span>{{ speaker.voiceName }}</span>
+                    <span class="material-symbols-outlined text-[14px]">
                       {{ speaker.gender === 'Male' ? 'male' : 'female' }}
                     </span>
                   </div>
                 </div>
-                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button (click)="editSpeaker(speaker)" [disabled]="isProcessing()"
-                    class="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors disabled:opacity-0 disabled:cursor-not-allowed">
-                    <span class="material-symbols-outlined text-[18px]">edit</span>
-                  </button>
-                  <button (click)="removeSpeaker(speaker.id)" [disabled]="isProcessing()"
-                    class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-0 disabled:cursor-not-allowed">
-                    <span class="material-symbols-outlined text-[18px]">close</span>
-                  </button>
-                </div>
+                <button (click)="removeSpeaker(speaker.id)" [disabled]="isProcessing()" class="remove-btn">
+                  <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
               </div>
               }
             </div>
@@ -160,47 +127,39 @@
           </div>
         </div>
 
-        <div>
-          <h3 class="text-sm font-bold text-slate-800 dark:text-[#f1f5f9] mb-4">Gemini Instructions</h3>
+        <div class="form-group">
+          <div class="form-label-wrapper">
+            <h3>Gemini Instructions</h3>
+          </div>
           <textarea (input)="geminiInstructions.set($any($event.target).value)" [value]="geminiInstructions()"
-            [disabled]="isProcessing()"
-            class="w-full bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-[#f1f5f9] placeholder:text-slate-400 dark:placeholder:text-[#94a3b8] focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
-            placeholder="e.g., No dubbing phrases, company name, special instructions..." rows="4"></textarea>
+            [disabled]="isProcessing()" placeholder="e.g., No dubbing phrases, company name, special instructions..."
+            rows="4"></textarea>
         </div>
       </div>
 
       <!-- Right Column -->
-      <div class="lg:col-span-3 space-y-6">
-        <div class="flex items-center justify-between">
-          <h3 class="text-sm font-bold text-slate-800 dark:text-[#f1f5f9]">Gemini Model</h3>
-          <div class="flex items-center gap-2" [class.opacity-50]="isProcessing()" [class.pointer-events-none]="isProcessing()">
-            <div class="relative inline-block w-10 -mr-2 align-middle select-none transition duration-200 ease-in">
-              <input type="checkbox" name="toggle" id="toggle-model" [checked]="useProModel()"
-                (change)="useProModel.set(!useProModel())" [disabled]="isProcessing()"
-                class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transform transition-transform duration-200 ease-in-out"
-                [ngClass]="useProModel() ? 'translate-x-5 border-primary dark:border-[#3b82f6]' : 'border-slate-300 dark:border-[#94a3b8]'" />
-              <label for="toggle-model"
-                class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"
-                [ngClass]="useProModel() ? 'bg-primary/20 dark:bg-white/90' : 'bg-slate-200 dark:bg-white/90'"></label>
-            </div>
-            <span class="text-sm font-medium text-slate-700 dark:text-[#f1f5f9] ml-2 w-10">{{ useProModel() ? 'Pro' : 'Flash'
-              }}</span>
+      <div class="right-column">
+        <div class="toggle-row">
+          <h3>Gemini Model</h3>
+          <div class="toggle-widget" [class.opacity-50]="isProcessing()">
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-model" [checked]="useProModel()"
+                (change)="useProModel.set(!useProModel())" [disabled]="isProcessing()">
+              <span class="slider"></span>
+            </label>
+            <span class="toggle-label-text">{{ useProModel() ? 'Pro' : 'Flash' }}</span>
           </div>
         </div>
 
-        <div class="flex items-center justify-between">
-          <h3 class="text-sm font-bold text-slate-800 dark:text-[#f1f5f9]">Adjust speed</h3>
-          <div class="flex items-center gap-2" [class.opacity-50]="isProcessing()" [class.pointer-events-none]="isProcessing()">
-            <div class="relative inline-block w-10 -mr-2 align-middle select-none transition duration-200 ease-in">
-              <input type="checkbox" name="toggle-speed" id="toggle-speed"
-                [checked]="adjustSpeed()" (change)="adjustSpeed.set(!adjustSpeed())" [disabled]="isProcessing()"
-                class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transform transition-transform duration-200 ease-in-out"
-                [ngClass]="adjustSpeed() ? 'translate-x-5 border-primary dark:border-[#3b82f6]' : 'border-slate-300 dark:border-[#94a3b8]'" />
-              <label for="toggle-speed"
-                class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"
-                [ngClass]="adjustSpeed() ? 'bg-primary/20 dark:bg-white/90' : 'bg-slate-200 dark:bg-white/90'"></label>
-            </div>
-            <span class="text-sm font-medium text-slate-700 dark:text-[#f1f5f9] ml-2 w-10">{{ adjustSpeed() ? 'Yes' : 'No' }}</span>
+        <div class="toggle-row">
+          <h3>Adjust speed</h3>
+          <div class="toggle-widget" [class.opacity-50]="isProcessing()">
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-speed" [checked]="adjustSpeed()"
+                (change)="adjustSpeed.set(!adjustSpeed())" [disabled]="isProcessing()">
+              <span class="slider"></span>
+            </label>
+            <span class="toggle-label-text">{{ adjustSpeed() ? 'Yes' : 'No' }}</span>
           </div>
         </div>
       </div>
@@ -209,9 +168,8 @@
   </div>
 
   <!-- Actions -->
-  <div class="flex justify-end relative">
-    <button (click)="startProcessing()" [disabled]="!isFormValid() || isProcessing()"
-      class="rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 px-8 py-3.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+  <div class="actions-footer">
+    <button (click)="startProcessing()" [disabled]="!isFormValid() || isProcessing()" class="start-processing-btn">
       @if (isProcessing()) {
       <span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
       Processing...
