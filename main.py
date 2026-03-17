@@ -135,7 +135,6 @@ def _process_utterance(
   gemini_model: str,
   gemini_tts_model: str,
   local_dir: str,
-  adjust_speed: bool,
 ) -> Utterance:
   """Processes a single utterance: translates and generates audio.
 
@@ -149,7 +148,6 @@ def _process_utterance(
     gemini_model: The Gemini model for translation.
     gemini_tts_model: The Gemini TTS model.
     local_dir: The directory to save audio.
-    adjust_speed: Whether to adjust audio speed.
 
   Returns:
     The processed Utterance object.
@@ -175,12 +173,6 @@ def _process_utterance(
     local_audio_path,
     model_name=gemini_tts_model,
   )
-  original_duration = t.end_time - t.start_time
-  if adjust_speed and audio_duration and audio_duration > original_duration:
-    audio_duration = shorten_audio(
-      local_audio_path, audio_duration, original_duration
-    )
-
   translated_end_time = t.start_time + audio_duration
 
   return Utterance(
@@ -202,7 +194,6 @@ def _process_utterance(
 async def process_video(
   original_language: Annotated[str, Form()],
   translate_language: Annotated[str, Form()],
-  adjust_speed: Annotated[bool, Form()],
   speakers: Annotated[str, Form()],
   prompt_enhancements: Annotated[str, Form()] = "",
   use_pro_model: Annotated[bool, Form()] = False,
@@ -421,7 +412,6 @@ async def process_video(
     gemini_model=gemini_model,
     gemini_tts_model=gemini_tts_model,
     local_dir=local_dir,
-    adjust_speed=adjust_speed,
   )
 
   with concurrent.futures.ThreadPoolExecutor() as executor:

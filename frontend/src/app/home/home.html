@@ -68,7 +68,7 @@
     </div>
   </div>
   }
-  
+
   @if (step() === 2) {
 
   <!-- Global Settings Container -->
@@ -188,20 +188,7 @@
             <span class="toggle-label-text">{{ useProModel() ? 'Pro' : 'Flash' }}</span>
           </div>
         </div>
-
-        <div class="toggle-row">
-          <h3>Adjust speed</h3>
-          <div class="toggle-widget" [class.opacity-50]="isProcessing()">
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-speed" [checked]="adjustSpeed()"
-                (change)="adjustSpeed.set(!adjustSpeed())" [disabled]="isProcessing()">
-              <span class="slider"></span>
-            </label>
-            <span class="toggle-label-text">{{ adjustSpeed() ? 'Yes' : 'No' }}</span>
-          </div>
-        </div>
       </div>
-
     </div>
   </div>
 
