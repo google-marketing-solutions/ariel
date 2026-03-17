@@ -36,7 +36,7 @@ class Speaker(BaseModel):
   """
 
   speaker_id: str = Field(description="A unique ID for the speaker in the video, created sequentially in the order the speakers speak.")
-  voice: str = Field(description="The name of the voice taken from the list of available Gemini TTS voices.")
+  voice: str = Field(description="The name of the Gemini-TTS voice (e.g., 'Achird', 'Aoede'). Do not use regional codes like 'en-US-Neural2'.")
   speaker_name: str = Field(description="A human readable name for the speaker.")
   gender: GenderEnum = Field(description="The gender of the speaker. Must be one of the predefined options.")
 
@@ -44,7 +44,7 @@ class VoiceData(BaseModel):
   """Specifies the data related to spoken text during preprocessing.
   """
 
-  language: str = Field(description="The ISO code of the language.")
+  language: str = Field(description="The ISO code of the language, including the country information (e.g. en-US).")
   voices: list[Speaker] = Field(description="A list of Speaker objects from the video.")
 
 class Utterance(BaseModel):

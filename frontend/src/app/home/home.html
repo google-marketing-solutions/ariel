@@ -49,6 +49,49 @@
   <!-- Hidden File Input -->
   <input type="file" id="video-input" accept="video/*" class="hidden" (change)="onFileSelected($event)" />
 
+  @if (step() === 1) {
+  <!-- Step 1 Area -->
+  <div class="w-full flex justify-center mb-12">
+    <div
+      class="flex flex-col sm:flex-row items-center gap-6 bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-[12px] border border-[#0000000d] dark:border-[#334155] shadow-glass-light dark:shadow-glass-dark rounded-2xl p-6">
+  
+      <div class="flex items-center gap-4">
+        <h3 class="text-sm font-bold text-slate-800 dark:text-[#f1f5f9]">Gemini Model</h3>
+        <div class="flex items-center gap-2" [class.opacity-50]="isPreprocessing()"
+          [class.pointer-events-none]="isPreprocessing()">
+          <div class="relative inline-block w-10 -mr-2 align-middle select-none transition duration-200 ease-in">
+            <input type="checkbox" name="toggle-model-step1" id="toggle-model-step1" [checked]="useProModel()"
+              (change)="useProModel.set(!useProModel())" [disabled]="isPreprocessing()"
+              class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transform transition-transform duration-200 ease-in-out"
+              [ngClass]="useProModel() ? 'translate-x-5 border-primary dark:border-[#3b82f6]' : 'border-slate-300 dark:border-[#94a3b8]'" />
+            <label for="toggle-model-step1" class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"
+              [ngClass]="useProModel() ? 'bg-primary/20 dark:bg-white/90' : 'bg-slate-200 dark:bg-white/90'"></label>
+          </div>
+          <span class="text-sm font-medium text-slate-700 dark:text-[#f1f5f9] ml-2 w-10">{{ useProModel() ? 'Pro' :
+            'Flash' }}</span>
+        </div>
+      </div>
+  
+      @if (videoPreviewUrl()) {
+      <div class="h-8 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
+  
+      <button (click)="preprocessVideo()" [disabled]="isPreprocessing()"
+        class="rounded-xl bg-gradient-to-br from-primary to-[#8b5cf6] dark:from-[#2563eb] dark:to-[#3b82f6] px-6 py-2.5 text-sm font-bold text-white shadow-md hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+        @if (isPreprocessing()) {
+        <span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+        Preprocessing...
+        } @else {
+        <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+        Pre-process Video
+        }
+      </button>
+      }
+    </div>
+  </div>
+  }
+  
+  @if (step() === 2) {
+
   <!-- Global Settings Container -->
   <div
     class="w-full bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-[12px] border border-[#0000000d] dark:border-[#334155] shadow-glass-light dark:shadow-glass-dark rounded-2xl p-8 mb-12">
@@ -68,9 +111,9 @@
               </a>
             </div>
             <div class="relative">
-              <select (change)="originalLanguage.set($any($event.target).value)" [disabled]="isProcessing()"
+              <select [ngModel]="originalLanguage()" (ngModelChange)="originalLanguage.set($event)" [disabled]="isProcessing()"
                 class="w-full appearance-none bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-slate-800 dark:text-[#f1f5f9] focus:outline-none focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                <option value="" disabled selected>Please select...</option>
+                <option value="" disabled>Please select...</option>
                 <optgroup label="GA">
                   @for (lang of gaLanguages(); track lang.code) {
                   <option [value]="lang.code">{{ lang.name }}</option>
@@ -98,9 +141,9 @@
               </a>
             </div>
             <div class="relative">
-              <select (change)="translationLanguage.set($any($event.target).value)" [disabled]="isProcessing()"
+              <select [ngModel]="translationLanguage()" (ngModelChange)="translationLanguage.set($event)" [disabled]="isProcessing()"
                 class="w-full appearance-none bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-slate-800 dark:text-[#f1f5f9] focus:outline-none focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                <option value="" disabled selected>Please select...</option>
+                <option value="" disabled>Please select...</option>
                 <optgroup label="GA">
                   @for (lang of gaLanguages(); track lang.code) {
                   <option [value]="lang.code">{{ lang.name }}</option>
@@ -139,7 +182,7 @@
                   <div class="flex items-center gap-2 mt-1">
                     <span class="text-xs text-slate-500 dark:text-slate-400">{{ speaker.voiceName }}</span>
                     <span class="material-symbols-outlined text-[14px] text-slate-400">
-                      {{ speaker.gender === 'Male' ? 'male' : 'female' }}
+                      {{ speaker.gender }}
                     </span>
                   </div>
                 </div>
@@ -203,7 +246,11 @@
   </div>
 
   <!-- Actions -->
-  <div class="flex justify-end relative">
+  <div class="flex justify-end gap-4 relative mt-8">
+    <button (click)="step.set(1)" [disabled]="isProcessing()"
+      class="rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-3.5 text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+      Back
+    </button>
     <button (click)="startProcessing()" [disabled]="!isFormValid() || isProcessing()"
       class="rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 px-8 py-3.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
       @if (isProcessing()) {
@@ -214,6 +261,7 @@
       }
     </button>
   </div>
+  }
 </div>
 <!-- Modals -->
 @if (isSpeakerModalOpen()) {

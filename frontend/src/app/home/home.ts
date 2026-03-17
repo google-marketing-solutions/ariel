@@ -1,5 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SpeakerModal } from '../_components/speaker-modal/speaker-modal';
 
@@ -20,7 +21,7 @@ export interface Speaker {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, SpeakerModal],
+  imports: [CommonModule, FormsModule, SpeakerModal],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
@@ -42,6 +43,9 @@ export class Home implements OnInit {
   geminiInstructions = signal<string>('');
 
   isProcessing = signal(false);
+
+  step = signal(1);
+  isPreprocessing = signal(false);
 
   constructor(private router: Router) { }
 
@@ -124,6 +128,10 @@ export class Home implements OnInit {
   removeVideo() {
     this.videoPreviewUrl.set(null);
     this.selectedVideoFile.set(null);
+    this.step.set(1);
+    this.originalLanguage.set('');
+    this.translationLanguage.set('');
+    this.speakers.set([]);
     // Reset file input so selecting the same file triggers 'change' event again
     const fileInput = document.getElementById('video-input') as HTMLInputElement;
     if (fileInput) {
@@ -132,9 +140,55 @@ export class Home implements OnInit {
   }
 
   isFormValid(): boolean {
-    return !!this.selectedVideoFile() &&
+    return this.step() === 2 &&
+      !!this.selectedVideoFile() &&
       this.originalLanguage() !== '' &&
       this.translationLanguage() !== '';
+  }
+
+  async preprocessVideo() {
+    const videoFile = this.selectedVideoFile();
+    if (!videoFile) return;
+
+    this.isPreprocessing.set(true);
+
+    const formData = new FormData();
+    formData.append('video', videoFile);
+    formData.append('use_pro_model', this.useProModel().toString());
+
+    try {
+      console.log('Sending request to /preprocess...');
+      const response = await fetch('/preprocess', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Received result from backend:', result);
+
+      if (result.original_language) {
+        this.originalLanguage.set(result.original_language);
+      }
+      if (result.speakers && Array.isArray(result.speakers)) {
+        const mappedSpeakers = result.speakers.map((s: any) => ({
+          id: s.speaker_id,
+          name: s.speaker_name || `Speaker ${s.speaker_id}`,
+          voice: s.voice,
+          voiceName: s.voice,
+          gender: s.gender ? s.gender : 'neutral'
+        }));
+        this.speakers.set(mappedSpeakers);
+      }
+      this.step.set(2);
+    } catch (error) {
+      console.error('Failed to preprocess video:', error);
+    } finally {
+      this.isPreprocessing.set(false);
+    }
   }
 
   async startProcessing() {
