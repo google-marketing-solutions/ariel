@@ -1,0 +1,69 @@
+@use '../styles/variables' as var;
+
+.app-root {
+  background-color: #f8fafc; // bg-slate-50
+  color: #1e293b; // text-slate-800
+  font-family: var.$font-family-sans;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+  transition: background-color 300ms, color 300ms;
+  position: relative;
+  min-height: 100vh;
+
+  @include var.dark-mode {
+    background-color: #0f172a;
+    color: #f1f5f9;
+  }
+
+  &.is-editor {
+    height: 100vh;
+    overflow: hidden;
+    min-height: auto;
+  }
+
+  main {
+    display: flex;
+    flex: 1;
+    position: relative;
+    z-index: 0;
+    flex-direction: column;
+    padding: 1.5rem;
+
+    @media (min-width: 1024px) {
+      padding: 3rem;
+    }
+
+    &.is-editor {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    &:not(.is-editor) {
+      overflow-y: auto;
+
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      &::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 3px;
+        @include var.dark-mode { background-color: #475569; }
+      }
+    }
+  }
+
+  .version-tag {
+    position: fixed;
+    bottom: 1rem;
+    right: 0.25rem;
+    font-size: 0.75rem;
+    color: #64748b;
+    z-index: 50;
+
+    @include var.dark-mode { color: #94a3b8; }
+  }
+}

@@ -1,0 +1,185 @@
+@use '../../styles/variables' as var;
+
+.app-header {
+  height: 4rem; // h-16
+  flex-shrink: 0;
+  border-bottom: 1px solid var.$border-subtle;
+  background-color: var.$bg-glass-light;
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  box-shadow: var.$shadow-glass-light;
+  z-index: 10;
+  position: relative;
+
+  @include var.dark-mode {
+    border-color: var.$border-dark;
+    background-color: rgba(30, 41, 59, 0.8);
+    box-shadow: var.$shadow-glass-dark;
+  }
+
+  .logo-section {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-right: 2rem;
+
+    .logo-img {
+      height: 2rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-family: var.$font-family-heading;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      background: linear-gradient(to right, #2563eb, #8b5cf6);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+
+      @include var.dark-mode {
+        background: linear-gradient(to right, var.$color-primary, var.$color-primary-light);
+        -webkit-background-clip: text;
+        background-clip: text;
+      }
+    }
+  }
+
+  .nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    height: 100%;
+
+    .nav-link {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      position: relative;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var.$text-subtle;
+      transition: color 150ms;
+      text-decoration: none;
+
+      @include var.dark-mode {
+        color: var.$text-muted;
+      }
+
+      &:hover {
+        color: var.$text-main;
+        @include var.dark-mode { color: var.$bg-white; }
+      }
+
+      &.nav-link-active {
+        color: var.$color-primary;
+        @include var.dark-mode { color: var.$color-primary-light; }
+
+        .active-indicator {
+          opacity: 1 !important;
+        }
+      }
+
+      .active-indicator {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: var.$color-primary;
+        border-radius: 9999px 9999px 0 0;
+        opacity: 0;
+        transition: opacity 150ms;
+
+        @include var.dark-mode {
+          background-color: var.$color-primary-light;
+        }
+      }
+    }
+  }
+
+  .actions-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .warning-info {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      margin-right: 0.5rem;
+      cursor: help;
+
+      span {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #d97706; // amber-600 approx or use warning
+        @include var.dark-mode { color: #fbbf24; }
+      }
+    }
+
+    .generate-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-radius: 0.75rem;
+      background-color: #2563eb;
+      padding: 0.5rem 1.25rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var.$bg-white;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 0 15px -3px rgba(37, 99, 235, 0.3);
+      transition: all 150ms;
+
+      @include var.dark-mode {
+        background: linear-gradient(135deg, var.$color-primary-dark, var.$color-primary);
+      }
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0 20px -3px rgba(37, 99, 235, 0.5);
+      }
+
+      &:active {
+        transform: scale(0.95);
+      }
+    }
+
+    .divider {
+      width: 1px;
+      height: 1.5rem;
+      background-color: #e2e8f0;
+      @include var.dark-mode { background-color: var.$border-dark; }
+    }
+
+    .theme-toggle-btn {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f1f5f9;
+      color: #475569;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      cursor: pointer;
+      transition: all 150ms;
+
+      @include var.dark-mode {
+        background-color: rgba(15, 23, 42, 0.8);
+        color: var.$text-muted;
+        border-color: var.$border-dark;
+      }
+
+      &:hover {
+        background-color: #e2e8f0;
+        @include var.dark-mode { background-color: rgba(0, 0, 0, 0.2); }
+      }
+    }
+  }
+}

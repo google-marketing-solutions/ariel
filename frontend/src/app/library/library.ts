@@ -18,6 +18,7 @@ interface VideoJob {
   translate_language: string;
   duration: number;
   speakers: VideoSpeaker[];
+  has_metadata?: boolean;
 }
 
 @Component({
@@ -63,21 +64,21 @@ export class Library implements OnInit {
     }
   }
 
-  private formatDate(timestamp: number): string {
+  formatDate(timestamp: number): string {
     if (!timestamp) return 'Date unknown';
     // The Python backend might send seconds or ms, usually seconds from GCS
     const date = new Date(timestamp > 1e11 ? timestamp : timestamp * 1000);
     return date.toLocaleString();
   }
 
-  private formatDuration(duration: number): string {
+  formatDuration(duration: number): string {
     const safeDuration = duration || 0;
     const minutes = Math.floor(safeDuration / 60);
     const seconds = Math.floor(safeDuration % 60);
     return `${minutes}m ${seconds}s`;
   }
 
-  private getSpeakersString(speakers: VideoSpeaker[]): string {
+  getSpeakersString(speakers: VideoSpeaker[]): string {
     if (!speakers || speakers.length === 0) return 'Unknown';
     const uniqueVoices = [...new Set(speakers.map(s => s.voice).filter(v => v))];
     return uniqueVoices.length > 0 ? uniqueVoices.join(', ') : 'Unknown';

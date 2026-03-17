@@ -1,0 +1,120 @@
+@use '../../styles/variables' as var;
+
+.result-container {
+  max-width: 56rem; // max-w-4xl
+  width: 100%;
+  margin: 0 auto;
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: var.$font-family-sans;
+    color: var.$text-main;
+    margin-bottom: 1.5rem;
+
+    @include var.dark-mode {
+      color: var.$bg-white;
+    }
+  }
+
+  .result-player {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background-color: black;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    position: relative;
+    margin-bottom: 1.5rem;
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+  }
+
+  .actions-row {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+
+    @media (min-width: 640px) {
+      flex-direction: row;
+    }
+
+    .download-actions, .system-actions {
+      display: flex;
+      gap: 1rem;
+      width: 100%;
+
+      @media (min-width: 640px) {
+        width: auto;
+      }
+    }
+
+    .download-actions {
+      a {
+        flex: 1;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid var.$color-primary;
+        color: var.$color-primary;
+        transition: background-color 150ms;
+
+        @media (min-width: 640px) {
+          flex: none;
+        }
+
+        @include var.dark-mode {
+          border-color: var.$color-primary-light;
+          color: var.$color-primary-light;
+        }
+
+        &:hover {
+          background-color: rgba(37, 99, 235, 0.05);
+          @include var.dark-mode { background-color: rgba(96, 165, 250, 0.1); }
+        }
+      }
+    }
+
+    .system-actions {
+      button {
+        flex: 1;
+        font-size: 0.875rem;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        border: none;
+        cursor: pointer;
+        color: white;
+        transition: background-color 150ms;
+
+        @media (min-width: 640px) {
+          flex: none;
+        }
+      }
+
+      .back-btn {
+        background-color: #64748b;
+        &:hover { background-color: #475569; }
+
+        @include var.dark-mode {
+          background-color: #475569;
+          &:hover { background-color: #334155; }
+        }
+      }
+
+      .start-over-btn {
+        background-color: #ef4444;
+        &:hover { background-color: #dc2626; }
+      }
+    }
+  }
+}

@@ -1,12 +1,8 @@
-<div
-  class="bg-slate-50 dark:bg-[#0f172a] text-slate-800 dark:text-[#f1f5f9] font-sans antialiased flex flex-col transition-colors duration-300 relative"
-  [class.h-screen]="isEditorRoute" [class.overflow-hidden]="isEditorRoute" [class.min-h-screen]="!isEditorRoute">
+<div class="app-root" [class.is-editor]="isEditorRoute">
 
   <app-header [isDarkMode]="isDarkMode()" (toggleTheme)="toggleTheme()"></app-header>
 
-  <main class="flex flex-1 relative z-0" [class.overflow-hidden]="isEditorRoute"
-    [class.overflow-y-auto]="!isEditorRoute" [class.custom-scrollbar]="!isEditorRoute" [class.p-6]="!isEditorRoute"
-    [class.lg:p-12]="!isEditorRoute" [class.flex-col]="!isEditorRoute">
+  <main [class.is-editor]="isEditorRoute">
     <router-outlet></router-outlet>
   </main>
 
