@@ -35,6 +35,42 @@
   <!-- Hidden File Input -->
   <input type="file" id="video-input" accept="video/*" class="hidden" (change)="onFileSelected($event)" />
 
+  @if (step() === 1) {
+  <!-- Step 1 Area -->
+  <div class="settings-container">
+    <div class="settings-grid">
+      <div class="left-column">
+        <div class="toggle-row">
+          <h3>Gemini Model</h3>
+          <div class="toggle-widget" [class.opacity-50]="isPreprocessing()">
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-model-step1" [checked]="useProModel()"
+                (change)="useProModel.set(!useProModel())" [disabled]="isPreprocessing()">
+              <span class="slider"></span>
+            </label>
+            <span class="toggle-label-text">{{ useProModel() ? 'Pro' : 'Flash' }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="right-column">
+        @if (videoPreviewUrl()) {
+        <button (click)="preprocessVideo()" [disabled]="isPreprocessing()" class="action-btn">
+          @if (isPreprocessing()) {
+          <span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+          Preprocessing...
+          } @else {
+          <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+          Pre-process Video
+          }
+        </button>
+        }
+      </div>
+    </div>
+  </div>
+  }
+  
+  @if (step() === 2) {
+
   <!-- Global Settings Container -->
   <div class="settings-container">
     <div class="settings-grid">
@@ -50,9 +86,10 @@
                   title="Select the source language of the video">help</span>
               </a>
             </div>
-            <div class="select-wrapper">
-              <select (change)="originalLanguage.set($any($event.target).value)" [disabled]="isProcessing()">
-                <option value="" disabled selected>Please select...</option>
+            <div class="relative">
+              <select [ngModel]="originalLanguage()" (ngModelChange)="originalLanguage.set($event)" [disabled]="isProcessing()"
+                class="w-full appearance-none bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-slate-800 dark:text-[#f1f5f9] focus:outline-none focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                <option value="" disabled>Please select...</option>
                 <optgroup label="GA">
                   @for (lang of gaLanguages(); track lang.code) {
                   <option [value]="lang.code">{{ lang.name }}</option>
@@ -77,9 +114,10 @@
                   title="Select the target language for dubbing">help</span>
               </a>
             </div>
-            <div class="select-wrapper">
-              <select (change)="translationLanguage.set($any($event.target).value)" [disabled]="isProcessing()">
-                <option value="" disabled selected>Please select...</option>
+            <div class="relative">
+              <select [ngModel]="translationLanguage()" (ngModelChange)="translationLanguage.set($event)" [disabled]="isProcessing()"
+                class="w-full appearance-none bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-slate-800 dark:text-[#f1f5f9] focus:outline-none focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                <option value="" disabled>Please select...</option>
                 <optgroup label="GA">
                   @for (lang of gaLanguages(); track lang.code) {
                   <option [value]="lang.code">{{ lang.name }}</option>
@@ -168,8 +206,13 @@
   </div>
 
   <!-- Actions -->
-  <div class="actions-footer">
-    <button (click)="startProcessing()" [disabled]="!isFormValid() || isProcessing()" class="start-processing-btn">
+  <div class="flex justify-end gap-4 relative mt-8">
+    <button (click)="step.set(1)" [disabled]="isProcessing()"
+      class="rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-3.5 text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+      Back
+    </button>
+    <button (click)="startProcessing()" [disabled]="!isFormValid() || isProcessing()"
+      class="rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 px-8 py-3.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
       @if (isProcessing()) {
       <span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
       Processing...
@@ -178,6 +221,7 @@
       }
     </button>
   </div>
+  }
 </div>
 <!-- Modals -->
 @if (isSpeakerModalOpen()) {
