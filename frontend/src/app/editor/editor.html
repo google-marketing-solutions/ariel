@@ -422,13 +422,7 @@
                       (click)="revertUtterance(utterance.id); $event.stopPropagation()">
                       <span class="material-symbols-outlined text-[16px]">history</span>
                     </button>
-                    <button
-                      class="flex items-center justify-center w-7 h-7 rounded bg-white dark:bg-[#0f172a] hover:bg-primary/10 dark:hover:bg-[#60a5fa]/10 text-slate-500 dark:text-[#94a3b8] hover:text-primary dark:hover:text-[#60a5fa] border border-slate-200 dark:border-[#334155] hover:border-primary/20 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                      matTooltip="Clone Utterance"
-                      [disabled]="utterance.muted || utterance.removed"
-                      (click)="cloneUtterance(utterance.id); $event.stopPropagation()">
-                      <span class="material-symbols-outlined text-[16px]">content_copy</span>
-                    </button>
+
                     </div>
                     
                     <!-- State Actions -->
@@ -923,8 +917,8 @@
                   [class.border-primary]="activeUtteranceId() === utterance.id"
                   [class.border-slate-100]="activeUtteranceId() !== utterance.id"
                   [class.dark:border-[#0f172a]]="activeUtteranceId() !== utterance.id"
-                  [style.left.%]="getLeftPercent(utterance.ui_original_start_time ?? utterance.original_start_time)"
-                  [style.width.%]="getWidthPercent(utterance.ui_original_start_time ?? utterance.original_start_time, utterance.ui_original_end_time ?? utterance.original_end_time)"
+                  [style.left.%]="getLeftPercent(utterance.original_start_time)"
+                  [style.width.%]="getWidthPercent(utterance.original_start_time, utterance.original_end_time)"
                   (click)="focusUtterance(utterance.id)">
                   <div class="absolute inset-0 opacity-20 bg-gradient-to-r from-primary/50 to-transparent pointer-events-none"></div>
                   <span class="text-xs font-bold truncate relative z-10 text-white pointer-events-none">U{{ i + 1 }}</span>

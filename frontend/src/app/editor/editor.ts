@@ -29,9 +29,7 @@ interface VideoUtterance {
   speaker: VideoSpeaker;
   audio_url?: string;
   duration?: number;
-  // UI Only Derived bounds for cloned utterance tracks
-  ui_original_start_time?: number;
-  ui_original_end_time?: number;
+
 
   // Mute State flag and cached timestamps
   muted?: boolean;
@@ -243,11 +241,7 @@ export class Editor implements OnInit, OnDestroy {
       if (this.isPlayingOriginal()) {
         let currentVisualTime = this.originalAudio.currentTime;
         if (this.activeAudioPlayback?.type === 'original') {
-          const activeU = this.videoData()?.utterances.find(u => u.id === this.activeAudioPlayback!.id);
-          if (activeU && activeU.ui_original_start_time !== undefined) {
-            const offset = activeU.ui_original_start_time - activeU.original_start_time;
-            currentVisualTime += offset;
-          }
+          // Time matches originalAudio directly
         }
         this.currentTime.set(currentVisualTime);
       } else if (this.isPlayingTranslated()) {
@@ -716,7 +710,6 @@ export class Editor implements OnInit, OnDestroy {
     if (!initialState || initialState.id !== u.id) return true;
     const isDirty = (
       u.original_text !== initialState.original_text ||
-      u.translated_text !== initialState.translated_text ||
       (u.instructions || '') !== (initialState.instructions || '')
     );
     return !!initialState.needs_translation_regen || isDirty;
@@ -726,7 +719,10 @@ export class Editor implements OnInit, OnDestroy {
     if (!initialState || initialState.id !== u.id) return true;
     const isDirty = (
       u.speaker.speaker_id !== initialState.speaker.speaker_id ||
-      (u.voice_instructions || '') !== (initialState.voice_instructions || '')
+      (u.voice_instructions || '') !== (initialState.voice_instructions || '') ||
+      u.translated_text !== initialState.translated_text ||
+      u.original_text !== initialState.original_text ||
+      (u.instructions || '') !== (initialState.instructions || '')
     );
     return !!initialState.needs_dubbing_regen || isDirty;
   }
@@ -769,6 +765,7 @@ export class Editor implements OnInit, OnDestroy {
           if (u.id === activeId) {
             const updated = { ...u, instructions: draft };
             updated.needs_translation_regen = this.checkTranslationRegen(updated, initialState);
+            updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
             return updated;
           }
           return u;
@@ -840,6 +837,7 @@ export class Editor implements OnInit, OnDestroy {
           if (u.id === utteranceId) {
             const updated = { ...u, original_text: newText };
             updated.needs_translation_regen = this.checkTranslationRegen(updated, initialState);
+            updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
             return updated;
           }
           return u;
@@ -1103,41 +1101,7 @@ export class Editor implements OnInit, OnDestroy {
     });
   }
 
-  cloneUtterance(utteranceId: string) {
-    console.log('cloneUtterance with ID:', utteranceId);
-    this.videoData.update(prev => {
-      if (!prev) return prev;
 
-      const currentIndex = prev.utterances.findIndex(u => u.id === utteranceId);
-      console.log('cloneUtterance: currentIndex =', currentIndex);
-      if (currentIndex === -1) return prev;
-
-      const utterance = prev.utterances[currentIndex];
-      const newUtterance = JSON.parse(JSON.stringify(utterance)); // Deep copy
-
-      newUtterance.id = `utterance_${Date.now()}`; // Simple unique ID
-      newUtterance.isNew = true; // Set isNew to true for cloned utterances
-      const duration = utterance.translated_end_time - utterance.translated_start_time;
-      newUtterance.translated_start_time = utterance.translated_end_time;
-      newUtterance.translated_end_time = utterance.translated_end_time + duration;
-
-      const originalDuration = utterance.original_end_time - utterance.original_start_time;
-      const refOriginalEnd = utterance.ui_original_end_time !== undefined ? utterance.ui_original_end_time : utterance.original_end_time;
-      newUtterance.ui_original_start_time = refOriginalEnd;
-      newUtterance.ui_original_end_time = refOriginalEnd + originalDuration;
-
-      const newUtterances = [...prev.utterances];
-      newUtterances.splice(currentIndex + 1, 0, newUtterance);
-
-      return {
-        ...prev,
-        utterances: newUtterances
-      };
-    });
-
-    // Close active panel when cloning
-    this.activePanelMode.set(null);
-  }
 
   get activeUtterance(): VideoUtterance | null {
     const data = this.videoData();
