@@ -676,7 +676,8 @@ def get_videos() -> list[dict]:
               "speakers": [],
           }
           meta_path = os.path.join(root, "metadata.json")
-          if os.path.exists(meta_path):
+          has_metadata = os.path.exists(meta_path)
+          if has_metadata:
             try:
               with open(meta_path, "r") as f:
                 file_data = json.load(f)
@@ -703,7 +704,8 @@ def get_videos() -> list[dict]:
             "original_language": metadata.get("original_language", "Unknown"),
             "translate_language": metadata.get("translate_language", "Unknown"),
             "duration": metadata.get("duration", 0),
-            "speakers": metadata.get("speakers", [])
+            "speakers": metadata.get("speakers", []),
+            "has_metadata": has_metadata
           })
       videos_list.sort(key=lambda x: x["created_at"], reverse=True)
   except Exception as e:

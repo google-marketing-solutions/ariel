@@ -223,7 +223,8 @@ def list_all_videos(bucket_name: str) -> list[VideoMetadata]:
           "speakers": []
       }
       metadata_blob = bucket.blob(metadata_path)
-      if metadata_blob.exists():
+      has_metadata = metadata_blob.exists()
+      if has_metadata:
           try:
               json_str = metadata_blob.download_as_text()
               file_data = json.loads(json_str)
@@ -246,7 +247,8 @@ def list_all_videos(bucket_name: str) -> list[VideoMetadata]:
         "translate_language": meta.get("translate_language", "Unknown"),
         "duration": meta.get("duration", 0),
         "speakers": clean_speakers,
-        "video_id": folder_name
+        "video_id": folder_name,
+        "has_metadata": has_metadata
       })
 
   videos.sort(key=lambda x: x['created_at'], reverse=True)

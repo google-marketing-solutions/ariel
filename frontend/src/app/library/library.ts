@@ -18,6 +18,7 @@ interface VideoJob {
   translate_language: string;
   duration: number;
   speakers: VideoSpeaker[];
+  has_metadata?: boolean;
 }
 
 @Component({
