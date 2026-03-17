@@ -51,8 +51,6 @@ export class Home implements OnInit {
   step = signal(1);
   isPreprocessing = signal(false);
 
-  constructor(private router: Router) { }
-
   ngOnInit() {
     this.fetchLanguages();
   }
