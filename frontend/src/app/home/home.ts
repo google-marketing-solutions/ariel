@@ -46,6 +46,23 @@ export class Home implements OnInit {
   translationLanguage = signal<string>('');
   geminiInstructions = signal<string>('');
 
+  isOriginalOpen = signal(false);
+  isTranslationOpen = signal(false);
+
+  originalLanguageLabel = computed(() => {
+    const code = this.originalLanguage();
+    if (!code) return 'Please select...';
+    const match = [...this.gaLanguages(), ...this.previewLanguages()].find(l => l.code === code);
+    return match ? match.name : 'Please select...';
+  });
+
+  translationLanguageLabel = computed(() => {
+    const code = this.translationLanguage();
+    if (!code) return 'Please select...';
+    const match = [...this.gaLanguages(), ...this.previewLanguages()].find(l => l.code === code);
+    return match ? match.name : 'Please select...';
+  });
+
   isProcessing = signal(false);
 
   step = signal(1);

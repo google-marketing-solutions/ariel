@@ -86,22 +86,30 @@
                   title="Select the source language of the video">help</span>
               </a>
             </div>
-            <div class="relative">
-              <select [ngModel]="originalLanguage()" (ngModelChange)="originalLanguage.set($event)" [disabled]="isProcessing()"
-                class="w-full appearance-none bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-slate-800 dark:text-[#f1f5f9] focus:outline-none focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                <option value="" disabled>Please select...</option>
-                <optgroup label="GA">
-                  @for (lang of gaLanguages(); track lang.code) {
-                  <option [value]="lang.code">{{ lang.name }}</option>
-                  }
-                </optgroup>
-                <optgroup label="Preview">
-                  @for (lang of previewLanguages(); track lang.code) {
-                  <option [value]="lang.code">{{ lang.name }}</option>
-                  }
-                </optgroup>
-              </select>
-              <span class="material-symbols-outlined select-arrow">expand_more</span>
+            <div class="custom-select" [class.open]="isOriginalOpen()" [class.disabled]="isProcessing()">
+              <div class="select-trigger" (click)="!isProcessing() && isOriginalOpen.set(!isOriginalOpen())">
+                <span class="truncate">{{ originalLanguageLabel() }}</span>
+                <span class="material-symbols-outlined select-arrow">expand_more</span>
+              </div>
+              @if (isOriginalOpen()) {
+              <div class="select-dropdown custom-scrollbar">
+                <div class="optgroup-label">GA</div>
+                @for (lang of gaLanguages(); track lang.code) {
+                <div class="option" (click)="originalLanguage.set(lang.code); isOriginalOpen.set(false)"
+                  [class.selected]="originalLanguage() === lang.code">
+                  {{ lang.name }}
+                </div>
+                }
+                <div class="optgroup-label">Preview</div>
+                @for (lang of previewLanguages(); track lang.code) {
+                <div class="option" (click)="originalLanguage.set(lang.code); isOriginalOpen.set(false)"
+                  [class.selected]="originalLanguage() === lang.code">
+                  {{ lang.name }}
+                </div>
+                }
+              </div>
+              <div class="overlay-backdrop" (click)="isOriginalOpen.set(false)"></div>
+              }
             </div>
           </div>
 
@@ -114,22 +122,30 @@
                   title="Select the target language for dubbing">help</span>
               </a>
             </div>
-            <div class="relative">
-              <select [ngModel]="translationLanguage()" (ngModelChange)="translationLanguage.set($event)" [disabled]="isProcessing()"
-                class="w-full appearance-none bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-3 pr-10 text-sm font-medium text-slate-800 dark:text-[#f1f5f9] focus:outline-none focus:border-primary dark:focus:border-[#60a5fa] focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                <option value="" disabled>Please select...</option>
-                <optgroup label="GA">
-                  @for (lang of gaLanguages(); track lang.code) {
-                  <option [value]="lang.code">{{ lang.name }}</option>
-                  }
-                </optgroup>
-                <optgroup label="Preview">
-                  @for (lang of previewLanguages(); track lang.code) {
-                  <option [value]="lang.code">{{ lang.name }}</option>
-                  }
-                </optgroup>
-              </select>
-              <span class="material-symbols-outlined select-arrow">expand_more</span>
+            <div class="custom-select" [class.open]="isTranslationOpen()" [class.disabled]="isProcessing()">
+              <div class="select-trigger" (click)="!isProcessing() && isTranslationOpen.set(!isTranslationOpen())">
+                <span class="truncate">{{ translationLanguageLabel() }}</span>
+                <span class="material-symbols-outlined select-arrow">expand_more</span>
+              </div>
+              @if (isTranslationOpen()) {
+              <div class="select-dropdown custom-scrollbar">
+                <div class="optgroup-label">GA</div>
+                @for (lang of gaLanguages(); track lang.code) {
+                <div class="option" (click)="translationLanguage.set(lang.code); isTranslationOpen.set(false)"
+                  [class.selected]="translationLanguage() === lang.code">
+                  {{ lang.name }}
+                </div>
+                }
+                <div class="optgroup-label">Preview</div>
+                @for (lang of previewLanguages(); track lang.code) {
+                <div class="option" (click)="translationLanguage.set(lang.code); isTranslationOpen.set(false)"
+                  [class.selected]="translationLanguage() === lang.code">
+                  {{ lang.name }}
+                </div>
+                }
+              </div>
+              <div class="overlay-backdrop" (click)="isTranslationOpen.set(false)"></div>
+              }
             </div>
           </div>
 
@@ -155,9 +171,14 @@
                     </span>
                   </div>
                 </div>
-                <button (click)="removeSpeaker(speaker.id)" [disabled]="isProcessing()" class="remove-btn">
-                  <span class="material-symbols-outlined text-[18px]">close</span>
-                </button>
+                <div class="speaker-actions">
+                  <button (click)="removeSpeaker(speaker.id)" [disabled]="isProcessing()" class="remove-btn" title="Delete speaker">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                  </button>
+                  <button (click)="editSpeaker(speaker)" [disabled]="isProcessing()" class="edit-btn" title="Edit speaker">
+                    <span class="material-symbols-outlined text-[18px]">edit</span>
+                  </button>
+                </div>
               </div>
               }
             </div>

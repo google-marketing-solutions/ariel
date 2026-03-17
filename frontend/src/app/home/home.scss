@@ -261,13 +261,18 @@
       }
     }
 
-    .select-wrapper {
+    .custom-select {
       position: relative;
       width: 100%;
 
-      select {
+      &.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        .select-trigger { pointer-events: none; }
+      }
+
+      .select-trigger {
         width: 100%;
-        appearance: none;
         background-color: rgba(248, 250, 252, 0.8);
         border: 1px solid rgba(0, 0, 0, 0.1);
         border-radius: 0.75rem;
@@ -276,8 +281,10 @@
         font-size: 0.875rem;
         font-weight: 500;
         color: var.$text-main;
-        outline: none;
         cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         transition: all 150ms;
 
         @include var.dark-mode {
@@ -286,19 +293,87 @@
           color: var.$text-light;
         }
 
-        &:focus {
-          border-color: var.$color-primary;
-          box-shadow: 0 0 0 2px rgba(var.$color-primary, 0.2);
+        .select-arrow {
+          position: absolute;
+          right: 0.75rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: var.$text-muted;
+          transition: transform 150ms;
+        }
+
+        .truncate {
+          text-overflow: ellipsis;
+          overflow: hidden;
+          white-space: nowrap;
         }
       }
 
-      .select-arrow {
+      &.open {
+        .select-trigger {
+          border-color: var.$color-primary;
+          box-shadow: 0 0 0 2px rgba(var.$color-primary, 0.2);
+          .select-arrow { transform: translateY(-50%) rotate(180deg); }
+        }
+      }
+
+      .select-dropdown {
         position: absolute;
-        right: 0.75rem;
-        top: 50%;
-        transform: translateY(-50%);
-        pointer-events: none;
-        color: var.$text-muted;
+        top: calc(100% + 0.5rem);
+        left: 0;
+        width: 100%;
+        max-height: 250px;
+        overflow-y: auto;
+        background-color: white;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 0.75rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        z-index: 50;
+
+        @include var.dark-mode {
+          background-color: #1e293b;
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .optgroup-label {
+          padding: 0.5rem 1rem 0.25rem;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: var.$text-muted;
+          text-transform: uppercase;
+          background-color: rgba(0, 0, 0, 0.02);
+          @include var.dark-mode { background-color: rgba(255, 255, 255, 0.02); }
+        }
+
+        .option {
+          padding: 0.75rem 1rem;
+          font-size: 0.875rem;
+          color: var.$text-main;
+          cursor: pointer;
+          transition: background-color 150ms;
+
+          @include var.dark-mode { color: var.$text-light; }
+
+          &:hover {
+            background-color: rgba(var.$color-primary, 0.05);
+            color: var.$color-primary;
+            @include var.dark-mode { background-color: rgba(255, 255, 255, 0.05); color: var.$color-primary-light; }
+          }
+
+          &.selected {
+            background-color: rgba(var.$color-primary, 0.10);
+            color: var.$color-primary;
+            font-weight: 600;
+            @include var.dark-mode { background-color: rgba(var.$color-primary-light, 0.2); color: var.$color-primary-light; }
+          }
+        }
+      }
+
+      .overlay-backdrop {
+        position: fixed;
+        inset: 0;
+        background-color: transparent;
+        z-index: 40;
       }
     }
 
@@ -326,6 +401,50 @@
     }
   }
 
+  .action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    background: transparent;
+    color: var.$color-primary;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border: 1px solid var.$color-primary;
+    cursor: pointer;
+    transition: all 200ms;
+    width: 100%;
+    white-space: nowrap;
+
+    &:hover:not(:disabled) {
+      background-color: rgba(var.$color-primary, 0.05);
+      border-color: var.$color-primary;
+    }
+
+    @include var.dark-mode {
+      border-color: var.$border-dark;
+      color: var.$color-primary-light;
+      &:hover:not(:disabled) {
+        background-color: rgba(var.$color-primary-light, 0.1);
+        border-color: var.$color-primary-light;
+      }
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .animate-spin {
+      display: inline-block;
+      animation: spin 1s linear infinite;
+    }
+  }
+
   .add-speaker-btn {
     display: flex;
     align-items: center;
@@ -334,7 +453,7 @@
     width: 100%;
     padding: 0.75rem 1rem;
     border-radius: 0.75rem;
-    border: 1px solid rgba(var.$color-primary, 0.2);
+    border: 1px solid var.$color-primary;
     background-color: transparent;
     color: var.$color-primary;
     font-weight: 600;
@@ -368,6 +487,7 @@
       border: 1px solid rgba(0, 0, 0, 0.05);
       background-color: rgba(248, 250, 252, 0.8);
       transition: background-color 150ms;
+      position: relative;
 
       @include var.dark-mode {
         border-color: var.$border-dark;
@@ -388,20 +508,39 @@
         }
       }
 
-      .remove-btn {
-        padding: 0.375rem;
-        border-radius: 0.5rem;
-        color: var.$text-muted;
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        opacity: 0;
-        transition: opacity 150ms;
+        .speaker-actions {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          right: 0.25rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.0625rem;
 
-        &:hover { color: var.$color-danger; }
+        button {
+          padding: 0.375rem;
+          border-radius: 0.5rem;
+          color: var.$text-muted;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          opacity: 0.7;
+          transition: opacity 150ms, color 150ms;
+
+          &:hover { color: var.$color-primary; }
+        }
+
+        .remove-btn {
+          padding-bottom: 0;
+          &:hover { color: var.$color-danger; }
+        }
+
+        .edit-btn {
+          padding-top: 0;
+        }
       }
 
-      &:hover .remove-btn { opacity: 1; }
+      &:hover .speaker-actions button { opacity: 1; }
     }
   }
 
