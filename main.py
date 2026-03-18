@@ -610,8 +610,9 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
     req.video.model_name,
     req.instructions,
   )
+  duration = utterance.translated_end_time - utterance.translated_start_time
   return RegenerateResponse(
-    translated_text=new_translation, audio_url=new_path, duration=duration
+    translated_text=new_translation, audio_url=utterance.audio_url, duration=duration
   )
 
 
