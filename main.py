@@ -135,7 +135,6 @@ def _process_utterance(
   gemini_model: str,
   gemini_tts_model: str,
   local_dir: str,
-  adjust_speed: bool,
 ) -> Utterance:
   """Processes a single utterance: translates and generates audio.
 
@@ -172,15 +171,10 @@ def _process_utterance(
     t.tone,
     translate_language,
     speaker.voice,
+    1.0,
     local_audio_path,
     model_name=gemini_tts_model,
   )
-  original_duration = t.end_time - t.start_time
-  if adjust_speed and audio_duration and audio_duration > original_duration:
-    audio_duration = shorten_audio(
-      local_audio_path, audio_duration, original_duration
-    )
-
   translated_end_time = t.start_time + audio_duration
 
   return Utterance(
@@ -202,7 +196,6 @@ def _process_utterance(
 async def process_video(
   original_language: Annotated[str, Form()],
   translate_language: Annotated[str, Form()],
-  adjust_speed: Annotated[bool, Form()],
   speakers: Annotated[str, Form()],
   prompt_enhancements: Annotated[str, Form()] = "",
   use_pro_model: Annotated[bool, Form()] = False,
@@ -376,6 +369,7 @@ async def process_video(
                 start_time=u["original_start_time"],
                 end_time=u["original_end_time"],
                 tone=u.get("instructions", ""),
+                gender=u["speaker"]["gender"],
               )
             )
           transcript = "SKIPPED_REUSED"
@@ -421,7 +415,6 @@ async def process_video(
     gemini_model=gemini_model,
     gemini_tts_model=gemini_tts_model,
     local_dir=local_dir,
-    adjust_speed=adjust_speed,
   )
 
   with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -617,9 +610,9 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
     req.video.model_name,
     req.instructions,
   )
-  
+  duration = utterance.translated_end_time - utterance.translated_start_time
   return RegenerateResponse(
-    translated_text=new_translation, audio_url="", duration=0.0
+    translated_text=new_translation, audio_url=utterance.audio_url, duration=duration
   )
 
 
@@ -645,6 +638,7 @@ def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
     req.instructions,
     req.video.translate_language,
     utterance.speaker.voice,
+    float(req.speaking_rate),
     new_path,
     req.video.tts_model_name,
   )

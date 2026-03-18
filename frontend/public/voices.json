@@ -2,152 +2,152 @@
   "voices": [
     {
       "name": "Achernar",
-      "gender": "Female",
+      "gender": "female",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-achernar.wav"
     },
     {
       "name": "Achird",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-achird.wav"
     },
     {
       "name": "Algenib",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-algenib.wav"
     },
     {
       "name": "Algieba",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-algieba.wav"
     },
     {
       "name": "Alnilam",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-alnilam.wav"
     },
     {
       "name": "Aoede",
-      "gender": "Female",
+      "gender": "female",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-aoeda.wav"
     },
     {
       "name": "Autonoe",
-      "gender": "Female",
+      "gender": "female",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-autonoe.wav"
     },
     {
       "name": "Callirrhoe",
-      "gender": "Female",
+      "gender": "female",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-callirrhoe.wav"
     },
     {
       "name": "Charon",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-charon.wav"
     },
     {
       "name": "Despina",
-      "gender": "Female",
+      "gender": "female",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-despina.wav"
     },
     {
       "name": "Enceladus",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-enceladus.wav"
     },
     {
       "name": "Erinome",
-      "gender": "Female",
+      "gender": "female",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-erinome.wav"
     },
     {
       "name": "Fenrir",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-fenrir.wav"
     },
     {
       "name": "Gacrux",
-      "gender": "Female",
+      "gender": "female",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-gacrux.wav"
     },
     {
       "name": "Iapetus",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-iapetus.wav"
     },
     {
       "name": "Kore",
-      "gender": "Female",
+      "gender": "female",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-kore.wav"
     },
     {
       "name": "Laomedeia",
-      "gender": "Female",
+      "gender": "female",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-laomedeia.wav"
     },
     {
       "name": "Leda",
-      "gender": "Female",
+      "gender": "female",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-leda.wav"
     },
     {
       "name": "Orus",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-orus.wav"
     },
     {
       "name": "Pulcherrima",
-      "gender": "Female",
+      "gender": "female",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-pulcherrima.wav"
     },
     {
       "name": "Puck",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-puck.wav"
     },
     {
       "name": "Rasalgethi",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-rasalgethi.wav"
     },
     {
       "name": "Sadachbia",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-sadachbia.wav"
     },
     {
       "name": "Sadaltager",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-sadaltager.wav"
     },
     {
       "name": "Schedar",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-schedar.wav"
     },
     {
       "name": "Sulafat",
-      "gender": "Female",
+      "gender": "female",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-sulafat.wav"
     },
     {
       "name": "Umbriel",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-umbriel.wav"
     },
     {
       "name": "Vindemiatrix",
-      "gender": "Female",
+      "gender": "female",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-vindemiatrix.wav"
     },
     {
       "name": "Zephyr",
-      "gender": "Female",
+      "gender": "female",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-zephyr.wav"
     },
     {
       "name": "Zubenelgenubi",
-      "gender": "Male",
+      "gender": "male",
       "url": "https://cloud.google.com//static/text-to-speech/docs/audio/chirp3-hd-zubenelgenubi.wav"
     }
   ]
