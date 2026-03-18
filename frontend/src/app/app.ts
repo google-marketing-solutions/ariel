@@ -1,7 +1,9 @@
 import { Component, PLATFORM_ID, signal, inject, ChangeDetectionStrategy } from '@angular/core';
-import { RouterOutlet, Router } from '@angular/router';
+import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { Header } from './header/header';
 import { isPlatformBrowser } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
@@ -35,9 +37,13 @@ export class App {
     }
   }
 
-  get isEditorRoute(): boolean {
-    return this.router.url.includes('/editor');
-  }
+  isEditorRoute = toSignal(
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd),
+      map((event) => (event as NavigationEnd).urlAfterRedirects.includes('/editor'))
+    ),
+    { initialValue: this.router.url.includes('/editor') }
+  );
 
   toggleTheme() {
     this.setDarkMode(!this.isDarkMode());

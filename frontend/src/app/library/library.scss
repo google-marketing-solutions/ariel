@@ -381,6 +381,21 @@
             background-color: #f8fafc;
             @include var.dark-mode { background-color: #475569; }
           }
+
+          &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed !important;
+            pointer-events: none;
+            background-color: #f1f5f9;
+            color: #94a3b8;
+            border-color: #e2e8f0;
+            
+            @include var.dark-mode {
+              background-color: rgba(30, 41, 59, 0.5);
+              color: #475569;
+              border-color: var.$border-dark;
+            }
+          }
         }
 
         .delete-btn {

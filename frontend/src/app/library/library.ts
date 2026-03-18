@@ -68,7 +68,16 @@ export class Library implements OnInit {
     if (!timestamp) return 'Date unknown';
     // The Python backend might send seconds or ms, usually seconds from GCS
     const date = new Date(timestamp > 1e11 ? timestamp : timestamp * 1000);
-    return date.toLocaleString();
+    
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    
+    return `${day}/${month}/${year}, ${hours}:${minutes}:${seconds}`;
   }
 
   formatDuration(duration: number): string {

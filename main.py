@@ -135,6 +135,7 @@ def _process_utterance(
   gemini_model: str,
   gemini_tts_model: str,
   local_dir: str,
+  adjust_speed: bool,
 ) -> Utterance:
   """Processes a single utterance: translates and generates audio.
 
@@ -148,6 +149,7 @@ def _process_utterance(
     gemini_model: The Gemini model for translation.
     gemini_tts_model: The Gemini TTS model.
     local_dir: The directory to save audio.
+    adjust_speed: Whether to adjust audio speed.
 
   Returns:
     The processed Utterance object.
@@ -607,20 +609,6 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
     utterance.original_text,
     req.video.model_name,
     req.instructions,
-  )
-  target_dir = os.path.join(mount_point, req.video.video_id)
-  new_file_name = (
-    f"audio_{req.utterance}-" + str(uuid.uuid1()) + ".wav"
-  )  # cache busting
-  new_path = os.path.join(target_dir, new_file_name)
-  duration = generate_audio(
-    new_translation,
-    utterance.instructions,
-    req.video.translate_language,
-    utterance.speaker.voice,
-    float(req.speaking_rate),
-    new_path,
-    req.video.tts_model_name,
   )
   return RegenerateResponse(
     translated_text=new_translation, audio_url=new_path, duration=duration

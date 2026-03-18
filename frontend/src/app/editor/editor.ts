@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef, inject, effect, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef, inject, effect, ChangeDetectionStrategy, HostListener } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { VideoGenerationService } from '../services/video-generation.service';
@@ -224,6 +224,22 @@ export class Editor implements OnInit, OnDestroy {
   gaLanguages = signal<Language[]>([]);
   previewLanguages = signal<Language[]>([]);
 
+  // Dropdown States
+  isOriginalOpen = signal(false);
+  isTranslationOpen = signal(false);
+
+  originalLanguageLabel = computed(() => {
+    const code = this.editOriginalLanguage();
+    const lang = this.languages().find(l => l.code === code);
+    return lang ? lang.name : 'Select Language';
+  });
+
+  translateLanguageLabel = computed(() => {
+    const code = this.editTranslateLanguage();
+    const lang = this.languages().find(l => l.code === code);
+    return lang ? lang.name : 'Select Language';
+  });
+
   // Speaker Modal State
   isSpeakerModalOpen = signal(false);
   speakerToEditId = signal<string | null>(null);
@@ -238,6 +254,10 @@ export class Editor implements OnInit, OnDestroy {
         this.videoGenerationService.updateUnregeneratedCount(0);
       }
     });
+
+    effect(() => {
+      this.videoGenerationService.setProcessingAudio(this.isGeneratingAudio());
+    }, { allowSignalWrites: true });
   }
 
   animationFrameId: number | null = null;
@@ -925,9 +945,6 @@ export class Editor implements OnInit, OnDestroy {
             i === utteranceIndex ? {
               ...u,
               translated_text: result.translated_text,
-              audio_url: result.audio_url,
-              duration: result.duration,
-              translated_end_time: u.translated_start_time + result.duration,
               needs_translation_regen: false,
               needs_dubbing_regen: true
             } : u
@@ -1074,6 +1091,12 @@ export class Editor implements OnInit, OnDestroy {
         utterances: newUtterances
       };
     });
+
+    // Close any open side panels if the utterance was just muted and was active
+    const updated = this.videoData()?.utterances.find(u => u.id === utteranceId);
+    if (updated?.muted && this.activeUtteranceId() === utteranceId) {
+      this.activePanelMode.set(null);
+    }
   }
 
   toggleRemoveUtterance(utteranceId: string) {
@@ -1109,6 +1132,15 @@ export class Editor implements OnInit, OnDestroy {
         utterances: newUtterances
       };
     });
+
+    // Close side panels and optionally clear active selection if utterance was removed
+    const updated = this.videoData()?.utterances.find(u => u.id === utteranceId);
+    if ((!updated || updated.removed) && this.activeUtteranceId() === utteranceId) {
+      this.activePanelMode.set(null);
+      if (!updated) {
+        this.activeUtteranceId.set(null);
+      }
+    }
   }
 
 
@@ -1129,9 +1161,7 @@ export class Editor implements OnInit, OnDestroy {
       if (u.original_end_time > maxDuration) maxDuration = u.original_end_time;
       if (u.translated_end_time > maxDuration) maxDuration = u.translated_end_time;
     }
-
-    // Add a small buffer visually at the end
-    return maxDuration;
+    return Math.max(maxDuration, 1);
   }
 
   // Utility to format seconds to MM:SS.ms format for presentation
@@ -1685,11 +1715,13 @@ export class Editor implements OnInit, OnDestroy {
     // Ignore clicks on header toggle buttons (e.g. edit settings button itself)
     if (targetElement.closest('.border-b.border-black\\/5')) return;
 
-    // Ignore clicks inside any utterance card
-    if (targetElement.closest('[id^="utterance-"]')) return;
-
-    // Ignore clicks on creation/merge inter-utterance buttons
-    if (targetElement.closest('.utterance-insert-divider')) return;
+    // Clicks on the transparent gap between utterances (divider) should be treated as background clicks (fall through to clear).
+    // But clicks on actual action buttons inside the divider or inside the utterance itself should keep it open.
+    if (targetElement.closest('.utterance-insert-divider') && !targetElement.closest('button')) {
+      // Fall through
+    } else if (targetElement.closest('[id^="utterance-"]')) {
+      return;
+    }
 
     // Ignore clicks inside the right Advanced Settings panel
     if (targetElement.closest('aside')) return;

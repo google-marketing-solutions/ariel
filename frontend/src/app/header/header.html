@@ -23,7 +23,7 @@
   <!-- Actions Menu -->
   <div class="actions-section">
 
-    @if (isEditorRoute) {
+    @if (isEditorRoute()) {
     <!-- Unregenerated Warning -->
     @if (videoGenerationService.unregeneratedCount(); as count) {
     <div class="warning-info"
@@ -33,7 +33,7 @@
     </div>
     }
 
-    <button (click)="generateVideo()" class="generate-btn">
+    <button (click)="generateVideo()" class="generate-btn" [disabled]="videoGenerationService.isProcessingAudio()" [class.opacity-50]="videoGenerationService.isProcessingAudio()" [class.cursor-not-allowed]="videoGenerationService.isProcessingAudio()">
       Generate Video
     </button>
     <div class="divider"></div>
