@@ -34,7 +34,7 @@ export class SpeakerModal implements OnInit {
 
     return this.voices().filter(voice => {
       const matchesName = voice.name.toLowerCase().includes(query);
-      const matchesGender = filter === 'all' || voice.gender === filter;
+      const matchesGender = filter === 'all' || voice.gender.toLowerCase() === filter;
       return matchesName && matchesGender;
     });
   });

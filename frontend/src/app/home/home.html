@@ -76,13 +76,13 @@
     <div class="settings-grid">
       <!-- Left Column -->
       <div class="left-column">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="form-grid">
           <div class="form-group">
             <div class="form-label-wrapper">
               <h3>Original Language</h3>
               <a href="https://docs.cloud.google.com/text-to-speech/docs/gemini-tts#available_languages" target="_blank"
                 class="help-link">
-                <span class="material-symbols-outlined text-[14px]"
+                <span class="material-symbols-outlined"
                   title="Select the source language of the video">help</span>
               </a>
             </div>
@@ -118,7 +118,7 @@
               <h3>Translation Language</h3>
               <a href="https://docs.cloud.google.com/text-to-speech/docs/gemini-tts#available_languages" target="_blank"
                 class="help-link">
-                <span class="material-symbols-outlined text-[14px]"
+                <span class="material-symbols-outlined"
                   title="Select the target language for dubbing">help</span>
               </a>
             </div>
@@ -152,9 +152,14 @@
           <div class="form-group">
             <div class="form-label-wrapper">
               <h3>Speakers</h3>
+              <a href="https://docs.cloud.google.com/text-to-speech/docs/gemini-tts#voice_options" target="_blank"
+                class="help-link">
+                <span class="material-symbols-outlined"
+                  title="View available voice options">help</span>
+              </a>
             </div>
             <button (click)="openSpeakerModal()" [disabled]="isProcessing()" class="add-speaker-btn">
-              <span class="material-symbols-outlined text-[18px]">add_circle</span>
+              <span class="material-symbols-outlined">add_circle</span>
               Add Speaker
             </button>
 
@@ -166,17 +171,17 @@
                   <span class="name">{{ speaker.name }}</span>
                   <div class="voice-info">
                     <span>{{ speaker.voiceName }}</span>
-                    <span class="material-symbols-outlined text-[14px]">
+                    <span class="material-symbols-outlined gender-icon">
                       {{ speaker.gender }}
                     </span>
                   </div>
                 </div>
                 <div class="speaker-actions">
                   <button (click)="removeSpeaker(speaker.id)" [disabled]="isProcessing()" class="remove-btn" title="Delete speaker">
-                    <span class="material-symbols-outlined text-[18px]">close</span>
+                    <span class="material-symbols-outlined">close</span>
                   </button>
                   <button (click)="editSpeaker(speaker)" [disabled]="isProcessing()" class="edit-btn" title="Edit speaker">
-                    <span class="material-symbols-outlined text-[18px]">edit</span>
+                    <span class="material-symbols-outlined">edit</span>
                   </button>
                 </div>
               </div>
@@ -226,14 +231,11 @@
     </div>
   </div>
 
-  <!-- Actions -->
-  <div class="flex justify-end gap-4 relative mt-8">
-    <button (click)="step.set(1)" [disabled]="isProcessing()"
-      class="rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-3.5 text-sm font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+  <div class="actions-footer">
+    <button (click)="step.set(1)" [disabled]="isProcessing()" class="btn-back">
       Back
     </button>
-    <button (click)="startProcessing()" [disabled]="!isFormValid() || isProcessing()"
-      class="rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-600 dark:to-emerald-700 px-8 py-3.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+    <button (click)="startProcessing()" [disabled]="!isFormValid() || isProcessing()" class="start-processing-btn">
       @if (isProcessing()) {
       <span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
       Processing...
