@@ -1,7 +1,7 @@
 @use '../../styles/variables' as var;
 
 .app-header {
-  height: 4rem; // h-16
+  height: 4rem;
   flex-shrink: 0;
   border-bottom: 1px solid var.$border-subtle;
   background-color: var.$bg-glass-light;
@@ -116,7 +116,7 @@
       span {
         font-size: 0.875rem;
         font-weight: 600;
-        color: #d97706; // amber-600 approx or use warning
+        color: #d97706;
         @include var.dark-mode { color: #fbbf24; }
       }
     }

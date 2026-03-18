@@ -15,32 +15,33 @@ $timeline-track-height: 3rem;
 
 // Theme Colors - Backgrounds & Surfaces
 $bg-white: #ffffff;
-$bg-dark: #0f172a; // slate-900
-$bg-dark-light: #1e293b; // slate-800
+$bg-dark: #0f172a;
+$bg-dark-light: #1e293b;
 $bg-glass-light: rgba(255, 255, 255, 0.4);
 
 // Theme Colors - Borders
 $border-subtle: rgba(0, 0, 0, 0.05);
-$border-dark: #334155; // slate-700
+$border-dark: #334155;
 $border-dark-intense: #1e293b;
 
 // Theme Colors - Text
-$text-main: #1e293b; // slate-800
-$text-subtle: #64748b; // slate-500
-$text-muted: #94a3b8; // slate-400
-$text-light: #f1f5f9; // slate-100
+$text-main: #1e293b;
+$text-subtle: #64748b;
+$text-muted: #94a3b8;
+$text-light: #f1f5f9;
 
 // States & Highlights
 $color-danger: #ef4444;
 $color-success: #16a34a;
-$color-warning: #d97706; // amber-600
-$color-warning-light: #fde68a; // amber-200
-$color-warning-lighter: #fef3c7; // amber-100
-$color-voice-female: #ec489b; // pink-500
+$color-warning: #d97706;
+$color-warning-light: #fde68a;
+$color-warning-lighter: #fef3c7;
+$color-voice-female: #ec489b;
 
 // Shadows
 $shadow-glass-light: 0 4px 30px rgba(0, 0, 0, 0.05);
 $shadow-glass-dark: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+
 // Dark Mode Support Mixin
 @mixin dark-mode {
   :host-context(.dark) & {
