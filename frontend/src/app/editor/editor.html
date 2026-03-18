@@ -137,16 +137,16 @@
                 @for (speaker of editSpeakers(); track speaker.speaker_id || speaker.name; let i = $index) {
                 <div class="speaker-item">
                   <div class="flex items-center gap-3 w-full">
-                    <span class="speaker-avatar shrink-0" [class.male]="speaker.gender?.toLowerCase() === 'male'"
-                      [class.female]="speaker.gender?.toLowerCase() === 'female'">
+                    <span class="speaker-avatar shrink-0" [class.male]="speaker.gender.toLowerCase() === 'male'"
+                      [class.female]="speaker.gender.toLowerCase() === 'female'">
                       <span class="material-symbols-outlined text-[18px]">
-                        {{ speaker.gender?.toLowerCase() === 'female' ? 'woman' : 'man' }}
+                        {{ speaker.gender.toLowerCase() === 'female' ? 'woman' : 'man' }}
                       </span>
                     </span>
                     <div class="speaker-info">
                       <p>{{ speaker.speaker_name || speaker.name }}</p>
                       <button (click)="openEditSpeakerVoiceModal(speaker.speaker_id)" [disabled]="isGeneratingAudio()">
-                        {{ speaker.voice }} ({{ speaker.gender?.toLowerCase() }})
+                        {{ speaker.voice }} ({{ speaker.gender.toLowerCase() }})
                       </button>
                     </div>
                   </div>
@@ -160,15 +160,15 @@
                 @for (speaker of videoData()?.speakers; track speaker.speaker_id || speaker.name; let i = $index) {
                 <div class="speaker-item">
                   <div class="flex items-center gap-3 w-full">
-                    <span class="speaker-avatar shrink-0" [class.male]="speaker.gender?.toLowerCase() === 'male'"
-                      [class.female]="speaker.gender?.toLowerCase() === 'female'">
+                    <span class="speaker-avatar shrink-0" [class.male]="speaker.gender.toLowerCase() === 'male'"
+                      [class.female]="speaker.gender.toLowerCase() === 'female'">
                       <span class="material-symbols-outlined text-[18px]">
-                        {{ speaker.gender?.toLowerCase() === 'female' ? 'woman' : 'man' }}
+                        {{ speaker.gender.toLowerCase() === 'female' ? 'woman' : 'man' }}
                       </span>
                     </span>
                     <div class="speaker-info">
                       <p>{{ speaker.speaker_name || speaker.name }}</p>
-                      <span class="voice-subtext">{{ speaker.voice }} ({{ speaker.gender?.toLowerCase() }})</span>
+                      <span class="voice-subtext">{{ speaker.voice }} ({{ speaker.gender.toLowerCase() }})</span>
                       </div>
                   </div>
                 </div>
@@ -629,15 +629,15 @@
               [class.selected]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) === spk.speaker_id"
               (click)="onSpeakerSelect(spk)">
               <div class="flex items-center gap-3 w-full">
-                <span class="speaker-avatar shrink-0" [class.male]="spk.gender?.toLowerCase() === 'male'"
-                  [class.female]="spk.gender?.toLowerCase() === 'female'">
+                <span class="speaker-avatar shrink-0" [class.male]="spk.gender.toLowerCase() === 'male'"
+                  [class.female]="spk.gender.toLowerCase() === 'female'">
                   <span class="material-symbols-outlined text-[18px]">
-                    {{ spk.gender?.toLowerCase() === 'female' ? 'woman' : 'man' }}
+                    {{ spk.gender.toLowerCase() === 'female' ? 'woman' : 'man' }}
                   </span>
                 </span>
                 <div class="speaker-info">
                   <div class="speaker-title">{{ spk.speaker_name || spk.name }}</div>
-                  <div class="speaker-subtitle">{{ spk.voice }} ({{ spk.gender?.toLowerCase() }})</div>
+                  <div class="speaker-subtitle">{{ spk.voice }} ({{ spk.gender.toLowerCase() }})</div>
                   </div>
               </div>
             </button>

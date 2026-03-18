@@ -1,8 +1,8 @@
 @use '../styles/variables' as var;
 
 .app-root {
-  background-color: #f8fafc; // bg-slate-50
-  color: #1e293b; // text-slate-800
+  background-color: #f8fafc;
+  color: #1e293b;
   font-family: var.$font-family-sans;
   -webkit-font-smoothing: antialiased;
   display: flex;

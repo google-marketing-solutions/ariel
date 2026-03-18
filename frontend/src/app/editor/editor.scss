@@ -5,9 +5,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem; // gap-3
-  padding: 0.5rem; // p-2
-  border-radius: 0.5rem; // rounded-lg
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
   background-color: var.$bg-white;
   border: 1px solid var.$border-subtle;
   box-shadow: 0 1px 2px 0 var.$border-subtle;
@@ -71,14 +71,14 @@
 }
 
 .speaker-avatar {
-  height: 2rem; // h-8
-  width: 2rem; // w-8
-  border-radius: 0.25rem; // rounded approx
+  height: 2rem;
+  width: 2rem;
+  border-radius: 0.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700; // font-bold
-  font-size: 0.75rem; // text-xs
+  font-weight: 700;
+  font-size: 0.75rem;
   font-style: italic;
 
   &.female {
@@ -126,7 +126,7 @@
   background-color: var.$bg-glass-light;
 
   @include var.dark-mode {
-    background-color: rgba(30, 41, 59, 0.4); // left as special glass or make var
+    background-color: rgba(30, 41, 59, 0.4);
   }
 }
 
@@ -138,18 +138,18 @@
   }
 
   .sidebar-content {
-    padding: 1rem; // p-4
+    padding: 1rem;
   }
 
   // Video Player Section
   .video-container {
     position: relative;
-    aspect-ratio: 16 / 9; // aspect-video
+    aspect-ratio: 16 / 9;
     width: 100%;
     overflow: hidden;
-    border-radius: 0.75rem; // rounded-xl
+    border-radius: 0.75rem;
     background-color: #000;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); // shadow-2xl approximate
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -166,19 +166,19 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 1.5rem; // p-6
+    padding: 1.5rem;
     width: 100%;
     height: 100%;
     text-align: center;
 
     .material-symbols-outlined {
-      font-size: 1.875rem; // text-3xl
-      margin-bottom: 0.5rem; // mb-2
+      font-size: 1.875rem;
+      margin-bottom: 0.5rem;
     }
 
     p {
-      font-size: 0.75rem; // text-xs
-      font-weight: 500; // font-medium
+      font-size: 0.75rem;
+      font-weight: 500;
     }
 
     &.loading {
@@ -192,33 +192,32 @@
     }
 
     &.error {
-      background-color: rgba(127, 29, 29, 0.2); // custom
+      background-color: rgba(127, 29, 29, 0.2);
       .material-symbols-outlined {
         color: var.$color-danger;
       }
       p {
-        color: #f87171; // custom light red or merge
+        color: #f87171;
       }
     }
 
     &.empty {
-      background-color: rgba(15, 23, 42, 0.5); // bg-slate-900/50
+      background-color: rgba(15, 23, 42, 0.5);
       .material-symbols-outlined {
-        color: #64748b; // text-slate-500
+        color: #64748b;
       }
       p {
-        color: #94a3b8; // text-slate-400
+        color: #94a3b8;
       }
     }
   }
 
-  // Global Settings Section
   .settings-section {
-    margin-top: 1.5rem; // mt-6
-    padding: 1rem; // Add padding to fix stuck-to-border issue
-      border-radius: 0.75rem; // Make corners rounded like other cards
-    background-color: rgba(248, 250, 252, 0.5); // leave custom slate-50 blend
-    border: 1px solid rgba(226, 232, 240, 0.6); // leave custom slate-200 blend
+    margin-top: 1.5rem;
+    padding: 1rem;
+      border-radius: 0.75rem;
+    background-color: rgba(248, 250, 252, 0.5);
+    border: 1px solid rgba(226, 232, 240, 0.6);
 
     @include var.dark-mode {
       background-color: rgba(var.$bg-dark-light, 0.5);
@@ -229,8 +228,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0.75rem 1rem; // py-3 px-4
-      border-radius: 0.75rem; // rounded-xl
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
       background-color: var.$bg-white;
       border: 1px solid var.$border-subtle;
       box-shadow: 0 1px 2px 0 var.$border-subtle;
@@ -242,7 +241,7 @@
       }
 
       & + .settings-card {
-        margin-top: 0.75rem; // space-y-3 approx
+        margin-top: 0.75rem;
       }
 
       select {
@@ -251,7 +250,7 @@
         font-size: 0.75rem;
         font-weight: 500;
         color: var.$text-main;
-        padding-right: 1.5rem; // Leave space for chevron
+        padding-right: 1.5rem;
           cursor: pointer;
           outline: none;
 
@@ -427,10 +426,10 @@
     }
 
     button {
-      font-size: 0.75rem; // text-xs
-      font-weight: 700; // font-bold
-      padding: 0.375rem 0.75rem; // px-3 py-1.5
-        border-radius: 0.25rem; // Matches other buttons
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
       transition-property: background-color, color, border-color, box-shadow;
       transition-duration: 150ms;
       display: inline-flex;
@@ -456,7 +455,7 @@
         }
 
       &.secondary {
-        border: 1px solid #e2e8f0; // leave custom slate-200 or make var
+        border: 1px solid #e2e8f0;
         &:hover { background-color: #f1f5f9; }
         @include var.dark-mode {
           background-color: transparent;
@@ -481,7 +480,7 @@
         color: var.$color-primary;
         font-size: 0.75rem;
           padding: 0.25rem 0.75rem;
-          border-radius: 0.25rem; // Matches other buttons
+          border-radius: 0.25rem;
         border: 1px solid rgba(var.$color-primary, 0.2);
         @include var.dark-mode {
           background-color: rgba(var.$color-primary-light, 0.1);
@@ -535,7 +534,7 @@
   }
 
   .workspace-content {
-    padding: 1.5rem; // p-6
+    padding: 1.5rem;
     max-width: 100%;
     margin-left: auto;
     margin-right: auto;
@@ -552,7 +551,7 @@
     padding-left: 1rem;
     padding-bottom: 0.75rem;
     border-bottom-width: 2px;
-    border-color: #e2e8f0; // leave custom frame
+    border-color: #e2e8f0;
     font-size: 0.875rem;
     font-weight: 800;
     text-transform: uppercase;
@@ -561,27 +560,27 @@
 
     @include var.dark-mode {
       border-color: var.$border-dark;
-      color: #cbd5e1; // leave slate-300
+      color: #cbd5e1;
     }
   }
 
   // Utterance Item
   .utterance-item {
-    padding-bottom: 1.5rem; // pb-6
-    padding-top: 1rem; // pt-4
-    padding-left: 1rem; // px-4
+    padding-bottom: 1.5rem;
+    padding-top: 1rem;
+    padding-left: 1rem;
     padding-right: 1rem;
-    margin-bottom: 1rem; // mb-4
+    margin-bottom: 1rem;
     position: relative;
     transition-property: all;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
-    border-radius: 0.75rem; // rounded-xl
+    border-radius: 0.75rem;
     cursor: pointer;
     border: 1px solid transparent;
 
     &:hover {
-      background-color: rgba(255, 255, 255, 0.5); // glass style
+      background-color: rgba(255, 255, 255, 0.5);
       @include var.dark-mode {
         background-color: rgba(var.$bg-dark-light, 0.5);
       }
@@ -609,8 +608,8 @@
       position: absolute;
       inset: 0;
       z-index: 10;
-      background-color: rgba(248, 250, 252, 0.4); // bg-slate-50/40
-      border-radius: 0.75rem; // rounded-xl
+      background-color: rgba(248, 250, 252, 0.4);
+      border-radius: 0.75rem;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -638,7 +637,7 @@
         }
 
         &.danger {
-          background-color: #dc2626; // leave or make var
+          background-color: #dc2626;
           @include var.dark-mode { background-color: #991b1b; }
         }
 
@@ -668,27 +667,27 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.5rem; // gap-2
-      margin-bottom: 0.75rem; // mb-3
-      padding-left: 0.5rem; // px-2
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      padding-left: 0.5rem;
       padding-right: 0.5rem;
     }
 
     .utterance-meta {
       display: flex;
       align-items: center;
-      gap: 0.5rem; // gap-2
+      gap: 0.5rem;
     }
 
     .badge {
-      height: 1.5rem; // h-6
+      height: 1.5rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.625rem; // text-[10px]
-      font-weight: 700; // font-bold
-      letter-spacing: 0.05em; // tracking-wide
-      border-radius: 0.5rem; // rounded-lg
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      border-radius: 0.5rem;
       border: 1px solid transparent;
 
       &.speaker {
@@ -706,7 +705,7 @@
 
         @include var.dark-mode {
           &:not(.female) {
-            background-color: rgba(96, 165, 250, 0.1); // bg-[#60a5fa]/10
+            background-color: rgba(96, 165, 250, 0.1);
             border-color: rgba(96, 165, 250, 0.2);
             color: #60a5fa;
           }
@@ -714,9 +713,9 @@
       }
 
       &.voice {
-        padding-left: 0.5rem; // px-2
+        padding-left: 0.5rem;
         padding-right: 0.5rem;
-        border-color: #2563eb; // border-primary
+        border-color: #2563eb;
         color: #2563eb;
 
         &.female {
@@ -726,10 +725,10 @@
       }
 
       &.status {
-        font-size: 0.625rem; // text-[10px]
-        font-weight: 700; // font-bold
-        padding: 0.125rem 0.5rem; // px-2 py-0.5
-        border-radius: 0.25rem; // rounded
+        font-size: 0.625rem;
+        font-weight: 700;
+        padding: 0.125rem 0.5rem;
+        border-radius: 0.25rem;
         border-width: 1px;
         border-style: solid;
         white-space: nowrap;
@@ -737,14 +736,14 @@
         &.blue {
           color: var.$color-primary;
           background-color: rgba(var.$color-primary, 0.05);
-          border-color: #bfdbfe; // leave light blue
+          border-color: #bfdbfe;
           animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
         &.green {
           color: var.$color-success;
           background-color: rgba(22, 163, 74, 0.05);
-          border-color: #bbf7d0; // leave light green
+          border-color: #bbf7d0;
           animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
@@ -760,9 +759,9 @@
     }
 
     .timestamp {
-      font-size: 0.625rem; // text-[10px]
+      font-size: 0.625rem;
       font-family: monospace;
-      color: #64748b; // text-slate-500
+      color: #64748b;
 
       @include var.dark-mode {
         color: #94a3b8;
@@ -772,22 +771,22 @@
     .toolbar {
       display: flex;
       align-items: center;
-      gap: 1rem; // gap-4
+      gap: 1rem;
       transition-property: opacity;
 
       .button-group {
         display: flex;
         align-items: center;
-        gap: 0.25rem; // gap-1
+        gap: 0.25rem;
 
         button {
-          width: 1.75rem; // w-7
-          height: 1.75rem; // h-7
+          width: 1.75rem;
+          height: 1.75rem;
           display: flex;
           align-items: center;
           justify-content: center;
           background-color: var.$bg-white;
-          border: 1px solid #e2e8f0; // leave frame
+          border: 1px solid #e2e8f0;
           border-radius: 0.25rem;
           color: var.$text-subtle;
           transition: all 150ms;
@@ -820,7 +819,7 @@
             @include var.dark-mode {
               background-color: rgba(217, 119, 6, 0.2);
               border-color: rgba(217, 119, 6, 0.4);
-              color: #f59e0b; // Brighter amber for dark mode visibility
+              color: #f59e0b;
               &:hover {
                 background-color: rgba(217, 119, 6, 0.3);
               }
@@ -853,7 +852,7 @@
         height: 1.75rem;
         border-radius: 0.25rem;
         background-color: var.$bg-white;
-        border: 1px solid #e2e8f0; // leave frame
+        border: 1px solid #e2e8f0;
         color: var.$text-subtle;
         transition: all 150ms;
 
@@ -892,9 +891,9 @@
           color: var.$color-warning;
 
           @include var.dark-mode {
-            background-color: rgba(217, 119, 6, 0.4); // custom
-            border-color: rgba(245, 158, 11, 0.5); // custom
-            color: #fca5a5; // custom
+            background-color: rgba(217, 119, 6, 0.4);
+            border-color: rgba(245, 158, 11, 0.5);
+            color: #fca5a5;
           }
         }
       }
@@ -903,10 +902,10 @@
     // Body
     .utterance-body {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr)); // grid-cols-2
-      gap: 2rem; // gap-8
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 2rem;
       align-items: stretch;
-      padding-left: 0.5rem; // px-2
+      padding-left: 0.5rem;
       padding-right: 0.5rem;
 
       .text-container {
@@ -920,10 +919,10 @@
           height: 100%;
           background-color: transparent;
           border: 1px solid transparent;
-          border-radius: 0.75rem; // rounded-xl
-          padding: 0.5rem 0; // py-2 px-0
-          font-size: 0.875rem; // text-sm
-          line-height: 1.625; // leading-relaxed
+          border-radius: 0.75rem;
+          padding: 0.5rem 0;
+          font-size: 0.875rem;
+          line-height: 1.625;
           outline: none;
           transition: all 150ms;
           resize: none;
@@ -934,15 +933,15 @@
           pointer-events: none;
 
           @include var.dark-mode {
-            color: #cbd5e1; // leave slate-300
+            color: #cbd5e1;
           }
         }
 
         .action-icon {
           position: absolute;
-          top: 0.625rem; // top-2.5
-          right: 0.75rem; // right-3
-          font-size: 1.25rem !important; // text-[20px]
+          top: 0.625rem;
+          right: 0.75rem;
+          font-size: 1.25rem !important;
           opacity: 0.6;
           transition: all 150ms;
           cursor: pointer;
@@ -975,10 +974,10 @@
       .utterance-body {
         .text-container {
           textarea {
-            padding-left: 0.75rem; // pl-3
-            padding-right: 2.5rem; // pr-10
-            border-color: #e2e8f0; // border
-            color: #64748b; // text-slate-500
+            padding-left: 0.75rem;
+            padding-right: 2.5rem;
+            border-color: #e2e8f0;
+            color: #64748b;
             pointer-events: auto;
             cursor: text;
 
@@ -1027,21 +1026,21 @@
       .toggle-group {
         display: flex;
         align-items: center;
-        gap: 0.75rem; // gap-3
-        font-size: 0.625rem; // text-[10px]
-        font-weight: 700; // font-bold
-        color: #94a3b8; // text-slate-400
+        gap: 0.75rem;
+        font-size: 0.625rem;
+        font-weight: 700;
+        color: #94a3b8;
       }
 
       button {
         display: flex;
         align-items: center;
-        gap: 0.25rem; // gap-1
+        gap: 0.25rem;
         font-weight: 700;
         transition-property: color, background-color, border-color;
         transition-duration: 150ms;
-        padding: 0.25rem 0.5rem; // px-2 py-1
-        border-radius: 0.25rem; // rounded
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
 
         &.active {
           background-color: var.$color-primary;
@@ -1086,7 +1085,7 @@
   }
 
   .sidebar-content {
-    padding: 1.25rem; // p-5
+    padding: 1.25rem;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -1094,12 +1093,12 @@
   }
 
   .panel-header {
-    font-size: 0.875rem; // text-sm
-    font-weight: 700; // font-bold
+    font-size: 0.875rem;
+    font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 0.5rem; // gap-2
-    margin-bottom: 1.5rem; // mb-6
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
 
     span {
       color: var.$color-primary;
@@ -1113,18 +1112,18 @@
   .panel-body {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem; // space-y-6
+    gap: 1.5rem;
     flex: 1;
   }
 
   // Inner elements styles
   input[type="text"] {
     width: 100%;
-    background-color: rgba(255, 255, 255, 0.5); // bg-white/50
-    border: 1px solid rgba(0, 0, 0, 0.1); // border-black/10
-    border-radius: 0.75rem; // rounded-xl
-    padding: 0.5rem 1rem; // px-4 py-2
-    font-size: 0.875rem; // text-sm
+    background-color: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 0.75rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
     text-align: center;
     transition-property: border-color, box-shadow;
     transition-duration: 150ms;
@@ -1136,7 +1135,7 @@
     }
 
     &:disabled {
-      background-color: #f1f5f9; // leave slate-100
+      background-color: #f1f5f9;
       color: var.$text-subtle;
       cursor: not-allowed;
       border-color: rgba(0, 0, 0, 0.05);
@@ -1156,11 +1155,11 @@
 
   textarea {
     width: 100%;
-    margin-top: 0.5rem; // mt-2
+    margin-top: 0.5rem;
     background-color: rgba(255, 255, 255, 0.5);
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 0.75rem;
-    padding: 0.625rem 1rem; // px-4 py-2.5
+    padding: 0.625rem 1rem;
     font-size: 0.875rem;
     outline: none;
     transition-property: border-color, box-shadow;
@@ -1183,11 +1182,11 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 0.5rem; // gap-2
-    border-radius: 0.75rem; // rounded-xl
-    padding: 0.625rem 1.25rem; // px-5 py-2.5
-    font-size: 0.875rem; // text-sm
-    font-weight: 600; // font-semibold
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
     transition-property: background-color, color, border-color, opacity;
     transition-duration: 150ms;
 
@@ -1200,8 +1199,8 @@
     }
 
     &.secondary {
-      background-color: #f1f5f9; // leave frame
-      color: #334155; // leave
+      background-color: #f1f5f9;
+      color: #334155;
       &:hover {
         background-color: #e2e8f0;
       }
@@ -1226,9 +1225,9 @@
   height: var.$footer-height;
   flex-shrink: 0;
   border-top-width: 2px;
-  border-color: #e2e8f0; // border-slate-200
-  backdrop-filter: blur(24px); // backdrop-blur-xl
-  background-color: #f1f5f9; // bg-slate-100
+  border-color: #e2e8f0;
+  backdrop-filter: blur(24px);
+  background-color: #f1f5f9;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -1240,7 +1239,7 @@
 
   @include var.dark-mode {
     border-color: var.$border-dark;
-    background-color: rgba(15, 23, 42, 0.9); // leave custom blend
+    background-color: rgba(15, 23, 42, 0.9);
     box-shadow: none;
   }
 
@@ -1254,8 +1253,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.5rem 1.5rem; // px-6 py-2
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05); // border-primary/10 approx
+    padding: 0.5rem 1.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 
     @include var.dark-mode {
       border-color: #334155;
@@ -1279,11 +1278,11 @@
     overflow-x: auto;
     overflow-y: hidden;
     position: relative;
-    padding-bottom: 0.5rem; // pb-2
+    padding-bottom: 0.5rem;
     
     .timeline-inner {
       width: 100%;
-      padding-left: 1.5rem; // px-6
+      padding-left: 1.5rem;
       padding-right: 1.5rem;
       transition: all 300ms;
     }
@@ -1292,8 +1291,8 @@
   .timeline-ruler {
     display: flex;
     align-items: center;
-    gap: 0.5rem; // gap-2
-    height: 1.5rem; // h-6
+    gap: 0.5rem;
+    height: 1.5rem;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 
     @include var.dark-mode {
@@ -1349,7 +1348,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding-right: 1rem; // pr-4
+      padding-right: 1rem;
 
       >span {
         font-size: 0.625rem;
@@ -1390,7 +1389,7 @@
         height: 2.25rem;
         border-radius: 9999px;
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        border: 1px solid #e2e8f0; // leave frame
+        border: 1px solid #e2e8f0;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1414,7 +1413,7 @@
           border-color: var.$border-dark;
           color: var.$text-muted;
           &:hover {
-            background-color: rgba(51, 65, 85, 0.8); // leave custom
+            background-color: rgba(51, 65, 85, 0.8);
             color: var.$color-primary-light;
           }
         }
@@ -1425,7 +1424,7 @@
       flex: 1;
       position: relative;
       height: 100%;
-      margin-right: 1.5rem; // mr-6
+      margin-right: 1.5rem;
     }
   }
 
@@ -1518,7 +1517,7 @@
         border-color: rgba(248, 113, 113, 0.3) !important;
         color: #f87171 !important;
         &.active {
-          border-color: #f87171 !important; // red-400
+          border-color: #f87171 !important;
           box-shadow: 0 0 8px rgba(248, 113, 113, 0.5) !important;
         }
       }
@@ -1563,7 +1562,7 @@
 .global-overlay {
   position: absolute;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.5); // left as global blend anchor
+  background-color: rgba(15, 23, 42, 0.5);
   z-index: 50;
   display: flex;
   flex-direction: column;
@@ -1577,15 +1576,15 @@
   }
 
   .material-symbols-outlined {
-    font-size: 2.25rem; // text-4xl
-    color: #2563eb; // text-primary
-    margin-bottom: 1rem; // mb-4
-    animation: spin 1s linear infinite; // animate-spin
+    font-size: 2.25rem;
+    color: #2563eb;
+    margin-bottom: 1rem;
+    animation: spin 1s linear infinite;
   }
 
   p {
-    font-size: 0.875rem; // text-sm
-    font-weight: 500; // font-medium
+    font-size: 0.875rem;
+    font-weight: 500;
     color: #fff;
     @include var.dark-mode { color: #cbd5e1; }
   }
@@ -1627,18 +1626,18 @@
   }
 
   button {
-    width: 1.75rem; // w-7
-    height: 1.75rem; // h-7
+    width: 1.75rem;
+    height: 1.75rem;
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: #fff;
-    border: 1px solid #e2e8f0; // border-slate-200
-    border-radius: 0.25rem; // rounded
-    color: #64748b; // text-slate-500
+    border: 1px solid #e2e8f0;
+    border-radius: 0.25rem;
+    color: #64748b;
     transition: all 150ms;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); // shadow-sm
-    position: relative; // override absolute line z-index if needed
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    position: relative;
     cursor: pointer;
 
     &:hover {
@@ -1660,36 +1659,36 @@
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 1rem; // p-4
+  padding: 1rem;
   background-color: var.$color-warning-lighter;
   border-top: 1px solid var.$color-warning-light;
   border-bottom: 1px solid var.$color-warning-light;
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem; // gap-3
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); // shadow-sm
+  gap: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   width: 100%;
   pointer-events: auto !important;
 
   @include var.dark-mode {
-    background-color: #0c0a09; // dark background
-    border-color: #78350f; // border-amber-800
+    background-color: #0c0a09;
+    border-color: #78350f;
   }
 
   .material-symbols-outlined {
-    color: #f59e0b; // text-amber-500
-    margin-top: 0.125rem; // mt-0.5
+    color: #f59e0b;
+    margin-top: 0.125rem;
     pointer-events: none;
   }
 
   h4 {
-    font-size: 0.875rem; // text-sm
-    font-weight: 700; // font-bold
-    color: #92400e; // text-amber-800
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #92400e;
     margin-bottom: 0.25rem;
 
     @include var.dark-mode {
-      color: #fbbf24; // text-amber-400
+      color: #fbbf24;
     }
   }
 
@@ -1716,7 +1715,7 @@
 
   .material-symbols-outlined {
     font-size: 2.25rem;
-    color: #cbd5e1; // leave slate-300
+    color: #cbd5e1;
     margin-bottom: 1rem;
 
     @include var.dark-mode {
@@ -1726,7 +1725,7 @@
 
   p {
     font-size: 0.875rem;
-    color: #475569; // leave slate-600
+    color: #475569;
     @include var.dark-mode {
       color: var.$text-muted;
     }
@@ -1741,7 +1740,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(15, 23, 42, 0.6); // leave overlay blend
+  background-color: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(4px);
   pointer-events: auto;
 }
@@ -1749,7 +1748,7 @@
 .modal-dialog {
   background-color: var.$bg-white;
   border-radius: 1rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); // leave custom heavy shadow
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -1762,7 +1761,7 @@
     border-color: var.$border-dark;
   }
 
-  &.sm { max-width: 24rem; } // max-w-sm
+  &.sm { max-width: 24rem; }
 
   .modal-header {
     display: flex;
@@ -1800,9 +1799,9 @@
     .left-actions, .right-actions { display: flex; gap: 0.75rem; }
 
     button {
-      padding: 0.5rem 1.25rem; // px-5 py-2
-      border-radius: 0.75rem; // rounded-xl
-      font-size: 0.875rem; // text-sm
+      padding: 0.5rem 1.25rem;
+      border-radius: 0.75rem;
+      font-size: 0.875rem;
       font-weight: 600;
       transition: all 150ms;
       cursor: pointer;
@@ -1815,7 +1814,7 @@
       }
 
       &.secondary {
-        color: #475569; // leave slate-600 or tokenize
+        color: #475569;
         background: transparent;
         border: 1px solid transparent;
         &:hover { background-color: #f1f5f9; border-color: #e2e8f0; }
