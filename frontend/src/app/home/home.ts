@@ -234,7 +234,6 @@ export class Home implements OnInit {
     formData.append('original_language', this.originalLanguage());
     formData.append('translate_language', this.translationLanguage());
     formData.append('prompt_enhancements', this.geminiInstructions());
-    formData.append('adjust_speed', this.adjustSpeed().toString());
     formData.append('use_pro_model', this.useProModel().toString());
 
     // Map speakers to format expected by backend
