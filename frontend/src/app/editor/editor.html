@@ -475,10 +475,17 @@
             <textarea #voiceInstructionsRef [value]="activeUtterance?.voice_instructions || ''"
               (input)="onVoiceInput(voiceInstructionsRef.value)" placeholder="Add specific terminology rules..."
               rows="4"></textarea>
+            <p class="panel-info-text pt-4">Enter a value between 0.25 and
+            2.0 to change the speaker's speed. Values less than 1 slow
+            the speech down and greater than 1 speed it up.</p>
+            <input #speakingRateRef class="form-input" type="number" id="speaker_speed"
+                   min="0.25" max="2.0" value="1.0" step="0.1"
+                   (input)="onSpeakingRateInput(+speakingRateRef.value)"/>
           </div>
           <div class="space-y-3 pt-4">
             <button [disabled]="!isVoiceDirty()" (click)="saveVoiceInstructions()" class="action-btn primary">
-              <span class="material-symbols-outlined text-[18px]">save</span> Save
+              <span class="material-symbols-outlined text-[18px]">save</span>
+              Save
             </button>
           </div>
         </div>

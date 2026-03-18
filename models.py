@@ -77,6 +77,7 @@ class Utterance(BaseModel):
   original_end_time: float
   translated_start_time: float
   translated_end_time: float
+  speaking_rate: float = 1.0
   removed: bool = False
   muted: bool = False
   audio_url: str = ""
@@ -121,6 +122,7 @@ class RegenerateRequest(BaseModel):
   video: Video
   utterance: int
   instructions: str = ""
+  speaking_rate: float = 1.0
 
 
 class RegenerateResponse(BaseModel):

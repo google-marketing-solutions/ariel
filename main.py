@@ -170,6 +170,7 @@ def _process_utterance(
     t.tone,
     translate_language,
     speaker.voice,
+    1.0,
     local_audio_path,
     model_name=gemini_tts_model,
   )
@@ -617,6 +618,7 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
     utterance.instructions,
     req.video.translate_language,
     utterance.speaker.voice,
+    float(req.speaking_rate),
     new_path,
     req.video.tts_model_name,
   )
@@ -647,6 +649,7 @@ def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
     req.instructions,
     req.video.translate_language,
     utterance.speaker.voice,
+    float(req.speaking_rate),
     new_path,
     req.video.tts_model_name,
   )

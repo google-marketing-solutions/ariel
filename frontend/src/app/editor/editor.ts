@@ -22,6 +22,7 @@ interface VideoUtterance {
   translated_text: string;
   instructions: string;
   voice_instructions?: string;
+  speaking_rate: number;
   original_start_time: number;
   original_end_time: number;
   translated_start_time: number;
@@ -136,6 +137,7 @@ export class Editor implements OnInit, OnDestroy {
 
   // Draft State for active panel
   draftVoiceInstructions = signal<string | null>(null);
+  draftSpeakingRate = signal<number | null>(null);
   draftTranslationInstructions = signal<string | null>(null);
   draftTimestamps = signal<{ start: string, end: string } | null>(null);
   timestampError = signal<string | null>(null);
@@ -144,9 +146,13 @@ export class Editor implements OnInit, OnDestroy {
   isVoiceDirty = computed(() => {
     const active = this.activeUtterance;
     if (!active) return false;
-    const draft = this.draftVoiceInstructions();
-    if (draft === null) return false;
-    return draft !== (active.voice_instructions || '');
+    const draftVoice = this.draftVoiceInstructions();
+    const draftRate = this.draftSpeakingRate();
+
+    const voiceInstructionsChanged = draftVoice !== null && draftVoice !== (active.voice_instructions || '');
+    const speakingRateChanged = draftRate !== null && draftRate !== active.speaking_rate;
+
+    return voiceInstructionsChanged || speakingRateChanged;
   });
 
   isTranslationDirty = computed(() => {
@@ -457,7 +463,6 @@ export class Editor implements OnInit, OnDestroy {
         formData.append('translate_language', newTranslateLang);
         formData.append('source_video_id', data.video_id);
         formData.append('update_existing', 'true');
-        formData.append('adjust_speed', 'false'); // Defaulting to false as it's not exposed in Editor UI
         formData.append('prompt_enhancements', data.prompt_enhancements || '');
 
         const speakersToPost = newSpeakers.map((s, index) => ({
@@ -484,7 +489,6 @@ export class Editor implements OnInit, OnDestroy {
         formData.append('source_video_id', data.video_id);
         formData.append('original_language', data.original_language);
         formData.append('translate_language', newTranslateLang);
-        formData.append('adjust_speed', 'false'); // Defaulting to false as it's not exposed in Editor UI
         formData.append('prompt_enhancements', data.prompt_enhancements || '');
 
         const speakersToPost = newSpeakers.map((s, index) => ({
@@ -661,6 +665,10 @@ export class Editor implements OnInit, OnDestroy {
     this.draftVoiceInstructions.set(val);
   }
 
+  onSpeakingRateInput(val: number) {
+    this.draftSpeakingRate.set(val);
+  }
+
   onTranslationInput(val: string) {
     this.draftTranslationInstructions.set(val);
   }
@@ -776,8 +784,9 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   saveVoiceInstructions() {
-    const draft = this.draftVoiceInstructions();
-    if (draft === null) return;
+    const draft = this.draftVoiceInstructions() || undefined;
+    const draftRate = this.draftSpeakingRate() || 1.0
+    if (!draft && draftRate === 1.0) return;
     const data = this.videoData();
     const activeId = this.activeUtteranceId();
     const initialState = this.initialUtteranceState();
@@ -789,7 +798,7 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u => {
           if (u.id === activeId) {
-            const updated = { ...u, voice_instructions: draft };
+            const updated = { ...u, voice_instructions: draft, speaking_rate: draftRate };
             updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
             return updated;
           }
@@ -958,7 +967,8 @@ export class Editor implements OnInit, OnDestroy {
         body: JSON.stringify({
           video: data,
           utterance: utteranceIndex,
-          instructions: utterance.voice_instructions || utterance.instructions || ''
+          instructions: utterance.voice_instructions || utterance.instructions || '',
+
         })
       });
 
@@ -1277,7 +1287,7 @@ export class Editor implements OnInit, OnDestroy {
     const data = this.videoData();
     if (data && data.video_id) {
       const expectedSrc = this.getOriginalAudioSrc(data);
-      
+
       const playSnippet = () => {
         this.originalAudio.currentTime = utterance.original_start_time;
         this.originalAudio.play().then(() => {
@@ -1599,6 +1609,7 @@ export class Editor implements OnInit, OnDestroy {
           speaker: currentUtterance.speaker,
           instructions: currentUtterance.instructions,
           voice_instructions: currentUtterance.voice_instructions,
+          speaking_rate: 1.0,
           audio_url: '',
           needs_dubbing_regen: true,
           needs_translation_regen: true,

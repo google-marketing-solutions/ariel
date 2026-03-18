@@ -52,6 +52,7 @@ def generate_audio(
     prompt: str,
     language: str,
     voice_name: str,
+    speaking_rate: float,
     output_path: str,
     model_name: str = "gemini-2.5-pro-tts",
 ) -> float:
@@ -75,7 +76,9 @@ def generate_audio(
         language_code=language, name=voice_name, model_name=model_name
     )
     audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.LINEAR16
+        audio_encoding=texttospeech.AudioEncoding.LINEAR16,
+        speaking_rate=speaking_rate,
+        pitch=20.0,
     )
     advanced_options = texttospeech.AdvancedVoiceOptions()
     # TODO: b/456676630 - add configuration flag for relaxing safety filters
