@@ -135,7 +135,6 @@ def _process_utterance(
   gemini_model: str,
   gemini_tts_model: str,
   local_dir: str,
-  adjust_speed: bool,
 ) -> Utterance:
   """Processes a single utterance: translates and generates audio.
 
@@ -370,6 +369,7 @@ async def process_video(
                 start_time=u["original_start_time"],
                 end_time=u["original_end_time"],
                 tone=u.get("instructions", ""),
+                gender=u["speaker"]["gender"],
               )
             )
           transcript = "SKIPPED_REUSED"
