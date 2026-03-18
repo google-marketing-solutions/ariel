@@ -28,7 +28,7 @@
         <!-- Global Settings Section -->
         <div class="settings-section">
           <div class="settings-header">
-            <h3 class="settings-title">Video Settings</h3>
+            <h3 class="settings-title whitespace-nowrap">Video Settings</h3>
             <div class="flex gap-2">
               @if (isEditingSettings()) {
               @if (!isGeneratingAudio()) {
@@ -45,7 +45,7 @@
               } @else {
               <button (click)="toggleEditSettings()" class="edit-btn">
                 <span class="material-symbols-outlined text-[14px]">edit</span>
-                Edit Settings
+                Edit
               </button>
               }
             </div>
@@ -55,42 +55,59 @@
             <!-- Languages -->
             <div class="space-y-3">
               @if (isEditingSettings()) {
-              <div class="settings-card">
-                <span class="card-label">Original</span>
-                <div class="relative flex items-center">
-                  <select [(ngModel)]="editOriginalLanguage" [disabled]="isGeneratingAudio()">
-                    <optgroup label="GA">
-                      @for (lang of gaLanguages(); track lang.code) {
-                      <option [value]="lang.code">{{ lang.name }}</option>
-                      }
-                    </optgroup>
-                    <optgroup label="Preview">
-                      @for (lang of previewLanguages(); track lang.code) {
-                      <option [value]="lang.code">{{ lang.name }}</option>
-                      }
-                    </optgroup>
-                  </select>
-                  <span
-                    class="material-symbols-outlined absolute right-0 text-slate-400 pointer-events-none text-[16px] -mt-0.5">expand_more</span>
+              <div class="settings-card flex-col items-stretch gap-2 !px-3 !py-2.5">
+                <span class="card-label mb-0 w-full text-left">Original</span>
+                <div class="custom-select original-select" [class.open]="isOriginalOpen()" [class.disabled]="isGeneratingAudio()">
+                  <div class="select-trigger" (click)="!isGeneratingAudio() && isOriginalOpen.set(!isOriginalOpen())">
+                    <span class="truncate">{{ originalLanguageLabel() }}</span>
+                    <span class="material-symbols-outlined select-arrow">expand_more</span>
+                  </div>
+                  @if (isOriginalOpen()) {
+                  <div class="select-dropdown custom-scrollbar" style="max-height: 250px;">
+                    <div class="optgroup-label">GA</div>
+                    @for (lang of gaLanguages(); track lang.code) {
+                    <div class="option" (click)="editOriginalLanguage.set(lang.code); isOriginalOpen.set(false)"
+                      [class.selected]="editOriginalLanguage() === lang.code">
+                      {{ lang.name }}
+                    </div>
+                    }
+                    <div class="optgroup-label">Preview</div>
+                    @for (lang of previewLanguages(); track lang.code) {
+                    <div class="option" (click)="editOriginalLanguage.set(lang.code); isOriginalOpen.set(false)"
+                      [class.selected]="editOriginalLanguage() === lang.code">
+                      {{ lang.name }}
+                    </div>
+                    }
+                  </div>
+                  }
                 </div>
               </div>
-              <div class="settings-card">
-                <span class="card-label">Translation</span>
-                <div class="relative flex items-center">
-                  <select [(ngModel)]="editTranslateLanguage" [disabled]="isGeneratingAudio()">
-                    <optgroup label="GA">
-                      @for (lang of gaLanguages(); track lang.code) {
-                      <option [value]="lang.code">{{ lang.name }}</option>
-                      }
-                    </optgroup>
-                    <optgroup label="Preview">
-                      @for (lang of previewLanguages(); track lang.code) {
-                      <option [value]="lang.code">{{ lang.name }}</option>
-                      }
-                    </optgroup>
-                  </select>
-                  <span
-                    class="material-symbols-outlined absolute right-0 text-slate-400 pointer-events-none text-[16px] -mt-0.5">expand_more</span>
+              <div class="settings-card flex-col items-stretch gap-2 !px-3 !py-2.5">
+                <span class="card-label mb-0 w-full text-left">Translation</span>
+                <div class="custom-select translation-select" [class.open]="isTranslationOpen()"
+                  [class.disabled]="isGeneratingAudio()">
+                  <div class="select-trigger" (click)="!isGeneratingAudio() && isTranslationOpen.set(!isTranslationOpen())">
+                    <span class="truncate">{{ translateLanguageLabel() }}</span>
+                    <span class="material-symbols-outlined select-arrow">expand_more</span>
+                  </div>
+                  @if (isTranslationOpen()) {
+                  <div class="select-dropdown custom-scrollbar" style="max-height: 250px;">
+                    <div class="optgroup-label">GA</div>
+                    @for (lang of gaLanguages(); track lang.code) {
+                    <div class="option" (click)="editTranslateLanguage.set(lang.code); isTranslationOpen.set(false)"
+                      [class.selected]="editTranslateLanguage() === lang.code">
+                      {{ lang.name }}
+                    </div>
+                    }
+                    <div class="optgroup-label">Preview</div>
+                    @for (lang of previewLanguages(); track lang.code) {
+                    <div class="option" (click)="editTranslateLanguage.set(lang.code); isTranslationOpen.set(false)"
+                      [class.selected]="editTranslateLanguage() === lang.code">
+                      {{ lang.name }}
+                    </div>
+                    }
+                  </div>
+                  }
                 </div>
               </div>
               } @else {
@@ -119,14 +136,17 @@
                 @if (isEditingSettings()) {
                 @for (speaker of editSpeakers(); track speaker.speaker_id || speaker.name; let i = $index) {
                 <div class="speaker-item">
-                  <div class="flex items-center gap-3">
-                    <div [class]="'speaker-avatar ' + (speaker.gender === 'Female' ? 'female' : 'male')">
-                      S{{ i + 1 }}
-                    </div>
+                  <div class="flex items-center gap-3 w-full">
+                    <span class="speaker-avatar shrink-0" [class.male]="speaker.gender?.toLowerCase() === 'male'"
+                      [class.female]="speaker.gender?.toLowerCase() === 'female'">
+                      <span class="material-symbols-outlined text-[18px]">
+                        {{ speaker.gender?.toLowerCase() === 'female' ? 'woman' : 'man' }}
+                      </span>
+                    </span>
                     <div class="speaker-info">
                       <p>{{ speaker.speaker_name || speaker.name }}</p>
                       <button (click)="openEditSpeakerVoiceModal(speaker.speaker_id)" [disabled]="isGeneratingAudio()">
-                        {{ speaker.voice }} ({{ speaker.gender }})
+                        {{ speaker.voice }} ({{ speaker.gender?.toLowerCase() }})
                       </button>
                     </div>
                   </div>
@@ -139,11 +159,17 @@
                 } @else {
                 @for (speaker of videoData()?.speakers; track speaker.speaker_id || speaker.name; let i = $index) {
                 <div class="speaker-item">
-                  <div [class]="'speaker-avatar ' + (speaker.gender === 'Female' ? 'female' : 'male')">
-                    S{{ i + 1 }}</div>
-                  <div class="speaker-info">
-                    <p>{{ speaker.speaker_name || speaker.name }}</p>
-                    <span class="voice-subtext">{{ speaker.voice }} ({{ speaker.gender }})</span>
+                  <div class="flex items-center gap-3 w-full">
+                    <span class="speaker-avatar shrink-0" [class.male]="speaker.gender?.toLowerCase() === 'male'"
+                      [class.female]="speaker.gender?.toLowerCase() === 'female'">
+                      <span class="material-symbols-outlined text-[18px]">
+                        {{ speaker.gender?.toLowerCase() === 'female' ? 'woman' : 'man' }}
+                      </span>
+                    </span>
+                    <div class="speaker-info">
+                      <p>{{ speaker.speaker_name || speaker.name }}</p>
+                      <span class="voice-subtext">{{ speaker.voice }} ({{ speaker.gender?.toLowerCase() }})</span>
+                      </div>
                   </div>
                 </div>
                 }
@@ -247,20 +273,20 @@
                 } @else if (utterance.needs_translation_regen && utterance.needs_dubbing_regen) {
                 <span class="badge status amber"
                   matTooltip="Original text or timings have changed. Translation and Dubbing are out of sync. Please click on the buttons to regenerate translation and dubbing.">
-                  Please regenerate translation and dubbing
-                  <span class="material-symbols-outlined">info</span>
+                  Translation & Dubbing changed
+                  <span class="material-symbols-outlined text-[14px]">info</span>
                 </span>
                 } @else if (utterance.needs_translation_regen) {
                 <span class="badge status amber"
                   matTooltip="Original text or timings have changed. Translation is out of sync. Please click on the button to regenerate translation.">
-                  Please regenerate translation
-                  <span class="material-symbols-outlined">info</span>
+                  Translation changed
+                  <span class="material-symbols-outlined text-[14px]">info</span>
                 </span>
                 } @else if (utterance.needs_dubbing_regen) {
                 <span class="badge status amber"
                   matTooltip="Translated text has changed. Dubbing is out of sync. Please click on the button to regenerate dubbing.">
-                  Please regenerate dubbing
-                  <span class="material-symbols-outlined">info</span>
+                  Dubbing changed
+                  <span class="material-symbols-outlined text-[14px]">info</span>
                 </span>
                 }
                 <!-- Regenerate Actions -->
@@ -271,7 +297,7 @@
                     @if (processingUtteranceId() === utterance.id && processingAction() === 'translation') {
                     <span class="material-symbols-outlined text-[16px] animate-spin">refresh</span>
                     } @else {
-                    <span class="material-symbols-outlined">autorenew</span>
+                    <span class="material-symbols-outlined text-[16px]">autorenew</span>
                     }
                   </button>
                   <button [class.warning]="utterance.needs_dubbing_regen" matTooltip="Regenerate Dubbing"
@@ -280,7 +306,7 @@
                     @if (processingUtteranceId() === utterance.id && processingAction() === 'dubbing') {
                     <span class="material-symbols-outlined text-[16px] animate-spin">refresh</span>
                     } @else {
-                    <span class="material-symbols-outlined">record_voice_over</span>
+                    <span class="material-symbols-outlined text-[16px]">record_voice_over</span>
                     }
                   </button>
                 </div>
@@ -290,7 +316,7 @@
                   <button matTooltip="Undo"
                     [disabled]="utterance.muted || utterance.removed || !canUndoActiveUtterance()"
                     (click)="revertUtterance(utterance.id); $event.stopPropagation()">
-                    <span class="material-symbols-outlined">history</span>
+                    <span class="material-symbols-outlined text-[16px]">history</span>
                   </button>
 
                 </div>
@@ -300,12 +326,12 @@
                   <button [matTooltip]="utterance.muted ? 'Unmute Utterance' : 'Mute Utterance'"
                     [disabled]="utterance.muted || utterance.removed"
                     (click)="toggleMuteUtterance(utterance.id); $event.stopPropagation()">
-                    <span class="material-symbols-outlined">{{ utterance.muted ? 'mic' : 'mic_off' }}</span>
+                    <span class="material-symbols-outlined text-[16px]">{{ utterance.muted ? 'mic' : 'mic_off' }}</span>
                   </button>
                   <button class="danger" [matTooltip]="utterance.removed ? 'Restore Utterance' : 'Remove Utterance'"
                     [disabled]="utterance.muted || utterance.removed"
                     (click)="toggleRemoveUtterance(utterance.id); $event.stopPropagation()">
-                    <span class="material-symbols-outlined">{{ utterance.removed ? 'settings_backup_restore' : 'delete'
+                    <span class="material-symbols-outlined text-[16px]">{{ utterance.removed ? 'settings_backup_restore' : 'delete'
                       }}</span>
                   </button>
                 </div>
@@ -319,49 +345,54 @@
                 } @else if (utterance.needs_translation_regen && utterance.needs_dubbing_regen) {
                 <span class="badge status amber"
                   matTooltip="Original text or timings have changed. Translation and Dubbing are out of sync. Please click on the buttons to regenerate translation and dubbing.">
-                  Please regenerate translation and dubbing
-                  <span class="material-symbols-outlined">info</span>
+                  Translation & Dubbing changed
+                  <span class="material-symbols-outlined text-[14px]">info</span>
                 </span>
                 } @else if (utterance.needs_translation_regen) {
                 <span class="badge status amber"
                   matTooltip="Original text or timings have changed. Translation is out of sync. Please click on the button to regenerate translation.">
-                  Please regenerate translation
-                  <span class="material-symbols-outlined">info</span>
+                  Translation changed
+                  <span class="material-symbols-outlined text-[14px]">info</span>
                 </span>
                 } @else if (utterance.needs_dubbing_regen) {
                 <span class="badge status amber"
                   matTooltip="Translated text has changed. Dubbing is out of sync. Please click on the button to regenerate dubbing.">
-                  Please regenerate dubbing
-                  <span class="material-symbols-outlined">info</span>
+                  Dubbing changed
+                  <span class="material-symbols-outlined text-[14px]">info</span>
                 </span>
                 }
               </div>
               }
-              @if (activeUtteranceId() === utterance.id) {
+            </div>
+            @if (activeUtteranceId() === utterance.id) {
               <!-- Interactive Action Buttons -->
               <div class="panel-toggle-bar">
                 <div class="flex items-center gap-4">
                   <div class="toggle-group">
                     <button (click)="setActivePanel(utterance.id, 'timestamps'); $event.stopPropagation()"
-                      [class.active]="activePanelMode() === 'timestamps'">
+                      [class.active]="activePanelMode() === 'timestamps'"
+                      [disabled]="utterance.muted || utterance.removed">
                       <span class="material-symbols-outlined text-sm">schedule</span>
                       Adjust timestamps
                     </button>
 
                     <button (click)="setActivePanel(utterance.id, 'speaker'); $event.stopPropagation()"
-                      [class.active]="activePanelMode() === 'speaker'">
+                      [class.active]="activePanelMode() === 'speaker'"
+                      [disabled]="utterance.muted || utterance.removed">
                       <span class="material-symbols-outlined text-sm">graphic_eq</span>
                       Change speaker
                     </button>
 
                     <button (click)="setActivePanel(utterance.id, 'translation'); $event.stopPropagation()"
-                      [class.active]="activePanelMode() === 'translation'">
+                      [class.active]="activePanelMode() === 'translation'"
+                      [disabled]="utterance.muted || utterance.removed">
                       <span class="material-symbols-outlined text-sm">spellcheck</span>
                       Translation instructions
                     </button>
 
                     <button (click)="setActivePanel(utterance.id, 'voice'); $event.stopPropagation()"
-                      [class.active]="activePanelMode() === 'voice'">
+                      [class.active]="activePanelMode() === 'voice'"
+                      [disabled]="utterance.muted || utterance.removed">
                       <span class="material-symbols-outlined text-sm">mood</span>
                       Voice instructions
                     </button>
@@ -383,11 +414,12 @@
                   @if (activeUtteranceId() === utterance.id) {
                   @if (utterance.isNew) {
                   <span class="material-symbols-outlined action-icon pointer-events-auto"
-                    matTooltip="This is a newly created utterance. It does not have original audio.">
+                    matTooltip="This is a newly created or merged utterance. It does not have original audio, so you can't play it.">
                     info
                   </span>
                   } @else {
                   <span class="material-symbols-outlined action-icon"
+                    [class.disabled]="utterance.muted || utterance.removed"
                     matTooltip="{{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'original' ? 'Stop original audio' : 'Play original audio' }}"
                     (click)="playOriginalUtterance(utterance, $event)">
                     {{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'original' ?
@@ -405,6 +437,7 @@
                     (click)="$event.stopPropagation()"></textarea>
                   @if (activeUtteranceId() === utterance.id && utterance.audio_url) {
                   <span class="material-symbols-outlined action-icon"
+                    [class.disabled]="utterance.muted || utterance.removed"
                     matTooltip="{{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'translated' ? 'Stop translated audio' : 'Play translated audio' }}"
                     (click)="playTranslatedUtterance(utterance, $event)">
                     {{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'translated' ?
@@ -414,7 +447,7 @@
                   }
                 </div>
               </div>
-            </div>
+              
             <!-- Inter-Utterance Actions -->
             <div class="utterance-insert-divider">
               <div class="divider-line"></div>
@@ -592,18 +625,20 @@
             </p>
 
             @for (spk of videoData()?.speakers; track spk.speaker_id) {
-            <button class="speaker-item"
+            <button class="speaker-item text-left block w-full"
               [class.selected]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) === spk.speaker_id"
               (click)="onSpeakerSelect(spk)">
-              <span class="speaker-avatar" [class.male]="spk.gender === 'MALE'"
-                [class.female]="spk.gender === 'FEMALE'">
-                <span class="material-symbols-outlined text-sm">
-                  {{ spk.gender === 'MALE' ? 'man' : 'woman' }}
+              <div class="flex items-center gap-3 w-full">
+                <span class="speaker-avatar shrink-0" [class.male]="spk.gender?.toLowerCase() === 'male'"
+                  [class.female]="spk.gender?.toLowerCase() === 'female'">
+                  <span class="material-symbols-outlined text-[18px]">
+                    {{ spk.gender?.toLowerCase() === 'female' ? 'woman' : 'man' }}
+                  </span>
                 </span>
-              </span>
-              <div>
-                <div class="speaker-title">{{ spk.speaker_name || spk.name }}</div>
-                <div class="speaker-subtitle">{{ spk.voice }}</div>
+                <div class="speaker-info">
+                  <div class="speaker-title">{{ spk.speaker_name || spk.name }}</div>
+                  <div class="speaker-subtitle">{{ spk.voice }} ({{ spk.gender?.toLowerCase() }})</div>
+                  </div>
               </div>
             </button>
             }
@@ -668,7 +703,7 @@
               @for (utterance of videoData()?.utterances; track utterance.id; let i = $index) {
               @if (!utterance.isNew) {
               <div class="audio-block" [class.active]="activeUtteranceId() === utterance.id"
-                [class.muted]="utterance.muted" [class.removed]="utterance.removed"
+                [class.removed]="utterance.removed"
                 [style.left.%]="getLeftPercent(utterance.original_start_time)"
                 [style.width.%]="getWidthPercent(utterance.original_start_time, utterance.original_end_time)"
                 (click)="focusUtterance(utterance.id)">
@@ -698,7 +733,7 @@
               @for (utterance of videoData()?.utterances; track utterance.id; let i = $index) {
               <div class="audio-block translated" [class.active]="activeUtteranceId() === utterance.id"
                 [class.new]="utterance.isNew && !utterance.original_text"
-                [class.overlap]="!utterance.isNew && getUtteranceOverlap(utterance)" [class.muted]="utterance.muted"
+                [class.overlap]="getUtteranceOverlap(utterance)" [class.muted]="utterance.muted"
                 [class.removed]="utterance.removed" [style.left.%]="getLeftPercent(utterance.translated_start_time)"
                 [style.width.%]="getWidthPercent(utterance.translated_start_time, utterance.translated_end_time)"
                 (mousedown)="onDragStart($event, utterance)">
@@ -787,7 +822,7 @@
 <div class="modal-overlay" id="validation-modal">
   <div class="modal-dialog">
     <div class="modal-header">
-      <span class="material-symbols-outlined">warning</span>
+      <span class="material-symbols-outlined warning-icon">warning</span>
       <h3>{{ validationModalTitle() }}</h3>
     </div>
     <div class="modal-body">

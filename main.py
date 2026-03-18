@@ -617,21 +617,9 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
     req.video.model_name,
     req.instructions,
   )
-  target_dir = os.path.join(mount_point, req.video.video_id)
-  new_file_name = (
-    f"audio_{req.utterance}-" + str(uuid.uuid1()) + ".wav"
-  )  # cache busting
-  new_path = os.path.join(target_dir, new_file_name)
-  duration = generate_audio(
-    new_translation,
-    utterance.instructions,
-    req.video.translate_language,
-    utterance.speaker.voice,
-    new_path,
-    req.video.tts_model_name,
-  )
+  
   return RegenerateResponse(
-    translated_text=new_translation, audio_url=new_path, duration=duration
+    translated_text=new_translation, audio_url="", duration=0.0
   )
 
 

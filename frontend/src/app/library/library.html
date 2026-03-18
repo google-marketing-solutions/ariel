@@ -90,33 +90,34 @@
 
   </div>
 
-</div>
-@if (isDeleteModalOpen()) {
-<div class="modal-overlay" (click)="cancelDelete()">
-  <div class="modal-dialog" (click)="$event.stopPropagation()">
+  @if (isDeleteModalOpen()) {
+  <div class="modal-overlay" (click)="cancelDelete()">
+    <div class="modal-dialog" (click)="$event.stopPropagation()">
 
-    <div class="modal-header">
-      <div class="icon-wrapper">
-        <span class="material-symbols-outlined">delete_forever</span>
+      <div class="modal-header">
+        <div class="icon-wrapper">
+          <span class="material-symbols-outlined">delete_forever</span>
+        </div>
+        <div class="title-group">
+          <h2>Delete Video?</h2>
+          <p>This action cannot be undone. This will permanently delete the video and its data.</p>
+        </div>
       </div>
-      <div class="title-group">
-        <h2>Delete Video?</h2>
-        <p>This action cannot be undone. This will permanently delete the video and its data.</p>
-      </div>
-    </div>
 
-    <div class="modal-footer">
-      <button [disabled]="isDeleting()" (click)="cancelDelete()" class="cancel-btn">
-        Cancel
-      </button>
-      <button [disabled]="isDeleting()" (click)="deleteVideo()" class="confirm-btn">
-        @if (isDeleting()) {
-        <span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Deleting...
-        } @else {
-        Delete Video
-        }
-      </button>
+      <div class="modal-footer">
+        <button [disabled]="isDeleting()" (click)="cancelDelete()" class="cancel-btn">
+          Cancel
+        </button>
+        <button [disabled]="isDeleting()" (click)="deleteVideo()" class="confirm-btn">
+          @if (isDeleting()) {
+          <span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Deleting...
+          } @else {
+          Delete Video
+          }
+        </button>
+      </div>
     </div>
   </div>
+  }
+
 </div>
-}

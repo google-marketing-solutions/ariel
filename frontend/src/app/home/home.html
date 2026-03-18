@@ -38,7 +38,7 @@
   @if (step() === 1) {
   <!-- Step 1 Area -->
   <div class="settings-container">
-    <div class="settings-grid">
+    <div class="settings-grid align-center">
       <div class="left-column">
         <div class="toggle-row">
           <h3>Gemini Model</h3>
@@ -167,7 +167,7 @@
                   <div class="voice-info">
                     <span>{{ speaker.voiceName }}</span>
                     <span class="material-symbols-outlined text-[14px]">
-                      {{ speaker.gender === 'Male' ? 'male' : 'female' }}
+                      {{ speaker.gender }}
                     </span>
                   </div>
                 </div>

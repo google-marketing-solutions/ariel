@@ -24,7 +24,7 @@ export class SpeakerModal implements OnInit {
 
   speakerName = signal('');
   searchQuery = signal('');
-  genderFilter = signal<'all' | 'Male' | 'Female'>('all');
+  genderFilter = signal<'all' | 'male' | 'female'>('all');
 
   voices = signal<Voice[]>([]);
 

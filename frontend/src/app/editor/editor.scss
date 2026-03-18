@@ -215,6 +215,8 @@
   // Global Settings Section
   .settings-section {
     margin-top: 1.5rem; // mt-6
+    padding: 1rem; // Add padding to fix stuck-to-border issue
+      border-radius: 0.75rem; // Make corners rounded like other cards
     background-color: rgba(248, 250, 252, 0.5); // leave custom slate-50 blend
     border: 1px solid rgba(226, 232, 240, 0.6); // leave custom slate-200 blend
 
@@ -249,6 +251,9 @@
         font-size: 0.75rem;
         font-weight: 500;
         color: var.$text-main;
+        padding-right: 1.5rem; // Leave space for chevron
+          cursor: pointer;
+          outline: none;
 
         &:hover { color: var.$color-primary; }
 
@@ -257,6 +262,141 @@
           &:hover { color: var.$color-primary-light; }
         }
       }
+.custom-select {
+  position: relative;
+  width: 100%;
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    .select-trigger {
+      pointer-events: none;
+    }
+  }
+
+  .select-trigger {
+    width: 100%;
+    background-color: rgba(248, 250, 252, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    padding-right: 2rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var.$text-main;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 150ms;
+
+    @include var.dark-mode {
+      background-color: var.$bg-dark;
+      border-color: var.$border-dark;
+      color: var.$text-light;
+    }
+
+    .select-arrow {
+      position: absolute;
+      right: 0.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var.$text-muted;
+      font-size: 1rem;
+      transition: transform 150ms;
+    }
+
+    .truncate {
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+  }
+
+  &.open {
+    .select-trigger {
+      border-color: var.$color-primary;
+      box-shadow: 0 0 0 1px rgba(var.$color-primary, 0.2);
+
+      .select-arrow {
+        transform: translateY(-50%) rotate(180deg);
+      }
+    }
+  }
+
+  .select-dropdown {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    left: 0;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: white;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    z-index: 50;
+
+    @include var.dark-mode {
+      background-color: #1e293b;
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .optgroup-label {
+      padding: 0.5rem 0.75rem 0.25rem;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var.$text-muted;
+      text-transform: uppercase;
+      background-color: rgba(0, 0, 0, 0.02);
+
+      @include var.dark-mode {
+        background-color: rgba(255, 255, 255, 0.02);
+      }
+    }
+
+    .option {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      color: var.$text-main;
+      cursor: pointer;
+      transition: background-color 150ms;
+
+      @include var.dark-mode {
+        color: var.$text-light;
+      }
+
+      &:hover {
+        background-color: rgba(var.$color-primary, 0.05);
+        color: var.$color-primary;
+
+        @include var.dark-mode {
+          background-color: rgba(255, 255, 255, 0.05);
+          color: var.$color-primary-light;
+        }
+      }
+
+      &.selected {
+        background-color: rgba(var.$color-primary, 0.10);
+        color: var.$color-primary;
+        font-weight: 600;
+
+        @include var.dark-mode {
+          background-color: rgba(var.$color-primary-light, 0.2);
+          color: var.$color-primary-light;
+        }
+      }
+    }
+  }
+
+  .overlay-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: transparent;
+    z-index: 40;
+  }
+}
     }
 
     .card-label {
@@ -287,12 +427,33 @@
     }
 
     button {
-      font-size: 0.625rem; // text-[10px]
+      font-size: 0.75rem; // text-xs
       font-weight: 700; // font-bold
-      padding: 0.25rem 0.75rem; // px-3 py-1
-      border-radius: 0.25rem; // rounded
+      padding: 0.375rem 0.75rem; // px-3 py-1.5
+        border-radius: 0.25rem; // Matches other buttons
       transition-property: background-color, color, border-color, box-shadow;
       transition-duration: 150ms;
+      display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      
+        &.cancel {
+          background-color: transparent;
+          color: var.$text-main;
+          border: 1px solid transparent;
+      
+          &:hover {
+            color: var.$text-subtle;
+          }
+      
+          @include var.dark-mode {
+            color: var.$text-light;
+      
+            &:hover {
+              color: var.$text-muted;
+            }
+          }
+        }
 
       &.secondary {
         border: 1px solid #e2e8f0; // leave custom slate-200 or make var
@@ -308,6 +469,7 @@
       &.primary {
         background-color: var.$color-primary;
         color: var.$bg-white;
+        border: 1px solid var.$color-primary;
         &:hover { background-color: #1d4ed8; }
       }
 
@@ -317,9 +479,9 @@
         gap: 0.25rem;
         background-color: rgba(var.$color-primary, 0.1);
         color: var.$color-primary;
-        font-size: 0.6875rem;
-        padding: 0.125rem 0.5rem;
-        border-radius: 0.5rem;
+        font-size: 0.75rem;
+          padding: 0.25rem 0.75rem;
+          border-radius: 0.25rem; // Matches other buttons
         border: 1px solid rgba(var.$color-primary, 0.2);
         @include var.dark-mode {
           background-color: rgba(var.$color-primary-light, 0.1);
@@ -647,6 +809,24 @@
             }
           }
 
+          &.warning {
+            color: var.$color-warning;
+            background-color: rgba(217, 119, 6, 0.05);
+            border-color: rgba(217, 119, 6, 0.2);
+            &:hover {
+               background-color: rgba(217, 119, 6, 0.1);
+            }
+
+            @include var.dark-mode {
+              background-color: rgba(217, 119, 6, 0.2);
+              border-color: rgba(217, 119, 6, 0.4);
+              color: #f59e0b; // Brighter amber for dark mode visibility
+              &:hover {
+                background-color: rgba(217, 119, 6, 0.3);
+              }
+            }
+          }
+
           &.danger:hover {
             color: var.$color-danger;
             background-color: rgba(var.$color-danger, 0.05);
@@ -773,6 +953,12 @@
             opacity: 1;
             transform: scale(1.1);
             color: #2563eb;
+          }
+
+          &.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
           }
         }
 
@@ -1165,7 +1351,7 @@
       justify-content: space-between;
       padding-right: 1rem; // pr-4
 
-      span {
+      >span {
         font-size: 0.625rem;
         font-weight: 700;
         text-transform: uppercase;
@@ -1174,7 +1360,7 @@
       }
 
       &.primary {
-        span {
+        >span {
           color: var.$color-primary;
           @include var.dark-mode { color: var.$color-primary-light; }
         }
@@ -1213,6 +1399,10 @@
         transition: all 150ms;
         cursor: pointer;
 
+        .material-symbols-outlined {
+          font-size: 1.125rem !important;
+        }
+
         &:hover {
           background-color: #f8fafc;
           color: #2563eb;
@@ -1244,6 +1434,7 @@
     top: 0.25rem;
     height: 2.5rem;
     background-color: var.$bg-dark-light;
+    color: var.$bg-white;
     border-radius: 0.5rem;
     display: flex;
     align-items: center;
@@ -1263,30 +1454,73 @@
     }
 
     &.active {
-      border-color: var.$color-primary;
+      border-color: var.$color-primary-light;
+      box-shadow: 0 0 8px rgba(var.$color-primary-light, 0.6);
+      z-index: 10;
+    }
+
+    &.translated {
+      background-color: rgba(var.$color-primary, 0.1) !important;
+      border-color: rgba(var.$color-primary, 0.2) !important;
+      color: var.$color-primary-dark !important;
+
+      &.active {
+        border-color: var.$color-primary !important;
+        box-shadow: 0 0 8px rgba(var.$color-primary, 0.5) !important;
+      }
+
+      @include var.dark-mode {
+        background-color: rgba(var.$color-primary-light, 0.1) !important;
+        border-color: rgba(var.$color-primary-light, 0.3) !important;
+        color: var.$color-primary-light !important;
+
+        &.active {
+          border-color: var.$color-primary-light !important;
+          box-shadow: 0 0 8px rgba(var.$color-primary-light, 0.5) !important;
+        }
+      }
     }
 
     &.new {
       background-color: rgba(217, 119, 6, 0.1) !important;
       border-color: rgba(217, 119, 6, 0.4) !important;
       border-style: dotted !important;
-      &.active { border-color: var.$color-warning !important; }
+      color: var.$color-warning !important;
+
+      &.active {
+        border-color: var.$color-warning !important;
+        box-shadow: 0 0 8px rgba(217, 119, 6, 0.5) !important;
+      }
+
+      @include var.dark-mode {
+        background-color: rgba(253, 230, 138, 0.1) !important;
+        border-color: rgba(253, 230, 138, 0.3) !important;
+        color: var.$color-warning-light !important;
+        &.active {
+          border-color: var.$color-warning-light !important;
+          box-shadow: 0 0 8px rgba(253, 230, 138, 0.5) !important;
+        }
+      }
     }
 
     &.overlap {
       background-color: rgba(var.$color-danger, 0.1) !important;
       border-color: rgba(var.$color-danger, 0.4) !important;
-      &.active { border-color: var.$color-danger !important; }
-    }
+      color: var.$color-danger !important;
 
-    &.translated {
-      background-color: rgba(var.$color-primary, 0.1) !important;
-      border-color: rgba(var.$color-primary, 0.2) !important;
-      &.active { border-color: var.$color-primary-dark !important; }
+      &.active {
+        border-color: var.$color-danger !important;
+        box-shadow: 0 0 8px rgba(var.$color-danger, 0.5) !important;
+      }
+
       @include var.dark-mode {
-        background-color: rgba(var.$color-primary-light, 0.1) !important;
-        border-color: rgba(var.$color-primary-light, 0.3) !important;
-        &.active { border-color: var.$color-primary-light !important; }
+        background-color: rgba(248, 113, 113, 0.1) !important;
+        border-color: rgba(248, 113, 113, 0.3) !important;
+        color: #f87171 !important;
+        &.active {
+          border-color: #f87171 !important; // red-400
+          box-shadow: 0 0 8px rgba(248, 113, 113, 0.5) !important;
+        }
       }
     }
 
@@ -1296,9 +1530,8 @@
     }
 
     .block-label {
-      font-size: 0.75rem;
+      font-size: 0.85rem;
       font-weight: 700;
-      color: var.$bg-white;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1315,15 +1548,13 @@
     
     .status-icon {
       margin-left: 0.25rem;
-      width: 1.25rem;
-      height: 1.25rem;
-      border-radius: 0.25rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: #dc2626; // leave or make var
-      color: var.$bg-white;
-      font-size: 0.75rem;
+      
+      span {
+        font-size: 1rem;
+      }
     }
   }
 }
@@ -1364,6 +1595,7 @@
   position: absolute;
   left: 0;
   right: 0;
+  bottom: -14px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1376,8 +1608,10 @@
     opacity: 1;
   }
 
-  &.top { top: -14px; }
-  &.bottom { bottom: -14px; }
+  &.top { 
+    top: -14px; 
+    bottom: auto;
+  }
 
   .divider-line {
     position: absolute;
@@ -1539,7 +1773,12 @@
 
     @include var.dark-mode { color: var.$color-primary-light; }
 
-    .material-symbols-outlined { font-size: 1.875rem; }
+    .material-symbols-outlined {
+      font-size: 1.875rem;
+      &.warning-icon {
+        color: var.$color-warning;
+      }
+    }
     h3 { font-size: 1.25rem; font-weight: 700; color: var.$text-main; @include var.dark-mode { color: var.$bg-white; } }
   }
 
