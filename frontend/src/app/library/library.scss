@@ -296,6 +296,10 @@
           align-items: center;
           gap: 0.375rem;
 
+          .material-symbols-outlined {
+            font-size: 1rem; // 16px to match standard text height instead of the default 24px
+          }
+
           @include var.dark-mode { color: var.$text-muted; }
         }
 

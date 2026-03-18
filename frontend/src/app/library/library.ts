@@ -13,7 +13,7 @@ interface VideoJob {
   name: string;
   url: string;
   download_url: string;
-  created_at: number;
+  created_at: number | string;
   original_language: string;
   translate_language: string;
   duration: number;
@@ -64,10 +64,16 @@ export class Library implements OnInit {
     }
   }
 
-  formatDate(timestamp: number): string {
+  formatDate(timestamp: number | string): string {
     if (!timestamp) return 'Date unknown';
-    // The Python backend might send seconds or ms, usually seconds from GCS
-    const date = new Date(timestamp > 1e11 ? timestamp : timestamp * 1000);
+    
+    let date: Date;
+    if (typeof timestamp === 'string') {
+      date = new Date(timestamp);
+    } else {
+      // The Python backend might send seconds or ms, usually seconds from local dev
+      date = new Date(timestamp > 1e11 ? timestamp : timestamp * 1000);
+    }
     
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
