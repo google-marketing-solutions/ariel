@@ -436,19 +436,19 @@
       display: inline-flex;
         align-items: center;
         justify-content: center;
-      
+
         &.cancel {
           background-color: transparent;
           color: var.$text-main;
           border: 1px solid transparent;
-      
+
           &:hover {
             color: var.$text-subtle;
           }
-      
+
           @include var.dark-mode {
             color: var.$text-light;
-      
+
             &:hover {
               color: var.$text-muted;
             }
@@ -1118,7 +1118,7 @@
   }
 
   // Inner elements styles
-  input[type="text"] {
+  input {
     width: 100%;
     background-color: rgba(255, 255, 255, 0.5); // bg-white/50
     border: 1px solid rgba(0, 0, 0, 0.1); // border-black/10
@@ -1280,7 +1280,7 @@
     overflow-y: hidden;
     position: relative;
     padding-bottom: 0.5rem; // pb-2
-    
+
     .timeline-inner {
       width: 100%;
       padding-left: 1.5rem; // px-6
@@ -1324,7 +1324,7 @@
     z-index: 50;
     pointer-events: none;
     box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
-    
+
     .playhead-marker {
       position: absolute;
       top: -0.25rem;
@@ -1545,13 +1545,13 @@
       opacity: 0.2;
       background: linear-gradient(to right, rgba(37, 99, 235, 0.5), transparent);
     }
-    
+
     .status-icon {
       margin-left: 0.25rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      
+
       span {
         font-size: 1rem;
       }
@@ -1573,7 +1573,7 @@
   backdrop-filter: blur(2px);
 
   @include var.dark-mode {
-    background-color: rgba(15, 23, 42, 0.5); 
+    background-color: rgba(15, 23, 42, 0.5);
   }
 
   .material-symbols-outlined {
@@ -1608,8 +1608,8 @@
     opacity: 1;
   }
 
-  &.top { 
-    top: -14px; 
+  &.top {
+    top: -14px;
     bottom: auto;
   }
 
