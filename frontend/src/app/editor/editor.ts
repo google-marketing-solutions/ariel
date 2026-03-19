@@ -805,8 +805,7 @@ export class Editor implements OnInit, OnDestroy {
 
   saveVoiceInstructions() {
     const draft = this.draftVoiceInstructions() || undefined;
-    const draftRate = this.draftSpeakingRate() || 1.0
-    if (!draft && draftRate === 1.0) return;
+    const draftRate = this.draftSpeakingRate() || 1.0;
     const data = this.videoData();
     const activeId = this.activeUtteranceId();
     const initialState = this.initialUtteranceState();
@@ -827,6 +826,7 @@ export class Editor implements OnInit, OnDestroy {
       };
     });
     this.draftVoiceInstructions.set(null);
+    this.draftSpeakingRate.set(null);
   }
 
   saveSpeaker() {

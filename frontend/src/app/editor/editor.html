@@ -512,7 +512,7 @@
             2.0 to change the speaker's speed. Values less than 1 slow
             the speech down and greater than 1 speed it up.</p>
             <input #speakingRateRef type="number" id="speaker_speed"
-                   min="0.25" max="2.0" value="1.0" step="0.1"
+                   min="0.25" max="2.0" [value]="activeUtterance?.speaking_rate || 1.0" step="0.1"
                    (input)="onSpeakingRateInput(+speakingRateRef.value)" />
           </div>
           <div class="space-y-3 pt-4">

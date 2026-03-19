@@ -78,7 +78,6 @@ def generate_audio(
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.LINEAR16,
         speaking_rate=speaking_rate,
-        pitch=20.0,
     )
     advanced_options = texttospeech.AdvancedVoiceOptions()
     # TODO: b/456676630 - add configuration flag for relaxing safety filters
