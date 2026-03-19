@@ -446,7 +446,7 @@ async def process_video(
       if to_return.utterances:
         duration = max([u.translated_end_time for u in to_return.utterances])
 
-    metadata['duration'] = round(duration, 1)
+    metadata['duration'] = duration
 
     metadata_path = os.path.join(local_dir, "metadata.json")
     with open(metadata_path, "w") as f:
@@ -559,7 +559,7 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
     metadata["original_video_url"] = (
       f"{mount_point}/{video_data.video_id}/{video_data.video_id}"
     )
-    metadata["duration"] = round(duration, 1)
+    metadata["duration"] = duration
 
     with open(os.path.join(local_dir, "metadata.json"), "w") as f:
       json.dump(metadata, f)
