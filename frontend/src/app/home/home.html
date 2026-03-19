@@ -35,84 +35,11 @@
   <!-- Hidden File Input -->
   <input type="file" id="video-input" accept="video/*" (change)="onFileSelected($event)" />
 
-  @if (step() === 1) {
   <!-- Step 1 Area -->
   <div class="settings-container">
     <div class="settings-grid align-center">
       <div class="left-column">
-        <div class="toggle-row">
-          <h3>Gemini Model</h3>
-          <div class="toggle-widget" [class.opacity-50]="isPreprocessing()">
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-model-step1" [checked]="useProModel()"
-                (change)="useProModel.set(!useProModel())" [disabled]="isPreprocessing()">
-              <span class="slider"></span>
-            </label>
-            <span class="toggle-label-text">{{ useProModel() ? 'Pro' : 'Flash' }}</span>
-          </div>
-        </div>
-      </div>
-      <div class="right-column">
-        @if (videoPreviewUrl()) {
-        <button (click)="preprocessVideo()" [disabled]="isPreprocessing()" class="action-btn">
-          @if (isPreprocessing()) {
-          <span class="material-symbols-outlined spinning">progress_activity</span>
-          Preprocessing...
-          } @else {
-          <span class="material-symbols-outlined">auto_awesome</span>
-          Pre-process Video
-          }
-        </button>
-        }
-      </div>
-    </div>
-  </div>
-  }
-
-  @if (step() === 2) {
-
-  <!-- Global Settings Container -->
-  <div class="settings-container">
-    <div class="settings-grid">
-      <!-- Left Column -->
-      <div class="left-column">
         <div class="form-grid">
-          <div class="form-group">
-            <div class="form-label-wrapper">
-              <h3>Original Language</h3>
-              <a href="https://docs.cloud.google.com/text-to-speech/docs/gemini-tts#available_languages" target="_blank"
-                class="help-link">
-                <span class="material-symbols-outlined"
-                  title="Select the source language of the video">help</span>
-              </a>
-            </div>
-            <div class="custom-select" [class.open]="isOriginalOpen()" [class.disabled]="isProcessing()">
-              <div class="select-trigger" (click)="!isProcessing() && isOriginalOpen.set(!isOriginalOpen())">
-                <span class="truncate">{{ originalLanguageLabel() }}</span>
-                <span class="material-symbols-outlined select-arrow">expand_more</span>
-              </div>
-              @if (isOriginalOpen()) {
-              <div class="select-dropdown custom-scrollbar">
-                <div class="optgroup-label">GA</div>
-                @for (lang of gaLanguages(); track lang.code) {
-                <div class="option" (click)="originalLanguage.set(lang.code); isOriginalOpen.set(false)"
-                  [class.selected]="originalLanguage() === lang.code">
-                  {{ lang.name }}
-                </div>
-                }
-                <div class="optgroup-label">Preview</div>
-                @for (lang of previewLanguages(); track lang.code) {
-                <div class="option" (click)="originalLanguage.set(lang.code); isOriginalOpen.set(false)"
-                  [class.selected]="originalLanguage() === lang.code">
-                  {{ lang.name }}
-                </div>
-                }
-              </div>
-              <div class="overlay-backdrop" (click)="isOriginalOpen.set(false)"></div>
-              }
-            </div>
-          </div>
-
           <div class="form-group">
             <div class="form-label-wrapper">
               <h3>Translation Language</h3>
@@ -122,8 +49,8 @@
                   title="Select the target language for dubbing">help</span>
               </a>
             </div>
-            <div class="custom-select" [class.open]="isTranslationOpen()" [class.disabled]="isProcessing()">
-              <div class="select-trigger" (click)="!isProcessing() && isTranslationOpen.set(!isTranslationOpen())">
+            <div class="custom-select" [class.open]="isTranslationOpen()" [class.disabled]="isPreprocessing()">
+              <div class="select-trigger" (click)="!isPreprocessing() && isTranslationOpen.set(!isTranslationOpen())">
                 <span class="truncate">{{ translationLanguageLabel() }}</span>
                 <span class="material-symbols-outlined select-arrow">expand_more</span>
               </div>
@@ -148,90 +75,34 @@
               }
             </div>
           </div>
-
-          <div class="form-group">
-            <div class="form-label-wrapper">
-              <h3>Speakers</h3>
-              <a href="https://docs.cloud.google.com/text-to-speech/docs/gemini-tts#voice_options" target="_blank"
-                class="help-link">
-                <span class="material-symbols-outlined"
-                  title="View available voice options">help</span>
-              </a>
+          <div class="toggle-row" style="align-self: center;">
+            <h3>Gemini Model</h3>
+            <div class="toggle-widget" [class.opacity-50]="isPreprocessing()">
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-model-step1" [checked]="useProModel()"
+                  (change)="useProModel.set(!useProModel())" [disabled]="isPreprocessing()">
+                <span class="slider"></span>
+              </label>
+              <span class="toggle-label-text">{{ useProModel() ? 'Pro' : 'Flash' }}</span>
             </div>
-            <button (click)="openSpeakerModal()" [disabled]="isProcessing()" class="add-speaker-btn">
-              <span class="material-symbols-outlined">add_circle</span>
-              Add Speaker
-            </button>
-
-            @if (speakers().length > 0) {
-            <div class="speaker-list-mini">
-              @for (speaker of speakers(); track speaker.id) {
-              <div class="speaker-pill">
-                <div class="speaker-details">
-                  <span class="name">{{ speaker.name }}</span>
-                  <div class="voice-info">
-                    <span>{{ speaker.voiceName }}</span>
-                    <span class="material-symbols-outlined gender-icon">
-                      {{ speaker.gender }}
-                    </span>
-                  </div>
-                </div>
-                <div class="speaker-actions">
-                  <button (click)="removeSpeaker(speaker.id)" [disabled]="isProcessing()" class="remove-btn" title="Delete speaker">
-                    <span class="material-symbols-outlined">close</span>
-                  </button>
-                  <button (click)="editSpeaker(speaker)" [disabled]="isProcessing()" class="edit-btn" title="Edit speaker">
-                    <span class="material-symbols-outlined">edit</span>
-                  </button>
-                </div>
-              </div>
-              }
-            </div>
-            }
           </div>
-        </div>
-
-        <div class="form-group">
-          <div class="form-label-wrapper">
-            <h3>Gemini Instructions</h3>
-          </div>
-          <textarea (input)="geminiInstructions.set($any($event.target).value)" [value]="geminiInstructions()"
-            [disabled]="isProcessing()" placeholder="e.g., No dubbing phrases, company name, special instructions..."
-            rows="4"></textarea>
         </div>
       </div>
-
-      <!-- Right Column -->
       <div class="right-column">
-        <div class="toggle-row">
-          <h3>Gemini Model</h3>
-          <div class="toggle-widget" [class.opacity-50]="isProcessing()">
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-model" [checked]="useProModel()"
-                (change)="useProModel.set(!useProModel())" [disabled]="isProcessing()">
-              <span class="slider"></span>
-            </label>
-            <span class="toggle-label-text">{{ useProModel() ? 'Pro' : 'Flash' }}</span>
-          </div>
-        </div>
+        @if (videoPreviewUrl() && translationLanguage()) {
+        <button (click)="processVideo()" [disabled]="isPreprocessing()" class="action-btn">
+          @if (isPreprocessing()) {
+          <span class="material-symbols-outlined spinning">progress_activity</span>
+          Processing...
+          } @else {
+          <span class="material-symbols-outlined">auto_awesome</span>
+          Process Video
+          }
+        </button>
+        }
       </div>
     </div>
   </div>
-
-  <div class="actions-footer">
-    <button (click)="step.set(1)" [disabled]="isProcessing()" class="btn-back">
-      Back
-    </button>
-    <button (click)="startProcessing()" [disabled]="!isFormValid() || isProcessing()" class="start-processing-btn">
-      @if (isProcessing()) {
-      <span class="material-symbols-outlined spinning">progress_activity</span>
-      Processing...
-      } @else {
-      Start Processing
-      }
-    </button>
-  </div>
-  }
 </div>
 <!-- Modals -->
 @if (isSpeakerModalOpen()) {

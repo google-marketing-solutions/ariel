@@ -219,7 +219,7 @@ def transcribe_media(audio_file_path: str, language: str) -> str:
     language = language.split("-")[0]
 
   segments, _ = whisper_model.transcribe(
-      audio_file_path, language=language, task="transcribe", beam_size=7
+      audio_file_path, language=language, task="transcribe", beam_size=7, word_timestamps=True,
   )
 
   transcript: list[str] = []

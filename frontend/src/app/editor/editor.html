@@ -507,7 +507,7 @@
               "speak
               faster," "with a happy tone," or "emphasize the first word") to control how the AI delivers the dubbed
               audio.</p>
-            <textarea #voiceInstructionsRef [value]="activeUtterance?.voice_instructions || ''"
+            <textarea #voiceInstructionsRef [value]="activeUtterance?.speaking_instructions || ''"
               (input)="onVoiceInput(voiceInstructionsRef.value)" placeholder="Add specific terminology rules..."
               rows="4"></textarea>
             <p class="panel-info-text speed-info">Enter a value between 0.25 and
@@ -536,7 +536,7 @@
               (e.g., "translate more formally" or "keep technical terms in English") to improve the accuracy or tone of
               the
               rewritten script.</p>
-            <textarea #translationInstructions [value]="activeUtterance?.instructions || ''"
+            <textarea #translationInstructions [value]="activeUtterance?.translation_instructions || ''"
               (input)="onTranslationInput(translationInstructions.value)"
               placeholder="E.g. Keep terminology consistent with marketing material." rows="6"></textarea>
           </div>

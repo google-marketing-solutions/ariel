@@ -20,8 +20,8 @@ interface VideoUtterance {
   id: string;
   original_text: string;
   translated_text: string;
-  instructions: string;
-  voice_instructions?: string;
+  translation_instructions: string;
+  speaking_instructions?: string;
   speaking_rate: number;
   original_start_time: number;
   original_end_time: number;
@@ -149,7 +149,7 @@ export class Editor implements OnInit, OnDestroy {
     const draftVoice = this.draftVoiceInstructions();
     const draftRate = this.draftSpeakingRate();
 
-    const voiceInstructionsChanged = draftVoice !== null && draftVoice !== (active.voice_instructions || '');
+    const voiceInstructionsChanged = draftVoice !== null && draftVoice !== (active.speaking_instructions || '');
     const speakingRateChanged = draftRate !== null && draftRate !== active.speaking_rate;
 
     return voiceInstructionsChanged || speakingRateChanged;
@@ -160,7 +160,7 @@ export class Editor implements OnInit, OnDestroy {
     if (!active) return false;
     const draft = this.draftTranslationInstructions();
     if (draft === null) return false;
-    return draft !== (active.instructions || '');
+    return draft !== (active.translation_instructions || '');
   });
 
   isTimestampsDirty = computed(() => {
@@ -212,8 +212,8 @@ export class Editor implements OnInit, OnDestroy {
 
     return currentU.original_text !== initialState.original_text ||
       currentU.translated_text !== initialState.translated_text ||
-      (currentU.instructions || '') !== (initialState.instructions || '') ||
-      (currentU.voice_instructions || '') !== (initialState.voice_instructions || '') ||
+      (currentU.translation_instructions || '') !== (initialState.translation_instructions || '') ||
+      (currentU.speaking_instructions || '') !== (initialState.speaking_instructions || '') ||
       currentU.translated_start_time !== initialState.translated_start_time ||
       currentU.translated_end_time !== initialState.translated_end_time ||
       currentU.speaker.speaker_id !== initialState.speaker.speaker_id;
@@ -326,16 +326,7 @@ export class Editor implements OnInit, OnDestroy {
       }
       const data: VideoJob = await response.json();
 
-      // The backend puts Gemini generated voice hints into the 'instructions' property by default
-      // Map these to the more specific 'voice_instructions' frontend property instead so they appear in the correct tab
-      if (data.utterances) {
-        data.utterances.forEach(u => {
-          if (u.instructions && !u.voice_instructions) {
-            u.voice_instructions = u.instructions;
-            u.instructions = ''; // Clear translation instructions to be clean by default
-          }
-        });
-      }
+
 
       this.videoData.set(data);
       this.initEditState();
@@ -546,7 +537,7 @@ export class Editor implements OnInit, OnDestroy {
             body: JSON.stringify({
               video: data,
               utterance: originalIndex,
-              instructions: utterance.voice_instructions || utterance.instructions || ''
+              instructions: utterance.speaking_instructions || utterance.translation_instructions || ''
             })
           });
           if (!response.ok) throw new Error('Failed to regenerate dubbing.');
@@ -738,7 +729,7 @@ export class Editor implements OnInit, OnDestroy {
     if (!initialState || initialState.id !== u.id) return true;
     const isDirty = (
       u.original_text !== initialState.original_text ||
-      (u.instructions || '') !== (initialState.instructions || '')
+      (u.translation_instructions || '') !== (initialState.translation_instructions || '')
     );
     return !!initialState.needs_translation_regen || isDirty;
   }
@@ -747,10 +738,10 @@ export class Editor implements OnInit, OnDestroy {
     if (!initialState || initialState.id !== u.id) return true;
     const isDirty = (
       u.speaker.speaker_id !== initialState.speaker.speaker_id ||
-      (u.voice_instructions || '') !== (initialState.voice_instructions || '') ||
+      (u.speaking_instructions || '') !== (initialState.speaking_instructions || '') ||
       u.translated_text !== initialState.translated_text ||
       u.original_text !== initialState.original_text ||
-      (u.instructions || '') !== (initialState.instructions || '')
+      (u.translation_instructions || '') !== (initialState.translation_instructions || '')
     );
     return !!initialState.needs_dubbing_regen || isDirty;
   }
@@ -791,7 +782,7 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u => {
           if (u.id === activeId) {
-            const updated = { ...u, instructions: draft };
+            const updated = { ...u, translation_instructions: draft };
             updated.needs_translation_regen = this.checkTranslationRegen(updated, initialState);
             updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
             return updated;
@@ -817,7 +808,7 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u => {
           if (u.id === activeId) {
-            const updated = { ...u, voice_instructions: draft, speaking_rate: draftRate };
+            const updated = { ...u, speaking_instructions: draft, speaking_rate: draftRate };
             updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
             return updated;
           }
@@ -916,7 +907,7 @@ export class Editor implements OnInit, OnDestroy {
         body: JSON.stringify({
           video: data,
           utterance: utteranceIndex,
-          instructions: utterance.instructions || utterance.voice_instructions || ''
+          instructions: utterance.translation_instructions || utterance.speaking_instructions || ''
         })
       });
 
@@ -984,7 +975,7 @@ export class Editor implements OnInit, OnDestroy {
         body: JSON.stringify({
           video: data,
           utterance: utteranceIndex,
-          instructions: utterance.voice_instructions || utterance.instructions || '',
+          instructions: utterance.speaking_instructions || utterance.translation_instructions || '',
 
         })
       });
@@ -1639,8 +1630,8 @@ export class Editor implements OnInit, OnDestroy {
           translated_start_time: newStartTime,
           translated_end_time: newEndTime,
           speaker: currentUtterance.speaker,
-          instructions: currentUtterance.instructions,
-          voice_instructions: currentUtterance.voice_instructions,
+          translation_instructions: currentUtterance.translation_instructions,
+          speaking_instructions: currentUtterance.speaking_instructions,
           speaking_rate: 1.0,
           audio_url: '',
           needs_dubbing_regen: true,

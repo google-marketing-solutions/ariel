@@ -176,74 +176,16 @@ export class Home implements OnInit {
       this.translationLanguage() !== '';
   }
 
-  async preprocessVideo() {
+  async processVideo() {
     const videoFile = this.selectedVideoFile();
-    if (!videoFile) return;
+    if (!videoFile || !this.translationLanguage()) return;
 
     this.isPreprocessing.set(true);
 
     const formData = new FormData();
     formData.append('video', videoFile);
-    formData.append('use_pro_model', this.useProModel().toString());
-
-    try {
-      console.log('Sending request to /preprocess...');
-      const response = await fetch('/preprocess', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Received result from backend:', result);
-
-      if (result.original_language) {
-        this.originalLanguage.set(result.original_language);
-      }
-      if (result.speakers && Array.isArray(result.speakers)) {
-        const mappedSpeakers = result.speakers.map((s: any) => ({
-          id: s.speaker_id,
-          name: s.speaker_name || `Speaker ${s.speaker_id}`,
-          voice: s.voice,
-          voiceName: s.voice,
-          gender: s.gender ? s.gender : 'neutral'
-        }));
-        this.speakers.set(mappedSpeakers);
-      }
-      this.step.set(2);
-    } catch (error) {
-      console.error('Failed to preprocess video:', error);
-    } finally {
-      this.isPreprocessing.set(false);
-    }
-  }
-
-  async startProcessing() {
-    if (!this.isFormValid()) return;
-
-    this.isProcessing.set(true);
-
-    const formData = new FormData();
-    const videoFile = this.selectedVideoFile();
-    if (videoFile) {
-      formData.append('video', videoFile);
-    }
-    formData.append('original_language', this.originalLanguage());
     formData.append('translate_language', this.translationLanguage());
-    formData.append('prompt_enhancements', this.geminiInstructions());
     formData.append('use_pro_model', this.useProModel().toString());
-
-    // Map speakers to format expected by backend
-    const speakersToPost = this.speakers().map((s, index) => ({
-      id: `speaker_${(index + 1).toString()}`,
-      name: s.name,
-      voice: s.voice,
-      gender: s.gender,
-    }));
-    formData.append('speakers', JSON.stringify(speakersToPost));
 
     try {
       console.log('Sending request to /process...');
@@ -259,14 +201,13 @@ export class Home implements OnInit {
       const result = await response.json();
       console.log('Received result from backend:', result);
 
-      // Redirect to the Editor page
       if (result.video_id) {
         this.router.navigate(['/editor'], { queryParams: { video_id: result.video_id } });
       }
     } catch (error) {
       console.error('Failed to process video:', error);
     } finally {
-      this.isProcessing.set(false);
+      this.isPreprocessing.set(false);
     }
   }
 }
