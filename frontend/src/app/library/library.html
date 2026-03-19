@@ -13,7 +13,7 @@
 
     @if (isLoading()) {
     <div class="loading-overlay">
-      <span class="material-symbols-outlined animate-spin">progress_activity</span>
+      <span class="material-symbols-outlined spinning">progress_activity</span>
       <p>Loading videos...</p>
     </div>
     } @else if (error()) {
@@ -46,11 +46,11 @@
           {{ video.name }}
         </h3>
         <p>
-          <span class="material-symbols-outlined text-[16px]">schedule</span>
+          <span class="material-symbols-outlined">schedule</span>
           {{ formatDate(video.created_at) }}
         </p>
         <p>
-          <span class="material-symbols-outlined text-[16px]">record_voice_over</span>
+          <span class="material-symbols-outlined">record_voice_over</span>
           {{ getSpeakersString(video.speakers) }}
         </p>
         
@@ -69,19 +69,19 @@
       <!-- Actions -->
       <div class="card-actions">
         <a [href]="video.download_url" [download]="video.name" class="download-btn">
-          <span class="material-symbols-outlined text-[18px]">download</span> Download
+          <span class="material-symbols-outlined">download</span> Download
         </a>
         @if (video.has_metadata) {
         <a [routerLink]="['/editor']" [queryParams]="{ video_id: video.video_id }" class="edit-btn">
-          <span class="material-symbols-outlined text-[18px]">edit</span> Edit
+          <span class="material-symbols-outlined">edit</span> Edit
         </a>
         } @else {
         <button disabled title="Legacy videos without metadata cannot be edited" class="edit-btn">
-          <span class="material-symbols-outlined text-[18px]">edit</span> Edit
+          <span class="material-symbols-outlined">edit</span> Edit
         </button>
         }
         <button (click)="promptDelete(video.video_id)" class="delete-btn">
-          <span class="material-symbols-outlined text-[18px]">delete</span> Delete
+          <span class="material-symbols-outlined">delete</span> Delete
         </button>
       </div>
     </div>
@@ -110,7 +110,7 @@
         </button>
         <button [disabled]="isDeleting()" (click)="deleteVideo()" class="confirm-btn">
           @if (isDeleting()) {
-          <span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Deleting...
+          <span class="material-symbols-outlined spinning">progress_activity</span> Deleting...
           } @else {
           Delete Video
           }

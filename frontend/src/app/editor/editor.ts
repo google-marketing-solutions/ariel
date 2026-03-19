@@ -1191,7 +1191,6 @@ export class Editor implements OnInit, OnDestroy {
       const sec = parseInt(secParts[0], 10) || 0;
       let ms = 0;
       if (secParts.length > 1) {
-        // Pad to ensure .5 is .50, etc.
         let msStr = secParts[1];
         if (msStr.length === 1) msStr += '0';
         ms = parseInt(msStr.substring(0, 2), 10) || 0;
@@ -1199,7 +1198,7 @@ export class Editor implements OnInit, OnDestroy {
       const val = (min * 60) + sec + (ms / 100);
       return isNegative ? -val : val;
     } catch {
-      return 0; // Fallback
+      return 0;
     }
   }
 
@@ -1344,7 +1343,7 @@ export class Editor implements OnInit, OnDestroy {
         this.originalAudio.src = expectedSrc;
         this.originalAudio.addEventListener('canplay', playSnippet, { once: true });
       } else {
-        if (this.originalAudio.readyState >= 3) { // HAVE_FUTURE_DATA or higher
+        if (this.originalAudio.readyState >= 3) {
           playSnippet();
         } else {
           this.originalAudio.addEventListener('canplay', playSnippet, { once: true });
@@ -1379,7 +1378,7 @@ export class Editor implements OnInit, OnDestroy {
 
       this.snippetAudio.onended = () => {
         this.isPlayingSnippet.set(false);
-        this.currentTime.set(0); // If tied to timeline visual, reset it.
+        this.currentTime.set(0);
         if (this.activeAudioPlayback?.id === utterance.id && this.activeAudioPlayback?.type === 'translated') {
           this.activeAudioPlayback = null;
         }
@@ -1506,7 +1505,7 @@ export class Editor implements OnInit, OnDestroy {
     if (!data) return [];
     return data.utterances.filter(u =>
       !u.removed &&
-      (u.id === utterance.id || // Include self
+      (u.id === utterance.id ||
         (utterance.translated_start_time <= u.translated_end_time && utterance.translated_end_time >= u.translated_start_time))
     );
   }
@@ -1562,7 +1561,7 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   onDragStart(event: MouseEvent, utterance: VideoUtterance) {
-    if (event.button !== 0) return; // Only left click
+    if (event.button !== 0) return;
     event.preventDefault();
     this.focusUtterance(utterance.id);
     this.isDragging.set(true);
@@ -1680,15 +1679,14 @@ export class Editor implements OnInit, OnDestroy {
 
         const mergedUtterance: VideoUtterance = {
           ...topUtterance,
-          id: crypto.randomUUID(), // Create a new ID so the UI refreshes properly
+          id: crypto.randomUUID(),
           original_text: `${topUtterance.original_text} ${bottomUtterance.original_text}`.trim(),
           translated_text: `${topUtterance.translated_text} ${bottomUtterance.translated_text}`.trim(),
           original_end_time: bottomUtterance.original_end_time,
           translated_end_time: bottomUtterance.translated_end_time,
-          // Since the text fundamentally changes by joining them, flag it for generation
           needs_translation_regen: true,
           needs_dubbing_regen: true,
-          audio_url: '' // Audio is no longer valid
+          audio_url: ''
         };
 
         const newUtterances = [...prev.utterances];
@@ -1709,19 +1707,15 @@ export class Editor implements OnInit, OnDestroy {
   onDocumentClick(event: MouseEvent) {
     if (!this.activeUtteranceId() && !this.activePanelMode()) return;
 
-    // We need to carefully define the click-away boundary.
     const targetElement = event.target as HTMLElement;
 
-    // Ignore clicks inside the video settings form specifically
     if (targetElement.closest('form')) return;
 
-    // Ignore clicks on header toggle buttons (e.g. edit settings button itself)
     if (targetElement.closest('.border-b.border-black\\/5')) return;
 
     // Clicks on the transparent gap between utterances (divider) should be treated as background clicks (fall through to clear).
     // But clicks on actual action buttons inside the divider or inside the utterance itself should keep it open.
     if (targetElement.closest('.utterance-insert-divider') && !targetElement.closest('button')) {
-      // Fall through
     } else if (targetElement.closest('[id^="utterance-"]')) {
       return;
     }
@@ -1759,7 +1753,7 @@ export class Editor implements OnInit, OnDestroy {
 
 private getOriginalAudioSrc(data: VideoJob): string {
     const u = data.utterances.find(utt => utt.audio_url);
-    let expectedSrc = `/temp/${data.video_id}/original_audio.wav`; // Fallback
+  let expectedSrc = `/temp/${data.video_id}/original_audio.wav`;
     if (u && u.audio_url) {
       let url = u.audio_url;
       if (!url.startsWith('http') && !url.startsWith('/')) {

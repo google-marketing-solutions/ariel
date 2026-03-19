@@ -119,9 +119,15 @@
       margin-right: 0.5rem;
       cursor: help;
 
-      span {
+      span:not(.material-symbols-outlined) {
         font-size: 0.875rem;
         font-weight: 600;
+        color: #d97706;
+        @include var.dark-mode { color: #fbbf24; }
+      }
+
+      .material-symbols-outlined {
+        font-size: 16px;
         color: #d97706;
         @include var.dark-mode { color: #fbbf24; }
       }
