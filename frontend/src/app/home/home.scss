@@ -179,6 +179,9 @@
       &:hover {
         background-color: var.$color-danger;
       }
+.material-symbols-outlined {
+  font-size: 18px;
+}
     }
 
     &:hover .close-btn {
@@ -187,6 +190,9 @@
   }
 }
 
+#video-input {
+  display: none;
+}
 
 .settings-container {
   width: 100%;
@@ -410,6 +416,7 @@
       border-radius: 0.75rem;
       padding: 0.75rem 1rem;
       font-size: 0.875rem;
+      font-family: inherit;
       outline: none;
       transition: all 150ms;
       resize: none;
@@ -465,10 +472,13 @@
       transform: none;
     }
 
-    .animate-spin {
+        .spinning {
       display: inline-block;
       animation: spin 1s linear infinite;
     }
+.material-symbols-outlined {
+  font-size: 18px;
+}
   }
 
   .add-speaker-btn {
@@ -728,10 +738,13 @@
        transform: none;
      }
 
-     .animate-spin {
+         .spinning {
        display: inline-block;
        animation: spin 1s linear infinite;
      }
+.material-symbols-outlined {
+  font-size: 18px;
+}
   }
 }
 

@@ -55,7 +55,7 @@
 
             @if (voice.url) {
             <button (click)="togglePlay(voice, $event)" class="control-btn">
-              <span class="material-symbols-outlined text-[16px]">{{ currentlyPlayingVoiceName() === voice.name ? 'stop' : 'play_arrow' }}</span>
+              <span class="material-symbols-outlined">{{ currentlyPlayingVoiceName() === voice.name ? 'stop' : 'play_arrow' }}</span>
             </button>
             }
 

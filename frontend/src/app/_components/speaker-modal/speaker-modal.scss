@@ -314,6 +314,10 @@
                 background-color: #e2e8f0;
                 @include var.dark-mode { background-color: #334155; }
               }
+
+              .material-symbols-outlined {
+                font-size: 16px;
+              }
             }
 
             .select-btn {

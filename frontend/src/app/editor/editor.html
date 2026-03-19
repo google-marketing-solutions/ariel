@@ -8,7 +8,7 @@
 
           @if (isLoading()) {
           <div class="video-state-overlay loading">
-            <span class="material-symbols-outlined animate-spin">progress_activity</span>
+            <span class="material-symbols-outlined spinning">progress_activity</span>
             <p>Loading video...</p>
           </div>
           } @else if (error()) {
@@ -28,7 +28,7 @@
         <!-- Global Settings Section -->
         <div class="settings-section">
           <div class="settings-header">
-            <h3 class="settings-title whitespace-nowrap">Video Settings</h3>
+            <h3 class="settings-title">Video Settings</h3>
             <div class="settings-actions">
               @if (isEditingSettings()) {
               @if (!isGeneratingAudio()) {
@@ -36,7 +36,7 @@
               }
               <button (click)="saveVideoSettings()" [disabled]="isGeneratingAudio()" class="primary">
                 @if (isGeneratingAudio()) {
-                <span class="material-symbols-outlined text-[14px] animate-spin">refresh</span>
+                <span class="material-symbols-outlined spinning">refresh</span>
                 Processing
                 } @else {
                 Submit
@@ -44,7 +44,7 @@
               </button>
               } @else {
               <button (click)="toggleEditSettings()" class="edit-btn">
-                <span class="material-symbols-outlined text-[14px]">edit</span>
+                <span class="material-symbols-outlined">edit</span>
                 Edit
               </button>
               }
@@ -156,7 +156,7 @@
                   </div>
                   <button (click)="removeEditSpeaker(speaker.speaker_id)" [disabled]="isGeneratingAudio()"
                     class="remove-btn">
-                    <span class="material-symbols-outlined text-[16px]">close</span>
+                    <span class="material-symbols-outlined">close</span>
                   </button>
                 </div>
                 }
@@ -202,7 +202,7 @@
           <span>{{ getLanguageName(isEditingSettings() ? editTranslateLanguage() : videoData()?.translate_language)
             }}</span>
         </div>
-        <div class="space-y-4" style="padding-bottom: 12rem;">
+        <div class="utterance-list" style="padding-bottom: 12rem;">
 
 
 
@@ -218,7 +218,7 @@
             <div class="utterance-insert-divider top">
               <div class="divider-line"></div>
               <button matTooltip="Add utterance above" (click)="createNewUtterance(-1, $event)">
-                <span class="material-symbols-outlined text-[16px]">add</span>
+                <span class="material-symbols-outlined">add</span>
               </button>
             </div>
             }
@@ -228,7 +228,7 @@
               <div class="overlay-badge">
                 <span>Muted - original audio will be used</span>
                 <button (click)="toggleMuteUtterance(utterance.id); $event.stopPropagation()">
-                  <span class="material-symbols-outlined text-[14px]">volume_up</span>
+                  <span class="material-symbols-outlined">volume_up</span>
                   <span>Unmute</span>
                 </button>
               </div>
@@ -240,7 +240,7 @@
               <div class="overlay-badge danger">
                 <span>Deleted - no audio will be generated</span>
                 <button (click)="toggleRemoveUtterance(utterance.id); $event.stopPropagation()">
-                  <span class="material-symbols-outlined text-[14px]">settings_backup_restore</span>
+                  <span class="material-symbols-outlined">settings_backup_restore</span>
                   <span>Restore</span>
                 </button>
               </div>
@@ -277,19 +277,19 @@
                 <span class="badge status amber"
                   matTooltip="Original text or timings have changed. Translation and Dubbing are out of sync. Please click on the buttons to regenerate translation and dubbing.">
                   Translation & Dubbing changed
-                  <span class="material-symbols-outlined text-[14px]">info</span>
+                  <span class="material-symbols-outlined">info</span>
                 </span>
                 } @else if (utterance.needs_translation_regen) {
                 <span class="badge status amber"
                   matTooltip="Original text or timings have changed. Translation is out of sync. Please click on the button to regenerate translation.">
                   Translation changed
-                  <span class="material-symbols-outlined text-[14px]">info</span>
+                  <span class="material-symbols-outlined">info</span>
                 </span>
                 } @else if (utterance.needs_dubbing_regen) {
                 <span class="badge status amber"
                   matTooltip="Translated text has changed. Dubbing is out of sync. Please click on the button to regenerate dubbing.">
                   Dubbing changed
-                  <span class="material-symbols-outlined text-[14px]">info</span>
+                  <span class="material-symbols-outlined">info</span>
                 </span>
                 }
                 <!-- Regenerate Actions -->
@@ -298,7 +298,7 @@
                     [disabled]="utterance.muted || utterance.removed || (processingUtteranceId() === utterance.id && processingAction() === 'translation')"
                     (click)="regenerateTranslation(utterance.id); $event.stopPropagation()">
                     @if (processingUtteranceId() === utterance.id && processingAction() === 'translation') {
-                    <span class="material-symbols-outlined animate-spin">refresh</span>
+                    <span class="material-symbols-outlined spinning">refresh</span>
                     } @else {
                     <span class="material-symbols-outlined">autorenew</span>
                     }
@@ -307,7 +307,7 @@
                     [disabled]="utterance.muted || utterance.removed || (processingUtteranceId() === utterance.id && processingAction() === 'dubbing')"
                     (click)="regenerateDubbing(utterance.id); $event.stopPropagation()">
                     @if (processingUtteranceId() === utterance.id && processingAction() === 'dubbing') {
-                    <span class="material-symbols-outlined animate-spin">refresh</span>
+                    <span class="material-symbols-outlined spinning">refresh</span>
                     } @else {
                     <span class="material-symbols-outlined">record_voice_over</span>
                     }
@@ -349,19 +349,19 @@
                 <span class="badge status amber"
                   matTooltip="Original text or timings have changed. Translation and Dubbing are out of sync. Please click on the buttons to regenerate translation and dubbing.">
                   Translation & Dubbing changed
-                  <span class="material-symbols-outlined text-[14px]">info</span>
+                  <span class="material-symbols-outlined">info</span>
                 </span>
                 } @else if (utterance.needs_translation_regen) {
                 <span class="badge status amber"
                   matTooltip="Original text or timings have changed. Translation is out of sync. Please click on the button to regenerate translation.">
                   Translation changed
-                  <span class="material-symbols-outlined text-[14px]">info</span>
+                  <span class="material-symbols-outlined">info</span>
                 </span>
                 } @else if (utterance.needs_dubbing_regen) {
                 <span class="badge status amber"
                   matTooltip="Translated text has changed. Dubbing is out of sync. Please click on the button to regenerate dubbing.">
                   Dubbing changed
-                  <span class="material-symbols-outlined text-[14px]">info</span>
+                  <span class="material-symbols-outlined">info</span>
                 </span>
                 }
               </div>
@@ -415,7 +415,7 @@
 
                 @if (activeUtteranceId() === utterance.id) {
                 @if (utterance.isNew) {
-                <span class="material-symbols-outlined action-icon pointer-events-auto"
+                <span class="material-symbols-outlined action-icon"
                   matTooltip="This is a newly created or merged utterance. It does not have original audio, so you can't play it.">
                   info
                 </span>
@@ -472,7 +472,6 @@
       </div>
       @if (durationWarningCount() > 0) {
       <div class="warning-banner">
-        <span class="material-symbols-outlined">warning</span>
         <div>
           <h4>Audio Exceeds Video Duration</h4>
           <p>
@@ -511,15 +510,15 @@
             <textarea #voiceInstructionsRef [value]="activeUtterance?.voice_instructions || ''"
               (input)="onVoiceInput(voiceInstructionsRef.value)" placeholder="Add specific terminology rules..."
               rows="4"></textarea>
-            <p class="panel-info-text pt-4">Enter a value between 0.25 and
+            <p class="panel-info-text speed-info">Enter a value between 0.25 and
               2.0 to change the speaker's speed. Values less than 1 slow
               the speech down and greater than 1 speed it up.</p>
             <input #speakingRateRef type="number" id="speaker_speed" min="0.25" max="2.0" value="1.0" step="0.1"
               (input)="onSpeakingRateInput(+speakingRateRef.value)" />
           </div>
-          <div class="space-y-3 pt-4">
+          <div class="panel-actions">
             <button [disabled]="!isVoiceDirty()" (click)="saveVoiceInstructions()" class="action-btn primary">
-              <span class="material-symbols-outlined text-[18px]">save</span>
+              <span class="material-symbols-outlined">save</span>
               Save
             </button>
           </div>
@@ -541,10 +540,10 @@
               (input)="onTranslationInput(translationInstructions.value)"
               placeholder="E.g. Keep terminology consistent with marketing material." rows="6"></textarea>
           </div>
-          <div class="space-y-3 pt-4">
+          <div class="panel-actions">
             <button [disabled]="!isTranslationDirty()" (click)="saveTranslationInstructions()"
               class="action-btn primary">
-              <span class="material-symbols-outlined text-[18px]">save</span> Save
+              <span class="material-symbols-outlined">save</span> Save
             </button>
           </div>
         </div>
@@ -581,7 +580,7 @@
                   [value]="activeUtterance ? formatTime(activeUtterance.original_end_time) : '00:00.00'" disabled>
               </div>
             </div>
-            <div class="timestamp-grid pt-4">
+            <div class="timestamp-grid translated-timestamps">
               <div>
                 <label class="timestamp-label">Translated Start Time</label>
                 <input #transStart type="text"
@@ -599,13 +598,13 @@
           <div class="timestamp-actions-container">
             <div class="timestamp-actions">
               @if (isTimestampsDirty() || timestampError()) {
-              <button (click)="cancelTimestamps()" class="flex-1 action-btn secondary">
-                <span class="material-symbols-outlined text-[18px]">undo</span> Undo
+              <button (click)="cancelTimestamps()" class="action-btn secondary cancel-btn">
+                <span class="material-symbols-outlined">undo</span> Undo
               </button>
               }
               <button [disabled]="!isTimestampsDirty() && !timestampError()" (click)="saveTimestamps()"
-                class="flex-[2] action-btn primary">
-                <span class="material-symbols-outlined text-[18px]">save</span> Save
+                class="action-btn primary save-btn">
+                <span class="material-symbols-outlined">save</span> Save
               </button>
             </div>
             @if (timestampError()) {
@@ -620,7 +619,7 @@
           <span class="material-symbols-outlined">graphic_eq</span> Change speaker
         </h3>
         <div class="panel-body">
-          <div class="panel-section flex flex-col gap-2">
+          <div class="panel-section speaker-selection">
             <p class="panel-info-text">Select a different voice for this
               segment
               from the available list of AI voice actors to better match the character or tone of the original speaker.
@@ -634,7 +633,7 @@
             </p>
 
             @for (spk of videoData()?.speakers; track spk.speaker_id) {
-            <button class="speaker-item w-full text-left"
+            <button class="speaker-item"
               [class.selected]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) === spk.speaker_id"
               (click)="onSpeakerSelect(spk)">
               <span class="speaker-avatar" [class.male]="spk.gender === 'male'" [class.female]="spk.gender === 'female'">
@@ -649,9 +648,9 @@
             </button>
             }
           </div>
-          <div class="space-y-3 pt-4 panel-section">
+          <div class="panel-section panel-actions">
             <button [disabled]="!isSpeakerDirty()" (click)="saveSpeaker()" class="action-btn primary">
-              <span class="material-symbols-outlined text-[18px]">save</span> Save
+              <span class="material-symbols-outlined">save</span> Save
             </button>
           </div>
         </div>
@@ -665,7 +664,7 @@
   <!-- Bottom Row: Timeline -->
   <footer [class.processing]="isProcessingGlobalChanges()" class="editor-footer">
     <div class="timeline-controls">
-      <div class="flex items-center gap-6">
+      <div class="timeline-status">
         <div class="time-display">
           {{ formatTime(currentTime()) }} / {{ formatTime(timelineDuration) }}
         </div>
@@ -694,13 +693,13 @@
           </div>
         </div>
         <!-- Tracks -->
-        <div class="pt-2 pb-6 space-y-2">
+        <div class="timeline-tracks">
           <!-- Original Track -->
           <div class="timeline-track">
             <div class="track-label">
               <span>Original</span>
               <button (click)="toggleOriginalAudio()" [disabled]="isGeneratingAudio()" matTooltip="Play Original">
-                <span class="material-symbols-outlined ml-0.5">
+                <span class="material-symbols-outlined nav-icon">
                   {{ isGeneratingAudio() ? 'hourglass_empty' : isPlayingOriginal() ? 'stop' : 'play_arrow' }}
                 </span>
               </button>
@@ -727,7 +726,7 @@
             <div class="track-label primary">
               <span>Translated</span>
               <button (click)="toggleTranslatedAudio()" [disabled]="isGeneratingAudio()" matTooltip="Play Translated">
-                <span class="material-symbols-outlined ml-0.5">
+                <span class="material-symbols-outlined nav-icon">
                   @if (isGeneratingAudio()) { hourglass_empty }
                   @else if (isPlayingTranslated()) { stop }
                   @else { play_arrow }
@@ -765,12 +764,12 @@
             <!-- Overlap Popup -->
             @if (showOverlapPopup()) {
             <div [style.left.px]="popupPosition().x" [style.top.px]="popupPosition().y"
-              class="fixed bg-red-500 text-white border-4 border-black rounded-lg shadow-lg p-2 z-[1000] flex flex-col gap-1 pointer-events-auto"
+              class="overlap-popup"
               (mouseenter)="keepPopupOpen()" (mouseleave)="closePopup()">
-              <div class="text-xs font-bold text-white px-2 pb-1 border-b border-red-400">Overlapping (DEBUG)</div>
+              <div class="overlap-popup-header">Overlapping (DEBUG)</div>
               @for (u of overlappingUtterances(); track u.id) {
               <button (click)="selectFromPopup(u)" class="overlap-btn">
-                <span class="w-2 h-2 rounded-full bg-white"></span>
+                <span class="overlap-dot"></span>
                 <span>U{{ getUtteranceIndex(u) + 1 }}</span>
               </button>
               }

@@ -29,7 +29,7 @@
     <div class="warning-info"
       matTooltip="You have {{count}} utterance(s) with changed text or voices that have not been regenerated yet.">
       <span>{{ count }} change(s) need regeneration</span>
-      <span class="material-symbols-outlined text-[16px]">info</span>
+      <span class="material-symbols-outlined">info</span>
     </div>
     }
 
@@ -40,7 +40,7 @@
     }
 
     <button (click)="onToggleTheme()" class="theme-toggle-btn">
-      <span class="material-symbols-outlined text-xl">
+      <span class="material-symbols-outlined">
         {{ isDarkMode() ? 'light_mode' : 'dark_mode' }}
       </span>
     </button>

@@ -121,13 +121,11 @@ export class Library implements OnInit {
     try {
       const response = await fetch(`/api/videos/${videoId}`, { method: 'DELETE' });
       if (response.ok) {
-        // Refresh the list
         await this.fetchVideos();
         this.isDeleteModalOpen.set(false);
         this.pendingDeleteVideoId.set(null);
       } else {
         console.error('Failed to delete video');
-        // A toast or inline error could be added here later if needed
       }
     } catch (err) {
       console.error('Error deleting video:', err);

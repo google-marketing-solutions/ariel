@@ -25,7 +25,7 @@
       <video [src]="videoPreviewUrl()" controls [class.opacity-50]="isProcessing()"></video>
       @if (!isProcessing()) {
       <button (click)="removeVideo()" class="close-btn">
-        <span class="material-symbols-outlined text-[18px]">close</span>
+        <span class="material-symbols-outlined">close</span>
       </button>
       }
     </div>
@@ -33,7 +33,7 @@
   }
 
   <!-- Hidden File Input -->
-  <input type="file" id="video-input" accept="video/*" class="hidden" (change)="onFileSelected($event)" />
+  <input type="file" id="video-input" accept="video/*" (change)="onFileSelected($event)" />
 
   @if (step() === 1) {
   <!-- Step 1 Area -->
@@ -56,10 +56,10 @@
         @if (videoPreviewUrl()) {
         <button (click)="preprocessVideo()" [disabled]="isPreprocessing()" class="action-btn">
           @if (isPreprocessing()) {
-          <span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+          <span class="material-symbols-outlined spinning">progress_activity</span>
           Preprocessing...
           } @else {
-          <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+          <span class="material-symbols-outlined">auto_awesome</span>
           Pre-process Video
           }
         </button>
@@ -224,7 +224,7 @@
     </button>
     <button (click)="startProcessing()" [disabled]="!isFormValid() || isProcessing()" class="start-processing-btn">
       @if (isProcessing()) {
-      <span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+      <span class="material-symbols-outlined spinning">progress_activity</span>
       Processing...
       } @else {
       Start Processing
