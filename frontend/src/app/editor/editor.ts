@@ -133,7 +133,7 @@ export class Editor implements OnInit, OnDestroy {
   validationModalTitle = signal('');
   validationModalMessage = signal('');
   showProceedButton = signal(true);
-
+  showErrorBanner = signal(false);
 
   // Draft State for active panel
   draftVoiceInstructions = signal<string | null>(null);
