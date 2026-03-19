@@ -8,12 +8,21 @@
   h2 {
     font-size: 1.5rem;
     font-weight: 700;
-    font-family: var.$font-family-sans;
-    color: var.$text-main;
+    font-family: var.$font-family-heading;
+    background: linear-gradient(to right, var.$color-primary, #8b5cf6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-top: 1.5rem;
     margin-bottom: 1.5rem;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+    padding-bottom: 0.5rem;
 
     @include var.dark-mode {
-      color: var.$bg-white;
+      background: linear-gradient(to right, var.$color-primary, var.$color-primary-light);
+      -webkit-background-clip: text;
+      background-clip: text;
     }
   }
 
@@ -58,11 +67,16 @@
     .download-actions {
       a {
         flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         font-size: 0.875rem;
         font-weight: 600;
         text-align: center;
         text-decoration: none;
         padding: 0.5rem 1rem;
+        min-height: 2.5rem;
+        box-sizing: border-box;
         border-radius: 0.5rem;
         border: 1px solid var.$color-primary;
         color: var.$color-primary;
@@ -87,11 +101,16 @@
     .system-actions {
       button {
         flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         font-size: 0.875rem;
         font-weight: 600;
         padding: 0.5rem 1rem;
+        min-height: 2.5rem;
+        box-sizing: border-box;
         border-radius: 0.5rem;
-        border: none;
+        border: 1px solid transparent;
         cursor: pointer;
         color: white;
         transition: background-color 150ms;

@@ -27,10 +27,10 @@
     flex: 1;
     position: relative;
     flex-direction: column;
-    padding: 1.5rem;
+    padding: 0.5rem 1rem 1rem 1rem;
 
     @media (min-width: 1024px) {
-      padding: 3rem;
+      padding: 0.5rem 1.5rem 1.5rem 1.5rem;
     }
 
     &.is-editor {

@@ -4,7 +4,7 @@
   max-width: 64rem;
   margin-left: auto;
   margin-right: auto;
-  padding: 2rem 1rem;
+  padding: 0.5rem 1rem;
 }
 
 .home-title {
@@ -15,9 +15,11 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  margin-bottom: 2rem;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
   letter-spacing: -0.025em;
-  padding-bottom: 0.5rem;
+  line-height: 1.2;
+    padding-bottom: 0.75rem;
 
   @media (min-width: 1024px) {
     font-size: 3rem;
@@ -229,6 +231,15 @@
     @media (min-width: 1024px) {
       grid-column: span 9 / span 9;
     }
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
     display: flex;
     flex-direction: column;
     gap: 2rem;
@@ -255,6 +266,7 @@
       margin-bottom: 0.5rem;
 
       h3 {
+        margin: 0;
         font-size: 0.875rem;
         font-weight: 700;
         color: var.$text-main;
@@ -264,9 +276,14 @@
       .help-link {
         display: flex;
         align-items: center;
+        text-decoration: none;
         color: var.$color-primary;
         @include var.dark-mode { color: var.$color-primary-dark; }
         &:hover { color: #1d4ed8; }
+
+        .material-symbols-outlined {
+          font-size: 14px;
+        }
       }
     }
 
@@ -469,6 +486,10 @@
     transition: all 150ms;
     cursor: pointer;
 
+    .material-symbols-outlined {
+      font-size: 18px;
+    }
+
     &:hover:not(:disabled) {
       background-color: rgba(var.$color-primary, 0.05);
       border-color: var.$color-primary;
@@ -514,6 +535,10 @@
           gap: 0.5rem;
           font-size: 0.75rem;
           color: var.$text-subtle;
+
+          .gender-icon {
+            font-size: 14px;
+          }
         }
       }
 
@@ -537,6 +562,10 @@
           transition: opacity 150ms, color 150ms;
 
           &:hover { color: var.$color-primary; }
+
+          .material-symbols-outlined {
+            font-size: 16px;
+          }
         }
 
         .remove-btn {
@@ -559,6 +588,7 @@
     align-items: center;
 
     h3 {
+      margin: 0;
       font-size: 0.875rem;
       font-weight: 700;
       color: var.$text-main;
@@ -640,8 +670,38 @@
 .actions-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 1rem;
+    margin-top: 2rem;
   position: relative;
 
+  .btn-back {
+      border-radius: 0.75rem;
+      background-color: #e2e8f0;
+      color: #334155;
+      padding: 0.875rem 1.5rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      transition: all 200ms;
+  
+      &:hover {
+        background-color: #cbd5e1;
+      }
+  
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+  
+      @include var.dark-mode {
+        background-color: #1e293b;
+        color: #cbd5e1;
+  
+        &:hover {
+          background-color: #334155;
+        }
+      }
+    }
   .start-processing-btn {
      display: flex;
      align-items: center;

@@ -1161,7 +1161,10 @@ export class Editor implements OnInit, OnDestroy {
       if (u.original_end_time > maxDuration) maxDuration = u.original_end_time;
       if (u.translated_end_time > maxDuration) maxDuration = u.translated_end_time;
     }
-    return Math.max(maxDuration, 1);
+
+    // Add visual padding to the right of the timeline (at least 1 second or 5%)
+    const padding = Math.max(0.1, maxDuration * 0.01);
+    return Math.max(maxDuration + padding, 1);
   }
 
   // Utility to format seconds to MM:SS.ms format for presentation

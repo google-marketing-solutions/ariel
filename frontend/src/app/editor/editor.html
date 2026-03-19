@@ -17,7 +17,7 @@
             <p>{{ error() }}</p>
           </div>
           } @else if (videoUrl()) {
-          <video [src]="videoUrl()" controls class="w-full h-full object-contain" preload="metadata"></video>
+          <video [src]="videoUrl()" controls preload="metadata"> </video>
           } @else {
           <div class="video-state-overlay empty">
             <span class="material-symbols-outlined">videocam_off</span>
@@ -29,7 +29,7 @@
         <div class="settings-section">
           <div class="settings-header">
             <h3 class="settings-title whitespace-nowrap">Video Settings</h3>
-            <div class="flex gap-2">
+            <div class="settings-actions">
               @if (isEditingSettings()) {
               @if (!isGeneratingAudio()) {
               <button (click)="toggleEditSettings()" class="cancel">Cancel</button>
@@ -51,71 +51,76 @@
             </div>
           </div>
 
-          <div class="space-y-6">
+          <div class="settings-groups">
             <!-- Languages -->
-            <div class="space-y-3">
+            <div class="languages-group">
               @if (isEditingSettings()) {
-              <div class="settings-card flex-col items-stretch gap-2 !px-3 !py-2.5">
-                <span class="card-label mb-0 w-full text-left">Original</span>
-                <div class="custom-select original-select" [class.open]="isOriginalOpen()" [class.disabled]="isGeneratingAudio()">
-                  <div class="select-trigger" (click)="!isGeneratingAudio() && isOriginalOpen.set(!isOriginalOpen())">
-                    <span class="truncate">{{ originalLanguageLabel() }}</span>
-                    <span class="material-symbols-outlined select-arrow">expand_more</span>
-                  </div>
-                  @if (isOriginalOpen()) {
-                  <div class="select-dropdown custom-scrollbar" style="max-height: 250px;">
-                    <div class="optgroup-label">GA</div>
-                    @for (lang of gaLanguages(); track lang.code) {
-                    <div class="option" (click)="editOriginalLanguage.set(lang.code); isOriginalOpen.set(false)"
-                      [class.selected]="editOriginalLanguage() === lang.code">
-                      {{ lang.name }}
+              <div class="settings-card stacked">
+                <div class="field-group">
+                  <span class="card-label full-width">Original</span>
+                  <div class="custom-select original-select" [class.open]="isOriginalOpen()"
+                    [class.disabled]="isGeneratingAudio()">
+                    <div class="select-trigger" (click)="!isGeneratingAudio() && isOriginalOpen.set(!isOriginalOpen())">
+                      <span class="truncate">{{ originalLanguageLabel() }}</span>
+                      <span class="material-symbols-outlined select-arrow">expand_more</span>
+                    </div>
+                    @if (isOriginalOpen()) {
+                    <div class="select-dropdown custom-scrollbar" style="max-height: 250px;">
+                      <div class="optgroup-label">GA</div>
+                      @for (lang of gaLanguages(); track lang.code) {
+                      <div class="option" (click)="editOriginalLanguage.set(lang.code); isOriginalOpen.set(false)"
+                        [class.selected]="editOriginalLanguage() === lang.code">
+                        {{ lang.name }}
+                      </div>
+                      }
+                      <div class="optgroup-label">Preview</div>
+                      @for (lang of previewLanguages(); track lang.code) {
+                      <div class="option" (click)="editOriginalLanguage.set(lang.code); isOriginalOpen.set(false)"
+                        [class.selected]="editOriginalLanguage() === lang.code">
+                        {{ lang.name }}
+                      </div>
+                      }
                     </div>
                     }
-                    <div class="optgroup-label">Preview</div>
-                    @for (lang of previewLanguages(); track lang.code) {
-                    <div class="option" (click)="editOriginalLanguage.set(lang.code); isOriginalOpen.set(false)"
-                      [class.selected]="editOriginalLanguage() === lang.code">
-                      {{ lang.name }}
-                    </div>
-                    }
                   </div>
-                  }
                 </div>
-              </div>
-              <div class="settings-card flex-col items-stretch gap-2 !px-3 !py-2.5">
-                <span class="card-label mb-0 w-full text-left">Translation</span>
-                <div class="custom-select translation-select" [class.open]="isTranslationOpen()"
-                  [class.disabled]="isGeneratingAudio()">
-                  <div class="select-trigger" (click)="!isGeneratingAudio() && isTranslationOpen.set(!isTranslationOpen())">
-                    <span class="truncate">{{ translateLanguageLabel() }}</span>
-                    <span class="material-symbols-outlined select-arrow">expand_more</span>
-                  </div>
-                  @if (isTranslationOpen()) {
-                  <div class="select-dropdown custom-scrollbar" style="max-height: 250px;">
-                    <div class="optgroup-label">GA</div>
-                    @for (lang of gaLanguages(); track lang.code) {
-                    <div class="option" (click)="editTranslateLanguage.set(lang.code); isTranslationOpen.set(false)"
-                      [class.selected]="editTranslateLanguage() === lang.code">
-                      {{ lang.name }}
+
+                <div class="field-group">
+                  <span class="card-label full-width">Translation</span>
+                  <div class="custom-select translation-select" [class.open]="isTranslationOpen()"
+                    [class.disabled]="isGeneratingAudio()">
+                    <div class="select-trigger"
+                      (click)="!isGeneratingAudio() && isTranslationOpen.set(!isTranslationOpen())">
+                      <span class="truncate">{{ translateLanguageLabel() }}</span>
+                      <span class="material-symbols-outlined select-arrow">expand_more</span>
+                    </div>
+                    @if (isTranslationOpen()) {
+                    <div class="select-dropdown custom-scrollbar" style="max-height: 250px;">
+                      <div class="optgroup-label">GA</div>
+                      @for (lang of gaLanguages(); track lang.code) {
+                      <div class="option" (click)="editTranslateLanguage.set(lang.code); isTranslationOpen.set(false)"
+                        [class.selected]="editTranslateLanguage() === lang.code">
+                        {{ lang.name }}
+                      </div>
+                      }
+                      <div class="optgroup-label">Preview</div>
+                      @for (lang of previewLanguages(); track lang.code) {
+                      <div class="option" (click)="editTranslateLanguage.set(lang.code); isTranslationOpen.set(false)"
+                        [class.selected]="editTranslateLanguage() === lang.code">
+                        {{ lang.name }}
+                      </div>
+                      }
                     </div>
                     }
-                    <div class="optgroup-label">Preview</div>
-                    @for (lang of previewLanguages(); track lang.code) {
-                    <div class="option" (click)="editTranslateLanguage.set(lang.code); isTranslationOpen.set(false)"
-                      [class.selected]="editTranslateLanguage() === lang.code">
-                      {{ lang.name }}
-                    </div>
-                    }
                   </div>
-                  }
                 </div>
               </div>
               } @else {
-              <div class="settings-card">
+              <div class="settings-card read-only">
                 <span class="card-label">Original</span>
                 <span class="card-value">{{ getLanguageName(videoData()?.original_language) }}</span>
               </div>
-              <div class="settings-card">
+              <div class="settings-card read-only">
                 <span class="card-label">Translation</span>
                 <span class="card-value">{{ getLanguageName(videoData()?.translate_language) }}</span>
               </div>
@@ -128,18 +133,17 @@
                 <h3 class="settings-title">Speakers</h3>
                 @if (isEditingSettings()) {
                 <button (click)="openAddSpeakerModal()" [disabled]="isGeneratingAudio()" class="edit-btn">
-                  <span class="material-symbols-outlined text-[16px]">add_circle</span> Add Speaker
+                  <span class="material-symbols-outlined">add_circle</span> Add Speaker
                 </button>
                 }
               </div>
-              <div class="space-y-2">
+              <div class="speakers-group">
                 @if (isEditingSettings()) {
                 @for (speaker of editSpeakers(); track speaker.speaker_id || speaker.name; let i = $index) {
                 <div class="speaker-item">
-                  <div class="flex items-center gap-3 w-full">
-                    <span class="speaker-avatar shrink-0" [class.male]="speaker.gender === 'male'"
-                      [class.female]="speaker.gender === 'female'">
-                      <span class="material-symbols-outlined text-[18px]">
+                  <div class="speaker-info-row">
+                    <span class="speaker-avatar" [class.male]="speaker.gender === 'male'" [class.female]="speaker.gender === 'female'">
+                      <span class="material-symbols-outlined gender-icon">
                         {{ speaker.gender === 'female' ? 'woman' : 'man' }}
                       </span>
                     </span>
@@ -159,17 +163,16 @@
                 } @else {
                 @for (speaker of videoData()?.speakers; track speaker.speaker_id || speaker.name; let i = $index) {
                 <div class="speaker-item">
-                  <div class="flex items-center gap-3 w-full">
-                    <span class="speaker-avatar shrink-0" [class.male]="speaker.gender === 'male'"
-                      [class.female]="speaker.gender === 'female'">
-                      <span class="material-symbols-outlined text-[18px]">
+                  <div class="speaker-info-row">
+                    <span class="speaker-avatar" [class.male]="speaker.gender === 'male'" [class.female]="speaker.gender === 'female'">
+                      <span class="material-symbols-outlined gender-icon">
                         {{ speaker.gender === 'female' ? 'woman' : 'man' }}
                       </span>
                     </span>
                     <div class="speaker-info">
                       <p>{{ speaker.speaker_name || speaker.name }}</p>
                       <span class="voice-subtext">{{ speaker.voice }} ({{ speaker.gender }})</span>
-                      </div>
+                    </div>
                   </div>
                 </div>
                 }
@@ -199,7 +202,7 @@
           <span>{{ getLanguageName(isEditingSettings() ? editTranslateLanguage() : videoData()?.translate_language)
             }}</span>
         </div>
-        <div class="space-y-4 pb-20">
+        <div class="space-y-4" style="padding-bottom: 12rem;">
 
 
 
@@ -295,18 +298,18 @@
                     [disabled]="utterance.muted || utterance.removed || (processingUtteranceId() === utterance.id && processingAction() === 'translation')"
                     (click)="regenerateTranslation(utterance.id); $event.stopPropagation()">
                     @if (processingUtteranceId() === utterance.id && processingAction() === 'translation') {
-                    <span class="material-symbols-outlined text-[16px] animate-spin">refresh</span>
+                    <span class="material-symbols-outlined animate-spin">refresh</span>
                     } @else {
-                    <span class="material-symbols-outlined text-[16px]">autorenew</span>
+                    <span class="material-symbols-outlined">autorenew</span>
                     }
                   </button>
                   <button [class.warning]="utterance.needs_dubbing_regen" matTooltip="Regenerate Dubbing"
                     [disabled]="utterance.muted || utterance.removed || (processingUtteranceId() === utterance.id && processingAction() === 'dubbing')"
                     (click)="regenerateDubbing(utterance.id); $event.stopPropagation()">
                     @if (processingUtteranceId() === utterance.id && processingAction() === 'dubbing') {
-                    <span class="material-symbols-outlined text-[16px] animate-spin">refresh</span>
+                    <span class="material-symbols-outlined animate-spin">refresh</span>
                     } @else {
-                    <span class="material-symbols-outlined text-[16px]">record_voice_over</span>
+                    <span class="material-symbols-outlined">record_voice_over</span>
                     }
                   </button>
                 </div>
@@ -316,7 +319,7 @@
                   <button matTooltip="Undo"
                     [disabled]="utterance.muted || utterance.removed || !canUndoActiveUtterance()"
                     (click)="revertUtterance(utterance.id); $event.stopPropagation()">
-                    <span class="material-symbols-outlined text-[16px]">history</span>
+                    <span class="material-symbols-outlined">history</span>
                   </button>
 
                 </div>
@@ -326,12 +329,12 @@
                   <button [matTooltip]="utterance.muted ? 'Unmute Utterance' : 'Mute Utterance'"
                     [disabled]="utterance.muted || utterance.removed"
                     (click)="toggleMuteUtterance(utterance.id); $event.stopPropagation()">
-                    <span class="material-symbols-outlined text-[16px]">{{ utterance.muted ? 'mic' : 'mic_off' }}</span>
+                    <span class="material-symbols-outlined">{{ utterance.muted ? 'mic' : 'mic_off' }}</span>
                   </button>
                   <button class="danger" [matTooltip]="utterance.removed ? 'Restore Utterance' : 'Remove Utterance'"
                     [disabled]="utterance.muted || utterance.removed"
                     (click)="toggleRemoveUtterance(utterance.id); $event.stopPropagation()">
-                    <span class="material-symbols-outlined text-[16px]">{{ utterance.removed ? 'settings_backup_restore' : 'delete'
+                    <span class="material-symbols-outlined">{{ utterance.removed ? 'settings_backup_restore' : 'delete'
                       }}</span>
                   </button>
                 </div>
@@ -365,93 +368,93 @@
               }
             </div>
             @if (activeUtteranceId() === utterance.id) {
-              <!-- Interactive Action Buttons -->
-              <div class="panel-toggle-bar">
-                <div class="flex items-center gap-4">
-                  <div class="toggle-group">
-                    <button (click)="setActivePanel(utterance.id, 'timestamps'); $event.stopPropagation()"
-                      [class.active]="activePanelMode() === 'timestamps'"
-                      [disabled]="utterance.muted || utterance.removed">
-                      <span class="material-symbols-outlined text-sm">schedule</span>
-                      Adjust timestamps
-                    </button>
+            <!-- Interactive Action Buttons -->
+            <div class="panel-toggle-bar">
+              <div class="toggle-actions-container">
+                <div class="toggle-group">
+                  <button (click)="setActivePanel(utterance.id, 'timestamps'); $event.stopPropagation()"
+                    [class.active]="activePanelMode() === 'timestamps'"
+                    [disabled]="utterance.muted || utterance.removed">
+                    <span class="material-symbols-outlined">schedule</span>
+                    Adjust timestamps
+                  </button>
 
-                    <button (click)="setActivePanel(utterance.id, 'speaker'); $event.stopPropagation()"
-                      [class.active]="activePanelMode() === 'speaker'"
-                      [disabled]="utterance.muted || utterance.removed">
-                      <span class="material-symbols-outlined text-sm">graphic_eq</span>
-                      Change speaker
-                    </button>
+                  <button (click)="setActivePanel(utterance.id, 'speaker'); $event.stopPropagation()"
+                    [class.active]="activePanelMode() === 'speaker'" [disabled]="utterance.muted || utterance.removed">
+                    <span class="material-symbols-outlined">graphic_eq</span>
+                    Change speaker
+                  </button>
 
-                    <button (click)="setActivePanel(utterance.id, 'translation'); $event.stopPropagation()"
-                      [class.active]="activePanelMode() === 'translation'"
-                      [disabled]="utterance.muted || utterance.removed">
-                      <span class="material-symbols-outlined text-sm">spellcheck</span>
-                      Translation instructions
-                    </button>
+                  <button (click)="setActivePanel(utterance.id, 'translation'); $event.stopPropagation()"
+                    [class.active]="activePanelMode() === 'translation'"
+                    [disabled]="utterance.muted || utterance.removed">
+                    <span class="material-symbols-outlined">spellcheck</span>
+                    Translation instructions
+                  </button>
 
-                    <button (click)="setActivePanel(utterance.id, 'voice'); $event.stopPropagation()"
-                      [class.active]="activePanelMode() === 'voice'"
-                      [disabled]="utterance.muted || utterance.removed">
-                      <span class="material-symbols-outlined text-sm">mood</span>
-                      Voice instructions
-                    </button>
-                  </div>
+                  <button (click)="setActivePanel(utterance.id, 'voice'); $event.stopPropagation()"
+                    [class.active]="activePanelMode() === 'voice'" [disabled]="utterance.muted || utterance.removed">
+                    <span class="material-symbols-outlined">mood</span>
+                    Voice instructions
+                  </button>
                 </div>
               </div>
-              }
+            </div>
+            }
 
-              <!-- Text Content -->
-              <div class="utterance-body">
+            <!-- Text Content -->
+            <div class="utterance-body">
 
-                <!-- Original Text (Editable) -->
-                <div class="text-container">
-                  <textarea class="custom-scrollbar" style="field-sizing: content; min-height: 44px;" rows="1"
-                    [value]="utterance.original_text"
-                    (input)="updateOriginalText(utterance.id, $any($event.target).value)"
-                    (click)="$event.stopPropagation()"></textarea>
+              <!-- Original Text (Editable) -->
+              <div class="text-container">
+                <textarea class="custom-scrollbar" style="field-sizing: content; min-height: 44px;" rows="1"
+                  [value]="utterance.original_text"
+                  (input)="updateOriginalText(utterance.id, $any($event.target).value)"
+                  (focus)="focusUtterance(utterance.id)"
+                  (click)="focusUtterance(utterance.id); $event.stopPropagation()"></textarea>
 
-                  @if (activeUtteranceId() === utterance.id) {
-                  @if (utterance.isNew) {
-                  <span class="material-symbols-outlined action-icon pointer-events-auto"
-                    matTooltip="This is a newly created or merged utterance. It does not have original audio, so you can't play it.">
-                    info
-                  </span>
-                  } @else {
-                  <span class="material-symbols-outlined action-icon"
-                    [class.disabled]="utterance.muted || utterance.removed"
-                    matTooltip="{{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'original' ? 'Stop original audio' : 'Play original audio' }}"
-                    (click)="playOriginalUtterance(utterance, $event)">
-                    {{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'original' ?
-                    'stop_circle' :
-                    'play_circle' }}
-                  </span>
-                  }
-                  }
-                </div>
-                <!-- Translated Text (Editable) -->
-                <div class="text-container">
-                  <textarea class="custom-scrollbar" style="field-sizing: content; min-height: 44px;" rows="1"
-                    [value]="utterance.translated_text"
-                    (input)="updateTranslatedText(utterance.id, $any($event.target).value)"
-                    (click)="$event.stopPropagation()"></textarea>
-                  @if (activeUtteranceId() === utterance.id && utterance.audio_url) {
-                  <span class="material-symbols-outlined action-icon"
-                    [class.disabled]="utterance.muted || utterance.removed"
-                    matTooltip="{{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'translated' ? 'Stop translated audio' : 'Play translated audio' }}"
-                    (click)="playTranslatedUtterance(utterance, $event)">
-                    {{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'translated' ?
-                    'stop_circle' :
-                    'play_circle' }}
-                  </span>
-                  }
-                </div>
+                @if (activeUtteranceId() === utterance.id) {
+                @if (utterance.isNew) {
+                <span class="material-symbols-outlined action-icon pointer-events-auto"
+                  matTooltip="This is a newly created or merged utterance. It does not have original audio, so you can't play it.">
+                  info
+                </span>
+                } @else {
+                <span class="material-symbols-outlined action-icon"
+                  [class.disabled]="utterance.muted || utterance.removed"
+                  matTooltip="{{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'original' ? 'Stop original audio' : 'Play original audio' }}"
+                  (click)="playOriginalUtterance(utterance, $event)">
+                  {{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'original' ?
+                  'stop_circle' :
+                  'play_circle' }}
+                </span>
+                }
+                }
               </div>
+              <!-- Translated Text (Editable) -->
+              <div class="text-container">
+                <textarea class="custom-scrollbar" style="field-sizing: content; min-height: 44px;" rows="1"
+                  [value]="utterance.translated_text"
+                  (input)="updateTranslatedText(utterance.id, $any($event.target).value)"
+                  (focus)="focusUtterance(utterance.id)"
+                  (click)="focusUtterance(utterance.id); $event.stopPropagation()"></textarea>
+                @if (activeUtteranceId() === utterance.id && utterance.audio_url) {
+                <span class="material-symbols-outlined action-icon"
+                  [class.disabled]="utterance.muted || utterance.removed"
+                  matTooltip="{{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'translated' ? 'Stop translated audio' : 'Play translated audio' }}"
+                  (click)="playTranslatedUtterance(utterance, $event)">
+                  {{ activeAudioPlayback?.id === utterance.id && activeAudioPlayback?.type === 'translated' ?
+                  'stop_circle' :
+                  'play_circle' }}
+                </span>
+                }
+              </div>
+            </div>
 
             <!-- Inter-Utterance Actions -->
             <div class="utterance-insert-divider">
               <div class="divider-line"></div>
-              <div class="relative flex gap-2">
+              <div class="action-buttons">
                 @if (i < (videoData()?.utterances?.length || 0) - 1 && !(videoData()?.utterances?.[i+1]?.removed) &&
                   !utterance.removed) { <button matTooltip="Merge with below" (click)="mergeUtterances(i, $event)">
                   <span class="material-symbols-outlined">merge_type</span>
@@ -509,11 +512,13 @@
               (input)="onVoiceInput(voiceInstructionsRef.value)" placeholder="Add specific terminology rules..."
               rows="4"></textarea>
             <p class="panel-info-text pt-4">Enter a value between 0.25 and
+==== BASE ====
             2.0 to change the speaker's speed. Values less than 1 slow
             the speech down and greater than 1 speed it up.</p>
             <input #speakingRateRef type="number" id="speaker_speed"
-                   min="0.25" max="2.0" [value]="activeUtterance?.speaking_rate || 1.0" step="0.1"
+                   min="0.25" max="2.0" value="1.0" step="0.1"
                    (input)="onSpeakingRateInput(+speakingRateRef.value)" />
+==== BASE ====
           </div>
           <div class="space-y-3 pt-4">
             <button [disabled]="!isVoiceDirty()" (click)="saveVoiceInstructions()" class="action-btn primary">
@@ -567,7 +572,7 @@
               faster") or merge
               with previous/next utterance.
             </p>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="timestamp-grid">
               <div>
                 <label class="timestamp-label">Original Start Time</label>
                 <input type="text"
@@ -579,7 +584,7 @@
                   [value]="activeUtterance ? formatTime(activeUtterance.original_end_time) : '00:00.00'" disabled>
               </div>
             </div>
-            <div class="grid grid-cols-2 gap-4 pt-4">
+            <div class="timestamp-grid pt-4">
               <div>
                 <label class="timestamp-label">Translated Start Time</label>
                 <input #transStart type="text"
@@ -594,8 +599,8 @@
               </div>
             </div>
           </div>
-          <div class="space-y-3 pt-4 border-t border-primary/5 dark:border-[#334155]">
-            <div class="flex items-center gap-2">
+          <div class="timestamp-actions-container">
+            <div class="timestamp-actions">
               @if (isTimestampsDirty() || timestampError()) {
               <button (click)="cancelTimestamps()" class="flex-1 action-btn secondary">
                 <span class="material-symbols-outlined text-[18px]">undo</span> Undo
@@ -632,20 +637,17 @@
             </p>
 
             @for (spk of videoData()?.speakers; track spk.speaker_id) {
-            <button class="speaker-item text-left block w-full"
+            <button class="speaker-item w-full text-left"
               [class.selected]="(draftSpeaker()?.speaker_id || activeUtterance?.speaker?.speaker_id) === spk.speaker_id"
               (click)="onSpeakerSelect(spk)">
-              <div class="flex items-center gap-3 w-full">
-                <span class="speaker-avatar shrink-0" [class.male]="spk.gender === 'male'"
-                  [class.female]="spk.gender === 'female'">
-                  <span class="material-symbols-outlined text-[18px]">
-                    {{ spk.gender === 'female' ? 'woman' : 'man' }}
-                  </span>
+              <span class="speaker-avatar" [class.male]="spk.gender === 'male'" [class.female]="spk.gender === 'female'">
+                <span class="material-symbols-outlined gender-icon">
+                  {{ spk.gender === 'female' ? 'woman' : 'man' }}
                 </span>
-                <div class="speaker-info">
-                  <div class="speaker-title">{{ spk.speaker_name || spk.name }}</div>
-                  <div class="speaker-subtitle">{{ spk.voice }} ({{ spk.gender }})</div>
-                  </div>
+              </span>
+              <div class="speaker-info">
+                <p>{{ spk.speaker_name || spk.name }}</p>
+                <div class="voice-subtext">{{ spk.voice }} ({{ spk.gender.toLowerCase() }})</div>
               </div>
             </button>
             }
@@ -675,10 +677,10 @@
     <div class="timeline-canvas custom-scrollbar">
       <div class="timeline-inner">
         <div class="timeline-ruler">
-          <div class="w-32 flex-shrink-0 pr-4"></div>
-          <div class="flex-1 relative h-full mr-6">
-            @for (marker of getTimeMarkers(); track marker) {
-            <div class="ruler-marker" [style.left.%]="getLeftPercent(marker)">
+          <div class="ruler-label-spacer"></div>
+          <div class="ruler-track-area">
+            @for (marker of getTimeMarkers(); track marker; let first = $first; let last = $last) {
+            <div class="ruler-marker" [class.first]="first" [class.last]="last" [style.left.%]="getLeftPercent(marker)">
               {{ formatTime(marker) }}
             </div>
             }
@@ -688,8 +690,8 @@
             </div>
             }
             @if (videoData()?.duration) {
-            <div class="absolute top-0 border-l border-dashed border-red-500 z-10 pointer-events-none"
-              style="height: 136px;" [style.left.%]="getLeftPercent(videoData()!.duration!)">
+            <div class="timeline-end-marker" style="height: 136px;"
+              [style.left.%]="getLeftPercent(videoData()!.duration!)">
             </div>
             }
           </div>
@@ -710,8 +712,7 @@
               @for (utterance of videoData()?.utterances; track utterance.id; let i = $index) {
               @if (!utterance.isNew) {
               <div class="audio-block" [class.active]="activeUtteranceId() === utterance.id"
-                [class.removed]="utterance.removed"
-                [style.left.%]="getLeftPercent(utterance.original_start_time)"
+                [class.removed]="utterance.removed" [style.left.%]="getLeftPercent(utterance.original_start_time)"
                 [style.width.%]="getWidthPercent(utterance.original_start_time, utterance.original_end_time)"
                 (click)="focusUtterance(utterance.id)">
                 <div class="block-gradient"></div>
@@ -755,7 +756,7 @@
                 }
                 @if (getUtteranceOverlap(utterance)) {
                 <div class="overlap-warning-icon">
-                  <span class="material-symbols-outlined text-[18px]">warning</span>
+                  <span class="material-symbols-outlined">warning</span>
                 </div>
                 <div class="overlap-tooltip">
                   Error: Overlapping utterances found. Adjust start/end times on the utterance to resolve the overlap.
@@ -791,12 +792,11 @@
 @if (isGeneratingVideo()) {
 <div class="modal-overlay">
   <div class="modal-dialog sm">
-    <div class="modal-body flex flex-col items-center mb-0">
-      <div class="relative w-20 h-20 mb-6 mt-4">
-        <div class="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
-        <div class="absolute inset-0 border-4 border-primary rounded-full border-t-transparent animate-spin"></div>
-        <span
-          class="absolute inset-0 flex items-center justify-center material-symbols-outlined text-primary text-3xl">movie_edit</span>
+    <div class="modal-body generating-video-body">
+      <div class="generating-spinner-container">
+        <div class="spinner-ring bg"></div>
+        <div class="spinner-ring fg"></div>
+        <span class="material-symbols-outlined icon">movie_edit</span>
       </div>
       <h3 class="modal-body-title">Generating Video</h3>
     </div>

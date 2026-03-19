@@ -20,6 +20,12 @@
     box-shadow: var.$shadow-glass-dark;
   }
 
+        .header-left {
+          display: flex;
+          align-items: center;
+          gap: 2rem;
+          height: 100%;
+        }
   .logo-section {
     display: flex;
     align-items: center;
@@ -125,10 +131,10 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      border-radius: 0.75rem;
+      border-radius: 0.8rem;
       background-color: #2563eb;
-      padding: 0.5rem 1.25rem;
-      font-size: 0.875rem;
+      padding: 0.625rem 1.5rem;
+        font-size: 1rem;
       font-weight: 600;
       color: var.$bg-white;
       border: none;
@@ -179,6 +185,10 @@
       &:hover {
         background-color: #e2e8f0;
         @include var.dark-mode { background-color: rgba(0, 0, 0, 0.2); }
+      }
+
+      .material-symbols-outlined {
+        font-size: 1.25rem;
       }
     }
   }
