@@ -1,8 +1,8 @@
 @use '../styles/variables' as var;
 
 .app-root {
-  background-color: #f8fafc;
-  color: #1e293b;
+  background-color: var.$bg-light;
+  color: var.$text-main;
   font-family: var.$font-family-sans;
   -webkit-font-smoothing: antialiased;
   display: flex;
@@ -12,8 +12,8 @@
   min-height: 100vh;
 
   @include var.dark-mode {
-    background-color: #0f172a;
-    color: #f1f5f9;
+    background-color: var.$bg-dark;
+    color: var.$text-light;
   }
 
   &.is-editor {
@@ -48,9 +48,9 @@
         background: transparent;
       }
       &::-webkit-scrollbar-thumb {
-        background-color: #cbd5e1;
+        background-color: var.$border-main;
         border-radius: 3px;
-        @include var.dark-mode { background-color: #475569; }
+        @include var.dark-mode { background-color: var.$text-secondary; }
       }
     }
   }
@@ -60,9 +60,9 @@
     bottom: 1rem;
     right: 0.25rem;
     font-size: 0.75rem;
-    color: #64748b;
+    color: var.$text-subtle;
     z-index: 50;
 
-    @include var.dark-mode { color: #94a3b8; }
+    @include var.dark-mode { color: var.$text-muted; }
   }
 }

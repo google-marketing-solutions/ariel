@@ -9,7 +9,7 @@
     font-size: 1.5rem;
     font-weight: 700;
     font-family: var.$font-family-heading;
-    background: linear-gradient(to right, var.$color-primary, #8b5cf6);
+    background: linear-gradient(to right, var.$color-primary, var.$color-accent);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -32,7 +32,7 @@
     background-color: black;
     border-radius: 0.75rem;
     overflow: hidden;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 25px 50px -12px rgba(var.$text-dark, 0.25);
     position: relative;
     margin-bottom: 1.5rem;
 
@@ -92,8 +92,8 @@
         }
 
         &:hover {
-          background-color: rgba(37, 99, 235, 0.05);
-          @include var.dark-mode { background-color: rgba(96, 165, 250, 0.1); }
+          background-color: rgba(var.$color-primary, 0.05);
+          @include var.dark-mode { background-color: rgba(var.$color-primary-light, 0.1); }
         }
       }
     }
@@ -121,18 +121,18 @@
       }
 
       .back-btn {
-        background-color: #64748b;
-        &:hover { background-color: #475569; }
+        background-color: var.$text-subtle;
+        &:hover { background-color: var.$text-secondary; }
 
         @include var.dark-mode {
-          background-color: #475569;
-          &:hover { background-color: #334155; }
+          background-color: var.$text-secondary;
+          &:hover { background-color: var.$border-dark; }
         }
       }
 
       .start-over-btn {
-        background-color: #ef4444;
-        &:hover { background-color: #dc2626; }
+        background-color: var.$color-danger;
+        &:hover { background-color: var.$color-danger-hover; }
       }
     }
   }
