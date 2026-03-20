@@ -14,9 +14,12 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from enum import Enum
-from pydantic import BaseModel, Field
 from datetime import datetime
+from enum import Enum
+
+from pydantic import BaseModel
+from pydantic import Field
+
 
 class GenderEnum(str, Enum):
     MALE = "male"
@@ -33,19 +36,14 @@ class Speaker(BaseModel):
     speaker_id: a unique id for the speaker in a video.
     voice: the TTS voice to used with text-to-speech for this speaker's
       utterances.
+    speaker_name: a human readable name for the speaker.
+    gender: the speaker's gender.
   """
 
   speaker_id: str = Field(description="A unique ID for the speaker in the video, created sequentially in the order the speakers speak.")
   voice: str = Field(description="The name of the Gemini-TTS voice (e.g., 'Achird', 'Aoede'). Do not use regional codes like 'en-US-Neural2'.")
   speaker_name: str = Field(description="A human readable name for the speaker.")
   gender: GenderEnum = Field(description="The gender of the speaker. Must be one of the predefined options.")
-
-class VoiceData(BaseModel):
-  """Specifies the data related to spoken text during preprocessing.
-  """
-
-  language: str = Field(description="The ISO code of the language, including the country information (e.g. en-US).")
-  voices: list[Speaker] = Field(description="A list of Speaker objects from the video.")
 
 class Utterance(BaseModel):
   """One spoken utterance from a video.
@@ -71,8 +69,9 @@ class Utterance(BaseModel):
   id: str
   original_text: str
   translated_text: str
-  instructions: str
+  translation_instructions: str = ""
   speaker: Speaker
+  speaking_instructions: str = ""
   original_start_time: float
   original_end_time: float
   translated_start_time: float
@@ -81,6 +80,13 @@ class Utterance(BaseModel):
   removed: bool = False
   muted: bool = False
   audio_url: str = ""
+
+
+class ProcessResponse(BaseModel):
+  """Wrapper class to capture the entire video analysis including the BCP-47 code."""
+  primary_language: str = Field(description="The BCP-47 code of the primary spoken language in the video.")
+  speakers: list[Speaker] = Field(description="A list of the unique speakers identified in the video.")
+  utterances: list[Utterance] = Field(description="A list of all transcribed and translated utterances, ordered chronologically.")
 
 
 class Video(BaseModel):
@@ -102,12 +108,10 @@ class Video(BaseModel):
   video_id: str
   original_language: str
   translate_language: str
-  prompt_enhancements: str = ""
   speakers: list[Speaker]
   utterances: list[Utterance]
   model_name: str = ""
   tts_model_name: str = ""
-
 
 class RegenerateRequest(BaseModel):
   """Used to request a new text translation and audio generation.

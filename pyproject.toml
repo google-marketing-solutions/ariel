@@ -51,18 +51,79 @@ dev = [
 ]
 
 [tool.ruff]
-fix = true
+# Google strongly enforces a strict 80-character line limit.
 line-length = 80
-preview = true
-indent-width = 2
-target-version = "py313"
 
-[tool.ruff.format]
-preview = true
-docstring-code-format = true
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle (Basic syntax and spacing errors)
+    "F",        # Pyflakes (Logical errors, unused variables)
+    "I",        # isort (Import sorting)
+    "N",        # pep8-naming (Google follows standard Python naming conventions)
+    "D",        # pydocstyle (Docstring rules)
+    "UP",       # pyupgrade (Google encourages modern Python features)
+    "BLE",      # flake8-blind-except (Google strictly forbids catch-all `except:`)
+    "B",        # flake8-bugbear (Catches common Python gotchas)
+    "A",        # flake8-builtins (Prevents shadowing Python built-ins)
+    "C4",       # flake8-comprehensions (Enforces proper comprehension usage)
+    "TID",      # flake8-tidy-imports (Enforces absolute imports)
+    "PL",       # Pylint (Google explicitly uses Pylint; Ruff implements many of its rules)
+    "RUF",      # Ruff-specific enhancements
+]
+
+ignore = [
+    # E501 warns about line lengths, but we let Ruff's formatter handle this automatically.
+    "E501",
+
+    # D100, D104: Google style doesn't strictly require docstrings on *every* single
+    # public module or package if they are incredibly simple, but you can remove
+    # these ignores if you want maximum strictness.
+    "D100",
+    "D104",
+]
 
 [tool.ruff.lint.pydocstyle]
+# This is the magic bullet: it tells Ruff to explicitly validate your docstrings
+# against the official Google Docstring format (Args:, Returns:, Raises:, etc.)
 convention = "google"
+
+[tool.ruff.lint.isort]
+# Google import ordering (from our previous setup)
+force-sort-within-sections = true
+order-by-type = false
+force-single-line = true
+single-line-exclusions = [
+    "collections.abc",
+    "typing",
+    "typing_extensions",
+    "six.moves",
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+# Google bans relative imports (e.g., `from . import foo`)
+ban-relative-imports = "all"
+
+[tool.ruff.lint.pep8-naming]
+# Google style allows class attributes and module-level variables to start
+# with an underscore to denote "internal" or "private" usage.
+ignore-names = ["_*"]
+
+[tool.ruff.lint.flake8-pytest-style]
+# If you use pytest, Google allows `assert` statements in tests, but warns
+# against them in production code. (Ruff's S101 rule catches assert usage).
+fixture-parentheses = false
+mark-parentheses = false
+
+[tool.ruff.format]
+# The Google guide says: "Be consistent with your choice of string quote character.
+# Pick ' or \" and stick with it."
+# Ruff defaults to double quotes. I've set it to single quotes here as it is
+# highly prevalent in Google code, but feel free to change it to "double".
+quote-style = "single"
+
+# Automatically format Python code examples inside your docstrings!
+docstring-code-format = true
+docstring-code-line-length = 80
 
 [tool.pyright]
 reportUnknownMemberType = "none"
