@@ -178,6 +178,12 @@
                 }
                 }
               </div>
+              @if (settingsError()) {
+              <div class="settings-error-message" style="color: #ea4335; margin-top: 8px; font-size: 13px; display: flex; align-items: center; gap: 4px;">
+                <span class="material-symbols-outlined" style="font-size: 16px;">error</span>
+                {{ settingsError() }}
+              </div>
+              }
             </div>
           </div>
 
@@ -470,20 +476,37 @@
 
         </div>
       </div>
-      @if (durationWarningCount() > 0) {
-      <div class="warning-banner">
-        <div>
-          <h4>Audio Exceeds Video Duration</h4>
-          <p>
-            One or more translated utterances extend beyond the original video's end. Generating the video will result
-            in a
-            frozen
-            final frame while the remaining audio finishes playing. To avoid this, try shortening the translated text or
-            adjusting the timestamps manually.
-          </p>
+
+      <div class="banners-container">
+        @if (showErrorBanner()) {
+        <div class="error-banner">
+          <span class="material-symbols-outlined icon">error</span>
+          <div class="content">
+            <h4>Translation Failed</h4>
+            <p>The backend encountered a timeout while connecting to the language service. Please try again.</p>
+          </div>
+          <button (click)="showErrorBanner.set(false)" class="dismiss-btn" matTooltip="Dismiss">
+            <span class="material-symbols-outlined">close</span>
+          </button>
         </div>
+        }
+
+        @if (durationWarningCount() > 0) {
+        <div class="warning-banner">
+          <span class="material-symbols-outlined">warning</span>
+          <div>
+            <h4>Audio Exceeds Video Duration</h4>
+            <p>
+              One or more translated utterances extend beyond the original video's end. Generating the video will result
+              in a
+              frozen
+              final frame while the remaining audio finishes playing. To avoid this, try shortening the translated text or
+              adjusting the timestamps manually.
+            </p>
+          </div>
+        </div>
+        }
       </div>
-      }
     </section>
 
     <!-- Right Column: Advanced Settings -->

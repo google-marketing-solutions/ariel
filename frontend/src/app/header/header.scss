@@ -16,7 +16,7 @@
 
   @include var.dark-mode {
     border-color: var.$border-dark;
-    background-color: rgba(30, 41, 59, 0.8);
+    background-color: rgba(var.$bg-dark-light, 0.8);
     box-shadow: var.$shadow-glass-dark;
   }
 
@@ -41,7 +41,7 @@
       font-family: var.$font-family-heading;
       font-weight: 700;
       letter-spacing: -0.025em;
-      background: linear-gradient(to right, #2563eb, #8b5cf6);
+      background: linear-gradient(to right, var.$color-primary, var.$color-accent);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
@@ -122,14 +122,14 @@
       span:not(.material-symbols-outlined) {
         font-size: 0.875rem;
         font-weight: 600;
-        color: #d97706;
-        @include var.dark-mode { color: #fbbf24; }
+        color: var.$color-warning;
+        @include var.dark-mode { color: var.$color-warning-main; }
       }
 
       .material-symbols-outlined {
         font-size: 16px;
-        color: #d97706;
-        @include var.dark-mode { color: #fbbf24; }
+        color: var.$color-warning;
+        @include var.dark-mode { color: var.$color-warning-main; }
       }
     }
 
@@ -138,14 +138,14 @@
       align-items: center;
       gap: 0.5rem;
       border-radius: 0.8rem;
-      background-color: #2563eb;
+      background-color: var.$color-primary;
       padding: 0.625rem 1.5rem;
         font-size: 1rem;
       font-weight: 600;
       color: var.$bg-white;
       border: none;
       cursor: pointer;
-      box-shadow: 0 0 15px -3px rgba(37, 99, 235, 0.3);
+      box-shadow: 0 0 15px -3px rgba(var.$color-primary, 0.3);
       transition: all 150ms;
 
       @include var.dark-mode {
@@ -154,7 +154,7 @@
 
       &:hover {
         transform: translateY(-1px);
-        box-shadow: 0 0 20px -3px rgba(37, 99, 235, 0.5);
+        box-shadow: 0 0 20px -3px rgba(var.$color-primary, 0.5);
       }
 
       &:active {
@@ -165,7 +165,7 @@
     .divider {
       width: 1px;
       height: 1.5rem;
-      background-color: #e2e8f0;
+      background-color: var.$border-light;
       @include var.dark-mode { background-color: var.$border-dark; }
     }
 
@@ -176,21 +176,21 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: #f1f5f9;
-      color: #475569;
-      border: 1px solid rgba(0, 0, 0, 0.05);
+      background-color: var.$bg-light-alt;
+      color: var.$text-secondary;
+      border: 1px solid var.$border-subtle;
       cursor: pointer;
       transition: all 150ms;
 
       @include var.dark-mode {
-        background-color: rgba(15, 23, 42, 0.8);
+        background-color: rgba(var.$bg-dark, 0.8);
         color: var.$text-muted;
         border-color: var.$border-dark;
       }
 
       &:hover {
-        background-color: #e2e8f0;
-        @include var.dark-mode { background-color: rgba(0, 0, 0, 0.2); }
+        background-color: var.$border-light;
+        @include var.dark-mode { background-color: var.$overlay-light; }
       }
 
       .material-symbols-outlined {

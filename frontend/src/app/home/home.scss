@@ -11,7 +11,7 @@
   font-size: 2.25rem;
   font-weight: 700;
   font-family: var.$font-family-heading;
-  background: linear-gradient(to right, var.$color-primary, #8b5cf6);
+  background: linear-gradient(to right, var.$color-primary, var.$color-accent);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -150,7 +150,7 @@
       border-radius: 1rem;
       box-shadow: var.$shadow-glass-light;
       object-fit: contain;
-      background-color: rgba(0, 0, 0, 0.05);
+      background-color: var.$border-subtle;
 
       @include var.dark-mode {
         background-color: var.$bg-dark;
@@ -167,7 +167,7 @@
       justify-content: center;
       width: 2rem;
       height: 2rem;
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: rgba(var.$text-dark, 0.5);
       color: var.$bg-white;
       border-radius: 9999px;
       border: none;
@@ -285,7 +285,7 @@
         text-decoration: none;
         color: var.$color-primary;
         @include var.dark-mode { color: var.$color-primary-dark; }
-        &:hover { color: #1d4ed8; }
+        &:hover { color: var.$color-primary-dark-hover; }
 
         .material-symbols-outlined {
           font-size: 14px;
@@ -305,8 +305,8 @@
 
       .select-trigger {
         width: 100%;
-        background-color: rgba(248, 250, 252, 0.8);
-        border: 1px solid rgba(0, 0, 0, 0.1);
+        background-color: rgba(var.$bg-light, 0.8);
+        border: 1px solid rgba(var.$text-dark, 0.1);
         border-radius: 0.75rem;
         padding: 0.75rem 1rem;
         padding-right: 2.5rem;
@@ -356,15 +356,15 @@
         width: 100%;
         max-height: 250px;
         overflow-y: auto;
-        background-color: white;
-        border: 1px solid rgba(0, 0, 0, 0.05);
+        background-color: var.$bg-white;
+        border: 1px solid var.$border-subtle;
         border-radius: 0.75rem;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 10px 15px -3px rgba(var.$text-dark, 0.1);
         z-index: 50;
 
         @include var.dark-mode {
-          background-color: #1e293b;
-          border-color: rgba(255, 255, 255, 0.1);
+          background-color: var.$bg-dark-light;
+          border-color: rgba(var.$bg-white, 0.1);
         }
 
         .optgroup-label {
@@ -373,8 +373,8 @@
           font-weight: 700;
           color: var.$text-muted;
           text-transform: uppercase;
-          background-color: rgba(0, 0, 0, 0.02);
-          @include var.dark-mode { background-color: rgba(255, 255, 255, 0.02); }
+          background-color: rgba(var.$text-dark, 0.02);
+          @include var.dark-mode { background-color: rgba(var.$bg-white, 0.02); }
         }
 
         .option {
@@ -389,7 +389,7 @@
           &:hover {
             background-color: rgba(var.$color-primary, 0.05);
             color: var.$color-primary;
-            @include var.dark-mode { background-color: rgba(255, 255, 255, 0.05); color: var.$color-primary-light; }
+            @include var.dark-mode { background-color: rgba(var.$bg-white, 0.05); color: var.$color-primary-light; }
           }
 
           &.selected {
@@ -400,19 +400,12 @@
           }
         }
       }
-
-      .overlay-backdrop {
-        position: fixed;
-        inset: 0;
-        background-color: transparent;
-        z-index: 40;
-      }
     }
 
     textarea {
       width: 100%;
-      background-color: rgba(248, 250, 252, 0.8);
-      border: 1px solid rgba(0, 0, 0, 0.1);
+      background-color: rgba(var.$bg-light, 0.8);
+      border: 1px solid rgba(var.$text-dark, 0.1);
       border-radius: 0.75rem;
       padding: 0.75rem 1rem;
       font-size: 0.875rem;
@@ -524,8 +517,8 @@
       align-items: center;
       padding: 0.75rem;
       border-radius: 0.75rem;
-      border: 1px solid rgba(0, 0, 0, 0.05);
-      background-color: rgba(248, 250, 252, 0.8);
+      border: 1px solid var.$border-subtle;
+      background-color: rgba(var.$bg-light, 0.8);
       transition: background-color 150ms;
       position: relative;
 
@@ -633,7 +626,7 @@
 
         &:checked + .slider {
           background-color: rgba(var.$color-primary, 0.2);
-          @include var.dark-mode { background-color: rgba(255, 255, 255, 0.9); }
+          @include var.dark-mode { background-color: rgba(var.$bg-white, 0.9); }
         }
 
         &:checked + .slider:before {
@@ -647,12 +640,12 @@
         position: absolute;
         cursor: pointer;
         inset: 0;
-        background-color: #e2e8f0;
+        background-color: var.$border-light;
         transition: 0.3s;
         border-radius: 9999px;
 
         @include var.dark-mode {
-          background-color: rgba(255, 255, 255, 0.9);
+          background-color: rgba(var.$bg-white, 0.9);
         }
 
         &:before {
@@ -662,13 +655,13 @@
           width: 1.25rem;
           left: 0;
           bottom: 0;
-          background-color: white;
+          background-color: var.$bg-white;
           transition: 0.3s;
           border-radius: 50%;
-          border: 4px solid #cbd5e1;
+          border: 4px solid var.$border-main;
 
           @include var.dark-mode {
-            border-color: #94a3b8;
+            border-color: var.$text-muted;
           }
         }
       }
@@ -679,15 +672,15 @@
 
 .actions-footer {
   display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-    margin-top: 2rem;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
   position: relative;
 
   .btn-back {
       border-radius: 0.75rem;
-      background-color: #e2e8f0;
-      color: #334155;
+      background-color: var.$border-light;
+      color: var.$border-dark;
       padding: 0.875rem 1.5rem;
       font-weight: 700;
       border: none;
@@ -695,7 +688,7 @@
       transition: all 200ms;
   
       &:hover {
-        background-color: #cbd5e1;
+        background-color: var.$border-main;
       }
   
       &:disabled {
@@ -704,34 +697,55 @@
       }
   
       @include var.dark-mode {
-        background-color: #1e293b;
-        color: #cbd5e1;
+        background-color: var.$bg-dark-light;
+        color: var.$border-main;
   
         &:hover {
-          background-color: #334155;
+          background-color: var.$border-dark;
         }
       }
     }
+
+  .actions-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .error-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var.$color-danger;
+    font-size: 0.875rem;
+    font-weight: 600;
+    animation: fadeIn 0.3s ease-in-out;
+
+    .material-symbols-outlined {
+      font-size: 1.25rem;
+    }
+  }
+
   .start-processing-btn {
      display: flex;
      align-items: center;
      gap: 0.5rem;
      border-radius: 0.75rem;
-     background: linear-gradient(135deg, #10b981, #059669);
+     background: linear-gradient(135deg, var.$color-emerald-main, var.$color-emerald-dark);
      padding: 0.875rem 2rem;
      font-weight: 700;
      color: var.$bg-white;
      border: none;
      cursor: pointer;
      transition: all 200ms;
-     box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+     box-shadow: 0 0 15px rgba(var.$color-emerald-main, 0.3);
 
-     &:hover:not(:disabled) {
-       box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+     &:hover:not(:disabled):not(.disabled) {
+       box-shadow: 0 0 20px rgba(var.$color-emerald-main, 0.5);
        transform: scale(1.02);
      }
 
-     &:disabled {
+     &:disabled, &.disabled {
        opacity: 0.5;
        cursor: not-allowed;
        box-shadow: none;

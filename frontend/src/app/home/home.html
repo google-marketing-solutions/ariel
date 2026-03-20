@@ -49,8 +49,8 @@
                   title="Select the target language for dubbing">help</span>
               </a>
             </div>
-            <div class="custom-select" [class.open]="isTranslationOpen()" [class.disabled]="isPreprocessing()">
-              <div class="select-trigger" (click)="!isPreprocessing() && isTranslationOpen.set(!isTranslationOpen())">
+            <div class="custom-select" [class.open]="isTranslationOpen()" [class.disabled]="isProcessing()">
+              <div class="select-trigger" (click)="toggleTranslation($event)">
                 <span class="truncate">{{ translationLanguageLabel() }}</span>
                 <span class="material-symbols-outlined select-arrow">expand_more</span>
               </div>
@@ -71,7 +71,6 @@
                 </div>
                 }
               </div>
-              <div class="overlay-backdrop" (click)="isTranslationOpen.set(false)"></div>
               }
             </div>
           </div>

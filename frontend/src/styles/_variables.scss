@@ -6,6 +6,7 @@ $font-family-heading: 'Outfit', sans-serif;
 $color-primary: #2563eb;
 $color-primary-dark: #3b82f6;
 $color-primary-light: #60a5fa;
+$color-accent: #8b5cf6;
 
 // Layout Dimensions
 $sidebar-width: 20rem;
@@ -18,6 +19,7 @@ $bg-white: #ffffff;
 $bg-dark: #0f172a;
 $bg-dark-light: #1e293b;
 $bg-glass-light: rgba(255, 255, 255, 0.4);
+$bg-light-alt: #f1f5f9;
 
 // Theme Colors - Borders
 $border-subtle: rgba(0, 0, 0, 0.05);
@@ -33,6 +35,8 @@ $text-light: #f1f5f9;
 // States & Highlights
 $color-danger: #ef4444;
 $color-success: #16a34a;
+$color-emerald-main: #10b981;
+$color-emerald-dark: #059669;
 $color-warning: #d97706;
 $color-warning-light: #fde68a;
 $color-warning-lighter: #fef3c7;
@@ -42,9 +46,36 @@ $color-voice-female: #ec489b;
 $shadow-glass-light: 0 4px 30px rgba(0, 0, 0, 0.05);
 $shadow-glass-dark: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
 
+// Overlays
+$overlay-light: rgba(0, 0, 0, 0.2);
+
 // Dark Mode Support Mixin
 @mixin dark-mode {
   :host-context(.dark) & {
     @content;
   }
 }
+// Variables from scss cleanup
+$text-dark: #000000;
+$bg-light: #f8fafc;
+$border-light: #e2e8f0;
+$border-main: #cbd5e1;
+$text-secondary: #475569;
+$color-primary-lighter: #bfdbfe;
+$color-primary-main: #3b82f6;
+$color-primary-dark-hover: #1d4ed8;
+$color-danger-lighter: #fef2f2;
+$color-danger-light: #fecaca;
+$color-danger-muted: #fca5a5;
+$color-danger-border: #f87171;
+$color-danger-hover: #dc2626;
+$color-danger-dark: #b91c1c;
+$color-danger-darker: #991b1b;
+$color-danger-deep: #7f1d1d;
+$bg-danger-dark: #2b0b0a;
+$color-warning-main: #fbbf24;
+$color-warning-dark: #f59e0b;
+$color-warning-darker: #92400e;
+$color-warning-deep: #78350f;
+$bg-warning-dark: #2b1a09;
+$color-success-light: #bbf7d0;

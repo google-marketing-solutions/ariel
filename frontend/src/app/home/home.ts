@@ -25,6 +25,9 @@ export interface Speaker {
   templateUrl: './home.html',
   styleUrl: './home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(document:click)': 'onDocumentClick($event)'
+  }
 })
 export class Home implements OnInit {
   private router = inject(Router);
@@ -48,6 +51,22 @@ export class Home implements OnInit {
 
   isOriginalOpen = signal(false);
   isTranslationOpen = signal(false);
+
+  toggleOriginal(event: MouseEvent) {
+    if (this.isProcessing()) return;
+    this.isOriginalOpen.set(!this.isOriginalOpen());
+    if (this.isOriginalOpen()) {
+      this.isTranslationOpen.set(false);
+    }
+  }
+
+  toggleTranslation(event: MouseEvent) {
+    if (this.isProcessing()) return;
+    this.isTranslationOpen.set(!this.isTranslationOpen());
+    if (this.isTranslationOpen()) {
+      this.isOriginalOpen.set(false);
+    }
+  }
 
   originalLanguageLabel = computed(() => {
     const code = this.originalLanguage();
@@ -173,7 +192,8 @@ export class Home implements OnInit {
     return this.step() === 2 &&
       !!this.selectedVideoFile() &&
       this.originalLanguage() !== '' &&
-      this.translationLanguage() !== '';
+      this.translationLanguage() !== '' &&
+      this.speakers().length > 0;
   }
 
   async processVideo() {
@@ -208,6 +228,14 @@ export class Home implements OnInit {
       console.error('Failed to process video:', error);
     } finally {
       this.isPreprocessing.set(false);
+    }
+  }
+
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.custom-select')) {
+      if (this.isOriginalOpen()) this.isOriginalOpen.set(false);
+      if (this.isTranslationOpen()) this.isTranslationOpen.set(false);
     }
   }
 }

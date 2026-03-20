@@ -17,7 +17,7 @@
       font-family: var.$font-family-heading;
       font-weight: 700;
       letter-spacing: -0.025em;
-      background: linear-gradient(to right, var.$color-primary, #8b5cf6);
+      background: linear-gradient(to right, var.$color-primary, var.$color-accent);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
@@ -36,7 +36,7 @@
       align-items: center;
       border-radius: 0.75rem;
       background-color: transparent;
-      border: 1px solid rgba(37, 99, 235, 0.2);
+      border: 1px solid rgba(var.$color-primary, 0.2);
       padding: 0.625rem 1rem;
       font-size: 0.875rem;
       font-weight: 600;
@@ -51,11 +51,11 @@
 
       &:hover {
         border-color: var.$color-primary;
-        background-color: rgba(37, 99, 235, 0.05);
+        background-color: rgba(var.$color-primary, 0.05);
 
         @include var.dark-mode {
           border-color: var.$color-primary-light;
-          background-color: rgba(96, 165, 220, 0.1);
+          background-color: rgba(var.$color-primary-light, 0.1);
         }
       }
     }
@@ -89,14 +89,14 @@
     align-items: center;
     justify-content: center;
     padding: 3rem 1.5rem;
-    background-color: #fef2f2;
-    border: 1px solid #fecaca;
+    background-color: var.$color-danger-lighter;
+    border: 1px solid var.$color-danger-light;
     border-radius: 1rem;
     width: 100%;
 
     @include var.dark-mode {
-      background-color: rgba(239, 68, 68, 0.1);
-      border-color: rgba(239, 68, 68, 0.2);
+      background-color: rgba(var.$color-danger, 0.1);
+      border-color: rgba(var.$color-danger, 0.2);
     }
 
     .material-symbols-outlined {
@@ -108,24 +108,24 @@
     h3 {
       font-size: 1.125rem;
       font-weight: 700;
-      color: #991b1b;
+      color: var.$color-danger-darker;
       margin-bottom: 0.25rem;
-      @include var.dark-mode { color: #f87171; }
+      @include var.dark-mode { color: var.$color-danger-border; }
     }
 
     p {
-      color: #dc2626;
+      color: var.$color-danger-hover;
       font-size: 0.875rem;
       text-align: center;
       margin-bottom: 1rem;
-      @include var.dark-mode { color: rgba(252, 165, 165, 0.8); }
+      @include var.dark-mode { color: rgba(var.$color-danger-muted, 0.8); }
     }
 
     .retry-btn {
       border-radius: 0.75rem;
-      border: 1px solid #fecaca;
-      background-color: white;
-      color: #dc2626;
+      border: 1px solid var.$color-danger-light;
+      background-color: var.$bg-white;
+      color: var.$color-danger-hover;
       padding: 0.5rem 1rem;
       font-size: 0.875rem;
       font-weight: 700;
@@ -133,14 +133,14 @@
       cursor: pointer;
 
       @include var.dark-mode {
-        border-color: rgba(239, 68, 68, 0.3);
-        background-color: rgba(239, 68, 68, 0.1);
-        color: #f87171;
+        border-color: rgba(var.$color-danger, 0.3);
+        background-color: rgba(var.$color-danger, 0.1);
+        color: var.$color-danger-border;
       }
 
       &:hover {
-        background-color: #fef2f2;
-        @include var.dark-mode { background-color: rgba(239, 68, 68, 0.2); }
+        background-color: var.$color-danger-lighter;
+        @include var.dark-mode { background-color: rgba(var.$color-danger, 0.2); }
       }
     }
   }
@@ -152,28 +152,28 @@
     justify-content: center;
     padding: 5rem 0;
     width: 100%;
-    background-color: rgba(248, 250, 252, 0.5);
+    background-color: rgba(var.$bg-light, 0.5);
     border-radius: 1rem;
-    border: 1px dashed #cbd5e1;
+    border: 1px dashed var.$border-main;
 
     @include var.dark-mode {
-      background-color: rgba(30, 41, 59, 0.5);
+      background-color: rgba(var.$bg-dark-light, 0.5);
       border-color: var.$border-dark;
     }
 
     .material-symbols-outlined {
       font-size: 3rem;
-      color: #cbd5e1;
+      color: var.$border-main;
       margin-bottom: 1rem;
-      @include var.dark-mode { color: #475569; }
+      @include var.dark-mode { color: var.$text-secondary; }
     }
 
     h3 {
       font-size: 1.25rem;
       font-weight: 700;
-      color: #334155;
+      color: var.$border-dark;
       margin-bottom: 0.5rem;
-      @include var.dark-mode { color: #e2e8f0; }
+      @include var.dark-mode { color: var.$border-light; }
     }
 
     p {
@@ -192,12 +192,12 @@
       padding: 0.75rem 1.5rem;
       font-size: 0.875rem;
       font-weight: 700;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 6px -1px rgba(var.$text-dark, 0.1);
       transition: all 150ms;
       text-decoration: none;
 
       &:hover {
-        background-color: #1d4ed8;
+        background-color: var.$color-primary-dark-hover;
       }
     }
   }
@@ -211,7 +211,7 @@
 
     .video-card {
       width: 100%;
-      background-color: rgba(255, 255, 255, 0.8);
+      background-color: rgba(var.$bg-white, 0.8);
       backdrop-filter: blur(12px);
       border: 1px solid var.$border-subtle;
       border-radius: 1rem;
@@ -228,15 +228,15 @@
       }
 
       @include var.dark-mode {
-        background-color: rgba(30, 41, 59, 0.8);
+        background-color: rgba(var.$bg-dark-light, 0.8);
         border-color: var.$border-dark;
         box-shadow: var.$shadow-glass-dark;
       }
 
       &:hover {
-        border-color: rgba(37, 99, 235, 0.5);
+        border-color: rgba(var.$color-primary, 0.5);
         transform: scale(1.01);
-        @include var.dark-mode { border-color: rgba(96, 165, 250, 0.5); }
+        @include var.dark-mode { border-color: rgba(var.$color-primary-light, 0.5); }
       }
 
       .video-thumbnail {
@@ -246,7 +246,7 @@
         overflow: hidden;
         position: relative;
         flex-shrink: 0;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 6px -1px rgba(var.$text-dark, 0.1);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -313,13 +313,13 @@
             display: inline-flex;
             align-items: center;
             border-radius: 0.5rem;
-            background-color: #f1f5f9;
-            border: 1px solid #e2e8f0;
+            background-color: var.$bg-light-alt;
+            border: 1px solid var.$border-light;
             padding: 0.375rem 0.75rem;
             font-size: 0.75rem;
             font-weight: 600;
-            color: #334155;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            color: var.$border-dark;
+            box-shadow: 0 1px 2px 0 rgba(var.$text-dark, 0.05);
 
             .material-symbols-outlined {
               font-size: 0.875rem;
@@ -327,18 +327,18 @@
               
               &.translate-icon {
                 color: var.$color-primary;
-                @include var.dark-mode { color: #60a5fa; }
+                @include var.dark-mode { color: var.$color-primary-light; }
               }
               
               &.timer-icon {
-                color: #8b5cf6;
+                color: var.$color-accent;
               }
             }
 
             @include var.dark-mode {
               background-color: var.$bg-dark;
               border-color: var.$border-dark;
-              color: #cbd5e1;
+              color: var.$border-main;
             }
 
             .material-symbols-outlined {
@@ -381,69 +381,121 @@
         }
 
         .download-btn {
-          background: linear-gradient(to bottom right, #2563eb, #3b82f6);
-          color: white;
-          box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+          background: linear-gradient(to bottom right, var.$color-primary, var.$color-primary-dark);
+          color: var.$bg-white;
+          box-shadow: 0 4px 6px -1px rgba(var.$color-primary, 0.2);
 
           &:hover {
-            box-shadow: 0 6px 10px -1px rgba(37, 99, 235, 0.4);
+            box-shadow: 0 6px 10px -1px rgba(var.$color-primary, 0.4);
           }
         }
 
         .edit-btn {
-          background-color: white;
-          border: 1px solid #e2e8f0;
-          color: #334155;
+          background-color: var.$bg-white;
+          border: 1px solid var.$border-light;
+          color: var.$border-dark;
 
           @include var.dark-mode {
-            background-color: #334155;
-            border-color: #475569;
-            color: white;
+            background-color: var.$border-dark;
+            border-color: var.$text-secondary;
+            color: var.$bg-white;
           }
 
           &:hover {
-            background-color: #f8fafc;
-            @include var.dark-mode { background-color: #475569; }
+            background-color: var.$bg-light;
+            @include var.dark-mode { background-color: var.$text-secondary; }
           }
 
           &:disabled {
             opacity: 0.5;
             cursor: not-allowed !important;
             pointer-events: none;
-            background-color: #f1f5f9;
-            color: #94a3b8;
-            border-color: #e2e8f0;
+            background-color: var.$bg-light-alt;
+            color: var.$text-muted;
+            border-color: var.$border-light;
             
             @include var.dark-mode {
-              background-color: rgba(30, 41, 59, 0.5);
-              color: #475569;
+              background-color: rgba(var.$bg-dark-light, 0.5);
+              color: var.$text-secondary;
               border-color: var.$border-dark;
             }
           }
         }
 
         .delete-btn {
-          background-color: white;
-          border: 1px solid #e2e8f0;
-          color: #334155;
+          background-color: var.$bg-white;
+          border: 1px solid var.$border-light;
+          color: var.$border-dark;
 
           @include var.dark-mode {
-            background-color: #334155;
-            border-color: #475569;
-            color: #cbd5e1;
+            background-color: var.$border-dark;
+            border-color: var.$text-secondary;
+            color: var.$border-main;
           }
 
           &:hover {
-            background-color: #fef2f2;
-            color: #dc2626;
-            border-color: #fecaca;
+            background-color: var.$color-danger-lighter;
+            color: var.$color-danger-hover;
+            border-color: var.$color-danger-light;
 
             @include var.dark-mode {
-              background-color: rgba(239, 68, 68, 0.1);
-              color: #f87171;
-              border-color: rgba(239, 68, 68, 0.3);
+              background-color: rgba(var.$color-danger, 0.1);
+              color: var.$color-danger-border;
+              border-color: rgba(var.$color-danger, 0.3);
             }
           }
+        }
+      }
+    }
+
+    .load-more-container {
+      display: flex;
+      justify-content: center;
+      padding: 1.5rem 0 2rem;
+      width: 100%;
+
+      .load-more-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border-radius: 0.75rem;
+        background-color: transparent;
+        border: 1px solid rgba(var.$color-primary, 0.2);
+        padding: 0.75rem 2rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var.$color-primary;
+        transition: all 150ms;
+        cursor: pointer;
+
+        @include var.dark-mode {
+          border-color: var.$border-dark;
+          color: var.$color-primary-light;
+        }
+
+        &:hover:not(:disabled) {
+          border-color: var.$color-primary;
+          background-color: rgba(var.$color-primary, 0.05);
+
+          @include var.dark-mode {
+            border-color: var.$color-primary-light;
+            background-color: rgba(var.$color-primary-light, 0.1);
+          }
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .spinning {
+           animation: spin 1s linear infinite;
+           font-size: 1.125rem;
+        }
+        
+        .material-symbols-outlined {
+           font-size: 1.125rem;
         }
       }
     }
@@ -457,28 +509,28 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: rgba(15, 23, 42, 0.6);
+    background-color: rgba(var.$bg-dark, 0.6);
     backdrop-filter: blur(4px);
     transition: opacity 150ms;
 
     .modal-dialog {
-      background-color: white;
+      background-color: var.$bg-white;
       border-radius: 1rem;
       padding: 1.5rem;
       display: flex;
       flex-direction: column;
       max-width: 24rem;
       width: 90%;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      border: 1px solid var.$border-light;
+      box-shadow: 0 25px 50px -12px rgba(var.$text-dark, 0.25);
       transform: scale(1);
       transition: all 150ms;
 
       @media (min-width: 640px) { padding: 2rem; }
 
       @include var.dark-mode {
-        background-color: #1e293b;
-        border-color: #334155;
+        background-color: var.$bg-dark-light;
+        border-color: var.$border-dark;
       }
 
       .modal-header {
@@ -491,18 +543,18 @@
           width: 3rem;
           height: 3rem;
           border-radius: 9999px;
-          background-color: #fef2f2;
+          background-color: var.$color-danger-lighter;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
 
-          @include var.dark-mode { background-color: rgba(239, 68, 68, 0.2); }
+          @include var.dark-mode { background-color: rgba(var.$color-danger, 0.2); }
 
           .material-symbols-outlined {
-            color: #dc2626;
+            color: var.$color-danger-hover;
             font-size: 1.5rem;
-            @include var.dark-mode { color: #f87171; }
+            @include var.dark-mode { color: var.$color-danger-border; }
           }
         }
 
@@ -513,9 +565,9 @@
           h2 {
             font-size: 1.25rem;
             font-weight: 700;
-            color: #1e293b;
+            color: var.$text-main;
             margin-bottom: 0.25rem;
-            @include var.dark-mode { color: white; }
+            @include var.dark-mode { color: var.$bg-white; }
           }
 
           p {
@@ -544,27 +596,27 @@
         }
 
         .cancel-btn {
-          color: #475569;
+          color: var.$text-secondary;
           background: transparent;
 
-          @include var.dark-mode { color: #cbd5e1; }
+          @include var.dark-mode { color: var.$border-main; }
 
           &:hover {
-            background-color: #f1f5f9;
-            @include var.dark-mode { background-color: #334155; }
+            background-color: var.$bg-light-alt;
+            @include var.dark-mode { background-color: var.$border-dark; }
           }
         }
 
         .confirm-btn {
-          color: white;
-          background-color: #dc2626;
-          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+          color: var.$bg-white;
+          background-color: var.$color-danger-hover;
+          box-shadow: 0 1px 2px 0 rgba(var.$text-dark, 0.05);
 
-          &:hover { background-color: #b91c1c; }
+          &:hover { background-color: var.$color-danger-dark; }
 
           @include var.dark-mode {
-            background-color: #ef4444;
-            &:hover { background-color: #dc2626; }
+            background-color: var.$color-danger;
+            &:hover { background-color: var.$color-danger-hover; }
           }
           
           .spinning {

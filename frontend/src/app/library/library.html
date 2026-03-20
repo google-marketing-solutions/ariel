@@ -86,6 +86,19 @@
       </div>
     </div>
     }
+
+    <!-- Pagination / Load More -->
+    @if (nextPageToken()) {
+      <div class="load-more-container">
+        <button class="load-more-btn" (click)="loadMore()" [disabled]="isLoadingMore()">
+          @if (isLoadingMore()) {
+            <span class="material-symbols-outlined spinning">progress_activity</span> Loading...
+          } @else {
+            Load more
+          }
+        </button>
+      </div>
+    }
     }
 
   </div>

@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-SERVICE_NAME="ariel"
+SERVICE_NAME="ariel-v2"
 REGION=$(grep "GCP_PROJECT_LOCATION" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
 GCS_BUCKET=$(grep "GCS_BUCKET_NAME" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
 PROJECT_ID=$(grep "GCP_PROJECT_ID" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
