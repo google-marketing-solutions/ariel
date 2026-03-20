@@ -12,14 +12,14 @@
   <div class="actions-row">
     <!-- Download Actions -->
     <div class="download-actions">
-      <a [href]="finalVideoData()?.video_url" [download]="'generated_video_' + originalVideoData()?.video_id + '.mp4'">
+      <a [href]="finalVideoData()?.video_url" [download]="getCleanVideoName()">
         Download Video
       </a>
       <a [href]="finalVideoData()?.merged_audio_url"
-        [download]="'vocals_and_music_' + originalVideoData()?.video_id + '.wav'">
+        [download]="getCleanAudioName('audio')">
         Download Final Audio
       </a>
-      <a [href]="finalVideoData()?.vocals_url" [download]="'vocals_only_' + originalVideoData()?.video_id + '.wav'">
+      <a [href]="finalVideoData()?.vocals_url" [download]="getCleanAudioName('vocals')">
         Download Vocals
       </a>
     </div>

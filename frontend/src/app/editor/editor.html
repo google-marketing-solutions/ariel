@@ -263,9 +263,6 @@
                   :
                   (utterance.speaker.speaker_name || utterance.speaker.name) }}
                 </div>
-                <span class="timestamp">
-                  {{ formatTime(utterance.translated_start_time) }} - {{ formatTime(utterance.translated_end_time) }}
-                </span>
                 @if (utterance.isNew) {
                 <span class="material-symbols-outlined info-icon"
                   matTooltip="This utterance is created additionally, and therefore is not part of the original video. It will not show in the Original timeline, only in the Translate timeline.">
@@ -413,6 +410,9 @@
 
               <!-- Original Text (Editable) -->
               <div class="text-container">
+                <div class="timestamp original" matTooltip="Original audio timing">
+                  {{ formatTime(utterance.original_start_time) }} - {{ formatTime(utterance.original_end_time) }}
+                </div>
                 <textarea class="custom-scrollbar" style="field-sizing: content; min-height: 44px;" rows="1"
                   [value]="utterance.original_text"
                   (input)="updateOriginalText(utterance.id, $any($event.target).value)"
@@ -439,6 +439,9 @@
               </div>
               <!-- Translated Text (Editable) -->
               <div class="text-container">
+                <div class="timestamp translated" matTooltip="Translated audio timing">
+                  {{ formatTime(utterance.translated_start_time) }} - {{ formatTime(utterance.translated_end_time) }}
+                </div>
                 <textarea class="custom-scrollbar" style="field-sizing: content; min-height: 44px;" rows="1"
                   [value]="utterance.translated_text"
                   (input)="updateTranslatedText(utterance.id, $any($event.target).value)"
