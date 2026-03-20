@@ -10,8 +10,8 @@ GCP_PROJECT_LOCATION: "enter project location here"
 GCS_BUCKET_NAME: "enter bucket name here"
 
 # Gemini Model for transcription
-GEMINI_PRO_MODEL: "gemini-2.5-pro"
-GEMINI_FLASH_MODEL: "gemini-2.5-flash"
+GEMINI_PRO_MODEL: "gemini-3.1-pro-preview"
+GEMINI_FLASH_MODEL: "gemini-3-flash-preview"
 
 # Gemini Model for TTS
 GEMINI_TTS_FLASH_MODEL: "gemini-2.5-flash-preview-tts"
