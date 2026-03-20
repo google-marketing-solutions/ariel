@@ -14,9 +14,12 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from enum import Enum
-from pydantic import BaseModel, Field
 from datetime import datetime
+from enum import Enum
+
+from pydantic import BaseModel
+from pydantic import Field
+
 
 class GenderEnum(str, Enum):
     MALE = "male"

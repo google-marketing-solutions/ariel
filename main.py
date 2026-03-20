@@ -23,12 +23,6 @@ import shutil
 from typing import Annotated
 import uuid
 
-from cloud_storage import clean_video_name
-from cloud_storage import delete_video_from_gcs
-from cloud_storage import list_all_videos
-from cloud_storage import upload_file_to_gcs
-from cloud_storage import upload_video_to_gcs
-from configuration import get_config
 from fastapi import FastAPI
 from fastapi import Form
 from fastapi import Request
@@ -37,11 +31,20 @@ from fastapi.responses import FileResponse
 from fastapi.responses import HTMLResponse
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from generate_audio import generate_audio
-from generate_audio import shorten_audio
 from google import genai
 import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
+import moviepy
+
+from cloud_storage import clean_video_name
+from cloud_storage import delete_video_from_gcs
+from cloud_storage import list_all_videos
+from cloud_storage import upload_file_to_gcs
+from cloud_storage import upload_video_to_gcs
+from configuration import get_config
+from generate_audio import generate_audio
+from generate_audio import shorten_audio
+from models import GenerateVideoRequest
 from models import ProcessResponse
 from models import RegenerateRequest
 from models import RegenerateResponse
@@ -56,8 +59,6 @@ from transcribe import annotate_transcript
 from transcribe import transcribe_media
 from transcribe import TranscribeSegment
 from translate import translate_text
-from models import GenerateVideoRequest
-import moviepy
 
 # Set up Google Cloud Logging
 if "K_SERVICE" in os.environ:
