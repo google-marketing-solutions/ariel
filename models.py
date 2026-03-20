@@ -15,22 +15,23 @@
 # under the License.
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 from pydantic import Field
 
 
-class GenderEnum(str, Enum):
-    MALE = "male"
-    FEMALE = "female"
-    NEUTRAL = "neutral"
+class GenderEnum(StrEnum):
+  """Represents the gender of a Speaker."""
+  MALE = "male"
+  FEMALE = "female"
+  NEUTRAL = "neutral"
 
 class Speaker(BaseModel):
   """A speaker in a video.
 
   This tracks a speaker in a video, with which speaker in the video it
-  represents and a Chirp voice that will be used when using text-to-speech.
+  represents and a TTS voice that will be used when using text-to-speech.
 
   Attributes:
     speaker_id: a unique id for the speaker in a video.
@@ -143,6 +144,7 @@ class RegenerateResponse(BaseModel):
   duration: float
 
 class GenerateVideoRequest(BaseModel):
+  """Used to request the completed video."""
   video: Video
   original_video_url: str = ""
 

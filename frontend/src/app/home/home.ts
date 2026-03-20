@@ -222,7 +222,7 @@ export class Home implements OnInit {
       console.log('Received result from backend:', result);
 
       if (result.video_id) {
-        this.router.navigate(['/editor'], { queryParams: { video_id: result.video_id } });
+        this.router.navigate(['/editor'], { state: { from: 'home' }, queryParams: { video_id: result.video_id } });
       }
     } catch (error) {
       console.error('Failed to process video:', error);

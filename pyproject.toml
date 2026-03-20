@@ -53,6 +53,7 @@ dev = [
 [tool.ruff]
 # Google strongly enforces a strict 80-character line limit.
 line-length = 80
+indent-width = 2
 
 [tool.ruff.lint]
 select = [
@@ -115,11 +116,7 @@ fixture-parentheses = false
 mark-parentheses = false
 
 [tool.ruff.format]
-# The Google guide says: "Be consistent with your choice of string quote character.
-# Pick ' or \" and stick with it."
-# Ruff defaults to double quotes. I've set it to single quotes here as it is
-# highly prevalent in Google code, but feel free to change it to "double".
-quote-style = "single"
+quote-style = "double"
 
 # Automatically format Python code examples inside your docstrings!
 docstring-code-format = true

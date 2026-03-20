@@ -83,6 +83,8 @@ export class Editor implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
+  cameFrom: string | null = null;
+
   videoId = signal<string | null>(null);
   videoUrl = signal<string | null>(null);
   videoData = signal<VideoJob | null>(null);
@@ -248,6 +250,13 @@ export class Editor implements OnInit, OnDestroy {
   settingsError = signal<string | null>(null);
 
   constructor() {
+    // saving where the user came from
+    const navigation = this.router.currentNavigation();
+    const from = navigation?.extras?.state?.['from'];
+    if (from) {
+      this.cameFrom = from;
+    }
+
     effect(() => {
       const data = this.videoData();
       if (data) {
@@ -483,8 +492,7 @@ export class Editor implements OnInit, OnDestroy {
         formData.append('original_language', newOriginalLang);
         formData.append('translate_language', newTranslateLang);
         formData.append('source_video_id', data.video_id);
-        formData.append('update_existing', 'true');
-        formData.append('prompt_enhancements', data.prompt_enhancements || '');
+        formData.append('update_existing', 'True');
 
         const speakersToPost = newSpeakers.map((s, index) => ({
           id: s.speaker_id || `speaker_${(index + 1).toString()}`,
@@ -506,11 +514,13 @@ export class Editor implements OnInit, OnDestroy {
 
       } else if (translateLangChanged) {
         // Translation change (Fork)
+        // We don't want to make a copy if the user hasn't opened an old project.
+        const update_existing = (this.cameFrom === 'home') ? 'True' : 'False';
         const formData = new FormData();
         formData.append('source_video_id', data.video_id);
         formData.append('original_language', data.original_language);
         formData.append('translate_language', newTranslateLang);
-        formData.append('prompt_enhancements', data.prompt_enhancements || '');
+        formData.append('update_existing', update_existing);
 
         const speakersToPost = newSpeakers.map((s, index) => ({
           id: s.speaker_id || `speaker_${(index + 1).toString()}`,

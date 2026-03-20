@@ -43,20 +43,16 @@ from cloud_storage import upload_file_to_gcs
 from cloud_storage import upload_video_to_gcs
 from configuration import get_config
 from generate_audio import generate_audio
-from generate_audio import shorten_audio
 from models import GenerateVideoRequest
 from models import ProcessResponse
 from models import RegenerateRequest
 from models import RegenerateResponse
-from models import Speaker
 from models import Utterance
 from models import Video
 from process import combine_video_and_audio
 from process import merge_background_and_vocals
 from process import merge_vocals
 from process import separate_audio_from_video
-from transcribe import annotate_transcript
-from transcribe import transcribe_media
 from transcribe import TranscribeSegment
 from translate import translate_text
 
@@ -82,48 +78,6 @@ else:
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 config = get_config()
-
-# @app.post("/preprocess")
-# def preprocess_video(
-#     use_pro_model: Annotated[bool, Form()] = False,
-#     video: UploadFile = None,
-# ) -> Video:
-#   """Preprocesses a video to extract metadata.
-
-#   This function sends the uploaded video file to Gemini for analysis. The
-#   original language, number of speakers, and speaker voices are determined. A
-#   partial Video object is returned with the extracted data.
-
-#   Args:
-#     video: the video file to preprocess.
-#     use_pro_model: if true, the pro model defined in the deployment is used.
-
-#   Returns:
-#     A partially completed Video object with the extracted metadata.
-#   """
-#   if use_pro_model:
-#     gemini_model = config.gemini_pro_model
-#     tts_model = config.gemini_pro_tts_model
-#   else:
-#     gemini_model = config.gemini_flash_model
-#     tts_model = config.gemini_flash_tts_model
-#   local_path, gcs_path = save_video(video)
-#   gemini_client = genai.Client(
-#       vertexai=True,
-#       project=config.gcp_project_id,
-#       location=config.gcp_project_location,
-#   )
-#   voice_data = extract_video_details(gcs_path, gemini_client, gemini_model)
-#   return Video(
-#       video_id=os.path.basename(local_path),
-#       original_language=voice_data.language,
-#       translate_language="",
-#       prompt_enhancements="",
-#       speakers=voice_data.voices,
-#       utterances=[],
-#       model_name=gemini_model,
-#       tts_model_name=tts_model
-#   )
 
 
 def _process_utterance(
@@ -163,99 +117,12 @@ def _process_utterance(
   return u
 
 
-@app.post("/super_process")
-def super_process_video(video: UploadFile, translate_language: Annotated[str, Form()], use_pro_model: Annotated[bool, Form()]) -> Video:
-  """Endpoint function to process a video completely with Gemini.
-
-  Args:
-    video: The video to process.
-    translate_language: The language the video will be translated to.
-
-  Returns:
-    A video object with the information required to carry out the dubbing.
-  """
-  local_path, gcs_path = save_video(video)
-  video_id = gcs_path.split("/")[-2]
-  video_clip = moviepy.VideoFileClip(local_path)
-  duration = video_clip.duration
-  video_clip.close()
-
-  if use_pro_model:
-    gemini_model = config.gemini_pro_model
-    gemini_tts_model = config.gemini_pro_tts_model
-  else:
-    gemini_model = config.gemini_flash_model
-    gemini_tts_model = config.gemini_flash_tts_model
-
-  genai_client = genai.Client(
-    vertexai=True,
-    project=config.gcp_project_id,
-    location="global",
-  )
-
-  system_instruction = """
-    You are an expert audio-visual localization system. Your task is to analyze a provided video, transcribe its spoken dialogue, analyze the prosody and tone, and translate the text into a target language.
-
-    You must extract the following information and structure it strictly according to the provided JSON schema:
-    1. Primary Language: Identify the primary spoken language in the video and output its BCP-47 language code.
-    2. Speaker List: Create a top-level list of all unique speakers in the video. Assign a unique `speaker_id`, a `speaker_name`, and `gender`. Assign a compatible Gemini-TTS voice name to the `voice` field (e.g., 'Achird', 'Aoede', 'Puck'). Do not use regional codes.
-    3. Sentence-by-Sentence Transcription: Transcribe the video strictly sentence by sentence into `original_text`. One sentence should not appear as multiple utterances.  
-    4. Timestamps: Provide `original_start_time` and `original_end_time` in seconds (precision: 2 decimal places). The timestamps must be as exact as possible.
-    5. Speaker Assignment: Assign the correct speaker object to each utterance, matching the speakers defined in your top-level Speaker List.
-    6. Speaking Instructions: In `speaking_instructions`, write detailed instructions for a TTS engine describing tone, pacing, rhythm, pitch, inflection, pauses, and emphasis.
-    7. Translation Instructions: In `translation_instructions`, describe formality, jargon, and cultural context.
-    8. Translation: Translate the `original_text` into the Target Language and place it in `translated_text`.
-
-    Important Constraints:
-    - Only populate fields that can be known *before* generating the translated speech.
-    - For `translated_start_time` and `translated_end_time`, set to 0.0.
-    - For `speaking_rate`, set to 1.0.
-    - For `removed` and `muted`, set to False.
-    - For `audio_url`, leave as an empty string "".
-    - Ensure all timestamps fall within the provided video duration.
-    """
-
-  video_part = genai.types.Part.from_uri(
-    file_uri=gcs_path,
-    mime_type="video/mp4"
-  )
-
-  user_prompt = f"""
-    Please process the attached video based on the following parameters:
-    - Video Duration: {duration} seconds
-    - Target Language: {translate_language}
-    """
-
-  gemini_config = genai.types.GenerateContentConfig(
-        system_instruction=system_instruction,
-        temperature=0.2,
-        response_mime_type="application/json",
-        # The new SDK accepts the Pydantic class directly
-        response_schema=ProcessResponse,
-    )
-
-  response = genai_client.models.generate_content(
-    model=gemini_model,
-    contents=[video_part, user_prompt],
-    config=gemini_config)
-
-  process_response = response.parsed
-  return Video(
-    video_id=video_id,
-    original_language=process_response.primary_language,
-    translate_language=translate_language,
-    speakers=process_response.speakers,
-    utterances=process_response.utterances,
-    model_name=gemini_model,
-    tts_model_name=gemini_tts_model,
-  )
-
 @app.post("/process")
 def process_video(
   translate_language: Annotated[str, Form()],
   use_pro_model: Annotated[bool, Form()] = False,
-  video: UploadFile = None,
-  source_video_id: Annotated[str, Form()] = None,
+  video: UploadFile | None = None,
+  source_video_id: Annotated[str, Form()] = "",
   update_existing: Annotated[bool, Form()] = False,
 ) -> Video:
   """Endpoint to run the initial video processing workflow.
@@ -279,7 +146,7 @@ def process_video(
       version is used.
     video: the original video file. Optional if source_video_id is provided.
     source_video_id: the ID of an existing video to fork/process from.
-    update_existing: if true, updates the existing project in-place instead of forking. 
+    update_existing: if true, updates the existing project in-place instead of forking.
         This is used when changing the language on the editor page.
 
   Returns:
@@ -294,7 +161,7 @@ def process_video(
   video_name = ""
   local_video_path = ""
 
-  # Logic to handle forking, update, or new upload
+  # If we're doing something with an existing video.
   if source_video_id:
     source_dir = os.path.join(mount_point, source_video_id)
     if not os.path.exists(source_dir):
@@ -309,11 +176,19 @@ def process_video(
         raise FileNotFoundError("Video file not found in source directory")
       video_filename = min(source_files, key=len)
 
+    # Updating from the edit page and only changing the original language.
     if update_existing:
       logging.info("Updating existing project: %s", source_video_id)
       local_dir = source_dir
       video_name = source_video_id
       local_video_path = os.path.join(local_dir, video_filename)
+      gcs_video_path = (
+        f"gs://{config.gcs_bucket_name}/{video_name}/{video_name}"
+      )
+      ### DEBUG
+      print(f"### DEBUG ### GSC PATH: {gcs_video_path}")
+      ### DEBUG
+    # Editing a video from the library page or the edit page if changing the translate language.
     else:
       logging.info("Forking from source_video_id: %s", source_video_id)
       now = datetime.datetime.now().isoformat().replace(":", "_")
@@ -332,13 +207,16 @@ def process_video(
       local_video_path = os.path.join(local_dir, new_id)
       shutil.copy2(os.path.join(source_dir, video_filename), local_video_path)
       video_name = new_id
+      gcs_video_path = (
+        f"gs://{config.gcs_bucket_name}/{video_name}/{video_name}"
+      )
 
       # Copy separated audio files if present
       for fname in ["original_audio.wav", "background.wav", "vocals.wav"]:
         src_file = os.path.join(source_dir, fname)
         if os.path.exists(src_file):
           shutil.copy2(src_file, os.path.join(local_dir, fname))
-    
+
     source_metadata_path = os.path.join(
       mount_point, source_video_id, "metadata.json"
     )
@@ -364,7 +242,6 @@ def process_video(
           transcript = "SKIPPED_REUSED"
       except Exception as e:
         logging.warning(f"Failed to reuse transcript: {e}")
-
 
   else:
     logging.info("Processing new video upload: %s", video.filename)
@@ -408,10 +285,6 @@ def process_video(
   with open(background_path, "rb") as f:
     upload_file_to_gcs(background_path, f, config.gcs_bucket_name)
 
-  gcs_original_audio_uri = (
-    f"gs://{config.gcs_bucket_name}/{original_audio_path}"
-  )
-
   genai_client = genai.Client(
     vertexai=True,
     project=config.gcp_project_id,
@@ -445,8 +318,7 @@ def process_video(
     """
 
   video_part = genai.types.Part.from_uri(
-    file_uri=gcs_video_path,
-    mime_type="video/mp4"
+    file_uri=gcs_video_path, mime_type="video/mp4"
   )
 
   user_prompt = f"""
@@ -456,28 +328,29 @@ def process_video(
     """
 
   gemini_config = genai.types.GenerateContentConfig(
-        system_instruction=system_instruction,
-        temperature=0.2,
-        response_mime_type="application/json",
-        response_schema=ProcessResponse,
-    )
+    system_instruction=system_instruction,
+    temperature=0.2,
+    response_mime_type="application/json",
+    response_schema=ProcessResponse,
+  )
 
   if use_pro_model:
     gemini_model = config.gemini_pro_model
     gemini_tts_model = config.gemini_pro_tts_model
   else:
     gemini_model = config.gemini_flash_model
-    gemini_tts_model = config.gemini_flash_tts_model  
+    gemini_tts_model = config.gemini_flash_tts_model
 
   response = genai_client.models.generate_content(
     model=gemini_model,
     contents=[video_part, user_prompt],
-    config=gemini_config)
+    config=gemini_config,
+  )
 
   process_response = response.parsed
   original_language = process_response.primary_language
   speaker_list = process_response.speakers
-  utterances = process_response.utterances  
+  utterances = process_response.utterances
 
   process_func = functools.partial(
     _process_utterance,
@@ -488,9 +361,7 @@ def process_video(
 
   with concurrent.futures.ThreadPoolExecutor() as executor:
     utterances = list(
-      executor.map(
-        process_func, range(len(utterances)), utterances
-      )
+      executor.map(process_func, range(len(utterances)), utterances)
     )
 
   to_return = Video(
@@ -514,7 +385,7 @@ def process_video(
       if to_return.utterances:
         duration = max([u.translated_end_time for u in to_return.utterances])
 
-    metadata['duration'] = duration
+    metadata["duration"] = duration
 
     metadata_path = os.path.join(local_dir, "metadata.json")
     with open(metadata_path, "w") as f:
@@ -600,7 +471,8 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
       target_language=video_data.translate_language,
     )
     combined_video_path = os.path.join(
-      local_dir, f"{video_data.video_id}.{video_data.translate_language}.mp4"
+      local_dir,
+      f"{video_data.video_id}.{video_data.translate_language}.mp4",
     )
     combine_video_and_audio(
       local_video_path, merged_audio_path, combined_video_path
@@ -680,7 +552,9 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
   )
   duration = utterance.translated_end_time - utterance.translated_start_time
   return RegenerateResponse(
-    translated_text=new_translation, audio_url=utterance.audio_url, duration=duration
+    translated_text=new_translation,
+    audio_url=utterance.audio_url,
+    duration=duration,
   )
 
 
@@ -768,7 +642,11 @@ def get_videos(page_token: str = None, max_results: int = 5) -> dict:
   """Fetches the list of videos from the appropriate source based on environment."""
 
   if "K_SERVICE" in os.environ:
-    return list_all_videos(config.gcs_bucket_name, page_token=page_token, max_results=max_results)
+    return list_all_videos(
+      config.gcs_bucket_name,
+      page_token=page_token,
+      max_results=max_results,
+    )
 
   videos_list = []
   try:
@@ -809,18 +687,22 @@ def get_videos(page_token: str = None, max_results: int = 5) -> dict:
             except Exception as e:
               print(f"Error reading metadata for {file}: {e}")
 
-          videos_list.append({
-            "video_id": folder_name,
-            "name": clean_video_name(file),
-            "url": web_path,
-            "download_url": web_path,
-            "created_at": creation_time,
-            "original_language": metadata.get("original_language", "Unknown"),
-            "translate_language": metadata.get("translate_language", "Unknown"),
-            "duration": metadata.get("duration", 0),
-            "speakers": metadata.get("speakers", []),
-            "has_metadata": has_metadata
-          })
+          videos_list.append(
+            {
+              "video_id": folder_name,
+              "name": clean_video_name(file),
+              "url": web_path,
+              "download_url": web_path,
+              "created_at": creation_time,
+              "original_language": metadata.get("original_language", "Unknown"),
+              "translate_language": metadata.get(
+                "translate_language", "Unknown"
+              ),
+              "duration": metadata.get("duration", 0),
+              "speakers": metadata.get("speakers", []),
+              "has_metadata": has_metadata,
+            }
+          )
       videos_list.sort(key=lambda x: x["created_at"], reverse=True)
   except Exception as e:
     print(f"Error listing videos: {e}")
@@ -855,14 +737,16 @@ def delete_video(video_id: str):
     if "K_SERVICE" in os.environ:
       delete_video_from_gcs(config.gcs_bucket_name, video_id)
       return JSONResponse(
-        status_code=200, content={"message": "Video deleted successfully"}
+        status_code=200,
+        content={"message": "Video deleted successfully"},
       )
     else:
       local_dir = os.path.join(mount_point, video_id)
       if os.path.exists(local_dir):
         shutil.rmtree(local_dir)
         return JSONResponse(
-          status_code=200, content={"message": "Video deleted successfully"}
+          status_code=200,
+          content={"message": "Video deleted successfully"},
         )
       else:
         return JSONResponse(
