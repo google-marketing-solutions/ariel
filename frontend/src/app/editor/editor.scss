@@ -1127,7 +1127,7 @@
           position: absolute;
           top: 0.5rem;
           right: 0.75rem;
-          font-size: 14px !important;
+          font-size: 18px !important;
           opacity: 0.6;
           pointer-events: auto;
           transition: all 150ms;
@@ -1289,7 +1289,12 @@
   overflow-x: hidden;
   flex-shrink: 0;
   z-index: 10;
-
+  
+  &.closed {
+      width: 0;
+      border-left: none;
+      padding: 0;
+    }
   @include var.dark-mode {
     background-color: rgba(var.$bg-dark-light, 0.4);
     border-color: var.$border-dark;
@@ -1297,10 +1302,16 @@
 
   .sidebar-content {
     padding: 1.25rem;
-    flex: 1;
     display: flex;
     flex-direction: column;
-    height: 100%;
+    min-height: 100%;
+
+    &::after {
+      content: "";
+      display: block;
+      height: 3rem;
+      flex-shrink: 0;
+    }
   }
 
   .panel-header {

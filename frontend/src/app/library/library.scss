@@ -9,7 +9,7 @@
     align-items: center;
     justify-content: flex-start;
     gap: 1.5rem;
-    margin-bottom: 2.5rem;
+    margin-bottom: 0.5rem;
     margin-top: 0.5rem;
 
     h2 {
@@ -21,8 +21,10 @@
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
+      margin-top: 0;
+      margin-bottom: 0;
       line-height: 1.2;
-      padding-bottom: 0.5rem;
+      padding-bottom: 0.75rem;
 
       @include var.dark-mode {
         background: linear-gradient(to right, var.$color-primary, var.$color-primary-light);

@@ -8,7 +8,7 @@
 }
 
 .home-title {
-  font-size: 2.25rem;
+  font-size: 2.5rem;
   font-weight: 700;
   font-family: var.$font-family-heading;
   background: linear-gradient(to right, var.$color-primary, var.$color-accent);
@@ -19,11 +19,7 @@
   margin-bottom: 0.5rem;
   letter-spacing: -0.025em;
   line-height: 1.2;
-    padding-bottom: 0.75rem;
-
-  @media (min-width: 1024px) {
-    font-size: 3rem;
-  }
+  padding-bottom: 0.75rem;
 
   @include var.dark-mode {
     background: linear-gradient(to right, var.$color-primary-dark, var.$color-primary-light);

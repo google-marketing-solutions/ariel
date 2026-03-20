@@ -510,15 +510,9 @@
     </section>
 
     <!-- Right Column: Advanced Settings -->
-    <aside class="sidebar-right custom-scrollbar">
+    <aside class="sidebar-right custom-scrollbar" [class.closed]="!activePanelMode() || !activeUtteranceId()">
       <div class="sidebar-content">
-        @if (!activePanelMode() || !activeUtteranceId()) {
-        <!-- Empty State -->
-        <div class="empty-state">
-          <span class="material-symbols-outlined">touch_app</span>
-          <p>Select an action on an utterance to customize settings.</p>
-        </div>
-        } @else {
+        @if (activePanelMode() && activeUtteranceId()) {
 
         @if (activePanelMode() === 'voice') {
         <h3 class="panel-header">
