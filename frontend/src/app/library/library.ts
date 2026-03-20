@@ -31,6 +31,8 @@ interface VideoJob {
 export class Library implements OnInit {
   videos = signal<VideoJob[]>([]);
   isLoading = signal(true);
+  isLoadingMore = signal(false);
+  nextPageToken = signal<string | null>(null);
   error = signal<string | null>(null);
 
   formattedVideos = computed(() => {
@@ -43,24 +45,51 @@ export class Library implements OnInit {
   });
 
   ngOnInit() {
-    this.fetchVideos();
+    this.fetchVideos(true);
   }
 
-  async fetchVideos() {
-    this.isLoading.set(true);
+  async fetchVideos(reset = false) {
+    if (reset) {
+      this.isLoading.set(true);
+      this.videos.set([]);
+      this.nextPageToken.set(null);
+    } else {
+      this.isLoadingMore.set(true);
+    }
+    
     try {
-      const response = await fetch('/api/videos');
+      let url = '/api/videos?max_results=5';
+      const token = this.nextPageToken();
+      if (!reset && token) {
+        url += `&page_token=${token}`;
+      }
+      
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      this.videos.set(data);
+      
+      if (reset) {
+        this.videos.set(data.videos || []);
+      } else {
+        this.videos.update(v => [...v, ...(data.videos || [])]);
+      }
+      this.nextPageToken.set(data.next_page_token || null);
+      
     } catch (err: unknown) {
       console.error('Failed to load videos:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to load videos';
       this.error.set(errorMessage);
     } finally {
       this.isLoading.set(false);
+      this.isLoadingMore.set(false);
+    }
+  }
+
+  loadMore() {
+    if (this.nextPageToken() && !this.isLoadingMore()) {
+      this.fetchVideos(false);
     }
   }
 
@@ -121,7 +150,7 @@ export class Library implements OnInit {
     try {
       const response = await fetch(`/api/videos/${videoId}`, { method: 'DELETE' });
       if (response.ok) {
-        await this.fetchVideos();
+        await this.fetchVideos(true);
         this.isDeleteModalOpen.set(false);
         this.pendingDeleteVideoId.set(null);
       } else {

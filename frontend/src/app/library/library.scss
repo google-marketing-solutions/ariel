@@ -447,6 +447,58 @@
         }
       }
     }
+
+    .load-more-container {
+      display: flex;
+      justify-content: center;
+      padding: 1.5rem 0 2rem;
+      width: 100%;
+
+      .load-more-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border-radius: 0.75rem;
+        background-color: transparent;
+        border: 1px solid rgba(var.$color-primary, 0.2);
+        padding: 0.75rem 2rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var.$color-primary;
+        transition: all 150ms;
+        cursor: pointer;
+
+        @include var.dark-mode {
+          border-color: var.$border-dark;
+          color: var.$color-primary-light;
+        }
+
+        &:hover:not(:disabled) {
+          border-color: var.$color-primary;
+          background-color: rgba(var.$color-primary, 0.05);
+
+          @include var.dark-mode {
+            border-color: var.$color-primary-light;
+            background-color: rgba(var.$color-primary-light, 0.1);
+          }
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .spinning {
+           animation: spin 1s linear infinite;
+           font-size: 1.125rem;
+        }
+        
+        .material-symbols-outlined {
+           font-size: 1.125rem;
+        }
+      }
+    }
   }
 
   // Delete Modal

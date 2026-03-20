@@ -243,6 +243,9 @@ export class Editor implements OnInit, OnDestroy {
   // Speaker Modal State
   isSpeakerModalOpen = signal(false);
   speakerToEditId = signal<string | null>(null);
+  
+  // Settings error
+  settingsError = signal<string | null>(null);
 
   constructor() {
     effect(() => {
@@ -389,6 +392,7 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   toggleEditSettings() {
+    this.settingsError.set(null);
     if (this.isEditingSettings()) {
       // Cancel edit
       this.isEditingSettings.set(false);
@@ -464,13 +468,19 @@ export class Editor implements OnInit, OnDestroy {
     const translateLangChanged = newTranslateLang !== data.translate_language;
 
     // Check if speakers changed
-    const speakersChanged = JSON.stringify(newSpeakers.map(s => ({ speaker_id: s.speaker_id, voice: s.voice }))) !==
-      JSON.stringify(data.speakers.map(s => ({ speaker_id: s.speaker_id, voice: s.voice })));
+    const speakersChanged = JSON.stringify(newSpeakers) !== JSON.stringify(data.speakers);
 
     if (!originalLangChanged && !translateLangChanged && !speakersChanged) {
       this.isEditingSettings.set(false);
       return;
     }
+
+    if (newSpeakers.length === 0) {
+      this.settingsError.set('You must have at least one speaker.');
+      return;
+    }
+
+    this.settingsError.set(null);
 
     this.isProcessingGlobalChanges.set(true);
     this.isGeneratingAudio.set(true);
@@ -489,7 +499,7 @@ export class Editor implements OnInit, OnDestroy {
           id: s.speaker_id || `speaker_${(index + 1).toString()}`,
           name: s.speaker_name || s.name,
           voice: s.voice,
-          gender: s.gender,
+          gender: s.gender ? s.gender.toLowerCase() : s.gender,
         }));
         formData.append('speakers', JSON.stringify(speakersToPost));
 
@@ -515,7 +525,7 @@ export class Editor implements OnInit, OnDestroy {
           id: s.speaker_id || `speaker_${(index + 1).toString()}`,
           name: s.speaker_name || s.name,
           voice: s.voice,
-          gender: s.gender,
+          gender: s.gender ? s.gender.toLowerCase() : s.gender,
         }));
         formData.append('speakers', JSON.stringify(speakersToPost));
 
@@ -530,13 +540,36 @@ export class Editor implements OnInit, OnDestroy {
         }
 
       } else if (speakersChanged) {
-        // Only voices changed, update data and regenerate dubbings that were changed
-        const changedSpeakers = newSpeakers.filter(
-          ns => !data.speakers.find(os => os.speaker_id === ns.speaker_id && os.voice === ns.voice)
-        );
-        const changedSpeakerIds = changedSpeakers.map(cs => cs.speaker_id);
+        // Find which utterances need new dubbing (assigned to a deleted speaker, or their speaker's voice changed)
+        const utterancesToUpdate = data.utterances.filter(u => {
+           const oldSpeaker = u.speaker;
+           const newSpeaker = newSpeakers.find(s => s.speaker_id === oldSpeaker.speaker_id);
+           
+           if (!newSpeaker) return true; // Speaker was deleted
+           if (newSpeaker.voice !== oldSpeaker.voice) return true; // Voice changed
+           return false; // Only name or gender changed, no audio regen needed
+        });
 
-        const utterancesToUpdate = data.utterances.filter(u => changedSpeakerIds.includes(u.speaker.speaker_id));
+        // Apply global speaker list change
+        data.speakers = newSpeakers.map(s => ({
+          ...s,
+          speaker_name: s.speaker_name || s.name,
+          gender: s.gender ? s.gender.toLowerCase() : s.gender
+        }));
+
+        // Update speaker voices locally BEFORE regeneration, and reassign orphans to the first available speaker
+        for (let u of data.utterances) {
+          let newSpk = data.speakers.find(s => s.speaker_id === u.speaker.speaker_id);
+          if (!newSpk) {
+            newSpk = data.speakers[0]; // Fallback to first speaker
+          }
+          // Only pull fields we want to sync, to avoid losing local state
+          u.speaker.speaker_id = newSpk.speaker_id;
+          u.speaker.name = newSpk.name;
+          u.speaker.speaker_name = newSpk.speaker_name;
+          u.speaker.voice = newSpk.voice;
+          u.speaker.gender = newSpk.gender;
+        }
 
         const dubbingPromises = utterancesToUpdate.map(async (utterance) => {
           const originalIndex = data.utterances.findIndex(u => u.id === utterance.id);
@@ -559,16 +592,6 @@ export class Editor implements OnInit, OnDestroy {
         });
 
         await Promise.all(dubbingPromises);
-
-        // Update speaker voices locally
-        for (let u of data.utterances) {
-          const newSpk = changedSpeakers.find(s => s.speaker_id === u.speaker.speaker_id);
-          if (newSpk) {
-            u.speaker.voice = newSpk.voice;
-          }
-        }
-
-        data.speakers = newSpeakers;
 
         this.videoData.set({ ...data });
         this.initEditState();
@@ -1705,9 +1728,14 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   onDocumentClick(event: MouseEvent) {
-    if (!this.activeUtteranceId() && !this.activePanelMode()) return;
-
     const targetElement = event.target as HTMLElement;
+
+    if (!targetElement.closest('.custom-select')) {
+      if (this.isOriginalOpen()) this.isOriginalOpen.set(false);
+      if (this.isTranslationOpen()) this.isTranslationOpen.set(false);
+    }
+
+    if (!this.activeUtteranceId() && !this.activePanelMode()) return;
 
     if (targetElement.closest('form')) return;
 

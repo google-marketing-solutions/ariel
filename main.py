@@ -696,11 +696,11 @@ def sanitize_filename(orig: str) -> str:
 
 
 @app.get("/api/videos")
-def get_videos() -> list[dict]:
+def get_videos(page_token: str = None, max_results: int = 5) -> dict:
   """Fetches the list of videos from the appropriate source based on environment."""
 
   if "K_SERVICE" in os.environ:
-    return list_all_videos(config.gcs_bucket_name)
+    return list_all_videos(config.gcs_bucket_name, page_token=page_token, max_results=max_results)
 
   videos_list = []
   try:
@@ -756,7 +756,7 @@ def get_videos() -> list[dict]:
       videos_list.sort(key=lambda x: x["created_at"], reverse=True)
   except Exception as e:
     print(f"Error listing videos: {e}")
-  return videos_list
+  return {"videos": videos_list, "next_page_token": None}
 
 
 @app.get("/api/projects/{video_id}")

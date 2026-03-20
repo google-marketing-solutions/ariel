@@ -178,6 +178,12 @@
                 }
                 }
               </div>
+              @if (settingsError()) {
+              <div class="settings-error-message" style="color: #ea4335; margin-top: 8px; font-size: 13px; display: flex; align-items: center; gap: 4px;">
+                <span class="material-symbols-outlined" style="font-size: 16px;">error</span>
+                {{ settingsError() }}
+              </div>
+              }
             </div>
           </div>
 

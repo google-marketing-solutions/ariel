@@ -165,26 +165,22 @@ def clean_video_name(filename: str) -> str:
   clean_name = re.sub(pattern, "", name)
   return clean_name
 
-def list_all_videos(bucket_name: str) -> list[VideoMetadata]:
+def list_all_videos(bucket_name: str, page_token: str = None, max_results: int = 5) -> dict:
   """
-  Returns a list of translated videos with their metadata.
+  Returns a page of translated videos with their metadata.
   Args:
     bucket_name: the name of the GCS bucket to list videos from.
+    page_token: optional token to fetch the next page.
+    max_results: max number of videos per page.
 
   Returns:
-    A list of VideoMetadata objects, each containing the metadata for a video:
-    name: the name of the video.
-    url: the URL to stream the video from.
-    download_url: the URL to download the video from.
-    created_at: the time the video was created.
-    original_language: the original language of the video.
-    translate_language: the language to translate the video to.
-    duration: the duration of the video.
-    speakers: the speakers in the video.
+    A dict with 'videos' list and 'next_page_token' string.
   """
   storage_client = storage.Client()
   bucket = storage_client.bucket(bucket_name)
-  blobs = storage_client.list_blobs(bucket_name)
+  
+  # The match_glob filters out uncompleted/raw video files, keeping only the translated ones (`.es-ES.mp4`, etc)
+  blobs = storage_client.list_blobs(bucket_name, max_results=max_results, page_token=page_token, match_glob="**/*.??-??.mp4")
 
   videos = []
 
@@ -253,7 +249,10 @@ def list_all_videos(bucket_name: str) -> list[VideoMetadata]:
 
   videos.sort(key=lambda x: x['created_at'], reverse=True)
 
-  return videos
+  return {
+      "videos": videos,
+      "next_page_token": blobs.next_page_token
+  }
 
 def delete_video_from_gcs(bucket_name: str, video_id: str):
   storage_client = storage.Client()
