@@ -236,12 +236,12 @@ export class Home implements OnInit {
     this.processingMessage.set('Uploading video...');
 
     const messages = [
-      { time: 4000, text: 'Analyzing audio...' },
-      { time: 10000, text: 'Extracting speech...' },
-      { time: 20000, text: 'Translating...' },
-      { time: 35000, text: 'Synthesizing voice...' },
-      { time: 60000, text: 'Generating utterances...' },
-      { time: 120000, text: 'Almost done...' }
+      { time: 10000, text: 'Analyzing audio...' },
+      { time: 30000, text: 'Extracting speech...' },
+      { time: 60000, text: 'Translating...' },
+      { time: 100000, text: 'Identifying speakers...' },
+      { time: 140000, text: 'Generating utterances...' },
+      { time: 180000, text: 'Almost done...' }
     ];
 
     const startTime = Date.now();
