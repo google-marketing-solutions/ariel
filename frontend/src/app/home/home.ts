@@ -240,7 +240,7 @@ export class Home implements OnInit {
       { time: 10000, text: 'Extracting speech...' },
       { time: 20000, text: 'Translating...' },
       { time: 35000, text: 'Synthesizing voice...' },
-      { time: 60000, text: 'Rendering video...' },
+      { time: 60000, text: 'Generating utterances...' },
       { time: 120000, text: 'Almost done...' }
     ];
 
