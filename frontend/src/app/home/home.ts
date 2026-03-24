@@ -238,8 +238,8 @@ export class Home implements OnInit {
     const messages = [
       { time: 10000, text: 'Analyzing audio...' },
       { time: 30000, text: 'Extracting speech...' },
-      { time: 60000, text: 'Translating...' },
-      { time: 100000, text: 'Identifying speakers...' },
+      { time: 60000, text: 'Identifying speakers...' },
+      { time: 100000, text: 'Translating...' },
       { time: 140000, text: 'Generating utterances...' },
       { time: 180000, text: 'Almost done...' }
     ];
