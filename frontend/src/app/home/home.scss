@@ -346,6 +346,13 @@
         }
       }
 
+      &.dropup {
+        .select-dropdown {
+          top: auto;
+          bottom: calc(100% + 0.5rem);
+        }
+      }
+
       .select-dropdown {
         position: absolute;
         top: calc(100% + 0.5rem);
@@ -362,6 +369,52 @@
         @include var.dark-mode {
           background-color: var.$bg-dark-light;
           border-color: rgba(var.$bg-white, 0.1);
+        }
+
+        .search-container {
+          position: sticky;
+          top: 0;
+          background-color: var.$bg-white;
+          z-index: 2;
+          padding: 0.5rem 1rem;
+          border-bottom: 1px solid var.$border-subtle;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          @include var.dark-mode {
+            background-color: var.$bg-dark-light;
+            border-bottom-color: rgba(var.$bg-white, 0.1);
+          }
+
+          .search-icon {
+            font-size: 1.125rem;
+            color: var.$text-muted;
+          }
+
+          .language-search-input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-size: 0.875rem;
+            color: var.$text-main;
+            outline: none;
+            padding: 0.25rem 0;
+
+            &::placeholder {
+              color: var.$text-muted;
+            }
+
+            @include var.dark-mode {
+              color: var.$text-light;
+            }
+          }
+        }
+        
+        .no-results {
+          padding: 1rem;
+          text-align: center;
+          font-size: 0.875rem;
+          color: var.$text-muted;
         }
 
         .optgroup-label {
@@ -460,6 +513,15 @@
       cursor: not-allowed;
       box-shadow: none;
       transform: none;
+
+      &.processing {
+        opacity: 0.9;
+        background-color: rgba(var.$color-primary, 0.05);
+
+        @include var.dark-mode {
+          background-color: rgba(var.$color-primary-light, 0.05);
+        }
+      }
     }
 
         .spinning {
@@ -594,9 +656,20 @@
         font-size: 0.875rem;
         font-weight: 500;
         color: var.$text-main;
-        width: 2.5rem;
-        margin-left: 0.5rem;
+        transition: all 0.3s ease;
         @include var.dark-mode { color: var.$text-light; }
+
+        &.active {
+          font-weight: 700;
+          color: var.$color-primary;
+          transform: scale(1.05);
+          text-shadow: 0 0 8px rgba(var.$color-primary, 0.4);
+          
+          @include var.dark-mode {
+            color: var.$color-primary-light;
+            text-shadow: 0 0 8px rgba(var.$color-primary-light, 0.4);
+          }
+        }
       }
     }
 

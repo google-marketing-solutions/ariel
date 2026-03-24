@@ -228,7 +228,82 @@ export class Editor implements OnInit, OnDestroy {
 
   // Dropdown States
   isOriginalOpen = signal(false);
+  originalDropdownPosition = signal<'bottom' | 'top'>('bottom');
+
   isTranslationOpen = signal(false);
+  translationDropdownPosition = signal<'bottom' | 'top'>('bottom');
+
+  toggleOriginalLanguage(event: MouseEvent) {
+    if (this.isGeneratingAudio()) return;
+    this.isOriginalOpen.set(!this.isOriginalOpen());
+    if (this.isOriginalOpen()) {
+      this.isTranslationOpen.set(false);
+      this.searchTranslationLanguage.set('');
+      const target = event.currentTarget as HTMLElement;
+      const sidebar = target.closest('.sidebar') as HTMLElement;
+      if (target && sidebar) {
+        const rect = target.getBoundingClientRect();
+        const sidebarRect = sidebar.getBoundingClientRect();
+        const spaceBelow = sidebarRect.bottom - rect.bottom;
+        const spaceAbove = rect.top - sidebarRect.top;
+        if (spaceBelow < 250 && spaceAbove > spaceBelow) {
+          this.originalDropdownPosition.set('top');
+        } else {
+          this.originalDropdownPosition.set('bottom');
+        }
+      }
+    } else {
+      this.searchOriginalLanguage.set('');
+    }
+  }
+
+  toggleTranslationLanguage(event: MouseEvent) {
+    if (this.isGeneratingAudio()) return;
+    this.isTranslationOpen.set(!this.isTranslationOpen());
+    if (this.isTranslationOpen()) {
+      this.isOriginalOpen.set(false);
+      this.searchOriginalLanguage.set('');
+      const target = event.currentTarget as HTMLElement;
+      const sidebar = target.closest('.sidebar') as HTMLElement;
+      if (target && sidebar) {
+        const rect = target.getBoundingClientRect();
+        const sidebarRect = sidebar.getBoundingClientRect();
+        const spaceBelow = sidebarRect.bottom - rect.bottom;
+        const spaceAbove = rect.top - sidebarRect.top;
+        if (spaceBelow < 250 && spaceAbove > spaceBelow) {
+          this.translationDropdownPosition.set('top');
+        } else {
+          this.translationDropdownPosition.set('bottom');
+        }
+      }
+    } else {
+      this.searchTranslationLanguage.set('');
+    }
+  }
+
+  searchOriginalLanguage = signal<string>('');
+  filteredOriginalGaLanguages = computed(() => {
+    const query = this.searchOriginalLanguage().toLowerCase().trim();
+    if (!query) return this.gaLanguages();
+    return this.gaLanguages().filter(lang => lang.name.toLowerCase().includes(query));
+  });
+  filteredOriginalPreviewLanguages = computed(() => {
+    const query = this.searchOriginalLanguage().toLowerCase().trim();
+    if (!query) return this.previewLanguages();
+    return this.previewLanguages().filter(lang => lang.name.toLowerCase().includes(query));
+  });
+
+  searchTranslationLanguage = signal<string>('');
+  filteredTranslationGaLanguages = computed(() => {
+    const query = this.searchTranslationLanguage().toLowerCase().trim();
+    if (!query) return this.gaLanguages();
+    return this.gaLanguages().filter(lang => lang.name.toLowerCase().includes(query));
+  });
+  filteredTranslationPreviewLanguages = computed(() => {
+    const query = this.searchTranslationLanguage().toLowerCase().trim();
+    if (!query) return this.previewLanguages();
+    return this.previewLanguages().filter(lang => lang.name.toLowerCase().includes(query));
+  });
 
   originalLanguageLabel = computed(() => {
     const code = this.editOriginalLanguage();
@@ -1732,8 +1807,14 @@ export class Editor implements OnInit, OnDestroy {
     const targetElement = event.target as HTMLElement;
 
     if (!targetElement.closest('.custom-select')) {
-      if (this.isOriginalOpen()) this.isOriginalOpen.set(false);
-      if (this.isTranslationOpen()) this.isTranslationOpen.set(false);
+      if (this.isOriginalOpen()) {
+        this.isOriginalOpen.set(false);
+        this.searchOriginalLanguage.set('');
+      }
+      if (this.isTranslationOpen()) {
+        this.isTranslationOpen.set(false);
+        this.searchTranslationLanguage.set('');
+      }
     }
 
     if (!this.activeUtteranceId() && !this.activePanelMode()) return;

@@ -59,26 +59,38 @@
                 <div class="field-group">
                   <span class="card-label full-width">Original</span>
                   <div class="custom-select original-select" [class.open]="isOriginalOpen()"
-                    [class.disabled]="isGeneratingAudio()">
-                    <div class="select-trigger" (click)="!isGeneratingAudio() && isOriginalOpen.set(!isOriginalOpen())">
+                    [class.disabled]="isGeneratingAudio()" [class.dropup]="originalDropdownPosition() === 'top'">
+                    <div class="select-trigger" (click)="toggleOriginalLanguage($event)">
                       <span class="truncate">{{ originalLanguageLabel() }}</span>
                       <span class="material-symbols-outlined select-arrow">expand_more</span>
                     </div>
                     @if (isOriginalOpen()) {
                     <div class="select-dropdown custom-scrollbar" style="max-height: 250px;">
+                      <div class="search-container" (click)="$event.stopPropagation()">
+                        <span class="material-symbols-outlined search-icon">search</span>
+                        <input type="text" [ngModel]="searchOriginalLanguage()" (ngModelChange)="searchOriginalLanguage.set($event)"
+                          placeholder="Search language..." class="language-search-input">
+                      </div>
+                      @if (filteredOriginalGaLanguages().length > 0) {
                       <div class="optgroup-label">GA</div>
-                      @for (lang of gaLanguages(); track lang.code) {
-                      <div class="option" (click)="editOriginalLanguage.set(lang.code); isOriginalOpen.set(false)"
+                      @for (lang of filteredOriginalGaLanguages(); track lang.code) {
+                      <div class="option" (click)="editOriginalLanguage.set(lang.code); isOriginalOpen.set(false); searchOriginalLanguage.set('')"
                         [class.selected]="editOriginalLanguage() === lang.code">
                         {{ lang.name }}
                       </div>
                       }
+                      }
+                      @if (filteredOriginalPreviewLanguages().length > 0) {
                       <div class="optgroup-label">Preview</div>
-                      @for (lang of previewLanguages(); track lang.code) {
-                      <div class="option" (click)="editOriginalLanguage.set(lang.code); isOriginalOpen.set(false)"
+                      @for (lang of filteredOriginalPreviewLanguages(); track lang.code) {
+                      <div class="option" (click)="editOriginalLanguage.set(lang.code); isOriginalOpen.set(false); searchOriginalLanguage.set('')"
                         [class.selected]="editOriginalLanguage() === lang.code">
                         {{ lang.name }}
                       </div>
+                      }
+                      }
+                      @if (filteredOriginalGaLanguages().length === 0 && filteredOriginalPreviewLanguages().length === 0) {
+                      <div class="no-results">No languages found</div>
                       }
                     </div>
                     }
@@ -88,27 +100,39 @@
                 <div class="field-group">
                   <span class="card-label full-width">Translation</span>
                   <div class="custom-select translation-select" [class.open]="isTranslationOpen()"
-                    [class.disabled]="isGeneratingAudio()">
+                    [class.disabled]="isGeneratingAudio()" [class.dropup]="translationDropdownPosition() === 'top'">
                     <div class="select-trigger"
-                      (click)="!isGeneratingAudio() && isTranslationOpen.set(!isTranslationOpen())">
+                      (click)="toggleTranslationLanguage($event)">
                       <span class="truncate">{{ translateLanguageLabel() }}</span>
                       <span class="material-symbols-outlined select-arrow">expand_more</span>
                     </div>
                     @if (isTranslationOpen()) {
                     <div class="select-dropdown custom-scrollbar" style="max-height: 250px;">
+                      <div class="search-container" (click)="$event.stopPropagation()">
+                        <span class="material-symbols-outlined search-icon">search</span>
+                        <input type="text" [ngModel]="searchTranslationLanguage()" (ngModelChange)="searchTranslationLanguage.set($event)"
+                          placeholder="Search language..." class="language-search-input">
+                      </div>
+                      @if (filteredTranslationGaLanguages().length > 0) {
                       <div class="optgroup-label">GA</div>
-                      @for (lang of gaLanguages(); track lang.code) {
-                      <div class="option" (click)="editTranslateLanguage.set(lang.code); isTranslationOpen.set(false)"
+                      @for (lang of filteredTranslationGaLanguages(); track lang.code) {
+                      <div class="option" (click)="editTranslateLanguage.set(lang.code); isTranslationOpen.set(false); searchTranslationLanguage.set('')"
                         [class.selected]="editTranslateLanguage() === lang.code">
                         {{ lang.name }}
                       </div>
                       }
+                      }
+                      @if (filteredTranslationPreviewLanguages().length > 0) {
                       <div class="optgroup-label">Preview</div>
-                      @for (lang of previewLanguages(); track lang.code) {
-                      <div class="option" (click)="editTranslateLanguage.set(lang.code); isTranslationOpen.set(false)"
+                      @for (lang of filteredTranslationPreviewLanguages(); track lang.code) {
+                      <div class="option" (click)="editTranslateLanguage.set(lang.code); isTranslationOpen.set(false); searchTranslationLanguage.set('')"
                         [class.selected]="editTranslateLanguage() === lang.code">
                         {{ lang.name }}
                       </div>
+                      }
+                      }
+                      @if (filteredTranslationGaLanguages().length === 0 && filteredTranslationPreviewLanguages().length === 0) {
+                      <div class="no-results">No languages found</div>
                       }
                     </div>
                     }
@@ -140,7 +164,7 @@
               <div class="speakers-group">
                 @if (isEditingSettings()) {
                 @for (speaker of editSpeakers(); track speaker.speaker_id || speaker.name; let i = $index) {
-                <div class="speaker-item">
+                <div class="speaker-item" (click)="!isGeneratingAudio() && openEditSpeakerVoiceModal(speaker.speaker_id)" [class.clickable]="!isGeneratingAudio()">
                   <div class="speaker-info-row">
                     <span class="speaker-avatar" [class.male]="speaker.gender === 'male'" [class.female]="speaker.gender === 'female'">
                       <span class="material-symbols-outlined gender-icon">
@@ -149,15 +173,19 @@
                     </span>
                     <div class="speaker-info">
                       <p>{{ speaker.speaker_name || speaker.name }}</p>
-                      <button (click)="openEditSpeakerVoiceModal(speaker.speaker_id)" [disabled]="isGeneratingAudio()">
-                        {{ speaker.voice }} ({{ speaker.gender }})
-                      </button>
+                      <span class="voice-subtext">{{ speaker.voice }} ({{ speaker.gender }})</span>
                     </div>
                   </div>
-                  <button (click)="removeEditSpeaker(speaker.speaker_id)" [disabled]="isGeneratingAudio()"
-                    class="remove-btn">
-                    <span class="material-symbols-outlined">close</span>
-                  </button>
+                  <div class="speaker-actions">
+                    <button (click)="$event.stopPropagation(); openEditSpeakerVoiceModal(speaker.speaker_id)" [disabled]="isGeneratingAudio()"
+                      class="icon-btn edit-btn" title="Edit Speaker">
+                      <span class="material-symbols-outlined">edit</span>
+                    </button>
+                    <button (click)="$event.stopPropagation(); removeEditSpeaker(speaker.speaker_id)" [disabled]="isGeneratingAudio()"
+                      class="icon-btn remove-btn" title="Remove Speaker">
+                      <span class="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
                 </div>
                 }
                 } @else {
