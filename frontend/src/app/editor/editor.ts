@@ -1051,6 +1051,14 @@ export class Editor implements OnInit, OnDestroy {
         };
       });
 
+      const updatedData = this.videoData();
+      if (updatedData) {
+        const u = updatedData.utterances.find(utt => utt.id === utteranceId);
+        if (u) {
+          this.initialUtteranceState.set(JSON.parse(JSON.stringify(u)));
+        }
+      }
+
     } catch (e) {
       console.error(e);
       alert('Failed to regenerate translation');
@@ -1120,6 +1128,14 @@ export class Editor implements OnInit, OnDestroy {
           )
         };
       });
+
+      const updatedData = this.videoData();
+      if (updatedData) {
+        const u = updatedData.utterances.find(utt => utt.id === utteranceId);
+        if (u) {
+          this.initialUtteranceState.set(JSON.parse(JSON.stringify(u)));
+        }
+      }
 
     } catch (e) {
       console.error(e);
