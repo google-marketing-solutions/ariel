@@ -304,11 +304,11 @@ def process_video(
     3. Sentence-by-Sentence Transcription: Transcribe the video strictly sentence by sentence into `original_text`.
     4. Timestamps: Provide `original_start_time` and `original_end_time` in seconds (precision: 2 decimal places).
     5. Speaker Assignment: Assign the correct speaker object to each utterance, matching the speakers defined in your top-level Speaker List.
-    6. Speaking Instructions: In `speaking_instructions`, write detailed instructions for a TTS engine describing tone, pacing, rhythm, pitch, inflection, pauses, and emphasis.
-    7. Translation Instructions: In `translation_instructions`, describe formality, jargon, and cultural context.
+    6. Speaking Instructions: In `speaking_instructions`, write detailed instructions for a TTS engine describing tone, pacing, rhythm, pitch, inflection, pauses, and emphasis. If words are to be emphasized or called out, use the translated word. Pacing instructions should help ensure the length of the spoken translation stays the same as the original.
     8. Translation: Translate the `original_text` into the Target Language and place it in `translated_text`.
 
     Important Constraints:
+    - Only transcribe spoken audio. Do not transcribe background music. Do not transcribe on screen text.
     - Only populate fields that can be known *before* generating the translated speech.
     - For `translated_start_time` and `translated_end_time`, set to 0.0.
     - For `speaking_rate`, set to 1.0.
