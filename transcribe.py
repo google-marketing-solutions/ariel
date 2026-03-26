@@ -27,11 +27,6 @@ from tenacity import stop_after_attempt
 from tenacity import wait_fixed
 
 
-# Load the fasterwhisper model only once to save on processing time.
-logging.info("Loading Whisper model...")
-whisper_model = WhisperModel("small", device="cpu", compute_type="int8")
-logging.info("Whisper model loaded.")
-
 VOICE_OPTIONS = {
     "Zephyr": {"gender": "female", "tone": "Bright", "pitch": "Higher"},
     "Puck": {"gender": "male", "tone": "Upbeat", "pitch": "Middle"},
