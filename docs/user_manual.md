@@ -1,5 +1,5 @@
 <!--
- Copyright 2025 Google LLC
+ Copyright 2026 Google LLC
 
  Licensed under the Apache License, Version 2.0 (the "License"); you may not
  use this file except in compliance with the License. You may obtain a copy
@@ -14,11 +14,8 @@
  under the License.
 -->
 
-# ![Ariel v2 logo](images/logo.png) Ariel v2 User Manual
+# ![Ariel logo](images/logo.png) Ariel User Manual
 
---------------------------------------------------------------------------------
-
-# Introduction
 
 Ariel is an AI-powered video dubbing tool designed to translate video voice
 tracks seamlessly. It utilizes Google's Gemini models to transcribe, translate,
@@ -32,174 +29,79 @@ managing speakers, editing translations, and fine-tuning audio timing.
 
 # Getting Started
 
-To access Ariel, navigate to the URL provided by your deployment
+To access Ariel v2.0, navigate to the URL provided by your deployment
 administrator. The application runs in a web browser and does not require local
 installation for the end-user.
 
 ## The Interface
 
-Upon loading the application, you will be presented with the **New Dubbing Job**
-screen. This is where you configure the initial processing parameters.
+Upon loading the application, you will be presented with the **Home**
+screen. This is where you upload video and provide the initial processing parameters like Translation Language and which Gemini model you want to use. When you click to process video, Gemini will automatically detect original language and it will try to automatically select voices which are as close as possible to the voices in the video. All these settings can be changed later on Editor page.
 
-![The Ariel v2 homepage](images/interface.png)
+![The Ariel homepage](images/homepage.png)
 
 --------------------------------------------------------------------------------
 
-# 2\. Setting Up a Dubbing Job
+# 2\. Setting Up a Project
 
-![The Ariel v2 interface with numbers](images/dubbing_job.png)
+![The Ariel homepage with numbers](images/homepage-steps.png)
 
 ## Step 1: Upload Video
 
-1.  Drag and drop your video file (e.g., MP4) into the designated **Video Drop
+*  Drag and drop your video file (e.g., MP4) into the designated **Video Drop
     Zone** area.
 
-2.  Alternatively, click the **Select Video from Computer** button to browse
+*  Alternatively, click the **Select Video from Computer** button to browse
     your files.
 
-3.  Once selected, a preview of the video will appear in the player.
+*  Once selected, a preview of the video will appear in the player.
 
-## Step 2: Configure Speakers
+## Step 2: Select translation language
 
-You must identify the speakers in the video *before* processing to ensure
-specific voices are assigned to them. Follow the instructions for each speaker
-in the order they speak in the video:
+Select the target language you wish to dub the video into. You can use search bar inside the dropdown to find the language you want to use.
 
-1.  Click the **⊕ Add Speaker** button in the "Speakers" section.
+![Translation language dropdown](images/dropdown-translate-language.png)
 
-2.  A modal window labeled **Select Speaker Voice** will appear.
+## Step 3: Select Gemini model
 
-3.  **Speaker Name (optional):** Enter a label for the speaker (e.g.,
-    "Narrator", "Interviewer").
+**Gemini Model Toggle:** Switch between **Flash** (faster, lower cost) and
+**Pro** (higher quality, higher cost) models for the translation and logic
+processing.
 
-4.  **Select Voice:**
+## Step 4: Start Processing
 
-    *   Use the search bar to find specific voices (e.g., "Zephyr", "Charon").
-
-    *   Filter by Gender using the **Male** / **Female** / **All** buttons.
-
-    *   Click the **Play icon (![Play icon](images/play_icon.png))** next to a
-        voice to preview it.
-
-5.  Select your desired voice and by clicking **Select**..
-
-6.  Repeat this process for every distinct speaker in your video.
-
-![The dialog used to choose speakers](images/speaker_dialog.png)
-
-## Step 3: Language Settings
-
-1.  **Original Language:** Select the language currently spoken in the video
-    from the dropdown menu.
-
-2.  **Translation Language:** Select the target language you wish to dub the
-    video into.
-
-## Step 4: Gemini Instructions
-
-In the text box provided, you can enter specific prompts for the AI to use
-during translation. Use this to specify words that should remain in the original
-language (like brand names) or to set a specific tone (e.g. formal or youthful).
-
-The solution will attempt to match the spoken tone of voice automatically, so no
-instructions for generating the dubbed audio are available here. To change the
-dubbed audio, follow the instructions below in section **4\. Editing
-Utterances**.
-
-## Step 5: Advanced Configuration
-
-*   **Gemini Model Toggle:** Switch between **Flash** (faster, lower cost) and
-    **Pro** (higher quality, higher cost) models for the translation and logic
-    processing.
-
-*   **Adjust Speed:** Toggle **Yes** to force the translated audio to speed up
-    or slow down to match the exact duration of the original speech. *Note: This
-    may result in unnatural audio artifacts*.
-
-## Step 6: Start Processing
-
-Click the green **Start Processing** button. The application will separate the
-audio tracks, transcribe the text, translate it, and generate the initial
+When you upload video and select translation language, the **Start Processing** button will appear. Click the button. The application will analyze the video and find the original language,separate the
+audio tracks, transcribe the text, translate it, add speakers which are most similar to the original speakers and generate the initial
 dubbing.
 
-**Note:** A "Thinking" animation will appear while the backend processes the
-video. This may take a few minutes depending on the video length.
+**Note:** The processing may take a few minutes depending on the video length and selected Gemini model.
+
+![Process video button](images/process-video-button.png)
 
 --------------------------------------------------------------------------------
 
-# 3\. The Editing Studio
+# 3\. The Editor
 
-Once processing is complete, the view shifts to the Editing Studio. Here you can
+Once processing is complete, the view shifts to the Editor page. Here you can
 refine the translation, timing, and audio.
 
-![Ariel with a video ready for editing](images/editing.png)
+![Ariel with a video ready for editing](images/editor-page.png)
+
 
 ## 1 Video Player
 
-A floating video player allows you to preview the results. You can drag this
-player around the screen to uncover other controls.
+A video player in upper left corner allows you to play the original video you uploaded.
 
-## 2 The Timeline
+## 2 Video Settings
 
-The timeline visualizes the synchronization between the original audio and the
-new dubbing.
+The initial settings used for the dubbing are shown at the left side, below the original video.
+If you need to change the target language or a list of speakers which Gemini selected:
 
-*   **Original:** Shows the timing of the original speech. Each speaker is given
-    a swimlane, with their utterances depicted as bars with lengths showing the
-    duration of the utterance. The utterance ID (e.g. U1) is shown on the bar.
+1.  Click the **Edit** button in the **Video Settings** section (left side).
 
-*   **Translated:** Shows the generated audio blocks. As with the original, each
-    speaker is given a swimlane for their utterances.
+2.  Change the **Original Language** or **Translation Language** for the entire script.
 
-In the timeline, utterances have three colors:
-
-*   **Blue:** the utterance does not overlap with another utterance.
-
-*   **Red-stripped**: the current utterance overlaps with another. Generally,
-    this means the translated utterance is longer than the original.
-
-*   **Yellow:** no audio was generated for this utterance. These will also be
-    yellow in the utterance list. The lack of audio can be due to a safety
-    filter being triggered when requesting the audio from TTS, or some other
-    error. Try updating the translated text and regenerating the dubbing to
-    create usable audio.
-
-You can **drag a translated utterance** to adjust its start time. Click and drag
-a translated utterance block left or right to change its start time manually.
-The duration of the utterance does not change when dragging.
-
-## 3 Utterance List
-
-Located on the bottom left, there is a list of utterances, i.e. segments of
-speech from the video . Each utterance shows the text from the original video,
-the translation of the text, and the speaker who made the utterance. In
-addition, there are five icons placed along the right:
-
-![The pencil icon](images/pencil_icon.png) Used to open this utterance in the
-editor.
-
-![The speaker icon](images/speaker_icon.png) Play the original audio from the
-video.
-
-![The translate icon](images/translate_icon.png) Play the translated audio.
-
-![The mute icon](images/mute_icon.png) Use the original audio in the final
-video.
-
-![The trash icon](images/trash_icon.png) Don’t use audio for this utterance in
-the final video.
-
-## 4 General Video Settings
-
-The initial settings used for the dubbing are shown at the top right of the
-page. If you need to change the target language or a speaker's voice for the
-*entire* video:
-
-1.  Click the **Edit** button in the **Video Settings** card (top right).
-
-2.  Change the **Translation Language** to re-translate the entire script.
-
-3.  Click on a Speaker's name to swap their assigned voice for all their lines.
+3.  Click on **Add Speaker** to add a new speaker, or click on an existing speaker's name to change the voice for all their lines.
 
 4.  Click **Submit** to process these changes or **Cancel** to continue with the
     current dubbing.
@@ -207,107 +109,151 @@ page. If you need to change the target language or a speaker's voice for the
 After clicking **Submit**, the video will be reprocessed, with updated
 transcription, translation, and dubbing.
 
+
+## 3 The Timeline
+
+The timeline visualizes the synchronization between the original audio and the
+new dubbing.
+
+*   **Original:** Shows the timing of the original speech. Each speaker is given
+    a swimlane, with their utterances depicted as bars with lengths showing the
+    duration of the utterance. The utterance ID (e.g. U1) is shown on the bar. If you click on play button, you can listen to the original audio for whole video.
+
+*   **Translated:** Shows the generated audio blocks. As with the original, each
+    speaker is given a swimlane for their utterances. If you click on play button, you can listen to the translated audio for whole video.
+
+In the timeline, utterances have three colors:
+
+*   **Blue:** the utterance does not overlap with another utterance.
+
+*   **Red-stripped**: the current utterance overlaps with another. Generally,
+    this means the translated utterance is longer than the original. Utterance will be also marked red if they are exceeding the original length of the video.
+
+*   **Yellow with dotted border:** when you click on a button to create new utterance, utterance will be marked yellow until you save it. When you save it, it will turn blue or red - depending on whether it overlaps with another utterance.
+
+You can **drag a translated utterance** to adjust its start time. Click and drag
+a translated utterance block left or right to change its start time manually.
+The duration of the utterance does not change when dragging.
+
+## 4 Utterance List
+
+Located on the middle of the screen, above the timeline, there is a list of utterances, i.e. segments of
+speech from the video. Each utterance shows the utterance ID (e.g. U1), speaker name, text from the original video and translated text. 
+
+When you click on one of the utterances in the list, it will be highlighted in the timeline as well.
+
+
 --------------------------------------------------------------------------------
 
-# 4\. Editing Utterances
+# 5\. Editing Utterances
 
-Clicking the **Pencil Icon** on an utterance opens the **Utterance Editor** on
-the right side of the screen.
+If you click on one of the utterances in the list, you will see different options for editing the utterance. 
 
-![An utterance open in the editor](images/utterance.png)
+![Utterance card](images/utterance-editing.png)
 
-## Available Actions:
+## Available Options:
 
-1.  **Edit the original transcription:** You can manually type corrections into
-    the **Original Text** text box. This may be necessary for misunderstood
-    slang or if you’d like to use a different specific text for the translation.
-    After editing the original text, you should regenerate the translation,
-    using the **Regenerate Translation** button at the bottom of the editor.
+1.  **Utterance instructions:** You will see 4 tabs here:
+    *   **Adjust timestamps:** Fine-tune when the dubbed audio starts and ends to ensure it aligns perfectly with the visuals and doesn't overlap with other speakers.  You can do this also by dragging the utterance in the timeline. 
+    *   **Change Speaker:** By default, Gemini will select the speaker for each utterance. But here you can change the speaker by selecting a different speaker from the dropdown menu. 
+    *   **Translate instructions:** Provide specific guidance for Gemini (e.g., "translate more formally" or "keep technical terms in English") to improve the accuracy or tone of the rewritten script.
+    *   **Voice Instructions:** Add voice instructions (e.g., "speak faster," "with a happy tone," or "emphasize the first word") to control how the AI delivers the dubbed audio.
 
-2.  **Edit the translation:** You can manually change the translation as well,
-    by typing in the **Translated Text** box. You may want to do this to use
-    more appropriate words for the context, or to change the length of the text
-    to better match the original. After updating the translation, you should
-    regenerate the dubbing, using the **Regenerate Dubbing** button at the
-    bottom of the editor.
+    
+2.  **Utterance instructions tab:** When you click on one of the tabs, the section will open on the right side, where you can adjust and save the settings for that specific tab.
+    
 
-3.  **Refine Translation:** You can enter instructions in the "Translation
-    instructions" box (e.g., "Make this sound more formal")to have Gemini update
-    the translation. Once you’ve added the instructions, click **Regenerate
-    Translation** to automatically update the translated text.
+3.  **Original Text:** This may be necessary for misunderstood slang or if you’d like to use a different specific text for the translation. If you want to hear audio for original text, click on the play icon inside the text box.
 
-4.  **Refine Intonation:** You can change the tone and speed of the generated
-    audio by entering instructions in the "Voice Intonation Instructions" box
-    (e.g., "Speak excitedly", or “relaxed but quick”). After entering
-    instructions, click **Regenerate Dubbing** to automatically generate new
-    audio. A green toast will appear when the generation is complete.
+4. **Translated Text:** You can manually change the translation as well, by typing in the **Translated Text** box. You may want to do this to use more appropriate words for the context, or to change the length of the text to better match the original. After updating the translation, you should regenerate the dubbing, using the **Regenerate Dubbing** button. If you want to hear audio for translated text, click on the play icon inside the text box.
 
-5.  **Adjust Timing:** Manually type new values into the **Translated Start
-    Time** or **Translated End Time** boxes to shift the utterance forwards or
-    back in the final video. Changing one will automatically update the other to
-    maintain the duration of the utterance. To change the duration, regenerate
-    the dubbing using the “Voice Intonation Instructions”, as per 4\.
+5.  **In addition, there are five icons placed in top right corner of each utterance card (from left to right):**
 
-6.  **Change Speaker:** Use the dropdown to assign a different speaker voice to
-    this specific utterance.
+* <img src="images/icon-translate.png" width="20"> **Regenerate translate:** Used to regenerate the translation of the current utterance. If you add Translation instructions or if you change the original text, you should regenerate the translation. Button will be automatically highlighted if there are any changes in the original text or translation instructions.
 
-In addition, you can hear the original audio by clicking the ![][image8]button,
-and listen to the translated audio by clicking the ![][image9] button. Please
-note \- Cloud Run may need some time to start up. If you click the button and
-nothing happens, please be patient and wait for the audio. Clicking multiple
-times will result in the audio being played multiple times, possibly at the same
-time.
+* <img src="images/icon-dub.png" width="20"> **Regenerate dubbing:** Used to regenerate the dubbing of the current utterance. If you change the translated text or voice instructions, you should regenerate the dubbing. Button will be automatically highlighted if there are any changes in the translated text or voice instructions.
 
-To save the changes, click **Save**. To revert to the last saved version, click
-**Revert**.
+* <img src="images/icon-undo.png" width="20"> **Undo:** Used to undo the last change.
 
-**Important:** You must click **Save** to apply your changes to the timeline.
+* <img src="images/icon-mute.png" width="20"> **Mute utterance:** Mute the utterance. Original audio will be played on that place. 
+video.
 
-## Dealing with zero-length utterances
+* <img src="images/icon-trash.png" width="20"> **Remove utterance:** Remove the utterance. No audio will be played.
 
-When the text of an utterance triggers the TTS safety filters, or another error
-occurs during audio generation, an utterance with a duration of zero is
-produced. The **Generate Video** button is disabled until all zero-length
-(highlighted in yellow) utterances are dealt with.
+For example, if you add translation instructions, you will see the warning message "Translation & Dubbing changed", which means you need to regenerate translation and then dubbing to get your new translation instructions applied in the audio. Next to the message, you will see two highlighted buttons that you need to press in order to apply the changes. First you need to press the **Regenerate Translation** button, and then the **Regenerate Dubbing** button. If you then change the translated text or Voice instructions, you will see the same warning message, but this time only the **Regenerate Dubbing** button will be highlighted.
 
-The most common way to fix a zero-length utterance is by regenerating the
-dubbing. In some cases, this will work without any additional changes to the
-utterance. More often, some words in the translation, such as tradewords or
-profanity, trigger TTS’s safety filter and need to be changed before audio can
-be generated. Follow the instructions in **2\. Edit the Translation** and/or
-**3\. Refine Translation** from above to generate audio for the affected
-utterance.
+![The utterance buttons](images/utterance-buttons.png) 
 
-Another option for zero-length utterance is to use the original audio in the
-final video. This may be appropriate for tradewords or other important aspects
-of the video that need to be included in the final output. To use the original
-audio, click the struck-through microphone icon (![][image10]) in the utterance
-list.
 
-## The final option for zero-length utterance is to use no audio at all for the utterance. For cases where the audio isn’t relevant to the new target market, or other aspects of the video can portray the required context, this may be an appropriate option. To leave the audio out, click the trash can icon (![][image11]) in the utterance list.
+## Merging existing utterances and adding new utterances
 
-# 5\. Finalizing and Downloading
+In case you want to merge existing utterances or add new ones, you can do it by clicking on one of these two buttons:
+
+![Utterance hover options](images/utterance-hover-options.png) 
+
+The buttons will appear if you put mouse cursor between two utterances, or if you put mouse cursor at the beginning of the first utterance or at the end of the last utterance.
+
+### Adding new utterances
+
+When you are adding new utterance, you need to write text in original language and then click on the **Regenerate Translation** button to generate the translation text. After translation text appears, you can regenerate the dubbing by clicking on the **Regenerate Dubbing** button.
+
+It is worth mentioning that utterances that you create by yourself won't be visible in the "Original" lane in the timeline, only in the "Translated" lane.
+
+![Utterance add](images/utterance-add.png) 
+
+### Merging existing utterances
+
+If you click on merge button between two utterances, the text will be concatenated and you will see that the two utterances are merged into one. You need to regenerate the translation and dubbing to apply the changes.
+
+![Utterance merge](images/utterance-merge.png) 
+
+
+
+# 6\. Finalizing and Downloading
 
 Once you are satisfied with the edits click the blue **Generate Video** button
-at the bottom of the screen. The system will mix the background music, sound
+at the top right corner of the screen. The system will mix the background music, sound
 effects, and new voice tracks into a final video file.
 
-When processing finishes, the **Generated Video View** will appear. In this
-view, you have the following options:
+In case if you have some unsynced changes in the utterances, you will see a warning message popup, which means you need to regenerate translation and then dubbing to get your new translation instructions applied in the final audio.
+
+When processing finishes, the result page will appear. On this page, you have the following options:
 
 1.  **Preview:** Watch the final result in the player.
 
-2.  **Download:**
+2.  **Video Actions:**
 
     *   **Download Video:** Saves the final MP4 file.
 
-    *   **Download Audio \-\> Vocals:** Saves a WAV file containing only the
+    *   **Download Final Audio:** Saves a WAV file containing the
+        AI voices mixed with the background music. 
+
+    *   **Download Vocals:** Saves a WAV file containing only the
         spoken AI voices.
 
-    *   **Download Audio \-\> Vocals \+ Music:** Saves a WAV file containing the
-        AI voices mixed with the background music.
+    *   **Go back to editing:** Go back to the editing page to make changes to the utterances.
 
-![The final Ariel page](images/finished.png)
+    *   **Start Over:** Go to the home page and start a new project.
+
+        
+
+![The final Ariel page](images/result-page.png)
+
+## Library page
+
+All of your projects are saved in the library page. You can access the library page by clicking on the "Library" in the header. For each saved video you will see three options:
+
+* **Download:** Watch the final MP4 file.
+
+* **Edit:** Go back to the editing page to make changes to the video.
+
+* **Delete:** Delete the video from your GCS bucket.
+
+
+**NOTE:** In case if you start editing the video on Editor page, you will see the project only on the Editor page until you close the browser tab (changes won't be saved). The video will be saved in Library page, only if you generate the video (click on the Generate Video button).
+
+![The library page](images/library-page.png)
+
 
 --------------------------------------------------------------------------------
 
@@ -328,74 +274,55 @@ view, you have the following options:
 *   **Background sound sometimes too loud:** Ariel does not currently support
     independent volume controls for separate audio tracks. To adjust the volume
     balance between the voice-over and background music please download the
-    voice-over track via Download Audio \> Vocals and use your external video
+    voice-over track via Download Vocals and use your external video
     editing software.
 
 *   **Music Lyrics Removed by Ariel:** Ariel may mistakenly remove original
     vocals if your background music contains lyrics. To fix this, go to the
-    Generated Video view, select Download Audio \> Vocals, and manually replace
+    Generated Video view, select Download Vocals, and manually replace
     the original voice-over track in your video editor.
 
 --------------------------------------------------------------------------------
 
 # Tips & Tricks
 
-*   The “Adjust Speed” toggle can be used to provide a quick translation, but
+*   The “Adjust Speed” toggle (can be found when you click on utterance card and then on **Voice instructions** tab) can be used to provide a quick translation, but
     will rarely provide results suitable for use in an advertising campaign.
 
 *   The gender of a narrator can be changed by selecting the same output
     language as the input language and selecting the appropriate voice.
 
 *   You can speed up or slow down utterances by giving additional instructions
-    to Gemini for the dubbing. Use words like “quickly” or “slowly”.
+    to Gemini for the dubbing. Use words like “quickly” or “slowly” in Voice instructions tab.
 
 --------------------------------------------------------------------------------
 
 # Architecture
 
-![Overview of Ariel's architecture](images/arch.png)
+![Overview of Ariel's architecture](images/ariel-architecture.png)
 
 The solution is built entirely using **Google Cloud’s AI ecosystem**
-(specifically Google Cloud Vertex AI) alongside open-source libraries for audio
-and video processing.
+(specifically Google Cloud Vertex AI) alongside open-source libraries for video reading, previewing and audio separation.
 
 *   **No Third-Party SaaS (besides Google):** The solution does not send data to
     other third-party API / SaaS providers.
 *   **Google Cloud Ecosystem:** The core generative AI components (Translation
     and Voice Generation) are exclusively Google Cloud services.
-*   **Local Processing:** Audio Separation, Video Processing and Transcription
-    use open-source libraries directly on the application infrastructure (Google
+*   **Local Processing:** Audio Separation uses open-source library directly on the application infrastructure (Google
     Cloud Run), keeping that specific processing loop contained within the
     user's defined cloud environment.
 
 Here is the detailed breakdown of the systems and models used:
 
-## Audio Separation (Stem Separation)
-
-**Library Used:** [Demucs](https://pypi.org/project/demucs/)
+## Audio Separation
 
 It separates the vocal track from the background music/sound in the original
-video so they can be processed independently. Demucs is an open-source library
-developed by Meta Research, released under the MIT License. This runs locally
-within the Ariel infrastructure.
+video so they can be processed independently.
 
-## Transcription
-
-**System Used:** [Faster Whisper](https://github.com/SYSTRAN/faster-whisper)
-
-The solution uses the small model architecture of Whisper, running locally
-within the application container. It converts the original video audio into
-text.
-
-This is an open-source implementation of OpenAI's Whisper model (MIT License).
-Crucially, this runs locally on the Ariel server/container, meaning the audio
-for transcription is not sent to OpenAI's public APIs.
-
-## Translation & Intelligence
+## Transcription, Translation & Intelligence
 
 The solution uses Google's Gemini models (configurable between Flash and Pro
-variants, e.g., gemini-2.5-flash, gemini-2.5-pro). This is used to translate the
-text and to annotate transcripts (identifying speakers, gender, and tone).
+variants). This is used to transcribe the original audio, translate the text and to annotate transcripts (identifying speakers, gender, and tone).
 
 ## Voice Generation (Text-to-Speech)
 
