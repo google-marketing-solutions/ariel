@@ -23,9 +23,11 @@ from pydantic import Field
 
 class GenderEnum(StrEnum):
   """Represents the gender of a Speaker."""
+
   MALE = "male"
   FEMALE = "female"
   NEUTRAL = "neutral"
+
 
 class Speaker(BaseModel):
   """A speaker in a video.
@@ -41,10 +43,19 @@ class Speaker(BaseModel):
     gender: the speaker's gender.
   """
 
-  speaker_id: str = Field(description="A unique ID for the speaker in the video, created sequentially in the order the speakers speak.")
-  voice: str = Field(description="The name of the Gemini-TTS voice (e.g., 'Achird', 'Aoede'). Do not use regional codes like 'en-US-Neural2'.")
-  speaker_name: str = Field(description="A human readable name for the speaker.")
-  gender: GenderEnum = Field(description="The gender of the speaker. Must be one of the predefined options.")
+  speaker_id: str = Field(
+    description="A unique ID for the speaker in the video, created sequentially in the order the speakers speak."
+  )
+  voice: str = Field(
+    description="The name of the Gemini-TTS voice (e.g., 'Achird', 'Aoede'). Do not use regional codes like 'en-US-Neural2'."
+  )
+  speaker_name: str = Field(
+    description="A human readable name for the speaker."
+  )
+  gender: GenderEnum = Field(
+    description="The gender of the speaker. Must be one of the predefined options."
+  )
+
 
 class Utterance(BaseModel):
   """One spoken utterance from a video.
@@ -85,9 +96,16 @@ class Utterance(BaseModel):
 
 class ProcessResponse(BaseModel):
   """Wrapper class to capture the entire video analysis including the BCP-47 code."""
-  primary_language: str = Field(description="The BCP-47 code of the primary spoken language in the video.")
-  speakers: list[Speaker] = Field(description="A list of the unique speakers identified in the video.")
-  utterances: list[Utterance] = Field(description="A list of all transcribed and translated utterances, ordered chronologically.")
+
+  primary_language: str = Field(
+    description="The BCP-47 code of the primary spoken language in the video."
+  )
+  speakers: list[Speaker] = Field(
+    description="A list of the unique speakers identified in the video."
+  )
+  utterances: list[Utterance] = Field(
+    description="A list of all transcribed and translated utterances, ordered chronologically."
+  )
 
 
 class Video(BaseModel):
@@ -113,6 +131,7 @@ class Video(BaseModel):
   utterances: list[Utterance]
   model_name: str = ""
   tts_model_name: str = ""
+
 
 class RegenerateRequest(BaseModel):
   """Used to request a new text translation and audio generation.
@@ -143,17 +162,24 @@ class RegenerateResponse(BaseModel):
   audio_url: str
   duration: float
 
+
 class GenerateVideoRequest(BaseModel):
   """Used to request the completed video."""
+
   video: Video
   original_video_url: str = ""
 
+
 class VideoMetadata(BaseModel):
-    name: str
-    url: str
-    download_url: str
-    created_at: datetime
-    original_language: str
-    translate_language: str
-    duration: float
-    speakers: list[dict]
+  """Represents the stored for a video project."""
+
+  name: str
+  url: str
+  download_url: str
+  created_at: datetime
+  original_language: str
+  translate_language: str
+  duration: float
+  speakers: list[Speaker]
+  video_id: str
+  has_metadata: bool

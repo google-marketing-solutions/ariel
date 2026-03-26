@@ -15,22 +15,29 @@
 # under the License.
 
 import datetime
+import json
 import logging
 import mimetypes
+import os
 import re
 import typing
 import uuid
-from google.cloud import storage
-import json
-import os
-import google.auth
-import requests
-from models import VideoMetadata
 
+from fastapi import status
+import google.auth
+from google.auth.credentials import Credentials
+import google.auth.exceptions
+from google.auth.transport.requests import Request
+from google.cloud import storage
+import google.cloud.exceptions
+import pydantic
+import requests
+
+from models import Video, VideoMetadata
 
 
 def upload_video_to_gcs(
-    video_name: str, video_file: typing.BinaryIO, bucket_name: str
+  video_name: str, video_file: typing.BinaryIO, bucket_name: str
 ) -> str:
   """Uploads a video to a Google Cloud Storage bucket, creating a new folder.
 
@@ -48,7 +55,7 @@ def upload_video_to_gcs(
   """
   now = datetime.datetime.now().isoformat()
   mime_type = mimetypes.guess_type(video_name)[0] or "video/mp4"
-  dir_name = f"{now}-{str(uuid.uuid4())}-{video_name}"
+  dir_name = f"{now}-{uuid.uuid4()}-{video_name}"
   dir_name = dir_name.replace(":", "_")
   dest_path = f"{dir_name}/{dir_name}"
 
@@ -63,10 +70,10 @@ def upload_video_to_gcs(
 
 
 def upload_file_to_gcs(
-    target_path: str,
-    file_object: typing.BinaryIO,
-    bucket_name: str,
-    mime_type: str = "",
+  target_path: str,
+  file_object: typing.BinaryIO,
+  bucket_name: str,
+  mime_type: str = "",
 ) -> str:
   """Uploads a file to GCS.
 
@@ -82,7 +89,7 @@ def upload_file_to_gcs(
   """
   if not mime_type:
     mime_type = (
-        mimetypes.guess_type(target_path)[0] or "application/octet-stream"
+      mimetypes.guess_type(target_path)[0] or "application/octet-stream"
     )
 
   storage_client = storage.Client()
@@ -93,7 +100,13 @@ def upload_file_to_gcs(
   return target_path
 
 
-def get_url_for_path(bucket_name: str, path: str, download_filename: str = "", service_account_email: str = None, access_token: str = None) -> str:
+def get_url_for_path(
+  bucket_name: str,
+  path: str,
+  download_filename: str = "",
+  service_account_email: str = "",
+  access_token: str = "",
+) -> str:
   """Returns a URL that can be used to fetch the files stored in GCS.
 
   Args:
@@ -111,63 +124,77 @@ def get_url_for_path(bucket_name: str, path: str, download_filename: str = "", s
   bucket = storage_client.bucket(bucket_name)
   blob = bucket.blob(path)
   kwargs = {
-      "version": "v4",
-      "expiration": (60 * 60 * 24),
-      "method": "GET",
-      "service_account_email": service_account_email,
-      "access_token": access_token,
+    "version": "v4",
+    "expiration": (60 * 60 * 24),
+    "method": "GET",
+    "service_account_email": service_account_email,
+    "access_token": access_token,
   }
   if download_filename:
-      kwargs["response_disposition"] = f'attachment; filename="{download_filename}"'
+    kwargs["response_disposition"] = (
+      f'attachment; filename="{download_filename}"'
+    )
   url = blob.generate_signed_url(**kwargs)
 
   return url
 
+
 def fetch_service_account_email() -> str:
-  service_account_email = None
+  """Fetches the email of the default service account."""
+  service_account_email = ""
   try:
-      credentials, _ = google.auth.default()
-      if hasattr(credentials, "service_account_email"):
-          service_account_email = credentials.service_account_email
-  except Exception as e:
-      logging.warning(f"Could not get default credentials: {e}")
+    credentials, _ = typing.cast(tuple[Credentials, str], google.auth.default())
+    if hasattr(credentials, "service_account_email"):
+      service_account_email = typing.cast(str, credentials.service_account_email)  # pyright: ignore[reportAttributeAccessIssue]
+  except google.auth.exceptions.DefaultCredentialsError as e:
+    logging.warning(f"Could not get default credentials: {e}")
 
   if not service_account_email or service_account_email == "default":
-        # Fallback to metadata server if email is not in credentials or is 'default'
-        try:
-             # Use a longer timeout and proper error handling
-             metadata_url = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email"
-             headers = {"Metadata-Flavor": "Google"}
-             response = requests.get(metadata_url, headers=headers, timeout=5)
-             if response.status_code == 200:
-                service_account_email = response.text.strip()
-        except Exception as e:
-             logging.warning(f"Could not determine service account email from metadata server: {e}")
+    # Fallback to metadata server if email is not in credentials or is 'default'
+    try:
+      # Use a longer timeout and proper error handling
+      metadata_url = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email"
+      headers = {"Metadata-Flavor": "Google"}
+      response = requests.get(metadata_url, headers=headers, timeout=5)
+      if response.status_code == status.HTTP_200_OK:
+        service_account_email = response.text.strip()
+    except requests.exceptions.RequestException as e:
+      logging.warning(
+        f"Could not determine service account email from metadata server: {e}"
+      )
   return service_account_email
+
 
 def fetch_access_token() -> str:
   """Fetches the access token for the current request."""
-  access_token = None
+  access_token = ""
   try:
-      credentials, _ = google.auth.default()
-      if not credentials.token:
-          from google.auth.transport.requests import Request
-          credentials.refresh(Request())
-      access_token = credentials.token
-  except Exception as e:
-      logging.warning(f"Could not refresh credentials: {e}")
-  return access_token
+    credentials, _ = typing.cast(tuple[Credentials, str], google.auth.default())
+    if not credentials.token:
+      credentials.refresh(Request())
+    access_token = credentials.token
+  except (google.auth.exceptions.DefaultCredentialsError, google.auth.exceptions.RefreshError) as e:
+    logging.warning(f"Could not refresh credentials: {e}")
+  if access_token:
+    return access_token
+  return ""
+
 
 def clean_video_name(filename: str) -> str:
   """Removes the timestamp and UUID prefix from the filename."""
   name = os.path.basename(filename)
-  pattern = r"^.+?-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-"
+  pattern = (
+    r"^.+?-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-"
+  )
   clean_name = re.sub(pattern, "", name)
   return clean_name
 
-def list_all_videos(bucket_name: str, page_token: str = None, max_results: int = 5) -> dict:
-  """
-  Returns a page of translated videos with their metadata.
+
+def list_all_videos(
+  bucket_name: str, page_token: str = "", max_results: int = 5
+) -> dict[str, list[VideoMetadata] | str]:
+  """Returns a list of translated videos with their metadata.
+
   Args:
     bucket_name: the name of the GCS bucket to list videos from.
     page_token: optional token to fetch the next page.
@@ -178,92 +205,102 @@ def list_all_videos(bucket_name: str, page_token: str = None, max_results: int =
   """
   storage_client = storage.Client()
   bucket = storage_client.bucket(bucket_name)
-  
-  # The match_glob filters out uncompleted/raw video files, keeping only the translated ones (`.es-ES.mp4`, etc)
-  blobs = storage_client.list_blobs(bucket_name, max_results=max_results, page_token=page_token, match_glob="**/*.??-??.mp4")
 
-  videos = []
+  # The match_glob filters out uncompleted/raw video files, keeping only the translated ones (`.es-ES.mp4`, etc)
+  iterator = storage_client.list_blobs(
+    bucket_name,
+    max_results=max_results,
+    page_token=page_token,
+    match_glob="**/*.??-??.mp4",
+  )
+  pages = iterator.pages
+
+  try:
+    page = next(pages)
+    blobs: list[storage.Blob] = list(page)
+    next_page_token: str = page.next_page_token
+  except StopIteration:
+    blobs = []
+    next_page_token = ""
+
+  videos: list[VideoMetadata] = []
 
   for blob in blobs:
-    if blob.name.lower().endswith(".mp4"):
-      parts = blob.name.split("/")
-      if len(parts) >= 2:
-          folder_name = parts[-2]
-          file_name = parts[-1]
-          if folder_name == file_name:
-              continue
+    if not blob.path:
+      continue
+    blob_path = typing.cast(str, blob.path)
+    if blob_path.lower().endswith(".mp4"):
+      parts = blob_path.split("/")
+      if len(parts) < 2:
+        continue
+      folder_name = parts[-2]
+      file_name = parts[-1]
+      if folder_name == file_name:
+        continue
 
       try:
         service_account_email = fetch_service_account_email()
         access_token = fetch_access_token()
-        url = get_url_for_path(bucket_name, blob.name, service_account_email=service_account_email, access_token=access_token)
-        download_url = get_url_for_path(bucket_name, blob.name, download_filename=clean_video_name(blob.name), service_account_email=service_account_email, access_token=access_token)
-        
-        if not url:
-          logging.error(f"Generated empty URL for {blob.name}")
-        else:
-          # Log first 50 chars of URL to verify it's looking correct (starts with https)
-          logging.info(f"Generated URL for {blob.name}: {url[:50]}...")
-      except Exception as e:
+        url = get_url_for_path(
+          bucket_name,
+          blob_path,
+          service_account_email=service_account_email,
+          access_token=access_token,
+        )
+        download_url = get_url_for_path(
+          bucket_name,
+          blob_path,
+          download_filename=clean_video_name(blob_path),
+          service_account_email=service_account_email,
+          access_token=access_token,
+        )
+      except google.cloud.exceptions.GoogleCloudError as e:
         logging.error(f"Error generating signed URL for {blob.name}: {e}")
         url = ""
         download_url = ""
 
-
-      folder = os.path.dirname(blob.name)
+      folder = str(os.path.dirname(blob_path))
       metadata_path = f"{folder}/metadata.json"
-      meta = {
-          "original_language": "Unknown",
-          "translate_language": "Unknown",
-          "duration": 0,
-          "speakers": []
-      }
       metadata_blob = bucket.blob(metadata_path)
       has_metadata = metadata_blob.exists()
       if has_metadata:
-          try:
-              json_str = metadata_blob.download_as_text()
-              file_data = json.loads(json_str)
-              meta.update(file_data)
-          except Exception as e:
-              logging.error(f"Error fetching metadata for {blob.name}: {e}")
+        try:
+          json_str = metadata_blob.download_as_text()
+          video = VideoMetadata.model_validate_json(json_str)
+          videos.append(video)
+        except (json.JSONDecodeError, google.cloud.exceptions.GoogleCloudError) as e:
+          logging.error(f"Error fetching metadata for {blob.name}: {e}")
+        except pydantic.ValidationError as ve:
+          logging.error(f"Error parsing metadata for {blob.name}: {ve}")
+      else:
+         videos.append(VideoMetadata(
+          name = "Unknown",
+          url = url,
+          download_url = download_url,
+          created_at = blob.time_created or datetime.datetime.now(),
+          original_language = "Unknown",
+          translate_language = "Unknown",
+          duration = 0,
+          speakers = [],
+          video_id = folder_name,
+          has_metadata = False,
+        )
+      )
 
-      raw_speakers = meta.get("speakers", [])
-      clean_speakers = []
-      for s in raw_speakers:
-          if "voice" in s:
-              clean_speakers.append({"voice": s["voice"]})
+  videos.sort(key=lambda x: x.created_at, reverse=True)
+  return {"videos": videos, "next_page_token": next_page_token}
 
-      videos.append({
-        "name": clean_video_name(blob.name),
-        "url": url,
-        "download_url": download_url,
-        "created_at": blob.time_created,
-        "original_language": meta.get("original_language", "Unknown"),
-        "translate_language": meta.get("translate_language", "Unknown"),
-        "duration": meta.get("duration", 0),
-        "speakers": clean_speakers,
-        "video_id": folder_name,
-        "has_metadata": has_metadata
-      })
-
-  videos.sort(key=lambda x: x['created_at'], reverse=True)
-
-  return {
-      "videos": videos,
-      "next_page_token": blobs.next_page_token
-  }
 
 def delete_video_from_gcs(bucket_name: str, video_id: str):
   storage_client = storage.Client()
   bucket = storage_client.bucket(bucket_name)
   blobs = list(bucket.list_blobs(prefix=video_id))
-  
+
   for blob in blobs:
     try:
       blob.delete()
       logging.info(f"Deleted blob: {blob.name}")
-    except Exception as e:
+    except google.cloud.exceptions.GoogleCloudError as e:
       logging.warning(f"Failed to delete blob {blob.name}: {e}")
-  
+
   logging.info("Deleted video %s from GCS.", video_id)

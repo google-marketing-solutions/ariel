@@ -20,7 +20,7 @@ import json
 import logging
 import os
 import shutil
-from typing import Annotated
+from typing import Annotated, cast
 import uuid
 
 from fastapi import FastAPI
@@ -43,7 +43,7 @@ from cloud_storage import upload_file_to_gcs
 from cloud_storage import upload_video_to_gcs
 from configuration import get_config
 from generate_audio import generate_audio
-from models import GenerateVideoRequest
+from models import GenerateVideoRequest, VideoMetadata
 from models import ProcessResponse
 from models import RegenerateRequest
 from models import RegenerateResponse
@@ -53,7 +53,6 @@ from process import combine_video_and_audio
 from process import merge_background_and_vocals
 from process import merge_vocals
 from process import separate_audio_from_video
-from transcribe import TranscribeSegment
 from translate import translate_text
 
 # Set up Google Cloud Logging
@@ -185,9 +184,6 @@ def process_video(
       gcs_video_path = (
         f"gs://{config.gcs_bucket_name}/{video_name}/{video_name}"
       )
-      ### DEBUG
-      print(f"### DEBUG ### GSC PATH: {gcs_video_path}")
-      ### DEBUG
     # Editing a video from the library page or the edit page if changing the translate language.
     else:
       logging.info("Forking from source_video_id: %s", source_video_id)
@@ -197,7 +193,7 @@ def process_video(
       if len(parts) == 4:
         new_id = f"{now}-{parts[3]}"
       else:
-        new_id = f"{now}-{str(uuid.uuid4())}-{video_filename}"
+        new_id = f"{now}-{uuid.uuid4()}-{video_filename}"
         new_id = new_id.replace(":", "_")
 
       local_dir = os.path.join(mount_point, new_id)
@@ -207,43 +203,21 @@ def process_video(
       local_video_path = os.path.join(local_dir, new_id)
       shutil.copy2(os.path.join(source_dir, video_filename), local_video_path)
       video_name = new_id
-      gcs_video_path = (
-        f"gs://{config.gcs_bucket_name}/{video_name}/{video_name}"
-      )
+      gcs_object_name = f"{video_name}/{video_name}"
+      with open(local_video_path, "rb") as f:
+        upload_file_to_gcs(gcs_object_name, f, config.gcs_bucket_name)
+
+      gcs_video_path = f"gs://{config.gcs_bucket_name}/{gcs_object_name}"
 
       # Copy separated audio files if present
       for fname in ["original_audio.wav", "background.wav", "vocals.wav"]:
         src_file = os.path.join(source_dir, fname)
         if os.path.exists(src_file):
           shutil.copy2(src_file, os.path.join(local_dir, fname))
-
-    source_metadata_path = os.path.join(
-      mount_point, source_video_id, "metadata.json"
-    )
-    if os.path.exists(source_metadata_path):
-      try:
-        with open(source_metadata_path, "r") as f:
-          source_metadata = json.load(f)
-        if source_metadata.get("original_language") == original_language:
-          logging.info("Reusing transcript from source state")
-          # Reconstruct annotated transcript segments from source utterances
-          annotated_transcript = []
-          for u in source_metadata.get("utterances", []):
-            annotated_transcript.append(
-              TranscribeSegment(
-                transcript=u["original_text"],
-                speaker_id=u["speaker"]["speaker_id"],
-                start_time=u["original_start_time"],
-                end_time=u["original_end_time"],
-                tone=u.get("instructions", ""),
-                gender=u["speaker"]["gender"],
-              )
-            )
-          transcript = "SKIPPED_REUSED"
-      except Exception as e:
-        logging.warning(f"Failed to reuse transcript: {e}")
-
   else:
+    if not video:
+        raise Exception("No video uploaded.")
+
     logging.info("Processing new video upload: %s", video.filename)
     local_video_path, gcs_video_path = save_video(video)
     local_dir = os.path.dirname(local_video_path)
@@ -292,24 +266,39 @@ def process_video(
   )
 
   video_clip = moviepy.VideoFileClip(local_video_path)
-  duration = video_clip.duration
+  duration: float = cast(float, video_clip.duration)
   video_clip.close()
 
   system_instruction = """
-    You are an expert audio-visual localization system. Your task is to analyze a provided video, transcribe its spoken dialogue, analyze the prosody and tone, and translate the text into a target language.
+    You are an expert audio-visual localization system. Your task is to analyze
+    a provided video, transcribe its spoken dialogue, analyze the prosody and
+    tone, and translate the text into a target language.
 
-    You must extract the following information and structure it strictly according to the provided JSON schema:
-    1. Primary Language: Identify the primary spoken language in the video and output its BCP-47 language code.
-    2. Speaker List: Create a top-level list of all unique speakers in the video. Assign a unique `speaker_id`, a `speaker_name`, and `gender`. Assign a compatible Gemini-TTS voice name to the `voice` field (e.g., 'Achird', 'Aoede', 'Puck'). Do not use regional codes.
-    3. Sentence-by-Sentence Transcription: Transcribe the video strictly sentence by sentence into `original_text`.
-    4. Timestamps: Provide `original_start_time` and `original_end_time` in seconds (precision: 2 decimal places).
-    5. Speaker Assignment: Assign the correct speaker object to each utterance, matching the speakers defined in your top-level Speaker List.
-    6. Speaking Instructions: In `speaking_instructions`, write detailed instructions for a TTS engine describing tone, pacing, rhythm, pitch, inflection, pauses, and emphasis.
-    7. Translation Instructions: In `translation_instructions`, describe formality, jargon, and cultural context.
-    8. Translation: Translate the `original_text` into the Target Language and place it in `translated_text`.
+    You must extract the following information and structure it strictly
+    according to the provided JSON schema:
+    1. Primary Language: Identify the primary spoken language in the video and
+       output its BCP-47 language code.
+    2. Speaker List: Create a top-level list of all unique speakers in the
+       video. Assign a unique `speaker_id`, a `speaker_name`, and `gender`.
+       Assign a compatible Gemini-TTS voice name to the `voice` field (e.g.,
+       'Achird', 'Aoede', 'Puck'). Do not use regional codes.
+    3. Sentence-by-Sentence Transcription: Transcribe the video strictly
+       sentence by sentence into `original_text`.
+    4. Timestamps: Provide `original_start_time` and `original_end_time` in
+       seconds (precision: 2 decimal places).
+    5. Speaker Assignment: Assign the correct speaker object to each utterance,
+       matching the speakers defined in your top-level Speaker List.
+    6. Speaking Instructions: In `speaking_instructions`, write detailed
+       instructions for a TTS engine describing tone, pacing, rhythm, pitch,
+       inflection, pauses, and emphasis.
+    7. Translation Instructions: In `translation_instructions`, describe
+       formality, jargon, and cultural context.
+    8. Translation: Translate the `original_text` into the Target Language and
+       place it in `translated_text`.
 
     Important Constraints:
-    - Only populate fields that can be known *before* generating the translated speech.
+    - Only populate fields that can be known *before* generating the translated
+      speech.
     - For `translated_start_time` and `translated_end_time`, set to 0.0.
     - For `speaking_rate`, set to 1.0.
     - For `removed` and `muted`, set to False.
@@ -341,13 +330,14 @@ def process_video(
     gemini_model = config.gemini_flash_model
     gemini_tts_model = config.gemini_flash_tts_model
 
+
   response = genai_client.models.generate_content(
     model=gemini_model,
     contents=[video_part, user_prompt],
     config=gemini_config,
   )
 
-  process_response = response.parsed
+  process_response = ProcessResponse.model_validate_json(cast(str, response.text))
   original_language = process_response.primary_language
   speaker_list = process_response.speakers
   utterances = process_response.utterances
@@ -379,9 +369,9 @@ def process_video(
     duration = 0
     try:
       video_clip = moviepy.VideoFileClip(local_video_path)
-      duration = video_clip.duration
+      duration = cast(float, video_clip.duration)
       video_clip.close()
-    except Exception:
+    except (OSError, AttributeError, KeyError, IndexError):
       if to_return.utterances:
         duration = max([u.translated_end_time for u in to_return.utterances])
 
@@ -392,7 +382,7 @@ def process_video(
       json.dump(metadata, f)
     logging.info("Saved draft metadata to %s", metadata_path)
 
-  except Exception as e:
+  except (OSError, TypeError) as e:
     logging.warning(f"Failed to save draft metadata: {e}")
 
   logging.info("Completed processing %s", video_name)
@@ -428,7 +418,7 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
   """Generates the final, translated video.
 
   Args:
-    video_data: the Video object representing the final video.
+    request: the request to create the final video.
 
   Returns:
     A JSON object with the URL to the completed video.
@@ -489,9 +479,9 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
     duration = 0
     try:
       video_clip = moviepy.VideoFileClip(local_video_path)
-      duration = video_clip.duration
+      duration = cast(float, video_clip.duration)
       video_clip.close()
-    except Exception:
+    except (OSError, AttributeError, KeyError, IndexError):
       if video_data.utterances:
         duration = max([u.translated_end_time for u in video_data.utterances])
 
@@ -638,9 +628,8 @@ def sanitize_filename(orig: str) -> str:
 
 
 @app.get("/api/videos")
-def get_videos(page_token: str = None, max_results: int = 5) -> dict:
-  """Fetches the list of videos from the appropriate source based on environment."""
-
+def get_videos(page_token: str = "", max_results: int = 5) -> dict[str, VideoMetadata | str]:
+  """Fetches the list of videos based on the environment."""
   if "K_SERVICE" in os.environ:
     return list_all_videos(
       config.gcs_bucket_name,
@@ -648,9 +637,9 @@ def get_videos(page_token: str = None, max_results: int = 5) -> dict:
       max_results=max_results,
     )
 
-  videos_list = []
+  videos_list: list[VideoMetadata] = []
   try:
-    for root, dirs, files in os.walk(mount_point):
+    for root, _, files in os.walk(mount_point):
       for file in files:
         if file.lower().endswith(".mp4"):
           folder_name = os.path.basename(root)
@@ -671,7 +660,7 @@ def get_videos(page_token: str = None, max_results: int = 5) -> dict:
           has_metadata = os.path.exists(meta_path)
           if has_metadata:
             try:
-              with open(meta_path, "r") as f:
+              with open(meta_path) as f:
                 file_data = json.load(f)
                 raw_from_file = file_data.get("speakers", [])
                 unique_clean_speakers = list(
@@ -688,20 +677,20 @@ def get_videos(page_token: str = None, max_results: int = 5) -> dict:
               print(f"Error reading metadata for {file}: {e}")
 
           videos_list.append(
-            {
-              "video_id": folder_name,
-              "name": clean_video_name(file),
-              "url": web_path,
-              "download_url": web_path,
-              "created_at": creation_time,
-              "original_language": metadata.get("original_language", "Unknown"),
-              "translate_language": metadata.get(
+            VideoMetadata(
+              video_id = folder_name,
+              name = clean_video_name(file),
+              url = web_path,
+              download_url = web_path,
+              created_at = datetime.datetime.fromtimestamp(creation_time),
+              original_language = metadata.get("original_language", "Unknown"),
+              translate_language = metadata.get(
                 "translate_language", "Unknown"
               ),
-              "duration": metadata.get("duration", 0),
-              "speakers": metadata.get("speakers", []),
-              "has_metadata": has_metadata,
-            }
+              duration = metadata.get("duration", 0),
+              speakers = metadata.get("speakers", []),
+              has_metadata = has_metadata,
+            )
           )
       videos_list.sort(key=lambda x: x["created_at"], reverse=True)
   except Exception as e:

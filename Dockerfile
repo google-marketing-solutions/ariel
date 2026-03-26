@@ -11,8 +11,6 @@ RUN pip install uv
 COPY ./pyproject.toml ./
 COPY ./uv.lock ./
 RUN uv sync --no-dev
-ENV HF_HOME=/app/models
-RUN uv run python -c "from faster_whisper import WhisperModel; WhisperModel('small', device='cpu', compute_type='int8')"
 
 # Copy everything, including the locally built frontend (un-ignored in .gcloudignore)
 COPY . ./
