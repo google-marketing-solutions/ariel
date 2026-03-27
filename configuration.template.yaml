@@ -17,8 +17,3 @@ GEMINI_FLASH_MODEL: "gemini-3-flash-preview"
 GEMINI_TTS_FLASH_MODEL: "gemini-2.5-flash-preview-tts"
 GEMINI_TTS_PRO_MODEL: "gemini-2.5-pro-preview-tts"
 
-# Default audio format
-AUDIO_FORMAT: "mp3"
-
-# Default video format
-VIDEO_FORMAT: "mp4"

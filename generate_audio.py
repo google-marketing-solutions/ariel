@@ -20,9 +20,6 @@ import wave
 from google.api_core import exceptions as api_exceptions
 from google.api_core.retry import Retry
 from google.cloud import texttospeech
-import librosa
-import numpy as np
-import soundfile
 
 
 def _process_audio_part(audio_data: bytes, path: str) -> float:
@@ -54,20 +51,21 @@ def generate_audio(
     voice_name: str,
     speaking_rate: float,
     output_path: str,
-    model_name: str = "gemini-2.5-pro-tts",
+    model_name: str,
 ) -> float:
   """Uses Gemini TTS to generate audio for the given text.
 
   Args:
-   text: the text to have spoken.
-   prompt: additional instructions for the generation.
-   language: the language to be spoken in ISO format (e.g. en-US)
-   voice_name: the name of the Gemini voice to use.
-   output_path: where to save the generated audio file.
-   model_name: the Gemini model to use. Defaults to gemini-2.5-pro-tts.
+   text: The text to have spoken.
+   prompt: Additional instructions for the generation.
+   language: The language to be spoken in BCP-47 format (e.g. en-US)
+   voice_name: The name of the Gemini voice to use.
+   speaking_rate: The speaking rate to pass to Gemini TTS.
+   output_path: Ehere to save the generated audio file.
+   model_name: The Gemini TTS model to use.
 
   Returns:
-   the duration of the generated file.
+    The duration of the generated file.
   """
   try:
     tts_client = texttospeech.TextToSpeechClient()
@@ -110,11 +108,7 @@ def generate_audio(
   ) as api_error:
     logging.error("An error occurred calling Gemini-TTS: %s", api_error)
     return 0.0
-  except (
-      EOFError,
-      IOError,
-      wave.Error,
-  ) as sys_error:
+  except (OSError, EOFError, wave.Error) as sys_error:
     logging.error(
         "An error occurred while processing the generated audio: %s", sys_error
     )

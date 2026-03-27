@@ -16,13 +16,15 @@
 
 import os
 import pathlib
+
 from audio_separator.separator import Separator
-from models import Utterance
 import moviepy
+
+from models import Utterance
 
 
 def separate_audio_from_video(
-    video_file_path: str, output_local_path: str
+  video_file_path: str, output_local_path: str
 ) -> tuple[str, str, str]:
   """Separates the music and vocals from the input video file.
 
@@ -47,7 +49,7 @@ def separate_audio_from_video(
   video = moviepy.VideoFileClip(video_file_path)
   audio = video.audio
   original_audio_path = (
-      f"{output_local_path}/{original_audio_name}.{original_audio_extension}"
+    f"{output_local_path}/{original_audio_name}.{original_audio_extension}"
   )
   if not audio:
     raise RuntimeError(f"Could not extract audio from {video_file_path}")
@@ -57,27 +59,26 @@ def separate_audio_from_video(
   output_file_names = {"Vocals": "vocals", "Instrumental": "background"}
   separator.load_model(model_filename="5_HP-Karaoke-UVR.pth")
   output_files: list[str] = separator.separate(
-      original_audio_path, output_file_names
+    original_audio_path, output_file_names
   )
 
   vocals_file = next(f for f in output_files if "vocals" in f.lower())
   background_file = next(f for f in output_files if "background" in f.lower())
 
   return (
-      original_audio_path,
-      os.path.join(output_local_path, vocals_file),
-      os.path.join(output_local_path, background_file),
+    original_audio_path,
+    os.path.join(output_local_path, vocals_file),
+    os.path.join(output_local_path, background_file),
   )
 
 
 def merge_background_and_vocals(
-    *,
-    background_audio_file: str,
-    dubbed_vocals_path: str,
-    output_directory: str,
-    target_language: str,
-    dubbed_audio_filename: str = "dubbed_audio",
-    output_format: str = "wav",
+  *,
+  background_audio_file: str,
+  dubbed_vocals_path: str,
+  output_directory: str,
+  target_language: str,
+  dubbed_audio_filename: str = "dubbed_audio",
 ) -> str:
   """Mixes background music and vocals tracks, normalizes the volume, and exports the result.
 
@@ -93,7 +94,6 @@ def merge_background_and_vocals(
   Returns:
     The path to the output audio file with merged dubbed vocals.
   """
-
   background_audio = moviepy.AudioFileClip(background_audio_file)
   background_audio = background_audio.with_start(0)
   dubbed_vocals = moviepy.AudioFileClip(dubbed_vocals_path)
@@ -102,35 +102,33 @@ def merge_background_and_vocals(
   audio_parts: list[moviepy.AudioClip] = [background_audio, dubbed_vocals]
 
   combined_audio: moviepy.CompositeAudioClip = moviepy.CompositeAudioClip(
-      audio_parts
+    audio_parts
   )
   target_language_suffix = "_" + target_language.replace("-", "_").lower()
   dubbed_audio_file = os.path.join(
-      output_directory,
-      dubbed_audio_filename + target_language_suffix + "." + output_format,
+    output_directory,
+    dubbed_audio_filename + target_language_suffix + ".wav",
   )
   combined_audio.write_audiofile(dubbed_audio_file)
   return dubbed_audio_file
 
 
 def merge_vocals(
-    *,
-    dubbed_vocals_metadata: list[Utterance],
-    output_directory: str,
-    target_language: str,
-    dubbed_audio_filename: str = "vocals_only",
-    output_format: str = "wav",
+  *,
+  dubbed_vocals_metadata: list[Utterance],
+  output_directory: str,
+  target_language: str,
+  dubbed_audio_filename: str = "vocals_only",
 ) -> str:
   """Merges dubbed vocal tracks into a single audio file.
 
   Args:
-    dubbed_vocals_metadata: A list of dictionaries, each containing the path to
+    dubbed_vocals_metadata: A list of Utteranaces, each containing the path to
       a dubbed vocal chunk and its start time.
     output_directory: The base directory where the output file will be saved.
     target_language: The language to dub the ad into. It must be ISO 3166-1
       alpha-2 country code.
     dubbed_audio_filename: The base name for the output audio file.
-    output_format: The file format for the output audio file (e.g., 'mp3').
 
   Returns:
     The path to the output audio file with merged dubbed vocals.
@@ -144,8 +142,8 @@ def merge_vocals(
 
   target_language_suffix = "_" + target_language.replace("-", "_").lower()
   target_file = os.path.join(
-      output_directory,
-      dubbed_audio_filename + target_language_suffix + "." + output_format,
+    output_directory,
+    dubbed_audio_filename + target_language_suffix + ".wav",
   )
 
   # Create a silent track with the same duration as the background audio
@@ -155,7 +153,7 @@ def merge_vocals(
     target_path.touch()
     return target_file
   silent_audio = moviepy.AudioClip(
-      frame_function=lambda t: [0, 0], duration=max_end_time
+    frame_function=lambda t: [0, 0], duration=max_end_time
   )
   audio_parts.append(silent_audio)
 
@@ -166,33 +164,31 @@ def merge_vocals(
 
     vocal_chunk = None
     if utterance.muted:
-      original_vocals_path = os.path.join(
-          output_directory, "vocals.wav"
-      )
+      original_vocals_path = os.path.join(output_directory, "vocals.wav")
       vocal_chunk = moviepy.AudioFileClip(original_vocals_path)
       vocal_chunk = vocal_chunk.subclipped(
-          utterance.original_start_time, utterance.original_end_time
+        utterance.original_start_time, utterance.original_end_time
       )
     elif utterance.audio_url:
       vocal_chunk = moviepy.AudioFileClip(utterance.audio_url)
 
     if vocal_chunk:
       vocal_chunk = vocal_chunk.with_start(
-          float(utterance.translated_start_time)
+        float(utterance.translated_start_time)
       )
       audio_parts.append(vocal_chunk)
 
   combined_audio: moviepy.CompositeAudioClip = moviepy.CompositeAudioClip(
-      audio_parts
+    audio_parts
   )
   combined_audio.write_audiofile(target_file)
   return target_file
 
 
 def combine_video_and_audio(
-    video_file_path: str,
-    audio_file_path: str,
-    output_file_path: str,
+  video_file_path: str,
+  audio_file_path: str,
+  output_file_path: str,
 ):
   """Combines a video file with an audio file to create the final video.
 
@@ -209,7 +205,7 @@ def combine_video_and_audio(
 
   # Write the final video file
   final_clip.write_videofile(
-      output_file_path, codec="libx264", audio_codec="aac"
+    output_file_path, codec="libx264", audio_codec="aac"
   )
 
   # Close the clips to free up resources
