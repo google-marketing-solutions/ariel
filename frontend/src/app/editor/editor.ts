@@ -5,8 +5,7 @@ import { VideoGenerationService } from '../services/video-generation.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTooltipModule, MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
-import { SpeakerModal } from '../_components/speaker-modal/speaker-modal';
-import { Speaker } from '../home/home';
+import { Speaker, SpeakerModal } from '../_components/speaker-modal/speaker-modal';
 
 interface VideoSpeaker {
   speaker_id: string;
@@ -344,7 +343,7 @@ export class Editor implements OnInit, OnDestroy {
 
     effect(() => {
       this.videoGenerationService.setProcessingAudio(this.isGeneratingAudio());
-    }, { allowSignalWrites: true });
+    });
   }
 
   animationFrameId: number | null = null;

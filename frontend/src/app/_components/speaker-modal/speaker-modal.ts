@@ -1,7 +1,14 @@
 import { Component, OnInit, signal, computed, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Speaker } from '../../home/home';
+
+export interface Speaker {
+  id: string;
+  name: string;
+  voice: string;
+  voiceName: string;
+  gender: string;
+}
 
 export interface Voice {
   name: string;

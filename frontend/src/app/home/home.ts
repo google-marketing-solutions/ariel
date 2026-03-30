@@ -2,7 +2,6 @@ import { Component, OnInit, signal, computed, inject, ChangeDetectionStrategy } 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { SpeakerModal } from '../_components/speaker-modal/speaker-modal';
 
 export interface Language {
   name: string;
@@ -10,18 +9,11 @@ export interface Language {
   readiness: string;
 }
 
-export interface Speaker {
-  id: string;
-  name: string;
-  voice: string;
-  voiceName: string;
-  gender: string;
-}
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, FormsModule, SpeakerModal],
+  imports: [CommonModule, FormsModule],
   templateUrl: './home.html',
   styleUrl: './home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,31 +26,11 @@ export class Home implements OnInit {
 
   gaLanguages = signal<Language[]>([]);
   previewLanguages = signal<Language[]>([]);
-
-  speakers = signal<Speaker[]>([]);
-  isSpeakerModalOpen = signal(false);
-  speakerToEdit = signal<Speaker | null>(null);
-
   useProModel = signal(false);
-  adjustSpeed = signal(false);
-
   selectedVideoFile = signal<File | null>(null);
   videoPreviewUrl = signal<string | null>(null);
-
-  originalLanguage = signal<string>('');
   translationLanguage = signal<string>('');
-  geminiInstructions = signal<string>('');
-
-  isOriginalOpen = signal(false);
   isTranslationOpen = signal(false);
-
-  toggleOriginal(event: MouseEvent) {
-    if (this.isProcessing() || this.isPreprocessing()) return;
-    this.isOriginalOpen.set(!this.isOriginalOpen());
-    if (this.isOriginalOpen()) {
-      this.isTranslationOpen.set(false);
-    }
-  }
 
   dropdownPosition = signal<'bottom' | 'top'>('bottom');
 
@@ -66,8 +38,6 @@ export class Home implements OnInit {
     if (this.isProcessing() || this.isPreprocessing()) return;
     this.isTranslationOpen.set(!this.isTranslationOpen());
     if (this.isTranslationOpen()) {
-      this.isOriginalOpen.set(false);
-      
       const target = event.currentTarget as HTMLElement;
       if (target) {
         const rect = target.getBoundingClientRect();
@@ -98,13 +68,6 @@ export class Home implements OnInit {
     return this.previewLanguages().filter(lang => lang.name.toLowerCase().includes(query));
   });
 
-  originalLanguageLabel = computed(() => {
-    const code = this.originalLanguage();
-    if (!code) return 'Please select...';
-    const match = [...this.gaLanguages(), ...this.previewLanguages()].find(l => l.code === code);
-    return match ? match.name : 'Please select...';
-  });
-
   translationLanguageLabel = computed(() => {
     const code = this.translationLanguage();
     if (!code) return 'Please select...';
@@ -133,35 +96,6 @@ export class Home implements OnInit {
     } catch (error) {
       console.error('Failed to fetch languages:', error);
     }
-  }
-
-  openSpeakerModal() {
-    this.speakerToEdit.set(null);
-    this.isSpeakerModalOpen.set(true);
-  }
-
-  editSpeaker(speaker: Speaker) {
-    this.speakerToEdit.set(speaker);
-    this.isSpeakerModalOpen.set(true);
-  }
-
-  closeSpeakerModal() {
-    this.isSpeakerModalOpen.set(false);
-    this.speakerToEdit.set(null);
-  }
-
-  onSpeakerAdded(speaker: Speaker) {
-    const target = this.speakerToEdit();
-    if (target) {
-      this.speakers.update(speakers => speakers.map(s => s.id === target.id ? speaker : s));
-    } else {
-      this.speakers.update(speakers => [...speakers, speaker]);
-    }
-    this.speakerToEdit.set(null);
-  }
-
-  removeSpeaker(speakerId: string) {
-    this.speakers.update(speakers => speakers.filter(s => s.id !== speakerId));
   }
 
   triggerFileInput() {
@@ -210,9 +144,7 @@ export class Home implements OnInit {
     this.videoPreviewUrl.set(null);
     this.selectedVideoFile.set(null);
     this.step.set(1);
-    this.originalLanguage.set('');
     this.translationLanguage.set('');
-    this.speakers.set([]);
     // Reset file input so selecting the same file triggers 'change' event again
     const fileInput = document.getElementById('video-input') as HTMLInputElement;
     if (fileInput) {
@@ -223,9 +155,7 @@ export class Home implements OnInit {
   isFormValid(): boolean {
     return this.step() === 2 &&
       !!this.selectedVideoFile() &&
-      this.originalLanguage() !== '' &&
-      this.translationLanguage() !== '' &&
-      this.speakers().length > 0;
+      this.translationLanguage() !== ''
   }
 
   async processVideo() {
@@ -287,7 +217,6 @@ export class Home implements OnInit {
   onDocumentClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
     if (!target.closest('.custom-select')) {
-      if (this.isOriginalOpen()) this.isOriginalOpen.set(false);
       if (this.isTranslationOpen()) {
         this.isTranslationOpen.set(false);
         this.searchLanguage.set('');
