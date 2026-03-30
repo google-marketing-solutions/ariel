@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from datetime import datetime
+import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel
@@ -44,16 +44,24 @@ class Speaker(BaseModel):
   """
 
   speaker_id: str = Field(
-    description="A unique ID for the speaker in the video, created sequentially in the order the speakers speak."
+      description=(
+          "A unique ID for the speaker in the video, created sequentially in"
+          " the order the speakers speak."
+      )
   )
   voice: str = Field(
-    description="The name of the Gemini-TTS voice (e.g., 'Achird', 'Aoede'). Do not use regional codes like 'en-US-Neural2'."
+      description=(
+          "The name of the Gemini-TTS voice (e.g., 'Achird', 'Aoede'). Do not"
+          " use regional codes like 'en-US-Neural2'."
+      )
   )
   speaker_name: str = Field(
-    description="A human readable name for the speaker."
+      description="A human readable name for the speaker."
   )
   gender: GenderEnum = Field(
-    description="The gender of the speaker. Must be one of the predefined options."
+      description=(
+          "The gender of the speaker. Must be one of the predefined options."
+      )
   )
 
 
@@ -73,10 +81,11 @@ class Utterance(BaseModel):
     original_start_time: The time in the original video the utterance started.
     original_end_time: The time in the original video that the utterance ended.
     translated_start_time: The time in the translated video that the utterance
-        will start.
+      will start.
     translated_end_time: The time in the translated video the utterance will
-        end.
-    speaking_rate: A factor (between 0.25 and 2.0) to send to Gemini TTS for how quickly to speak.
+      end.
+    speaking_rate: A factor (between 0.25 and 2.0) to send to Gemini TTS for how
+      quickly to speak.
     removed: If True, no audio is used for the utterance.
     muted: If True, the original audio is used for the utterance.
     audio_url: A URL pointing to the generated audio for the translation.
@@ -84,46 +93,51 @@ class Utterance(BaseModel):
 
   id: str = Field(description="A unique to the file id for this utterance.")
   original_text: str = Field(
-    description="A transcription of the original audio."
+      description="A transcription of the original audio."
   )
   translated_text: str = Field(description="The text translation to be used.")
   translation_instructions: str = Field(
-    default="", description="Additional instructions for translation."
+      default="", description="Additional instructions for translation."
   )
   speaker: Speaker = Field(
-    description="The TTS speaker to use when generating audio."
+      description="The TTS speaker to use when generating audio."
   )
   speaking_instructions: str = Field(
-    default="", description="Additional instructions on how to speak."
+      default="", description="Additional instructions on how to speak."
   )
   original_start_time: float = Field(
-    description="The time in the original video the utterance started."
+      description="The time in the original video the utterance started."
   )
   original_end_time: float = Field(
-    description="The time in the original video that the utterance ended."
+      description="The time in the original video that the utterance ended."
   )
   translated_start_time: float = Field(
-    description="The time in the translated video that the utterance will start."
+      description=(
+          "The time in the translated video that the utterance will start."
+      )
   )
   translated_end_time: float = Field(
-    description="The time in the translated video the utterance will end."
+      description="The time in the translated video the utterance will end."
   )
   speaking_rate: float = Field(
-    default=1.0,
-    description="A factor (between 0.25 and 2.0) to send to Gemini TTS for how quickly to speak.",
-    ge=0.25,
-    le=2.0,
+      default=1.0,
+      description=(
+          "A factor (between 0.25 and 2.0) to send to Gemini TTS for how"
+          " quickly to speak."
+      ),
+      ge=0.25,
+      le=2.0,
   )
   removed: bool = Field(
-    default=False, description="If True, no audio is used for the utterance."
+      default=False, description="If True, no audio is used for the utterance."
   )
   muted: bool = Field(
-    default=False,
-    description="If True, the original audio is used for the utterance.",
+      default=False,
+      description="If True, the original audio is used for the utterance.",
   )
   audio_url: str = Field(
-    default="",
-    description="A URL pointing to the generated audio for the translation.",
+      default="",
+      description="A URL pointing to the generated audio for the translation.",
   )
 
 
@@ -131,13 +145,16 @@ class ProcessResponse(BaseModel):
   """Wrapper class to capture the entire video analysis including the BCP-47 code."""
 
   primary_language: str = Field(
-    description="The BCP-47 code of the primary spoken language in the video."
+      description="The BCP-47 code of the primary spoken language in the video."
   )
   speakers: list[Speaker] = Field(
-    description="A list of the unique speakers identified in the video."
+      description="A list of the unique speakers identified in the video."
   )
   utterances: list[Utterance] = Field(
-    description="A list of all transcribed and translated utterances, ordered chronologically."
+      description=(
+          "A list of all transcribed and translated utterances, ordered"
+          " chronologically."
+      )
   )
 
 
@@ -156,32 +173,14 @@ class Video(BaseModel):
     tts_model_name: The model used for Text-to-speech
   """
 
-  video_id: str = Field(
-    description="A unique id representing a single video and translation."
-  )
-  original_language: str = Field(
-    description="The language the of the voice over in the video."
-  )
-  translate_language: str = Field(
-    description="The language to translate the video to."
-  )
-  prompt_enhancements: str = Field(
-    default="",
-    description="Additional information to provide Gemini when translating the transcription.",
-  )
-  speakers: list[Speaker] = Field(
-    description="The speakers to use in the final translated video."
-  )
-  utterances: list[Utterance] = Field(
-    description="A list of the individual utterances for the video."
-  )
-  model_name: str = Field(
-    default="",
-    description="The Gemini model used to transcribe and translate the video.",
-  )
-  tts_model_name: str = Field(
-    default="", description="The model used for Text-to-speech"
-  )
+  video_id: str
+  original_language: str
+  translate_language: str
+  prompt_enhancements: str = ""
+  speakers: list[Speaker]
+  utterances: list[Utterance]
+  model_name: str
+  tts_model_name: str
 
 
 class RegenerateRequest(BaseModel):
@@ -197,15 +196,17 @@ class RegenerateRequest(BaseModel):
 
   video: Video = Field(description="The video being processed")
   utterance: int = Field(
-    description="The index of the utterance to re-translate"
+      description="The index of the utterance to re-translate"
   )
   instructions: str = Field(
-    default="",
-    description="Additional instructions to guide the translation (defaults to empty)",
+      default="",
+      description=(
+          "Additional instructions to guide the translation (defaults to empty)"
+      ),
   )
   speaking_rate: float = Field(
-    default=1.0,
-    description="The factor to speed up the default speaking rate by.",
+      default=1.0,
+      description="The factor to speed up the default speaking rate by.",
   )
 
 
@@ -233,7 +234,7 @@ class GenerateVideoRequest(BaseModel):
 
   video: Video = Field(description="The video to generate.")
   original_video_url: str = Field(
-    default="", description="The URL to the original video."
+      default="", description="The URL to the original video."
   )
 
 
@@ -247,7 +248,8 @@ class VideoMetadata(BaseModel):
     created_at: When the project was created.
     original_language: The language of the original video.
     translate_langiage: The language the video was translated to.
-    duration: The duration of the translated video (may be longer than the original).
+    duration: The duration of the translated video (may be longer than the
+      original).
     speakers: The list of speakers in the video.
     video_id: The UUID used to identify the project.
     has_metadata: True if the metadata JSON file has been saved.
@@ -256,22 +258,27 @@ class VideoMetadata(BaseModel):
   name: str = Field(description="The file name of the translated video.")
   url: str = Field(description="The URL to edit the project.")
   download_url: str = Field(
-    description="The URL to download the translated video."
+      description="The URL to download the translated video."
   )
-  created_at: datetime = Field(description="When the project was created.")
+  created_at: datetime.datetime = Field(
+      description="When the project was created."
+  )
   original_language: str = Field(
-    description="The language of the original video."
+      description="The language of the original video."
   )
   translate_language: str = Field(
-    description="The language the video was translated to."
+      description="The language the video was translated to."
   )
   duration: float = Field(
-    description="The duration of the translated video (may be longer than the original)."
+      description=(
+          "The duration of the translated video (may be longer than the"
+          " original)."
+      )
   )
   speakers: list[Speaker] = Field(
-    description="The list of speakers in the video."
+      description="The list of speakers in the video."
   )
   video_id: str = Field(description="The UUID used to identify the project.")
   has_metadata: bool = Field(
-    description="True if the metadata JSON file has been saved."
+      description="True if the metadata JSON file has been saved."
   )

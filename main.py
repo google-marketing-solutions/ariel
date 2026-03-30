@@ -126,7 +126,7 @@ def process_video(
     video: UploadFile | None = None,
     source_video_id: Annotated[str, Form()] = "",
     update_existing: Annotated[bool, Form()] = False,
-) -> Video:
+) -> JSONResponse:
   """Endpoint to run the initial video processing workflow.
 
   This function provides the workflow to separate the audio from the video,
@@ -146,9 +146,6 @@ def process_video(
 
   Returns:
     A Video object with the information for the dubbing.
-
-  Raises:
-    FileNotFoundError: Raised when the source video isn't found.
   """
   if not video and not source_video_id:
     raise HTTPException(
@@ -162,62 +159,51 @@ def process_video(
   video_name = ""
   local_video_path = ""
 
-  # If we're doing something with an existing video.
-  if source_video_id:
+  # If we're doing something with an existing video project.
+  if source_video_id and not update_existing:
     source_dir = os.path.join(mount_point, source_video_id)
     if not os.path.exists(source_dir):
-      raise FileNotFoundError(f"Source video {source_video_id} not found")
-
-    # Find source video file
-    video_filename = source_video_id
-    if not os.path.exists(os.path.join(source_dir, video_filename)):
-      # Fallback to shortest .mp4 file in case of slight naming mismatch in
-      # old projects
-      source_files = [f for f in os.listdir(source_dir) if f.endswith(".mp4")]
-      if not source_files:
-        raise FileNotFoundError("Video file not found in source directory")
-      video_filename = min(source_files, key=len)
-
-    # Updating from the edit page and only changing the original language.
-    if update_existing:
-      logging.info("Updating existing project: %s", source_video_id)
-      local_dir = source_dir
-      video_name = source_video_id
-      local_video_path = os.path.join(local_dir, video_filename)
-      gcs_video_path = (
-          f"gs://{config.gcs_bucket_name}/{video_name}/{video_name}"
+      logging.error("Source video %s not found.", source_video_id)
+      return JSONResponse(
+          status_code=500,
+          content={"error": f"Source video {source_video_id} not found."},
       )
-    # Editing a video from the library page or the edit page if changing the
-    # translate language.
+
+    logging.info("Forking from source_video_id: %s", source_video_id)
+    now = datetime.datetime.now().isoformat().replace(":", "_")
+
+    parts = source_video_id.split("-", 3)
+    if len(parts) == 4:
+      new_id = f"{now}-{parts[3]}"
     else:
-      logging.info("Forking from source_video_id: %s", source_video_id)
-      now = datetime.datetime.now().isoformat().replace(":", "_")
+      new_id = f"{now}-{uuid.uuid4()}-{source_video_id}"
+      new_id = new_id.replace(":", "_")
 
-      parts = source_video_id.split("-", 3)
-      if len(parts) == 4:
-        new_id = f"{now}-{parts[3]}"
-      else:
-        new_id = f"{now}-{uuid.uuid4()}-{video_filename}"
-        new_id = new_id.replace(":", "_")
+    local_dir = os.path.join(mount_point, new_id)
+    os.makedirs(local_dir, exist_ok=True)
 
-      local_dir = os.path.join(mount_point, new_id)
-      os.makedirs(local_dir, exist_ok=True)
+    # Copy video file
+    local_video_path = os.path.join(local_dir, new_id)
+    shutil.copy2(os.path.join(source_dir, source_video_id), local_video_path)
+    video_name = new_id
+    gcs_object_name = f"{video_name}/{video_name}"
+    with open(local_video_path, "rb") as f:
+      upload_file_to_gcs(gcs_object_name, f, config.gcs_bucket_name)
 
-      # Copy video file
-      local_video_path = os.path.join(local_dir, new_id)
-      shutil.copy2(os.path.join(source_dir, video_filename), local_video_path)
-      video_name = new_id
-      gcs_object_name = f"{video_name}/{video_name}"
-      with open(local_video_path, "rb") as f:
-        upload_file_to_gcs(gcs_object_name, f, config.gcs_bucket_name)
+    gcs_video_path = f"gs://{config.gcs_bucket_name}/{gcs_object_name}"
 
-      gcs_video_path = f"gs://{config.gcs_bucket_name}/{gcs_object_name}"
-
-      # Copy separated audio files if present
-      for fname in ["original_audio.wav", "background.wav", "vocals.wav"]:
-        src_file = os.path.join(source_dir, fname)
-        if os.path.exists(src_file):
-          shutil.copy2(src_file, os.path.join(local_dir, fname))
+    # Copy separated audio files if present
+    for fname in ["original_audio.wav", "background.wav", "vocals.wav"]:
+      src_file = os.path.join(source_dir, fname)
+      if os.path.exists(src_file):
+        shutil.copy2(src_file, os.path.join(local_dir, fname))
+  elif update_existing:
+    logging.info("Updating existing project: %s", source_video_id)
+    gcs_video_path = (
+        f"gs://{config.gcs_bucket_name}/{source_video_id}/{source_video_id}"
+    )
+    source_dir = os.path.join(mount_point, source_video_id)
+    local_video_path = os.path.join(source_dir, source_video_id)
   else:
     assert video is not None
     logging.info("Processing new video upload: %s", video.filename)
@@ -315,7 +301,12 @@ def process_video(
       if to_return.utterances:
         duration = max([u.translated_end_time for u in to_return.utterances])
 
+    metadata["name"] = video_name
     metadata["duration"] = duration
+    metadata["url"] = ""
+    metadata["download_url"] = ""
+    metadata["created_at"] = str(datetime.datetime.now())
+    metadata["has_metadata"] = True
 
     metadata_path = os.path.join(local_dir, "metadata.json")
     with open(metadata_path, "w") as f:
@@ -326,7 +317,7 @@ def process_video(
     logging.warning("Failed to save draft metadata: %s", e)
 
   logging.info("Completed processing %s", video_name)
-  return to_return
+  return JSONResponse(content=to_return.model_dump())
 
 
 @app.post("/generate_audio")
@@ -426,10 +417,17 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
         duration = max([u.translated_end_time for u in video_data.utterances])
 
     metadata = video_data.model_dump()
+    metadata["name"] = (
+        f"{video_data.video_id}.{video_data.translate_language}.mp4"
+    )
     metadata["original_video_url"] = (
         f"{mount_point}/{video_data.video_id}/{video_data.video_id}"
     )
+    metadata["url"] = public_video_path
+    metadata["download_url"] = public_video_path
     metadata["duration"] = duration
+    metadata["created_at"] = str(datetime.datetime.now())
+    metadata["has_metadata"] = True
 
     with open(os.path.join(local_dir, "metadata.json"), "w") as f:
       json.dump(metadata, f)
@@ -639,7 +637,7 @@ def load_project(video_id: str):
     video_id: The ID of the video project to load.
 
   Returns:
-    The VideoMetadata object serialized to JSON, or an error object with error
+    The project metadata as a JSON object, or an error object with error
     details.
   """
   try:
@@ -647,10 +645,8 @@ def load_project(video_id: str):
     metadata_path = os.path.join(local_dir, "metadata.json")
 
     with open(metadata_path) as f:
-      file_data = f.read()
-      metadata = VideoMetadata.model_validate_json(file_data)
-    return metadata.model_dump_json()
-  except (OSError, pydantic.ValidationError) as e:
+      return json.load(f)
+  except (OSError, json.JSONDecodeError) as e:
     logging.exception("Error loading the metadata for %s: %s", video_id, e)
     return JSONResponse(
         status_code=404, content={"error": "The file doesn't exist"}
@@ -696,7 +692,7 @@ def delete_video(video_id: str) -> JSONResponse:
 @app.get("/{catchall:path}")
 async def catch_all(
     request: Request, catchall: str  # pyright: ignore[reportUnusedParameter]
-) -> HTMLResponse | FileResponse:
+):
   """Used to server the frontend files or a 404.
 
   Args:

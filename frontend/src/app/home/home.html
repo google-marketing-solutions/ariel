@@ -49,26 +49,38 @@
                   title="Select the target language for dubbing">help</span>
               </a>
             </div>
-            <div class="custom-select" [class.open]="isTranslationOpen()" [class.disabled]="isProcessing()">
+            <div class="custom-select" [class.open]="isTranslationOpen()" [class.disabled]="isProcessing() || isPreprocessing()" [class.dropup]="dropdownPosition() === 'top'">
               <div class="select-trigger" (click)="toggleTranslation($event)">
                 <span class="truncate">{{ translationLanguageLabel() }}</span>
                 <span class="material-symbols-outlined select-arrow">expand_more</span>
               </div>
               @if (isTranslationOpen()) {
               <div class="select-dropdown custom-scrollbar">
+                <div class="search-container" (click)="$event.stopPropagation()">
+                  <span class="material-symbols-outlined search-icon">search</span>
+                  <input type="text" [ngModel]="searchLanguage()" (ngModelChange)="searchLanguage.set($event)"
+                    placeholder="Search language..." class="language-search-input">
+                </div>
+                @if (filteredGaLanguages().length > 0) {
                 <div class="optgroup-label">GA</div>
-                @for (lang of gaLanguages(); track lang.code) {
-                <div class="option" (click)="translationLanguage.set(lang.code); isTranslationOpen.set(false)"
+                @for (lang of filteredGaLanguages(); track lang.code) {
+                <div class="option" (click)="translationLanguage.set(lang.code); isTranslationOpen.set(false); searchLanguage.set('')"
                   [class.selected]="translationLanguage() === lang.code">
                   {{ lang.name }}
                 </div>
                 }
+                }
+                @if (filteredPreviewLanguages().length > 0) {
                 <div class="optgroup-label">Preview</div>
-                @for (lang of previewLanguages(); track lang.code) {
-                <div class="option" (click)="translationLanguage.set(lang.code); isTranslationOpen.set(false)"
+                @for (lang of filteredPreviewLanguages(); track lang.code) {
+                <div class="option" (click)="translationLanguage.set(lang.code); isTranslationOpen.set(false); searchLanguage.set('')"
                   [class.selected]="translationLanguage() === lang.code">
                   {{ lang.name }}
                 </div>
+                }
+                }
+                @if (filteredGaLanguages().length === 0 && filteredPreviewLanguages().length === 0) {
+                <div class="no-results">No languages found</div>
                 }
               </div>
               }
@@ -79,22 +91,23 @@
               <h3>Gemini Model</h3>
             </div>
             <div class="toggle-widget" [class.opacity-50]="isPreprocessing()">
+              <span class="toggle-label-text" [class.active]="!useProModel()" [class.opacity-50]="useProModel()">Flash</span>
               <label class="toggle-switch">
                 <input type="checkbox" id="toggle-model-step1" [checked]="useProModel()"
                   (change)="useProModel.set(!useProModel())" [disabled]="isPreprocessing()">
                 <span class="slider"></span>
               </label>
-              <span class="toggle-label-text">{{ useProModel() ? 'Pro' : 'Flash' }}</span>
+              <span class="toggle-label-text" [class.active]="useProModel()" [class.opacity-50]="!useProModel()">Pro</span>
             </div>
           </div>
         </div>
       </div>
       <div class="right-column">
         @if (videoPreviewUrl() && translationLanguage()) {
-        <button (click)="processVideo()" [disabled]="isPreprocessing()" class="action-btn">
+        <button (click)="processVideo()" [disabled]="isPreprocessing()" class="action-btn" [class.processing]="isPreprocessing()">
           @if (isPreprocessing()) {
           <span class="material-symbols-outlined spinning">progress_activity</span>
-          Processing...
+          {{ processingMessage() }}
           } @else {
           <span class="material-symbols-outlined">auto_awesome</span>
           Process Video

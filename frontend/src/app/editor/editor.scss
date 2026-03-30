@@ -91,7 +91,27 @@
     }
   }
 
-  button.remove-btn {
+  &.clickable {
+    cursor: pointer;
+    transition: background-color 150ms, border-color 150ms;
+    &:hover {
+      border-color: rgba(var.$color-primary, 0.4);
+      background-color: rgba(var.$color-primary, 0.05);
+
+      @include var.dark-mode {
+        border-color: rgba(var.$color-primary-light, 0.4);
+        background-color: rgba(var.$color-primary-light, 0.05);
+      }
+    }
+  }
+
+  .speaker-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  button.icon-btn {
     color: var.$text-muted;
     background: transparent;
     border: none;
@@ -110,6 +130,13 @@
 
     &:hover {
       opacity: 1;
+    }
+
+    &.edit-btn:hover {
+      color: var.$color-primary;
+    }
+
+    &.remove-btn:hover {
       color: var.$color-danger;
     }
   }
@@ -420,6 +447,13 @@
           }
         }
 
+        &.dropup {
+          .select-dropdown {
+            top: auto;
+            bottom: calc(100% + 0.25rem);
+          }
+        }
+
         .select-dropdown {
           position: absolute;
           top: calc(100% + 0.25rem);
@@ -436,6 +470,53 @@
           @include var.dark-mode {
             background-color: var.$bg-dark-light;
             border-color: rgba(var.$bg-white, 0.1);
+          }
+
+          .search-container {
+            position: sticky;
+            top: 0;
+            background-color: var.$bg-white;
+            z-index: 2;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var.$border-subtle;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            
+            @include var.dark-mode {
+              background-color: var.$bg-dark-light;
+              border-bottom-color: rgba(var.$bg-white, 0.1);
+            }
+
+            .search-icon {
+              font-size: 1rem;
+              color: var.$text-muted;
+            }
+
+            .language-search-input {
+              width: 100%;
+              border: none;
+              background: transparent;
+              font-size: 0.75rem;
+              color: var.$text-main;
+              outline: none;
+              padding: 0.25rem 0;
+
+              &::placeholder {
+                color: var.$text-muted;
+              }
+
+              @include var.dark-mode {
+                color: var.$text-light;
+              }
+            }
+          }
+
+          .no-results {
+            padding: 0.75rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var.$text-muted;
           }
 
           .optgroup-label {

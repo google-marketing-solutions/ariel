@@ -4,7 +4,7 @@
   <div class="library-header">
     <h2>Video Library</h2>
     <a routerLink="/" class="create-job-btn">
-      Create New Job
+      Create New Project
     </a>
   </div>
 
@@ -28,7 +28,7 @@
       <span class="material-symbols-outlined">video_library</span>
       <h3>No Videos Found</h3>
       <p>You haven't dubbed any videos yet. Go back to the home page to start your first dubbing job.</p>
-      <a routerLink="/" class="create-link">Create New Job</a>
+      <a routerLink="/" class="create-link">Create New Project</a>
     </div>
     } @else {
     @for (video of formattedVideos(); track video.video_id) {

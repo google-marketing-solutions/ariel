@@ -53,20 +53,50 @@ export class Home implements OnInit {
   isTranslationOpen = signal(false);
 
   toggleOriginal(event: MouseEvent) {
-    if (this.isProcessing()) return;
+    if (this.isProcessing() || this.isPreprocessing()) return;
     this.isOriginalOpen.set(!this.isOriginalOpen());
     if (this.isOriginalOpen()) {
       this.isTranslationOpen.set(false);
     }
   }
 
+  dropdownPosition = signal<'bottom' | 'top'>('bottom');
+
   toggleTranslation(event: MouseEvent) {
-    if (this.isProcessing()) return;
+    if (this.isProcessing() || this.isPreprocessing()) return;
     this.isTranslationOpen.set(!this.isTranslationOpen());
     if (this.isTranslationOpen()) {
       this.isOriginalOpen.set(false);
+      
+      const target = event.currentTarget as HTMLElement;
+      if (target) {
+        const rect = target.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        // 250px is the max-height of the dropdown + some padding
+        if (spaceBelow < 280 && rect.top > 280) {
+          this.dropdownPosition.set('top');
+        } else {
+          this.dropdownPosition.set('bottom');
+        }
+      }
+    } else {
+      this.searchLanguage.set('');
     }
   }
+
+  searchLanguage = signal<string>('');
+
+  filteredGaLanguages = computed(() => {
+    const query = this.searchLanguage().toLowerCase().trim();
+    if (!query) return this.gaLanguages();
+    return this.gaLanguages().filter(lang => lang.name.toLowerCase().includes(query));
+  });
+
+  filteredPreviewLanguages = computed(() => {
+    const query = this.searchLanguage().toLowerCase().trim();
+    if (!query) return this.previewLanguages();
+    return this.previewLanguages().filter(lang => lang.name.toLowerCase().includes(query));
+  });
 
   originalLanguageLabel = computed(() => {
     const code = this.originalLanguage();
@@ -84,8 +114,10 @@ export class Home implements OnInit {
 
   isProcessing = signal(false);
 
-  step = signal(1);
+  step = signal(1); // 1 = Upload, 2 = Configure
   isPreprocessing = signal(false);
+  processingMessage = signal('Processing...');
+  private processingInterval: any;
 
   ngOnInit() {
     this.fetchLanguages();
@@ -201,6 +233,25 @@ export class Home implements OnInit {
     if (!videoFile || !this.translationLanguage()) return;
 
     this.isPreprocessing.set(true);
+    this.processingMessage.set('Uploading video...');
+
+    const messages = [
+      { time: 10000, text: 'Analyzing audio...' },
+      { time: 30000, text: 'Extracting speech...' },
+      { time: 60000, text: 'Identifying speakers...' },
+      { time: 100000, text: 'Translating...' },
+      { time: 140000, text: 'Generating utterances...' },
+      { time: 180000, text: 'Almost done...' }
+    ];
+
+    const startTime = Date.now();
+    this.processingInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const nextMessage = [...messages].reverse().find(m => elapsed >= m.time);
+      if (nextMessage) {
+        this.processingMessage.set(nextMessage.text);
+      }
+    }, 1000);
 
     const formData = new FormData();
     formData.append('video', videoFile);
@@ -227,7 +278,9 @@ export class Home implements OnInit {
     } catch (error) {
       console.error('Failed to process video:', error);
     } finally {
+      clearInterval(this.processingInterval);
       this.isPreprocessing.set(false);
+      this.processingMessage.set('Processing...');
     }
   }
 
@@ -235,7 +288,10 @@ export class Home implements OnInit {
     const target = event.target as HTMLElement;
     if (!target.closest('.custom-select')) {
       if (this.isOriginalOpen()) this.isOriginalOpen.set(false);
-      if (this.isTranslationOpen()) this.isTranslationOpen.set(false);
+      if (this.isTranslationOpen()) {
+        this.isTranslationOpen.set(false);
+        this.searchLanguage.set('');
+      }
     }
   }
 }
