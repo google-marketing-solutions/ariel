@@ -41,7 +41,7 @@ class TestTranslate(unittest.TestCase):
         original_lang=original_lang,
         target_lang=target_lang,
         text=text,
-        model_name="gemini-2.5-flash",
+        model_name="some-gemini-model",
         instructions=instructions,
     )
 
@@ -49,7 +49,7 @@ class TestTranslate(unittest.TestCase):
 
     mock_client.models.generate_content.assert_called_once()
     call_args = mock_client.models.generate_content.call_args
-    self.assertEqual(call_args.kwargs["model"], "gemini-2.5-flash")
+    self.assertEqual(call_args.kwargs["model"], "some-gemini-model")
 
     prompt_arg = call_args.kwargs["contents"][0]
     self.assertIn("Translate the text from English to Spanish", prompt_arg)
@@ -74,14 +74,14 @@ class TestTranslate(unittest.TestCase):
         original_lang=original_lang,
         target_lang=target_lang,
         text=text,
-        model_name="gemini-2.5-flash",
+        model_name="some-gemini-model",
         instructions=instructions,
     )
 
     self.assertEqual(result, "TRANSLATION FAILED")
     mock_client.models.generate_content.assert_called_once()
     call_args = mock_client.models.generate_content.call_args
-    self.assertEqual(call_args.kwargs["model"], "gemini-2.5-flash")
+    self.assertEqual(call_args.kwargs["model"], "some-gemini-model")
 
 
 if __name__ == "__main__":

@@ -37,12 +37,8 @@ class ConfigurationTest(unittest.TestCase):
     self.assertEqual(config.gcp_project_location, "test-location")
     self.assertEqual(config.gcs_bucket_name, "test-bucket")
     # Check default values
-    self.assertEqual(config.gemini_model, "gemini-2.5-flash")
-    self.assertEqual(config.gemini_flash_model, "gemini-2.5-flash")
-    self.assertEqual(config.gemini_pro_model, "gemini-2.5-pro")
-    self.assertEqual(config.audio_format, "mp3")
-    self.assertEqual(config.video_format, "mp4")
-    self.assertEqual(config.gemini_tts_model, "gemini-2.5-pro-tts")
+    self.assertEqual(config.gemini_flash_model, "gemini-3-flash-preview")
+    self.assertEqual(config.gemini_pro_model, "gemini-3.1-pro-preview")
     self.assertEqual(config.gemini_flash_tts_model, "gemini-2.5-flash-tts")
     self.assertEqual(config.gemini_pro_tts_model, "gemini-2.5-pro-tts")
 
@@ -50,12 +46,8 @@ class ConfigurationTest(unittest.TestCase):
       "GCP_PROJECT_ID": "test-project",
       "GCP_PROJECT_LOCATION": "test-location",
       "GCS_BUCKET_NAME": "test-bucket",
-      "GEMINI_MODEL": "custom-model",
       "GEMINI_FLASH_MODEL": "custom-flash",
       "GEMINI_PRO_MODEL": "custom-pro",
-      "AUDIO_FORMAT": "wav",
-      "VIDEO_FORMAT": "avi",
-      "GEMINI_TTS_MODEL": "custom-tts",
       "GEMINI_FLASH_TTS_MODEL": "custom-flash-tts",
       "GEMINI_PRO_TTS_MODEL": "custom-pro-tts",
   })
@@ -63,12 +55,8 @@ class ConfigurationTest(unittest.TestCase):
     """Tests that get_config respects environment variable overrides."""
     config = get_config()
 
-    self.assertEqual(config.gemini_model, "custom-model")
     self.assertEqual(config.gemini_flash_model, "custom-flash")
     self.assertEqual(config.gemini_pro_model, "custom-pro")
-    self.assertEqual(config.audio_format, "wav")
-    self.assertEqual(config.video_format, "avi")
-    self.assertEqual(config.gemini_tts_model, "custom-tts")
     self.assertEqual(config.gemini_flash_tts_model, "custom-flash-tts")
     self.assertEqual(config.gemini_pro_tts_model, "custom-pro-tts")
 
