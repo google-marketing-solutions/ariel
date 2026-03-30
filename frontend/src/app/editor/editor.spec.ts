@@ -4,7 +4,6 @@ import { provideRouter, Router, ActivatedRoute } from '@angular/router';
 import { VideoGenerationService } from '../services/video-generation.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { of, Subject } from 'rxjs';
-import { signal, WritableSignal } from '@angular/core';
 import { Speaker } from '../_components/speaker-modal/speaker-modal';
 
 describe('Editor', () => {
@@ -14,16 +13,18 @@ describe('Editor', () => {
   let mockActivatedRoute: any;
   let mockVideoGenerationService: any;
   let navigationEndSubject: Subject<any>;
+  let generateVideoSubject: Subject<void>;
 
   beforeEach(async () => {
     navigationEndSubject = new Subject<any>();
+    generateVideoSubject = new Subject<void>();
 
     mockActivatedRoute = {
       queryParams: of({ video_id: 'test-video-id' }),
     };
 
     mockVideoGenerationService = {
-      generateVideo$: of(null),
+      generateVideo$: generateVideoSubject.asObservable(),
       updateUnregeneratedCount: vi.fn(),
       setProcessingAudio: vi.fn(),
     };
@@ -64,6 +65,7 @@ describe('Editor', () => {
                 original_end_time: 2,
                 translated_start_time: 0,
                 translated_end_time: 2,
+                speaking_rate: 1.0,
                 speaker: { speaker_id: 'spk_1', name: 'Alice', voice: 'voice_1', gender: 'female' }
               },
               {
@@ -74,6 +76,7 @@ describe('Editor', () => {
                 original_end_time: 4,
                 translated_start_time: 2,
                 translated_end_time: 4,
+                speaking_rate: 1.0,
                 speaker: { speaker_id: 'spk_1', name: 'Alice', voice: 'voice_1', gender: 'female' }
               }
             ],
@@ -335,6 +338,202 @@ describe('Editor', () => {
         expect(component.videoData()?.utterances[0].needs_dubbing_regen).toBe(true);
         expect(component.draftSpeaker()).toBeNull();
       }
+    });
+  });
+
+  describe('Voice instructions panel', () => {
+    beforeEach(async () => {
+      await fixture.whenStable();
+      fixture.detectChanges();
+      // Focus first utterance and open voice instructions panel
+      component.setActivePanel('utt_1', 'voice');
+      fixture.detectChanges();
+    });
+
+    it('should open the voice instructions panel', () => {
+      expect(component.activePanelMode()).toBe('voice');
+      const panelHeader = fixture.nativeElement.querySelector('.panel-header');
+      expect(panelHeader.textContent).toContain('Voice instructions');
+    });
+
+    it('should update draft instructions', () => {
+      component.draftVoiceInstructions.set('New instructions');
+      expect(component.draftVoiceInstructions()).toBe('New instructions');
+    });
+
+    it('should save instructions', () => {
+      component.draftVoiceInstructions.set('Final instructions');
+      component.saveVoiceInstructions();
+      fixture.detectChanges();
+      
+      expect(component.videoData()?.utterances[0].speaking_instructions).toBe('Final instructions');
+      expect(component.videoData()?.utterances[0].needs_dubbing_regen).toBe(true);
+      expect(component.draftVoiceInstructions()).toBeNull();
+    });
+
+    it('should update and save speaking rate', () => {
+      component.draftSpeakingRate.set(1.5);
+      component.saveVoiceInstructions();
+      fixture.detectChanges();
+      
+      expect(component.videoData()?.utterances[0].speaking_rate).toBe(1.5);
+      expect(component.videoData()?.utterances[0].needs_dubbing_regen).toBe(true);
+      expect(component.draftSpeakingRate()).toBeNull();
+    });
+  });
+
+  describe('Translation instructions panel', () => {
+    beforeEach(async () => {
+      await fixture.whenStable();
+      fixture.detectChanges();
+      // Focus first utterance and open translation instructions panel
+      component.setActivePanel('utt_1', 'translation');
+      fixture.detectChanges();
+    });
+
+    it('should open the translation instructions panel', () => {
+      expect(component.activePanelMode()).toBe('translation');
+      const panelHeader = fixture.nativeElement.querySelector('.panel-header');
+      expect(panelHeader.textContent).toContain('Translation instructions');
+    });
+
+    it('should update draft instructions', () => {
+      component.draftTranslationInstructions.set('New translation instructions');
+      expect(component.draftTranslationInstructions()).toBe('New translation instructions');
+    });
+
+    it('should save instructions', () => {
+      component.draftTranslationInstructions.set('Final translation instructions');
+      component.saveTranslationInstructions();
+      fixture.detectChanges();
+      
+      expect(component.videoData()?.utterances[0].translation_instructions).toBe('Final translation instructions');
+      expect(component.videoData()?.utterances[0].needs_translation_regen).toBe(true);
+      expect(component.draftTranslationInstructions()).toBeNull();
+    });
+  });
+
+  describe('Warnings', () => {
+    it('should display duration warning banner when an utterance exceeds video duration', async () => {
+      await fixture.whenStable();
+      
+      // Initially no warning (mock duration is 10, utterances end at 2 and 4)
+      expect(fixture.nativeElement.querySelector('.warning-banner')).toBeNull();
+
+      // Make an utterance exceed duration
+      component.videoData.update(data => {
+        if (data) {
+          const newUtterances = [...data.utterances];
+          newUtterances[0] = { ...newUtterances[0], translated_end_time: 12 };
+          return { ...data, utterances: newUtterances };
+        }
+        return data;
+      });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      
+      const warningBanner = fixture.nativeElement.querySelector('.warning-banner');
+      expect(warningBanner).toBeTruthy();
+      expect(warningBanner.textContent).toContain('Audio Exceeds Video Duration');
+    });
+
+    it('should show validation modal when Generate video is clicked and duration exceeds original', async () => {
+      await fixture.whenStable();
+      
+      // Make an utterance exceed duration
+      component.videoData.update(data => {
+        if (data) {
+          const newUtterances = [...data.utterances];
+          newUtterances[0] = { ...newUtterances[0], translated_end_time: 12 };
+          return { ...data, utterances: newUtterances };
+        }
+        return data;
+      });
+      fixture.detectChanges();
+
+      // Trigger video generation
+      generateVideoSubject.next();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const modal = fixture.nativeElement.querySelector('#validation-modal');
+      expect(modal).toBeTruthy();
+      expect(modal.querySelector('h3').textContent).toBe('Utterances Exceed Length');
+    });
+  });
+
+  describe('Timeline', () => {
+    beforeEach(async () => {
+      await fixture.whenStable();
+      fixture.detectChanges();
+      
+      // Mock timelineContainer for drag calculations
+      component.timelineContainer = {
+        nativeElement: {
+          clientWidth: 1000 // 1000 pixels
+        }
+      } as any;
+    });
+
+    it('should calculate timeline duration with padding', () => {
+      // Mock project duration is 10, utterances end at 2 and 4.
+      // timelineDuration adds 1% padding or 0.1s minimum.
+      // 10 + (10 * 0.01) = 10.1
+      expect(component.timelineDuration).toBeCloseTo(10.1, 1);
+    });
+
+    it('should generate time markers', () => {
+      const markers = component.getTimeMarkers();
+      expect(markers).toEqual([0, 5, 10]);
+    });
+
+    it('should calculate left and width percentages', () => {
+      const duration = component.timelineDuration;
+      expect(component.getLeftPercent(5)).toBe((5 / duration) * 100);
+      expect(component.getWidthPercent(2, 4)).toBe(((4 - 2) / duration) * 100);
+    });
+
+    it('should handle dragging an utterance', () => {
+      const utterance = component.videoData()?.utterances[0]!;
+      const startEvent = { button: 0, clientX: 100, preventDefault: vi.fn() } as any;
+      
+      component.onDragStart(startEvent, utterance);
+      expect(component.isDragging()).toBe(true);
+      expect(component.draggedUtteranceId()).toBe('utt_1');
+
+      // Move drag: 100 pixels to the right. 
+      // containerWidth=1000, duration=10.1. 100 pixels = (100 / 1000) * 10.1 = 1.01 seconds.
+      // Initial translated_start_time = 0. New should be ~1.01.
+      const moveEvent = { clientX: 200 } as any;
+      component.onDragMove(moveEvent);
+      
+      const updatedUtterance = component.videoData()?.utterances[0]!;
+      expect(updatedUtterance.translated_start_time).toBeCloseTo(1.01, 2);
+      expect(updatedUtterance.translated_end_time).toBeCloseTo(3.01, 2);
+
+      component.onDragEnd({} as any);
+      expect(component.isDragging()).toBe(false);
+      expect(component.draggedUtteranceId()).toBeNull();
+    });
+
+    it('should detect utterance overlaps', () => {
+      const utterance1 = component.videoData()?.utterances[0]!;
+      const utterance2 = component.videoData()?.utterances[1]!;
+      
+      // Initially no overlap: utt1 [0,2], utt2 [2,4]
+      expect(component.getUtteranceOverlap(utterance1)).toBeNull();
+
+      // Make them overlap: utt1 [1,3], utt2 [2,4]
+      utterance1.translated_start_time = 1;
+      utterance1.translated_end_time = 3;
+      
+      const overlap = component.getUtteranceOverlap(utterance1);
+      expect(overlap?.id).toBe('utt_2');
+      
+      const overlaps = component.getOverlappingUtterances(utterance1);
+      expect(overlaps.length).toBe(2);
+      expect(overlaps.map(u => u.id)).toContain('utt_1');
+      expect(overlaps.map(u => u.id)).toContain('utt_2');
     });
   });
 

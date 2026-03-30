@@ -848,7 +848,8 @@ export class Editor implements OnInit, OnDestroy {
       (u.speaking_instructions || '') !== (initialState.speaking_instructions || '') ||
       u.translated_text !== initialState.translated_text ||
       u.original_text !== initialState.original_text ||
-      (u.translation_instructions || '') !== (initialState.translation_instructions || '')
+      (u.translation_instructions || '') !== (initialState.translation_instructions || '') ||
+      u.speaking_rate !== initialState.speaking_rate
     );
     return !!initialState.needs_dubbing_regen || isDirty;
   }
