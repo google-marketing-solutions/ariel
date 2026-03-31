@@ -1,6 +1,6 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {Library} from './library';
 import {provideRouter} from '@angular/router';
+import {Library} from './library';
 
 describe('Library', () => {
   let component: Library;
@@ -92,7 +92,7 @@ describe('Library', () => {
   it('should fetch and display videos on init', async () => {
     fixture.detectChanges(); // ngOnInit -> fetchVideos(true)
     await fixture.whenStable();
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     fixture.detectChanges();
 
     expect(component.videos().length).toBe(1);
@@ -108,7 +108,7 @@ describe('Library', () => {
   it('should load more videos when clicking "Load more"', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     fixture.detectChanges();
 
     const loadMoreBtn = fixture.nativeElement.querySelector('.load-more-btn');
@@ -117,7 +117,7 @@ describe('Library', () => {
     loadMoreBtn.click();
 
     await fixture.whenStable();
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     fixture.detectChanges();
 
     expect(component.videos().length).toBe(2);
@@ -131,7 +131,7 @@ describe('Library', () => {
 
     fixture.detectChanges();
     await fixture.whenStable();
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     fixture.detectChanges();
 
     const errorAlert = fixture.nativeElement.querySelector('.error-alert');
@@ -142,7 +142,7 @@ describe('Library', () => {
   it('should open delete modal and delete a video', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     fixture.detectChanges();
 
     const videoCards = fixture.nativeElement.querySelectorAll('.video-card');
@@ -175,7 +175,7 @@ describe('Library', () => {
     fixture.detectChanges();
 
     await fixture.whenStable();
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     fixture.detectChanges();
 
     expect(component.isDeleteModalOpen()).toBe(false);

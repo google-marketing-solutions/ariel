@@ -26,29 +26,29 @@
   <!-- Actions Menu -->
   <div class="actions-section">
     @if (isEditorRoute()) {
-      <!-- Unregenerated Warning -->
-      @if (videoGenerationService.unregeneratedCount(); as count) {
-        <div
-          class="warning-info"
-          matTooltip="You have {{
+    <!-- Unregenerated Warning -->
+    @if (videoGenerationService.unregeneratedCount(); as count) {
+    <div
+      class="warning-info"
+      matTooltip="You have {{
             count
           }} utterance(s) with changed text or voices that have not been regenerated yet."
-        >
-          <span>{{ count }} change(s) need regeneration</span>
-          <span class="material-symbols-outlined">info</span>
-        </div>
-      }
+    >
+      <span>{{ count }} change(s) need regeneration</span>
+      <span class="material-symbols-outlined">info</span>
+    </div>
+    }
 
-      <button
-        (click)="generateVideo()"
-        class="generate-btn"
-        [disabled]="videoGenerationService.isProcessingAudio()"
-        [class.opacity-50]="videoGenerationService.isProcessingAudio()"
-        [class.cursor-not-allowed]="videoGenerationService.isProcessingAudio()"
-      >
-        Generate Video
-      </button>
-      <div class="divider"></div>
+    <button
+      (click)="generateVideo()"
+      class="generate-btn"
+      [disabled]="videoGenerationService.isProcessingAudio()"
+      [class.opacity-50]="videoGenerationService.isProcessingAudio()"
+      [class.cursor-not-allowed]="videoGenerationService.isProcessingAudio()"
+    >
+      Generate Video
+    </button>
+    <div class="divider"></div>
     }
 
     <button (click)="onToggleTheme()" class="theme-toggle-btn">

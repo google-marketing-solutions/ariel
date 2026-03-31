@@ -1,13 +1,13 @@
+import {CommonModule} from '@angular/common';
 import {
+  ChangeDetectionStrategy,
   Component,
-  OnInit,
-  signal,
   computed,
   input,
+  OnInit,
   output,
-  ChangeDetectionStrategy,
+  signal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 
 export interface Speaker {
@@ -47,7 +47,7 @@ export class SpeakerModal implements OnInit {
     const query = this.searchQuery().toLowerCase();
     const filter = this.genderFilter();
 
-    return this.voices().filter(voice => {
+    return this.voices().filter((voice) => {
       const matchesName = voice.name.toLowerCase().includes(query);
       const matchesGender =
         filter === 'all' || voice.gender.toLowerCase() === filter;

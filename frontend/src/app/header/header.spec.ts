@@ -1,10 +1,10 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {Header} from './header';
-import {provideRouter, Router, NavigationEnd} from '@angular/router';
-import {VideoGenerationService} from '../services/video-generation.service';
-import {MatTooltipModule} from '@angular/material/tooltip';
-import {Subject} from 'rxjs'; // 'of' is from rxjs, 'Subject' for router.events
 import {signal, WritableSignal} from '@angular/core'; // 'signal' and 'WritableSignal' is from @angular/core
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {MatTooltipModule} from '@angular/material/tooltip';
+import {NavigationEnd, provideRouter, Router} from '@angular/router';
+import {Subject} from 'rxjs'; // 'of' is from rxjs, 'Subject' for router.events
+import {VideoGenerationService} from '../services/video-generation.service';
+import {Header} from './header';
 
 describe('Header', () => {
   let component: Header;
