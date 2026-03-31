@@ -9,7 +9,11 @@
     font-size: 2.5rem;
     font-weight: 700;
     font-family: var.$font-family-heading;
-    background: linear-gradient(to right, var.$color-primary, var.$color-accent);
+    background: linear-gradient(
+      to right,
+      var.$color-primary,
+      var.$color-accent
+    );
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -20,7 +24,11 @@
     padding-bottom: 0.75rem;
 
     @include var.dark-mode {
-      background: linear-gradient(to right, var.$color-primary-dark, var.$color-primary-light);
+      background: linear-gradient(
+        to right,
+        var.$color-primary-dark,
+        var.$color-primary-light
+      );
       -webkit-background-clip: text;
       background-clip: text;
     }
@@ -54,7 +62,8 @@
       flex-direction: row;
     }
 
-    .download-actions, .system-actions {
+    .download-actions,
+    .system-actions {
       display: flex;
       gap: 1rem;
       width: 100%;
@@ -93,7 +102,9 @@
 
         &:hover {
           background-color: rgba(var.$color-primary, 0.05);
-          @include var.dark-mode { background-color: rgba(var.$color-primary-light, 0.1); }
+          @include var.dark-mode {
+            background-color: rgba(var.$color-primary-light, 0.1);
+          }
         }
       }
     }
@@ -122,17 +133,23 @@
 
       .back-btn {
         background-color: var.$text-subtle;
-        &:hover { background-color: var.$text-secondary; }
+        &:hover {
+          background-color: var.$text-secondary;
+        }
 
         @include var.dark-mode {
           background-color: var.$text-secondary;
-          &:hover { background-color: var.$border-dark; }
+          &:hover {
+            background-color: var.$border-dark;
+          }
         }
       }
 
       .start-over-btn {
         background-color: var.$color-danger;
-        &:hover { background-color: var.$color-danger-hover; }
+        &:hover {
+          background-color: var.$color-danger-hover;
+        }
       }
     }
   }

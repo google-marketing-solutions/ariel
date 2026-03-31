@@ -1,13 +1,13 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Home } from './home';
-import { RouterTestingModule } from '@angular/router/testing';
-import { Router } from '@angular/router';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {Home} from './home';
+import {RouterTestingModule} from '@angular/router/testing';
+import {Router} from '@angular/router';
 
 describe('Home', () => {
   let component: Home;
   let fixture: ComponentFixture<Home>;
   let mockRouter: any;
-  let store: { [key: string]: string } = {};
+  let store: {[key: string]: string} = {};
 
   const mockLocalStorage = {
     getItem: (key: string): string | null => {
@@ -21,7 +21,7 @@ describe('Home', () => {
     },
     clear: () => {
       store = {};
-    }
+    },
   };
 
   const mockMatchMedia = {
@@ -38,7 +38,7 @@ describe('Home', () => {
   beforeEach(async () => {
     Object.defineProperty(window, 'localStorage', {
       value: mockLocalStorage,
-      writable: true
+      writable: true,
     });
 
     Object.defineProperty(window, 'matchMedia', {
@@ -51,29 +51,32 @@ describe('Home', () => {
       url: '/home',
       events: {
         pipe: () => ({
-          subscribe: () => {}
-        })
-      }
+          subscribe: () => {},
+        }),
+      },
     };
 
     // Mock fetch for languages.json and voices.json
-    vi.spyOn(window, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
-      if (typeof input === 'string') {
-        if (input.includes('languages.json')) {
-          return new Response(JSON.stringify([
-            { name: 'English', code: 'en', readiness: 'GA' },
-            { name: 'Spanish', code: 'es', readiness: 'Preview' },
-          ]), { status: 200 });
+    vi.spyOn(window, 'fetch').mockImplementation(
+      async (input: RequestInfo | URL) => {
+        if (typeof input === 'string') {
+          if (input.includes('languages.json')) {
+            return new Response(
+              JSON.stringify([
+                {name: 'English', code: 'en', readiness: 'GA'},
+                {name: 'Spanish', code: 'es', readiness: 'Preview'},
+              ]),
+              {status: 200},
+            );
+          }
         }
-      }
-      return Promise.reject(new Error('Unexpected fetch request'));
-    });
+        return Promise.reject(new Error('Unexpected fetch request'));
+      },
+    );
 
     await TestBed.configureTestingModule({
       imports: [Home, RouterTestingModule],
-      providers: [
-        { provide: Router, useValue: mockRouter },
-      ],
+      providers: [{provide: Router, useValue: mockRouter}],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Home);
@@ -87,7 +90,11 @@ describe('Home', () => {
 
   it('should fetch languages on ngOnInit', async () => {
     await fixture.whenStable();
-    expect(component.gaLanguages()).toEqual([{ name: 'English', code: 'en', readiness: 'GA' }]);
-    expect(component.previewLanguages()).toEqual([{ name: 'Spanish', code: 'es', readiness: 'Preview' }]);
+    expect(component.gaLanguages()).toEqual([
+      {name: 'English', code: 'en', readiness: 'GA'},
+    ]);
+    expect(component.previewLanguages()).toEqual([
+      {name: 'Spanish', code: 'es', readiness: 'Preview'},
+    ]);
   });
 });

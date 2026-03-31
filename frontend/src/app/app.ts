@@ -1,16 +1,22 @@
-import { Component, PLATFORM_ID, signal, inject, ChangeDetectionStrategy } from '@angular/core';
-import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
-import { Header } from './header/header';
-import { isPlatformBrowser } from '@angular/common';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { filter, map } from 'rxjs/operators';
+import {
+  Component,
+  PLATFORM_ID,
+  signal,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+import {RouterOutlet, Router, NavigationEnd} from '@angular/router';
+import {Header} from './header/header';
+import {isPlatformBrowser} from '@angular/common';
+import {toSignal} from '@angular/core/rxjs-interop';
+import {filter, map} from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet, Header],
   templateUrl: './app.html',
   styleUrl: './app.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
   isDarkMode = signal(false);
@@ -24,7 +30,9 @@ export class App {
   initTheme() {
     if (isPlatformBrowser(this.platformId)) {
       const savedTheme = localStorage.getItem('color-theme');
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const prefersDark = window.matchMedia(
+        '(prefers-color-scheme: dark)',
+      ).matches;
 
       if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
         this.setDarkMode(true);
@@ -40,9 +48,11 @@ export class App {
   isEditorRoute = toSignal(
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd),
-      map((event) => (event as NavigationEnd).urlAfterRedirects.includes('/editor'))
+      map(event =>
+        (event as NavigationEnd).urlAfterRedirects.includes('/editor'),
+      ),
     ),
-    { initialValue: this.router.url.includes('/editor') }
+    {initialValue: this.router.url.includes('/editor')},
   );
 
   toggleTheme() {

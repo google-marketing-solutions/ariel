@@ -60,7 +60,9 @@
         font-size: 1.125rem;
         font-weight: 700;
         color: #1e293b;
-        @include var.dark-mode { color: white; }
+        @include var.dark-mode {
+          color: white;
+        }
       }
 
       .close-btn {
@@ -97,7 +99,9 @@
       &::-webkit-scrollbar-thumb {
         background-color: #cbd5e1;
         border-radius: 3px;
-        @include var.dark-mode { background-color: #475569; }
+        @include var.dark-mode {
+          background-color: #475569;
+        }
       }
 
       .form-group {
@@ -109,7 +113,9 @@
           font-weight: 600;
           color: #334155;
           margin-bottom: 0.5rem;
-          @include var.dark-mode { color: #cbd5e1; }
+          @include var.dark-mode {
+            color: #cbd5e1;
+          }
         }
 
         input {
@@ -140,7 +146,9 @@
         background-color: #e2e8f0;
         width: 100%;
         margin-bottom: 1.5rem;
-        @include var.dark-mode { background-color: #334155; }
+        @include var.dark-mode {
+          background-color: #334155;
+        }
       }
 
       .filters-row {
@@ -213,7 +221,9 @@
             transition: all 150ms;
             color: #475569;
 
-            @include var.dark-mode { color: #94a3b8; }
+            @include var.dark-mode {
+              color: #94a3b8;
+            }
 
             &.active {
               background-color: white;
@@ -267,7 +277,9 @@
               font-weight: 500;
               font-size: 0.875rem;
               color: #1e293b;
-              @include var.dark-mode { color: white; }
+              @include var.dark-mode {
+                color: white;
+              }
             }
           }
 
@@ -312,7 +324,9 @@
 
               &:hover {
                 background-color: #e2e8f0;
-                @include var.dark-mode { background-color: #334155; }
+                @include var.dark-mode {
+                  background-color: #334155;
+                }
               }
 
               .material-symbols-outlined {
@@ -332,7 +346,9 @@
               transition: background-color 150ms;
               box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 
-              &:hover { background-color: rgba(var.$color-primary, 0.9); }
+              &:hover {
+                background-color: rgba(var.$color-primary, 0.9);
+              }
             }
           }
         }
@@ -349,6 +365,10 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

@@ -1,6 +1,6 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Library } from './library';
-import { provideRouter } from '@angular/router';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {Library} from './library';
+import {provideRouter} from '@angular/router';
 
 describe('Library', () => {
   let component: Library;
@@ -16,8 +16,10 @@ describe('Library', () => {
       original_language: 'en',
       translate_language: 'es',
       duration: 125,
-      speakers: [{ id: 's1', name: 'Alice', voice: 'AliceVoice', gender: 'female' }],
-      has_metadata: true
+      speakers: [
+        {id: 's1', name: 'Alice', voice: 'AliceVoice', gender: 'female'},
+      ],
+      has_metadata: true,
     },
     {
       video_id: 'video2',
@@ -28,52 +30,55 @@ describe('Library', () => {
       original_language: 'en',
       translate_language: 'fr',
       duration: 60,
-      speakers: [{ id: 's2', name: 'Bob', voice: 'BobVoice', gender: 'male' }],
-      has_metadata: false
-    }
+      speakers: [{id: 's2', name: 'Bob', voice: 'BobVoice', gender: 'male'}],
+      has_metadata: false,
+    },
   ];
 
   beforeEach(async () => {
     // Mock fetch
-    window.fetch = vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input : (input as URL).toString();
-      
-      if (url.includes('/api/videos')) {
-        let responseData;
-        if (url.includes('page_token=token123')) {
-          responseData = {
-            videos: [mockVideos[1]],
-            next_page_token: null
-          };
-        } else {
-          responseData = {
-            videos: [mockVideos[0]],
-            next_page_token: 'token123'
-          };
-        }
-        
-        return {
-          ok: true,
-          status: 200,
-          json: async () => responseData
-        } as Response;
-      }
-      
-      if (url.includes('/api/videos/video1') && init?.method === 'DELETE') {
-        return {
-          ok: true,
-          status: 200
-        } as Response;
-      }
+    window.fetch = vi
+      .fn()
+      .mockImplementation(
+        async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url =
+            typeof input === 'string' ? input : (input as URL).toString();
 
-      return Promise.reject(new Error(`Unexpected fetch request: ${url}`));
-    });
+          if (url.includes('/api/videos')) {
+            let responseData;
+            if (url.includes('page_token=token123')) {
+              responseData = {
+                videos: [mockVideos[1]],
+                next_page_token: null,
+              };
+            } else {
+              responseData = {
+                videos: [mockVideos[0]],
+                next_page_token: 'token123',
+              };
+            }
+
+            return {
+              ok: true,
+              status: 200,
+              json: async () => responseData,
+            } as Response;
+          }
+
+          if (url.includes('/api/videos/video1') && init?.method === 'DELETE') {
+            return {
+              ok: true,
+              status: 200,
+            } as Response;
+          }
+
+          return Promise.reject(new Error(`Unexpected fetch request: ${url}`));
+        },
+      );
 
     await TestBed.configureTestingModule({
       imports: [Library],
-      providers: [
-        provideRouter([])
-      ]
+      providers: [provideRouter([])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Library);
@@ -91,15 +96,17 @@ describe('Library', () => {
     fixture.detectChanges();
 
     expect(component.videos().length).toBe(1);
-    
+
     const videoCards = fixture.nativeElement.querySelectorAll('.video-card');
     expect(videoCards.length).toBe(1);
-    expect(videoCards[0].querySelector('h3').textContent).toContain('Test Video 1');
+    expect(videoCards[0].querySelector('h3').textContent).toContain(
+      'Test Video 1',
+    );
     expect(component.nextPageToken()).toBe('token123');
   });
 
   it('should load more videos when clicking "Load more"', async () => {
-    fixture.detectChanges(); 
+    fixture.detectChanges();
     await fixture.whenStable();
     await new Promise(resolve => setTimeout(resolve, 100));
     fixture.detectChanges();
@@ -108,7 +115,7 @@ describe('Library', () => {
     expect(loadMoreBtn).toBeTruthy();
 
     loadMoreBtn.click();
-    
+
     await fixture.whenStable();
     await new Promise(resolve => setTimeout(resolve, 100));
     fixture.detectChanges();
@@ -121,8 +128,8 @@ describe('Library', () => {
 
   it('should show error message if fetch fails', async () => {
     vi.mocked(window.fetch).mockRejectedValueOnce(new Error('Network error'));
-    
-    fixture.detectChanges(); 
+
+    fixture.detectChanges();
     await fixture.whenStable();
     await new Promise(resolve => setTimeout(resolve, 100));
     fixture.detectChanges();
@@ -151,17 +158,17 @@ describe('Library', () => {
 
     const confirmBtn = fixture.nativeElement.querySelector('.confirm-btn');
     expect(confirmBtn).toBeTruthy();
-    
+
     // Clear fetch spy to check for subsequent calls
     vi.mocked(window.fetch).mockClear();
-    
+
     // Mock for delete and subsequent fetch
     vi.mocked(window.fetch)
-      .mockResolvedValueOnce({ ok: true, status: 200 } as Response)
+      .mockResolvedValueOnce({ok: true, status: 200} as Response)
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ videos: [], next_page_token: null })
+        json: async () => ({videos: [], next_page_token: null}),
       } as Response);
 
     confirmBtn.click();
@@ -172,6 +179,9 @@ describe('Library', () => {
     fixture.detectChanges();
 
     expect(component.isDeleteModalOpen()).toBe(false);
-    expect(window.fetch).toHaveBeenCalledWith('/api/videos/video1', expect.objectContaining({ method: 'DELETE' }));
+    expect(window.fetch).toHaveBeenCalledWith(
+      '/api/videos/video1',
+      expect.objectContaining({method: 'DELETE'}),
+    );
   });
 });

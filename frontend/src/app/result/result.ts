@@ -1,5 +1,10 @@
-import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
-import { Router } from '@angular/router';
+import {
+  Component,
+  inject,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+import {Router} from '@angular/router';
 
 export interface ResultData {
   video_url?: string;
@@ -13,7 +18,7 @@ export interface ResultData {
   imports: [],
   templateUrl: './result.html',
   styleUrl: './result.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Result {
   private router = inject(Router);
@@ -22,7 +27,9 @@ export class Result {
 
   constructor() {
     const navigation = this.router.getCurrentNavigation();
-    const state = navigation?.extras.state as { finalVideoData: ResultData, originalVideoData: ResultData } | undefined;
+    const state = navigation?.extras.state as
+      | {finalVideoData: ResultData; originalVideoData: ResultData}
+      | undefined;
     if (state) {
       this.finalVideoData.set(state.finalVideoData);
       this.originalVideoData.set(state.originalVideoData);
@@ -38,8 +45,10 @@ export class Result {
   }
 
   goBack() {
-    const original = this.originalVideoData() as { video_id?: string } | null;
-    this.router.navigate(['/editor'], { queryParams: { video_id: original?.video_id } });
+    const original = this.originalVideoData() as {video_id?: string} | null;
+    this.router.navigate(['/editor'], {
+      queryParams: {video_id: original?.video_id},
+    });
   }
 
   startOver() {
@@ -49,7 +58,10 @@ export class Result {
   getCleanVideoName(): string {
     const data = this.originalVideoData() as any;
     if (!data || !data.video_id) return 'video.mp4';
-    const cleanId = data.video_id.replace(/^.+?-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, '');
+    const cleanId = data.video_id.replace(
+      /^.+?-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i,
+      '',
+    );
     const lang = data.translate_language;
     return lang ? `${cleanId}.${lang}.mp4` : cleanId;
   }
@@ -57,7 +69,10 @@ export class Result {
   getCleanAudioName(type: 'audio' | 'vocals'): string {
     const data = this.originalVideoData() as any;
     if (!data || !data.video_id) return `${type}.wav`;
-    let cleanId = data.video_id.replace(/^.+?-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, '');
+    let cleanId = data.video_id.replace(
+      /^.+?-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i,
+      '',
+    );
     cleanId = cleanId.replace(/\.mp4$/i, '');
     const lang = data.translate_language;
     return lang ? `${cleanId}_${type}.${lang}.wav` : `${cleanId}_${type}.wav`;

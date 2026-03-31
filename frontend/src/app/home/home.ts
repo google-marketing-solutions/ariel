@@ -1,14 +1,20 @@
-import { Component, OnInit, signal, computed, inject, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import {
+  Component,
+  OnInit,
+  signal,
+  computed,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {FormsModule} from '@angular/forms';
+import {Router} from '@angular/router';
 
 export interface Language {
   name: string;
   code: string;
   readiness: string;
 }
-
 
 @Component({
   selector: 'app-home',
@@ -18,8 +24,8 @@ export interface Language {
   styleUrl: './home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    '(document:click)': 'onDocumentClick($event)'
-  }
+    '(document:click)': 'onDocumentClick($event)',
+  },
 })
 export class Home implements OnInit {
   private router = inject(Router);
@@ -59,19 +65,25 @@ export class Home implements OnInit {
   filteredGaLanguages = computed(() => {
     const query = this.searchLanguage().toLowerCase().trim();
     if (!query) return this.gaLanguages();
-    return this.gaLanguages().filter(lang => lang.name.toLowerCase().includes(query));
+    return this.gaLanguages().filter(lang =>
+      lang.name.toLowerCase().includes(query),
+    );
   });
 
   filteredPreviewLanguages = computed(() => {
     const query = this.searchLanguage().toLowerCase().trim();
     if (!query) return this.previewLanguages();
-    return this.previewLanguages().filter(lang => lang.name.toLowerCase().includes(query));
+    return this.previewLanguages().filter(lang =>
+      lang.name.toLowerCase().includes(query),
+    );
   });
 
   translationLanguageLabel = computed(() => {
     const code = this.translationLanguage();
     if (!code) return 'Please select...';
-    const match = [...this.gaLanguages(), ...this.previewLanguages()].find(l => l.code === code);
+    const match = [...this.gaLanguages(), ...this.previewLanguages()].find(
+      l => l.code === code,
+    );
     return match ? match.name : 'Please select...';
   });
 
@@ -92,14 +104,18 @@ export class Home implements OnInit {
       const languages: Language[] = await response.json();
 
       this.gaLanguages.set(languages.filter(lang => lang.readiness === 'GA'));
-      this.previewLanguages.set(languages.filter(lang => lang.readiness === 'Preview'));
+      this.previewLanguages.set(
+        languages.filter(lang => lang.readiness === 'Preview'),
+      );
     } catch (error) {
       console.error('Failed to fetch languages:', error);
     }
   }
 
   triggerFileInput() {
-    const fileInput = document.getElementById('video-input') as HTMLInputElement;
+    const fileInput = document.getElementById(
+      'video-input',
+    ) as HTMLInputElement;
     if (fileInput) {
       fileInput.click();
     }
@@ -134,7 +150,7 @@ export class Home implements OnInit {
     this.selectedVideoFile.set(file);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = e => {
       this.videoPreviewUrl.set(e.target?.result as string);
     };
     reader.readAsDataURL(file);
@@ -146,16 +162,20 @@ export class Home implements OnInit {
     this.step.set(1);
     this.translationLanguage.set('');
     // Reset file input so selecting the same file triggers 'change' event again
-    const fileInput = document.getElementById('video-input') as HTMLInputElement;
+    const fileInput = document.getElementById(
+      'video-input',
+    ) as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
     }
   }
 
   isFormValid(): boolean {
-    return this.step() === 2 &&
+    return (
+      this.step() === 2 &&
       !!this.selectedVideoFile() &&
       this.translationLanguage() !== ''
+    );
   }
 
   async processVideo() {
@@ -166,12 +186,12 @@ export class Home implements OnInit {
     this.processingMessage.set('Uploading video...');
 
     const messages = [
-      { time: 10000, text: 'Analyzing audio...' },
-      { time: 30000, text: 'Extracting speech...' },
-      { time: 60000, text: 'Identifying speakers...' },
-      { time: 100000, text: 'Translating...' },
-      { time: 140000, text: 'Generating utterances...' },
-      { time: 180000, text: 'Almost done...' }
+      {time: 10000, text: 'Analyzing audio...'},
+      {time: 30000, text: 'Extracting speech...'},
+      {time: 60000, text: 'Identifying speakers...'},
+      {time: 100000, text: 'Translating...'},
+      {time: 140000, text: 'Generating utterances...'},
+      {time: 180000, text: 'Almost done...'},
     ];
 
     const startTime = Date.now();
@@ -203,7 +223,10 @@ export class Home implements OnInit {
       console.log('Received result from backend:', result);
 
       if (result.video_id) {
-        this.router.navigate(['/editor'], { state: { from: 'home' }, queryParams: { video_id: result.video_id } });
+        this.router.navigate(['/editor'], {
+          state: {from: 'home'},
+          queryParams: {video_id: result.video_id},
+        });
       }
     } catch (error) {
       console.error('Failed to process video:', error);

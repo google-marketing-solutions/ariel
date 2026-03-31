@@ -7,7 +7,9 @@
   -webkit-font-smoothing: antialiased;
   display: flex;
   flex-direction: column;
-  transition: background-color 300ms, color 300ms;
+  transition:
+    background-color 300ms,
+    color 300ms;
   position: relative;
   min-height: 100vh;
 
@@ -50,7 +52,9 @@
       &::-webkit-scrollbar-thumb {
         background-color: var.$border-main;
         border-radius: 3px;
-        @include var.dark-mode { background-color: var.$text-secondary; }
+        @include var.dark-mode {
+          background-color: var.$text-secondary;
+        }
       }
     }
   }
@@ -63,6 +67,8 @@
     color: var.$text-subtle;
     z-index: 50;
 
-    @include var.dark-mode { color: var.$text-muted; }
+    @include var.dark-mode {
+      color: var.$text-muted;
+    }
   }
 }

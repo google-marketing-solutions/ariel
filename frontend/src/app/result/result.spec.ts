@@ -1,7 +1,7 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Result } from './result';
-import { Router } from '@angular/router';
-import { provideRouter } from '@angular/router';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {Result} from './result';
+import {Router} from '@angular/router';
+import {provideRouter} from '@angular/router';
 
 describe('Result', () => {
   let component: Result;
@@ -12,12 +12,12 @@ describe('Result', () => {
     video_url: 'http://test.com/result.mp4',
     merged_audio_url: 'http://test.com/audio.wav',
     vocals_url: 'http://test.com/vocals.wav',
-    video_id: 'original-id-test.mp4'
+    video_id: 'original-id-test.mp4',
   };
 
   const mockOriginalData = {
     video_id: 'user-uuid-original-id-test.mp4',
-    translate_language: 'es'
+    translate_language: 'es',
   };
 
   beforeEach(async () => {
@@ -27,18 +27,15 @@ describe('Result', () => {
         extras: {
           state: {
             finalVideoData: mockResultData,
-            originalVideoData: mockOriginalData
-          }
-        }
-      })
+            originalVideoData: mockOriginalData,
+          },
+        },
+      }),
     };
 
     await TestBed.configureTestingModule({
       imports: [Result],
-      providers: [
-        { provide: Router, useValue: mockRouter },
-        provideRouter([])
-      ]
+      providers: [{provide: Router, useValue: mockRouter}, provideRouter([])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Result);
@@ -54,7 +51,9 @@ describe('Result', () => {
     const video = fixture.nativeElement.querySelector('video');
     expect(video.src).toBe(mockResultData.video_url);
 
-    const downloadLinks = fixture.nativeElement.querySelectorAll('.download-actions a');
+    const downloadLinks = fixture.nativeElement.querySelectorAll(
+      '.download-actions a',
+    );
     expect(downloadLinks.length).toBe(3);
     expect(downloadLinks[0].href).toBe(mockResultData.video_url);
     expect(downloadLinks[1].href).toBe(mockResultData.merged_audio_url);
@@ -63,8 +62,8 @@ describe('Result', () => {
 
   it('should navigate back to editor with video_id', () => {
     component.goBack();
-    expect(mockRouter.navigate).toHaveBeenCalledWith(['/editor'], { 
-      queryParams: { video_id: mockOriginalData.video_id } 
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/editor'], {
+      queryParams: {video_id: mockOriginalData.video_id},
     });
   });
 
@@ -85,14 +84,17 @@ describe('Result', () => {
   it('should redirect to home if no data is present', () => {
     // Reset component with no navigation state
     mockRouter.getCurrentNavigation.mockReturnValue(null);
-    
+
     // Mock history.state to be an empty object to avoid crashes
-    const originalHistoryState = Object.getOwnPropertyDescriptor(window.history, 'state');
+    const originalHistoryState = Object.getOwnPropertyDescriptor(
+      window.history,
+      'state',
+    );
     Object.defineProperty(window.history, 'state', {
       configurable: true,
-      value: {}
+      value: {},
     });
-    
+
     // Create new fixture to trigger constructor again
     fixture = TestBed.createComponent(Result);
     component = fixture.componentInstance;

@@ -1,8 +1,8 @@
-import { Injectable, signal } from '@angular/core';
-import { Subject } from 'rxjs';
+import {Injectable, signal} from '@angular/core';
+import {Subject} from 'rxjs';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class VideoGenerationService {
   private generateVideoSource = new Subject<void>();

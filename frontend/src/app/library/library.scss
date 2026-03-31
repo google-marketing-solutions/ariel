@@ -17,7 +17,11 @@
       font-family: var.$font-family-heading;
       font-weight: 700;
       letter-spacing: -0.025em;
-      background: linear-gradient(to right, var.$color-primary, var.$color-accent);
+      background: linear-gradient(
+        to right,
+        var.$color-primary,
+        var.$color-accent
+      );
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
@@ -27,7 +31,11 @@
       padding-bottom: 0.75rem;
 
       @include var.dark-mode {
-        background: linear-gradient(to right, var.$color-primary, var.$color-primary-light);
+        background: linear-gradient(
+          to right,
+          var.$color-primary,
+          var.$color-primary-light
+        );
         -webkit-background-clip: text;
         background-clip: text;
       }
@@ -81,7 +89,9 @@
     p {
       color: var.$text-subtle;
       font-weight: 500;
-      @include var.dark-mode { color: var.$text-muted; }
+      @include var.dark-mode {
+        color: var.$text-muted;
+      }
     }
   }
 
@@ -112,7 +122,9 @@
       font-weight: 700;
       color: var.$color-danger-darker;
       margin-bottom: 0.25rem;
-      @include var.dark-mode { color: var.$color-danger-border; }
+      @include var.dark-mode {
+        color: var.$color-danger-border;
+      }
     }
 
     p {
@@ -120,7 +132,9 @@
       font-size: 0.875rem;
       text-align: center;
       margin-bottom: 1rem;
-      @include var.dark-mode { color: rgba(var.$color-danger-muted, 0.8); }
+      @include var.dark-mode {
+        color: rgba(var.$color-danger-muted, 0.8);
+      }
     }
 
     .retry-btn {
@@ -142,7 +156,9 @@
 
       &:hover {
         background-color: var.$color-danger-lighter;
-        @include var.dark-mode { background-color: rgba(var.$color-danger, 0.2); }
+        @include var.dark-mode {
+          background-color: rgba(var.$color-danger, 0.2);
+        }
       }
     }
   }
@@ -167,7 +183,9 @@
       font-size: 3rem;
       color: var.$border-main;
       margin-bottom: 1rem;
-      @include var.dark-mode { color: var.$text-secondary; }
+      @include var.dark-mode {
+        color: var.$text-secondary;
+      }
     }
 
     h3 {
@@ -175,7 +193,9 @@
       font-weight: 700;
       color: var.$border-dark;
       margin-bottom: 0.5rem;
-      @include var.dark-mode { color: var.$border-light; }
+      @include var.dark-mode {
+        color: var.$border-light;
+      }
     }
 
     p {
@@ -184,7 +204,9 @@
       text-align: center;
       max-width: 24rem;
       margin-bottom: 1.5rem;
-      @include var.dark-mode { color: var.$text-muted; }
+      @include var.dark-mode {
+        color: var.$text-muted;
+      }
     }
 
     .create-link {
@@ -238,7 +260,9 @@
       &:hover {
         border-color: rgba(var.$color-primary, 0.5);
         transform: scale(1.01);
-        @include var.dark-mode { border-color: rgba(var.$color-primary-light, 0.5); }
+        @include var.dark-mode {
+          border-color: rgba(var.$color-primary-light, 0.5);
+        }
       }
 
       .video-thumbnail {
@@ -286,7 +310,9 @@
           overflow: hidden;
           white-space: nowrap;
 
-          @include var.dark-mode { color: var.$text-light; }
+          @include var.dark-mode {
+            color: var.$text-light;
+          }
         }
 
         p {
@@ -302,7 +328,9 @@
             font-size: 1rem;
           }
 
-          @include var.dark-mode { color: var.$text-muted; }
+          @include var.dark-mode {
+            color: var.$text-muted;
+          }
         }
 
         .badges-row {
@@ -326,12 +354,14 @@
             .material-symbols-outlined {
               font-size: 0.875rem;
               margin-right: 0.375rem;
-              
+
               &.translate-icon {
                 color: var.$color-primary;
-                @include var.dark-mode { color: var.$color-primary-light; }
+                @include var.dark-mode {
+                  color: var.$color-primary-light;
+                }
               }
-              
+
               &.timer-icon {
                 color: var.$color-accent;
               }
@@ -359,10 +389,16 @@
         width: 100%;
         padding-right: 0.5rem;
 
-        @media (min-width: 640px) { flex-direction: row; }
-        @media (min-width: 768px) { flex-direction: column; width: 9rem; }
+        @media (min-width: 640px) {
+          flex-direction: row;
+        }
+        @media (min-width: 768px) {
+          flex-direction: column;
+          width: 9rem;
+        }
 
-        a, button {
+        a,
+        button {
           width: 100%;
           display: inline-flex;
           justify-content: center;
@@ -383,7 +419,11 @@
         }
 
         .download-btn {
-          background: linear-gradient(to bottom right, var.$color-primary, var.$color-primary-dark);
+          background: linear-gradient(
+            to bottom right,
+            var.$color-primary,
+            var.$color-primary-dark
+          );
           color: var.$bg-white;
           box-shadow: 0 4px 6px -1px rgba(var.$color-primary, 0.2);
 
@@ -405,7 +445,9 @@
 
           &:hover {
             background-color: var.$bg-light;
-            @include var.dark-mode { background-color: var.$text-secondary; }
+            @include var.dark-mode {
+              background-color: var.$text-secondary;
+            }
           }
 
           &:disabled {
@@ -415,7 +457,7 @@
             background-color: var.$bg-light-alt;
             color: var.$text-muted;
             border-color: var.$border-light;
-            
+
             @include var.dark-mode {
               background-color: rgba(var.$bg-dark-light, 0.5);
               color: var.$text-secondary;
@@ -492,12 +534,12 @@
         }
 
         .spinning {
-           animation: spin 1s linear infinite;
-           font-size: 1.125rem;
+          animation: spin 1s linear infinite;
+          font-size: 1.125rem;
         }
-        
+
         .material-symbols-outlined {
-           font-size: 1.125rem;
+          font-size: 1.125rem;
         }
       }
     }
@@ -528,7 +570,9 @@
       transform: scale(1);
       transition: all 150ms;
 
-      @media (min-width: 640px) { padding: 2rem; }
+      @media (min-width: 640px) {
+        padding: 2rem;
+      }
 
       @include var.dark-mode {
         background-color: var.$bg-dark-light;
@@ -551,12 +595,16 @@
           justify-content: center;
           flex-shrink: 0;
 
-          @include var.dark-mode { background-color: rgba(var.$color-danger, 0.2); }
+          @include var.dark-mode {
+            background-color: rgba(var.$color-danger, 0.2);
+          }
 
           .material-symbols-outlined {
             color: var.$color-danger-hover;
             font-size: 1.5rem;
-            @include var.dark-mode { color: var.$color-danger-border; }
+            @include var.dark-mode {
+              color: var.$color-danger-border;
+            }
           }
         }
 
@@ -569,13 +617,17 @@
             font-weight: 700;
             color: var.$text-main;
             margin-bottom: 0.25rem;
-            @include var.dark-mode { color: var.$bg-white; }
+            @include var.dark-mode {
+              color: var.$bg-white;
+            }
           }
 
           p {
             font-size: 0.875rem;
             color: var.$text-subtle;
-            @include var.dark-mode { color: var.$text-muted; }
+            @include var.dark-mode {
+              color: var.$text-muted;
+            }
           }
         }
       }
@@ -601,11 +653,15 @@
           color: var.$text-secondary;
           background: transparent;
 
-          @include var.dark-mode { color: var.$border-main; }
+          @include var.dark-mode {
+            color: var.$border-main;
+          }
 
           &:hover {
             background-color: var.$bg-light-alt;
-            @include var.dark-mode { background-color: var.$border-dark; }
+            @include var.dark-mode {
+              background-color: var.$border-dark;
+            }
           }
         }
 
@@ -614,19 +670,23 @@
           background-color: var.$color-danger-hover;
           box-shadow: 0 1px 2px 0 rgba(var.$text-dark, 0.05);
 
-          &:hover { background-color: var.$color-danger-dark; }
+          &:hover {
+            background-color: var.$color-danger-dark;
+          }
 
           @include var.dark-mode {
             background-color: var.$color-danger;
-            &:hover { background-color: var.$color-danger-hover; }
+            &:hover {
+              background-color: var.$color-danger-hover;
+            }
           }
-          
+
           .spinning {
-             animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
           }
 
           .material-symbols-outlined {
-             font-size: 18px;
+            font-size: 18px;
           }
         }
       }
@@ -635,6 +695,10 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

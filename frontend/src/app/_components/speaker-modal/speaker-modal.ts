@@ -1,6 +1,14 @@
-import { Component, OnInit, signal, computed, input, output, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import {
+  Component,
+  OnInit,
+  signal,
+  computed,
+  input,
+  output,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {FormsModule} from '@angular/forms';
 
 export interface Speaker {
   id: string;
@@ -21,7 +29,7 @@ export interface Voice {
   imports: [CommonModule, FormsModule],
   templateUrl: './speaker-modal.html',
   styleUrl: './speaker-modal.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SpeakerModal implements OnInit {
   close = output<void>();
@@ -41,7 +49,8 @@ export class SpeakerModal implements OnInit {
 
     return this.voices().filter(voice => {
       const matchesName = voice.name.toLowerCase().includes(query);
-      const matchesGender = filter === 'all' || voice.gender.toLowerCase() === filter;
+      const matchesGender =
+        filter === 'all' || voice.gender.toLowerCase() === filter;
       return matchesName && matchesGender;
     });
   });
@@ -105,7 +114,9 @@ export class SpeakerModal implements OnInit {
     this.stopPlaying();
 
     const initSpeaker = this.initialSpeaker();
-    const fallbackName = initSpeaker ? initSpeaker.name : `Speaker ${this.speakerCount() + 1}`;
+    const fallbackName = initSpeaker
+      ? initSpeaker.name
+      : `Speaker ${this.speakerCount() + 1}`;
     const customName = this.speakerName().trim() || fallbackName;
 
     const newSpeaker: Speaker = {
@@ -113,7 +124,7 @@ export class SpeakerModal implements OnInit {
       name: customName,
       voice: voice.name,
       voiceName: voice.name,
-      gender: voice.gender
+      gender: voice.gender,
     };
 
     this.speakerAdded.emit(newSpeaker);

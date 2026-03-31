@@ -1,5 +1,11 @@
-import { Component, OnInit, signal, computed, ChangeDetectionStrategy } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import {
+  Component,
+  OnInit,
+  signal,
+  computed,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+import {RouterLink} from '@angular/router';
 
 interface VideoSpeaker {
   id: string;
@@ -26,7 +32,7 @@ interface VideoJob {
   imports: [RouterLink],
   templateUrl: './library.html',
   styleUrl: './library.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Library implements OnInit {
   videos = signal<VideoJob[]>([]);
@@ -40,7 +46,7 @@ export class Library implements OnInit {
       ...video,
       formattedDate: this.formatDate(video.created_at),
       formattedDuration: this.formatDuration(video.duration),
-      speakersString: this.getSpeakersString(video.speakers)
+      speakersString: this.getSpeakersString(video.speakers),
     }));
   });
 
@@ -56,30 +62,30 @@ export class Library implements OnInit {
     } else {
       this.isLoadingMore.set(true);
     }
-    
+
     try {
       let url = '/api/videos?max_results=5';
       const token = this.nextPageToken();
       if (!reset && token) {
         url += `&page_token=${token}`;
       }
-      
+
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      
+
       if (reset) {
         this.videos.set(data.videos || []);
       } else {
         this.videos.update(v => [...v, ...(data.videos || [])]);
       }
       this.nextPageToken.set(data.next_page_token || null);
-      
     } catch (err: unknown) {
       console.error('Failed to load videos:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load videos';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to load videos';
       this.error.set(errorMessage);
     } finally {
       this.isLoading.set(false);
@@ -95,7 +101,7 @@ export class Library implements OnInit {
 
   formatDate(timestamp: number | string): string {
     if (!timestamp) return 'Date unknown';
-    
+
     let date: Date;
     if (typeof timestamp === 'string') {
       date = new Date(timestamp);
@@ -103,15 +109,15 @@ export class Library implements OnInit {
       // The Python backend might send seconds or ms, usually seconds from local dev
       date = new Date(timestamp > 1e11 ? timestamp : timestamp * 1000);
     }
-    
+
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
-    
+
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
-    
+
     return `${day}/${month}/${year}, ${hours}:${minutes}:${seconds}`;
   }
 
@@ -124,7 +130,9 @@ export class Library implements OnInit {
 
   getSpeakersString(speakers: VideoSpeaker[]): string {
     if (!speakers || speakers.length === 0) return 'Unknown';
-    const uniqueVoices = [...new Set(speakers.map(s => s.voice).filter(v => v))];
+    const uniqueVoices = [
+      ...new Set(speakers.map(s => s.voice).filter(v => v)),
+    ];
     return uniqueVoices.length > 0 ? uniqueVoices.join(', ') : 'Unknown';
   }
 
@@ -148,7 +156,9 @@ export class Library implements OnInit {
 
     this.isDeleting.set(true);
     try {
-      const response = await fetch(`/api/videos/${videoId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/videos/${videoId}`, {
+        method: 'DELETE',
+      });
       if (response.ok) {
         await this.fetchVideos(true);
         this.isDeleteModalOpen.set(false);

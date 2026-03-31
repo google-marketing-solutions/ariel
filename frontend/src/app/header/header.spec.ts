@@ -1,10 +1,10 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Header } from './header';
-import { provideRouter, Router, NavigationEnd } from '@angular/router';
-import { VideoGenerationService } from '../services/video-generation.service';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { Subject } from 'rxjs'; // 'of' is from rxjs, 'Subject' for router.events
-import { signal, WritableSignal } from '@angular/core'; // 'signal' and 'WritableSignal' is from @angular/core
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {Header} from './header';
+import {provideRouter, Router, NavigationEnd} from '@angular/router';
+import {VideoGenerationService} from '../services/video-generation.service';
+import {MatTooltipModule} from '@angular/material/tooltip';
+import {Subject} from 'rxjs'; // 'of' is from rxjs, 'Subject' for router.events
+import {signal, WritableSignal} from '@angular/core'; // 'signal' and 'WritableSignal' is from @angular/core
 
 describe('Header', () => {
   let component: Header;
@@ -46,7 +46,7 @@ describe('Header', () => {
       imports: [Header, MatTooltipModule],
       providers: [
         provideRouter([]),
-        { provide: VideoGenerationService, useValue: mockVideoGenerationService },
+        {provide: VideoGenerationService, useValue: mockVideoGenerationService},
       ],
     }).compileComponents();
 
@@ -72,9 +72,9 @@ describe('Header', () => {
     // Directly set the component's isEditorRoute signal
     Object.defineProperty(component, 'isEditorRoute', {
       value: mockIsEditorRouteSignal,
-      writable: true
+      writable: true,
     });
-    
+
     // Emit initial event to simulate router state
     navigationEndSubject.next(new NavigationEnd(1, '/home', '/home'));
 
@@ -87,7 +87,8 @@ describe('Header', () => {
 
   it('should toggle theme on button click', () => {
     vi.spyOn(component.toggleTheme, 'emit');
-    const themeToggleButton = fixture.nativeElement.querySelector('.theme-toggle-btn');
+    const themeToggleButton =
+      fixture.nativeElement.querySelector('.theme-toggle-btn');
     themeToggleButton.click();
     expect(component.toggleTheme.emit).toHaveBeenCalled();
   });
@@ -99,7 +100,8 @@ describe('Header', () => {
     fixture.detectChanges();
     await fixture.whenStable(); // Wait for the DOM to update
 
-    const generateVideoButton = fixture.nativeElement.querySelector('.generate-btn');
+    const generateVideoButton =
+      fixture.nativeElement.querySelector('.generate-btn');
     expect(generateVideoButton).toBeTruthy(); // Ensure the button exists for the editor route
     generateVideoButton.click();
     expect(mockVideoGenerationService.triggerGenerateVideo).toHaveBeenCalled();
@@ -111,11 +113,14 @@ describe('Header', () => {
     navigationEndSubject.next(new NavigationEnd(1, '/home', '/home'));
     fixture.detectChanges();
     await fixture.whenStable(); // Wait for the DOM to update
-    
-    const generateVideoButton = fixture.nativeElement.querySelector('.generate-btn');
+
+    const generateVideoButton =
+      fixture.nativeElement.querySelector('.generate-btn');
     expect(generateVideoButton).toBeFalsy(); // Ensure the button does not exist for non-editor route
     // Even if we somehow clicked it, it shouldn't be called
-    expect(mockVideoGenerationService.triggerGenerateVideo).not.toHaveBeenCalled();
+    expect(
+      mockVideoGenerationService.triggerGenerateVideo,
+    ).not.toHaveBeenCalled();
   });
 
   it('should display unregenerated count', async () => {
@@ -142,8 +147,9 @@ describe('Header', () => {
     mockVideoGenerationService.isProcessingAudio.set(true);
     fixture.detectChanges();
     await fixture.whenStable(); // Wait for the DOM to update
-    
-    const generateVideoButton = fixture.nativeElement.querySelector('.generate-btn');
+
+    const generateVideoButton =
+      fixture.nativeElement.querySelector('.generate-btn');
     expect(generateVideoButton.disabled).toBe(true);
   });
 });

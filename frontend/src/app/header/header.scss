@@ -20,12 +20,12 @@
     box-shadow: var.$shadow-glass-dark;
   }
 
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 2rem;
-          height: 100%;
-        }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    height: 100%;
+  }
   .logo-section {
     display: flex;
     align-items: center;
@@ -41,13 +41,21 @@
       font-family: var.$font-family-heading;
       font-weight: 700;
       letter-spacing: -0.025em;
-      background: linear-gradient(to right, var.$color-primary, var.$color-accent);
+      background: linear-gradient(
+        to right,
+        var.$color-primary,
+        var.$color-accent
+      );
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
 
       @include var.dark-mode {
-        background: linear-gradient(to right, var.$color-primary, var.$color-primary-light);
+        background: linear-gradient(
+          to right,
+          var.$color-primary,
+          var.$color-primary-light
+        );
         -webkit-background-clip: text;
         background-clip: text;
       }
@@ -77,12 +85,16 @@
 
       &:hover {
         color: var.$text-main;
-        @include var.dark-mode { color: var.$bg-white; }
+        @include var.dark-mode {
+          color: var.$bg-white;
+        }
       }
 
       &.nav-link-active {
         color: var.$color-primary;
-        @include var.dark-mode { color: var.$color-primary-light; }
+        @include var.dark-mode {
+          color: var.$color-primary-light;
+        }
 
         .active-indicator {
           opacity: 1 !important;
@@ -123,13 +135,17 @@
         font-size: 0.875rem;
         font-weight: 600;
         color: var.$color-warning;
-        @include var.dark-mode { color: var.$color-warning-main; }
+        @include var.dark-mode {
+          color: var.$color-warning-main;
+        }
       }
 
       .material-symbols-outlined {
         font-size: 16px;
         color: var.$color-warning;
-        @include var.dark-mode { color: var.$color-warning-main; }
+        @include var.dark-mode {
+          color: var.$color-warning-main;
+        }
       }
     }
 
@@ -140,7 +156,7 @@
       border-radius: 0.8rem;
       background-color: var.$color-primary;
       padding: 0.625rem 1.5rem;
-        font-size: 1rem;
+      font-size: 1rem;
       font-weight: 600;
       color: var.$bg-white;
       border: none;
@@ -149,7 +165,11 @@
       transition: all 150ms;
 
       @include var.dark-mode {
-        background: linear-gradient(135deg, var.$color-primary-dark, var.$color-primary);
+        background: linear-gradient(
+          135deg,
+          var.$color-primary-dark,
+          var.$color-primary
+        );
       }
 
       &:hover {
@@ -166,7 +186,9 @@
       width: 1px;
       height: 1.5rem;
       background-color: var.$border-light;
-      @include var.dark-mode { background-color: var.$border-dark; }
+      @include var.dark-mode {
+        background-color: var.$border-dark;
+      }
     }
 
     .theme-toggle-btn {
@@ -190,7 +212,9 @@
 
       &:hover {
         background-color: var.$border-light;
-        @include var.dark-mode { background-color: var.$overlay-light; }
+        @include var.dark-mode {
+          background-color: var.$overlay-light;
+        }
       }
 
       .material-symbols-outlined {

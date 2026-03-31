@@ -12,11 +12,8 @@
   <div class="actions-row">
     <!-- Download Actions -->
     <div class="download-actions">
-      <a [href]="finalVideoData()?.video_url" [download]="getCleanVideoName()">
-        Download Video
-      </a>
-      <a [href]="finalVideoData()?.merged_audio_url"
-        [download]="getCleanAudioName('audio')">
+      <a [href]="finalVideoData()?.video_url" [download]="getCleanVideoName()"> Download Video </a>
+      <a [href]="finalVideoData()?.merged_audio_url" [download]="getCleanAudioName('audio')">
         Download Final Audio
       </a>
       <a [href]="finalVideoData()?.vocals_url" [download]="getCleanAudioName('vocals')">
@@ -26,12 +23,8 @@
 
     <!-- System Actions -->
     <div class="system-actions">
-      <button (click)="goBack()" class="back-btn">
-        Go back to editing
-      </button>
-      <button (click)="startOver()" class="start-over-btn">
-        Start Over
-      </button>
+      <button (click)="goBack()" class="back-btn">Go back to editing</button>
+      <button (click)="startOver()" class="start-over-btn">Start Over</button>
     </div>
   </div>
 </div>

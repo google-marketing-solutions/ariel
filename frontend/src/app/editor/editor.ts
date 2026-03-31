@@ -1,11 +1,29 @@
-import { Component, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef, inject, effect, ChangeDetectionStrategy, HostListener } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
-import { VideoGenerationService } from '../services/video-generation.service';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { MatTooltipModule, MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
-import { Speaker, SpeakerModal } from '../_components/speaker-modal/speaker-modal';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  signal,
+  computed,
+  ViewChild,
+  ElementRef,
+  inject,
+  effect,
+  ChangeDetectionStrategy,
+  HostListener,
+} from '@angular/core';
+import {ActivatedRoute, Router} from '@angular/router';
+import {Subscription} from 'rxjs';
+import {VideoGenerationService} from '../services/video-generation.service';
+import {CommonModule} from '@angular/common';
+import {FormsModule} from '@angular/forms';
+import {
+  MatTooltipModule,
+  MAT_TOOLTIP_DEFAULT_OPTIONS,
+} from '@angular/material/tooltip';
+import {
+  Speaker,
+  SpeakerModal,
+} from '../_components/speaker-modal/speaker-modal';
 
 interface VideoSpeaker {
   speaker_id: string;
@@ -29,7 +47,6 @@ interface VideoUtterance {
   speaker: VideoSpeaker;
   audio_url?: string;
   duration?: number;
-
 
   // Mute State flag and cached timestamps
   muted?: boolean;
@@ -61,13 +78,21 @@ interface Language {
   readiness?: string;
 }
 
-export type PanelMode = 'timestamps' | 'speaker' | 'translation' | 'voice' | null;
+export type PanelMode =
+  | 'timestamps'
+  | 'speaker'
+  | 'translation'
+  | 'voice'
+  | null;
 
 @Component({
   selector: 'app-editor',
   imports: [CommonModule, FormsModule, SpeakerModal, MatTooltipModule],
   providers: [
-    { provide: MAT_TOOLTIP_DEFAULT_OPTIONS, useValue: { showDelay: 300, hideDelay: 0, touchendHideDelay: 1500 } }
+    {
+      provide: MAT_TOOLTIP_DEFAULT_OPTIONS,
+      useValue: {showDelay: 300, hideDelay: 0, touchendHideDelay: 1500},
+    },
   ],
   templateUrl: './editor.html',
   styleUrl: './editor.scss',
@@ -75,8 +100,8 @@ export type PanelMode = 'timestamps' | 'speaker' | 'translation' | 'voice' | nul
   host: {
     '(document:mousemove)': 'onDragMove($event)',
     '(document:mouseup)': 'onDragEnd($event)',
-    '(document:click)': 'onDocumentClick($event)'
-  }
+    '(document:click)': 'onDocumentClick($event)',
+  },
 })
 export class Editor implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
@@ -114,7 +139,8 @@ export class Editor implements OnInit, OnDestroy {
   // Audio elements for individual utterance snippet playback
   snippetAudio = new Audio();
   utteranceTimeoutId: ReturnType<typeof setTimeout> | undefined;
-  activeAudioPlayback: { id: string; type: 'original' | 'translated' } | null = null;
+  activeAudioPlayback: {id: string; type: 'original' | 'translated'} | null =
+    null;
 
   // Timeline dragging
   isDragging = signal(false);
@@ -122,8 +148,8 @@ export class Editor implements OnInit, OnDestroy {
   dragInitialStartTime = 0;
   draggedUtteranceId = signal<string | null>(null);
 
-
-  @ViewChild('timelineContainer') timelineContainer!: ElementRef<HTMLDivElement>;
+  @ViewChild('timelineContainer')
+  timelineContainer!: ElementRef<HTMLDivElement>;
 
   languages = signal<Language[]>([]);
 
@@ -140,7 +166,7 @@ export class Editor implements OnInit, OnDestroy {
   draftVoiceInstructions = signal<string | null>(null);
   draftSpeakingRate = signal<number | null>(null);
   draftTranslationInstructions = signal<string | null>(null);
-  draftTimestamps = signal<{ start: string, end: string } | null>(null);
+  draftTimestamps = signal<{start: string; end: string} | null>(null);
   timestampError = signal<string | null>(null);
   draftSpeaker = signal<VideoSpeaker | null>(null);
 
@@ -150,8 +176,11 @@ export class Editor implements OnInit, OnDestroy {
     const draftVoice = this.draftVoiceInstructions();
     const draftRate = this.draftSpeakingRate();
 
-    const voiceInstructionsChanged = draftVoice !== null && draftVoice !== (active.speaking_instructions || '');
-    const speakingRateChanged = draftRate !== null && draftRate !== active.speaking_rate;
+    const voiceInstructionsChanged =
+      draftVoice !== null &&
+      draftVoice !== (active.speaking_instructions || '');
+    const speakingRateChanged =
+      draftRate !== null && draftRate !== active.speaking_rate;
 
     return voiceInstructionsChanged || speakingRateChanged;
   });
@@ -169,8 +198,10 @@ export class Editor implements OnInit, OnDestroy {
     if (!active) return false;
     const draft = this.draftTimestamps();
     if (draft === null) return false;
-    return draft.start !== this.formatTime(active.translated_start_time) ||
-      draft.end !== this.formatTime(active.translated_end_time);
+    return (
+      draft.start !== this.formatTime(active.translated_start_time) ||
+      draft.end !== this.formatTime(active.translated_end_time)
+    );
   });
 
   isSpeakerDirty = computed(() => {
@@ -184,7 +215,9 @@ export class Editor implements OnInit, OnDestroy {
   durationWarningCount = computed(() => {
     const data = this.videoData();
     if (!data || !data.duration) return 0;
-    return data.utterances.filter(u => u.translated_end_time > data.duration && !u.removed).length;
+    return data.utterances.filter(
+      u => u.translated_end_time > data.duration && !u.removed,
+    ).length;
   });
 
   // Video Settings Editing State
@@ -193,7 +226,7 @@ export class Editor implements OnInit, OnDestroy {
   // Overlap Popup State
   showOverlapPopup = signal(false);
   overlappingUtterances = signal<VideoUtterance[]>([]);
-  popupPosition = signal<{ x: number, y: number }>({ x: 0, y: 0 });
+  popupPosition = signal<{x: number; y: number}>({x: 0, y: 0});
   popupCloseTimeout: ReturnType<typeof setTimeout> | undefined;
   initialUtteranceState = signal<VideoUtterance | null>(null);
 
@@ -211,13 +244,17 @@ export class Editor implements OnInit, OnDestroy {
     const currentU = data.utterances.find(u => u.id === activeId);
     if (!currentU) return false;
 
-    return currentU.original_text !== initialState.original_text ||
+    return (
+      currentU.original_text !== initialState.original_text ||
       currentU.translated_text !== initialState.translated_text ||
-      (currentU.translation_instructions || '') !== (initialState.translation_instructions || '') ||
-      (currentU.speaking_instructions || '') !== (initialState.speaking_instructions || '') ||
+      (currentU.translation_instructions || '') !==
+        (initialState.translation_instructions || '') ||
+      (currentU.speaking_instructions || '') !==
+        (initialState.speaking_instructions || '') ||
       currentU.translated_start_time !== initialState.translated_start_time ||
       currentU.translated_end_time !== initialState.translated_end_time ||
-      currentU.speaker.speaker_id !== initialState.speaker.speaker_id;
+      currentU.speaker.speaker_id !== initialState.speaker.speaker_id
+    );
   });
   editOriginalLanguage = signal('');
   editTranslateLanguage = signal('');
@@ -284,24 +321,32 @@ export class Editor implements OnInit, OnDestroy {
   filteredOriginalGaLanguages = computed(() => {
     const query = this.searchOriginalLanguage().toLowerCase().trim();
     if (!query) return this.gaLanguages();
-    return this.gaLanguages().filter(lang => lang.name.toLowerCase().includes(query));
+    return this.gaLanguages().filter(lang =>
+      lang.name.toLowerCase().includes(query),
+    );
   });
   filteredOriginalPreviewLanguages = computed(() => {
     const query = this.searchOriginalLanguage().toLowerCase().trim();
     if (!query) return this.previewLanguages();
-    return this.previewLanguages().filter(lang => lang.name.toLowerCase().includes(query));
+    return this.previewLanguages().filter(lang =>
+      lang.name.toLowerCase().includes(query),
+    );
   });
 
   searchTranslationLanguage = signal<string>('');
   filteredTranslationGaLanguages = computed(() => {
     const query = this.searchTranslationLanguage().toLowerCase().trim();
     if (!query) return this.gaLanguages();
-    return this.gaLanguages().filter(lang => lang.name.toLowerCase().includes(query));
+    return this.gaLanguages().filter(lang =>
+      lang.name.toLowerCase().includes(query),
+    );
   });
   filteredTranslationPreviewLanguages = computed(() => {
     const query = this.searchTranslationLanguage().toLowerCase().trim();
     if (!query) return this.previewLanguages();
-    return this.previewLanguages().filter(lang => lang.name.toLowerCase().includes(query));
+    return this.previewLanguages().filter(lang =>
+      lang.name.toLowerCase().includes(query),
+    );
   });
 
   originalLanguageLabel = computed(() => {
@@ -319,7 +364,7 @@ export class Editor implements OnInit, OnDestroy {
   // Speaker Modal State
   isSpeakerModalOpen = signal(false);
   speakerToEditId = signal<string | null>(null);
-  
+
   // Settings error
   settingsError = signal<string | null>(null);
 
@@ -334,7 +379,9 @@ export class Editor implements OnInit, OnDestroy {
     effect(() => {
       const data = this.videoData();
       if (data) {
-        const count = data.utterances.filter(u => u.needs_translation_regen || u.needs_dubbing_regen).length;
+        const count = data.utterances.filter(
+          u => u.needs_translation_regen || u.needs_dubbing_regen,
+        ).length;
         this.videoGenerationService.updateUnregeneratedCount(count);
       } else {
         this.videoGenerationService.updateUnregeneratedCount(0);
@@ -359,18 +406,22 @@ export class Editor implements OnInit, OnDestroy {
       } else if (this.isPlayingTranslated()) {
         this.currentTime.set(this.translatedAudio.currentTime);
       } else if (this.isPlayingSnippet()) {
-        this.currentTime.set(this.snippetStartTime + this.snippetAudio.currentTime);
+        this.currentTime.set(
+          this.snippetStartTime + this.snippetAudio.currentTime,
+        );
       }
       this.animationFrameId = requestAnimationFrame(updateTimeLoop);
     };
     this.animationFrameId = requestAnimationFrame(updateTimeLoop);
 
-    this.videoGenSub = this.videoGenerationService.generateVideo$.subscribe(async () => {
-      console.log("generateVideo$ triggered");
-      if (this.validateForGeneration()) {
-        this.generateVideo();
-      }
-    });
+    this.videoGenSub = this.videoGenerationService.generateVideo$.subscribe(
+      async () => {
+        console.log('generateVideo$ triggered');
+        if (this.validateForGeneration()) {
+          this.generateVideo();
+        }
+      },
+    );
 
     this.fetchLanguages();
     this.route.queryParams.subscribe(params => {
@@ -390,7 +441,9 @@ export class Editor implements OnInit, OnDestroy {
       const langs: Language[] = await response.json();
       this.languages.set(langs);
       this.gaLanguages.set(langs.filter(lang => lang.readiness === 'GA'));
-      this.previewLanguages.set(langs.filter(lang => lang.readiness === 'Preview'));
+      this.previewLanguages.set(
+        langs.filter(lang => lang.readiness === 'Preview'),
+      );
     } catch (error) {
       console.error('Failed to fetch languages:', error);
     }
@@ -412,12 +465,11 @@ export class Editor implements OnInit, OnDestroy {
       }
       const data: VideoJob = await response.json();
 
-
-
       this.videoData.set(data);
       this.initEditState();
 
-      let rawUrl = (data as VideoJob & { original_video_url?: string }).original_video_url;
+      let rawUrl = (data as VideoJob & {original_video_url?: string})
+        .original_video_url;
 
       if (!rawUrl && data.video_id) {
         // Fallback: try to deduce from utterances if available
@@ -449,7 +501,8 @@ export class Editor implements OnInit, OnDestroy {
       }
     } catch (err: unknown) {
       console.error('Failed to load project:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load project details';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to load project details';
       this.error.set(errorMessage);
     } finally {
       this.isLoading.set(false);
@@ -506,12 +559,16 @@ export class Editor implements OnInit, OnDestroy {
     if (editId) {
       // Edit existing speaker voice
       this.editSpeakers.update(speakers =>
-        speakers.map(s => s.speaker_id === editId ? {
-          ...s,
-          voice: modalSpeaker.voice,
-          // Make sure we keep the name the user previously assigned to it, or take from modal if they changed it
-          name: modalSpeaker.name || s.name
-        } : s)
+        speakers.map(s =>
+          s.speaker_id === editId
+            ? {
+                ...s,
+                voice: modalSpeaker.voice,
+                // Make sure we keep the name the user previously assigned to it, or take from modal if they changed it
+                name: modalSpeaker.name || s.name,
+              }
+            : s,
+        ),
       );
     } else {
       // Add new speaker
@@ -519,7 +576,7 @@ export class Editor implements OnInit, OnDestroy {
         speaker_id: modalSpeaker.id,
         name: modalSpeaker.name,
         voice: modalSpeaker.voice,
-        gender: modalSpeaker.gender
+        gender: modalSpeaker.gender,
       };
       this.editSpeakers.update(s => [...s, newSpeaker]);
     }
@@ -527,7 +584,9 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   removeEditSpeaker(speakerId: string) {
-    this.editSpeakers.update(speakers => speakers.filter(s => s.speaker_id !== speakerId));
+    this.editSpeakers.update(speakers =>
+      speakers.filter(s => s.speaker_id !== speakerId),
+    );
   }
 
   async saveVideoSettings() {
@@ -542,7 +601,8 @@ export class Editor implements OnInit, OnDestroy {
     const translateLangChanged = newTranslateLang !== data.translate_language;
 
     // Check if speakers changed
-    const speakersChanged = JSON.stringify(newSpeakers) !== JSON.stringify(data.speakers);
+    const speakersChanged =
+      JSON.stringify(newSpeakers) !== JSON.stringify(data.speakers);
 
     if (!originalLangChanged && !translateLangChanged && !speakersChanged) {
       this.isEditingSettings.set(false);
@@ -576,20 +636,24 @@ export class Editor implements OnInit, OnDestroy {
         }));
         formData.append('speakers', JSON.stringify(speakersToPost));
 
-        const response = await fetch('/process', { method: 'POST', body: formData });
+        const response = await fetch('/process', {
+          method: 'POST',
+          body: formData,
+        });
         if (!response.ok) throw new Error('Failed to reprocess video.');
         const result = await response.json();
 
         if (result.video_id && result.video_id !== data.video_id) {
-          this.router.navigate(['/editor'], { queryParams: { video_id: result.video_id } });
+          this.router.navigate(['/editor'], {
+            queryParams: {video_id: result.video_id},
+          });
         } else {
           this.loadProject(result.video_id);
         }
-
       } else if (translateLangChanged) {
         // Translation change (Fork)
         // We don't want to make a copy if the user hasn't opened an old project.
-        const update_existing = (this.cameFrom === 'home') ? 'True' : 'False';
+        const update_existing = this.cameFrom === 'home' ? 'True' : 'False';
         const formData = new FormData();
         formData.append('source_video_id', data.video_id);
         formData.append('original_language', data.original_language);
@@ -604,37 +668,45 @@ export class Editor implements OnInit, OnDestroy {
         }));
         formData.append('speakers', JSON.stringify(speakersToPost));
 
-        const response = await fetch('/process', { method: 'POST', body: formData });
+        const response = await fetch('/process', {
+          method: 'POST',
+          body: formData,
+        });
         if (!response.ok) throw new Error('Failed to create translation.');
         const result = await response.json();
 
         if (result.video_id && result.video_id !== data.video_id) {
-          this.router.navigate(['/editor'], { queryParams: { video_id: result.video_id } });
+          this.router.navigate(['/editor'], {
+            queryParams: {video_id: result.video_id},
+          });
         } else {
           this.loadProject(result.video_id);
         }
-
       } else if (speakersChanged) {
         // Find which utterances need new dubbing (assigned to a deleted speaker, or their speaker's voice changed)
         const utterancesToUpdate = data.utterances.filter(u => {
-           const oldSpeaker = u.speaker;
-           const newSpeaker = newSpeakers.find(s => s.speaker_id === oldSpeaker.speaker_id);
-           
-           if (!newSpeaker) return true; // Speaker was deleted
-           if (newSpeaker.voice !== oldSpeaker.voice) return true; // Voice changed
-           return false; // Only name or gender changed, no audio regen needed
+          const oldSpeaker = u.speaker;
+          const newSpeaker = newSpeakers.find(
+            s => s.speaker_id === oldSpeaker.speaker_id,
+          );
+
+          if (!newSpeaker) return true; // Speaker was deleted
+          if (newSpeaker.voice !== oldSpeaker.voice) return true; // Voice changed
+          return false; // Only name or gender changed, no audio regen needed
         });
 
         // Apply global speaker list change
         data.speakers = newSpeakers.map(s => ({
           ...s,
           speaker_name: s.speaker_name || s.name,
-          gender: s.gender ? s.gender.toLowerCase() : s.gender
+          gender: s.gender ? s.gender.toLowerCase() : s.gender,
         }));
 
         // Update speaker voices locally BEFORE regeneration, and reassign orphans to the first available speaker
         for (let u of data.utterances) {
-          let newSpk = data.speakers.find(s => s.speaker_id === u.speaker.speaker_id);
+          let newSpk = data.speakers.find(
+            s => s.speaker_id === u.speaker.speaker_id,
+          );
           if (!newSpk) {
             newSpk = data.speakers[0]; // Fallback to first speaker
           }
@@ -646,16 +718,21 @@ export class Editor implements OnInit, OnDestroy {
           u.speaker.gender = newSpk.gender;
         }
 
-        const dubbingPromises = utterancesToUpdate.map(async (utterance) => {
-          const originalIndex = data.utterances.findIndex(u => u.id === utterance.id);
+        const dubbingPromises = utterancesToUpdate.map(async utterance => {
+          const originalIndex = data.utterances.findIndex(
+            u => u.id === utterance.id,
+          );
           const response = await fetch('/regenerate_dubbing', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
               video: data,
               utterance: originalIndex,
-              instructions: utterance.speaking_instructions || utterance.translation_instructions || ''
-            })
+              instructions:
+                utterance.speaking_instructions ||
+                utterance.translation_instructions ||
+                '',
+            }),
           });
           if (!response.ok) throw new Error('Failed to regenerate dubbing.');
 
@@ -663,12 +740,13 @@ export class Editor implements OnInit, OnDestroy {
           const targetUtterance = data.utterances[originalIndex];
           targetUtterance.audio_url = result.audio_url;
           targetUtterance.duration = result.duration;
-          targetUtterance.translated_end_time = targetUtterance.translated_start_time + result.duration;
+          targetUtterance.translated_end_time =
+            targetUtterance.translated_start_time + result.duration;
         });
 
         await Promise.all(dubbingPromises);
 
-        this.videoData.set({ ...data });
+        this.videoData.set({...data});
         this.initEditState();
       }
 
@@ -685,7 +763,12 @@ export class Editor implements OnInit, OnDestroy {
   // --- Right Panel Interactions ---
 
   executeWithDirtyCheck(action: () => void) {
-    if (this.isVoiceDirty() || this.isTranslationDirty() || this.isTimestampsDirty() || this.isSpeakerDirty()) {
+    if (
+      this.isVoiceDirty() ||
+      this.isTranslationDirty() ||
+      this.isTimestampsDirty() ||
+      this.isSpeakerDirty()
+    ) {
       this.pendingDiscardAction = action;
       this.showDiscardModal.set(true);
     } else {
@@ -730,7 +813,6 @@ export class Editor implements OnInit, OnDestroy {
     const prevId = this.activeUtteranceId();
     const data = this.videoData();
 
-
     this.activeUtteranceId.set(utteranceId);
     this.activePanelMode.set(null);
     this.clearDrafts();
@@ -752,7 +834,10 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   setActivePanel(utteranceId: string, mode: PanelMode) {
-    if (this.activeUtteranceId() === utteranceId && this.activePanelMode() === mode) {
+    if (
+      this.activeUtteranceId() === utteranceId &&
+      this.activePanelMode() === mode
+    ) {
       // Toggle off the panel if clicking the same button again
       if (this.activePanelMode() !== null) {
         this.executeWithDirtyCheck(() => {
@@ -794,17 +879,18 @@ export class Editor implements OnInit, OnDestroy {
   onStartTimestampInput(startStr: string, endInput: HTMLInputElement) {
     const active = this.activeUtterance;
     if (!active) return;
-    const currentDuration = active.translated_end_time - active.translated_start_time;
+    const currentDuration =
+      active.translated_end_time - active.translated_start_time;
 
     let newStart = this.parseTime(startStr);
     if (!isNaN(newStart) && startStr.includes(':')) {
       const newEnd = newStart + currentDuration;
       const newEndStr = this.formatTime(newEnd);
       endInput.value = newEndStr;
-      this.draftTimestamps.set({ start: startStr, end: newEndStr });
+      this.draftTimestamps.set({start: startStr, end: newEndStr});
       this.timestampError.set(null);
     } else {
-      this.draftTimestamps.set({ start: startStr, end: endInput.value });
+      this.draftTimestamps.set({start: startStr, end: endInput.value});
       this.timestampError.set(null);
     }
   }
@@ -812,7 +898,8 @@ export class Editor implements OnInit, OnDestroy {
   onEndTimestampInput(startInput: HTMLInputElement, endStr: string) {
     const active = this.activeUtterance;
     if (!active) return;
-    const currentDuration = active.translated_end_time - active.translated_start_time;
+    const currentDuration =
+      active.translated_end_time - active.translated_start_time;
 
     let newEnd = this.parseTime(endStr);
     if (!isNaN(newEnd) && endStr.includes(':')) {
@@ -820,10 +907,10 @@ export class Editor implements OnInit, OnDestroy {
 
       const newStartStr = this.formatTime(newStart);
       startInput.value = newStartStr;
-      this.draftTimestamps.set({ start: newStartStr, end: endStr });
+      this.draftTimestamps.set({start: newStartStr, end: endStr});
       this.timestampError.set(null);
     } else {
-      this.draftTimestamps.set({ start: startInput.value, end: endStr });
+      this.draftTimestamps.set({start: startInput.value, end: endStr});
       this.timestampError.set(null);
     }
   }
@@ -832,25 +919,32 @@ export class Editor implements OnInit, OnDestroy {
     this.draftSpeaker.set(spk);
   }
 
-  checkTranslationRegen(u: VideoUtterance, initialState: VideoUtterance | null): boolean {
+  checkTranslationRegen(
+    u: VideoUtterance,
+    initialState: VideoUtterance | null,
+  ): boolean {
     if (!initialState || initialState.id !== u.id) return true;
-    const isDirty = (
+    const isDirty =
       u.original_text !== initialState.original_text ||
-      (u.translation_instructions || '') !== (initialState.translation_instructions || '')
-    );
+      (u.translation_instructions || '') !==
+        (initialState.translation_instructions || '');
     return !!initialState.needs_translation_regen || isDirty;
   }
 
-  checkDubbingRegen(u: VideoUtterance, initialState: VideoUtterance | null): boolean {
+  checkDubbingRegen(
+    u: VideoUtterance,
+    initialState: VideoUtterance | null,
+  ): boolean {
     if (!initialState || initialState.id !== u.id) return true;
-    const isDirty = (
+    const isDirty =
       u.speaker.speaker_id !== initialState.speaker.speaker_id ||
-      (u.speaking_instructions || '') !== (initialState.speaking_instructions || '') ||
+      (u.speaking_instructions || '') !==
+        (initialState.speaking_instructions || '') ||
       u.translated_text !== initialState.translated_text ||
       u.original_text !== initialState.original_text ||
-      (u.translation_instructions || '') !== (initialState.translation_instructions || '') ||
-      u.speaking_rate !== initialState.speaking_rate
-    );
+      (u.translation_instructions || '') !==
+        (initialState.translation_instructions || '') ||
+      u.speaking_rate !== initialState.speaking_rate;
     return !!initialState.needs_dubbing_regen || isDirty;
   }
 
@@ -866,12 +960,15 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u => {
           if (u.id === activeId) {
-            const updated = { ...u, speaker: newSpeaker };
-            updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
+            const updated = {...u, speaker: newSpeaker};
+            updated.needs_dubbing_regen = this.checkDubbingRegen(
+              updated,
+              initialState,
+            );
             return updated;
           }
           return u;
-        })
+        }),
       };
     });
   }
@@ -890,13 +987,19 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u => {
           if (u.id === activeId) {
-            const updated = { ...u, translation_instructions: draft };
-            updated.needs_translation_regen = this.checkTranslationRegen(updated, initialState);
-            updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
+            const updated = {...u, translation_instructions: draft};
+            updated.needs_translation_regen = this.checkTranslationRegen(
+              updated,
+              initialState,
+            );
+            updated.needs_dubbing_regen = this.checkDubbingRegen(
+              updated,
+              initialState,
+            );
             return updated;
           }
           return u;
-        })
+        }),
       };
     });
     this.draftTranslationInstructions.set(null);
@@ -916,12 +1019,19 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u => {
           if (u.id === activeId) {
-            const updated = { ...u, speaking_instructions: draft, speaking_rate: draftRate };
-            updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
+            const updated = {
+              ...u,
+              speaking_instructions: draft,
+              speaking_rate: draftRate,
+            };
+            updated.needs_dubbing_regen = this.checkDubbingRegen(
+              updated,
+              initialState,
+            );
             return updated;
           }
           return u;
-        })
+        }),
       };
     });
     this.draftVoiceInstructions.set(null);
@@ -946,7 +1056,9 @@ export class Editor implements OnInit, OnDestroy {
 
     // Validate negative timestamps on save
     if (this.parseTime(draft.start) < 0) {
-      this.timestampError.set("Start time cannot be negative. To change duration of utterance, try changing the speed or shortening the text.");
+      this.timestampError.set(
+        'Start time cannot be negative. To change duration of utterance, try changing the speed or shortening the text.',
+      );
       return;
     }
 
@@ -963,13 +1075,19 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u => {
           if (u.id === utteranceId) {
-            const updated = { ...u, original_text: newText };
-            updated.needs_translation_regen = this.checkTranslationRegen(updated, initialState);
-            updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
+            const updated = {...u, original_text: newText};
+            updated.needs_translation_regen = this.checkTranslationRegen(
+              updated,
+              initialState,
+            );
+            updated.needs_dubbing_regen = this.checkDubbingRegen(
+              updated,
+              initialState,
+            );
             return updated;
           }
           return u;
-        })
+        }),
       };
     });
   }
@@ -982,13 +1100,19 @@ export class Editor implements OnInit, OnDestroy {
         ...prev,
         utterances: prev.utterances.map(u => {
           if (u.id === utteranceId) {
-            const updated = { ...u, translated_text: newText };
-            updated.needs_translation_regen = this.checkTranslationRegen(updated, initialState);
-            updated.needs_dubbing_regen = this.checkDubbingRegen(updated, initialState);
+            const updated = {...u, translated_text: newText};
+            updated.needs_translation_regen = this.checkTranslationRegen(
+              updated,
+              initialState,
+            );
+            updated.needs_dubbing_regen = this.checkDubbingRegen(
+              updated,
+              initialState,
+            );
             return updated;
           }
           return u;
-        })
+        }),
       };
     });
   }
@@ -1011,12 +1135,15 @@ export class Editor implements OnInit, OnDestroy {
 
       const response = await fetch('/regenerate_translation', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           video: data,
           utterance: utteranceIndex,
-          instructions: utterance.translation_instructions || utterance.speaking_instructions || ''
-        })
+          instructions:
+            utterance.translation_instructions ||
+            utterance.speaking_instructions ||
+            '',
+        }),
       });
 
       if (!response.ok) {
@@ -1028,7 +1155,10 @@ export class Editor implements OnInit, OnDestroy {
 
       // Clear success state after 3 seconds
       setTimeout(() => {
-        if (this.successUtteranceId() === utteranceId && this.successAction() === 'translation') {
+        if (
+          this.successUtteranceId() === utteranceId &&
+          this.successAction() === 'translation'
+        ) {
           this.successUtteranceId.set(null);
           this.successAction.set(null);
         }
@@ -1041,13 +1171,15 @@ export class Editor implements OnInit, OnDestroy {
         return {
           ...prev,
           utterances: prev.utterances.map((u, i) =>
-            i === utteranceIndex ? {
-              ...u,
-              translated_text: result.translated_text,
-              needs_translation_regen: false,
-              needs_dubbing_regen: true
-            } : u
-          )
+            i === utteranceIndex
+              ? {
+                  ...u,
+                  translated_text: result.translated_text,
+                  needs_translation_regen: false,
+                  needs_dubbing_regen: true,
+                }
+              : u,
+          ),
         };
       });
 
@@ -1058,7 +1190,6 @@ export class Editor implements OnInit, OnDestroy {
           this.initialUtteranceState.set(JSON.parse(JSON.stringify(u)));
         }
       }
-
     } catch (e) {
       console.error(e);
       alert('Failed to regenerate translation');
@@ -1087,13 +1218,15 @@ export class Editor implements OnInit, OnDestroy {
 
       const response = await fetch('/regenerate_dubbing', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           video: data,
           utterance: utteranceIndex,
-          instructions: utterance.speaking_instructions || utterance.translation_instructions || '',
-
-        })
+          instructions:
+            utterance.speaking_instructions ||
+            utterance.translation_instructions ||
+            '',
+        }),
       });
 
       if (!response.ok) {
@@ -1105,7 +1238,10 @@ export class Editor implements OnInit, OnDestroy {
 
       // Clear success state after 3 seconds
       setTimeout(() => {
-        if (this.successUtteranceId() === utteranceId && this.successAction() === 'dubbing') {
+        if (
+          this.successUtteranceId() === utteranceId &&
+          this.successAction() === 'dubbing'
+        ) {
           this.successUtteranceId.set(null);
           this.successAction.set(null);
         }
@@ -1118,14 +1254,17 @@ export class Editor implements OnInit, OnDestroy {
         return {
           ...prev,
           utterances: prev.utterances.map((u, i) =>
-            i === utteranceIndex ? {
-              ...u,
-              audio_url: result.audio_url,
-              duration: result.duration,
-              translated_end_time: u.translated_start_time + result.duration,
-              needs_dubbing_regen: false
-            } : u
-          )
+            i === utteranceIndex
+              ? {
+                  ...u,
+                  audio_url: result.audio_url,
+                  duration: result.duration,
+                  translated_end_time:
+                    u.translated_start_time + result.duration,
+                  needs_dubbing_regen: false,
+                }
+              : u,
+          ),
         };
       });
 
@@ -1136,7 +1275,6 @@ export class Editor implements OnInit, OnDestroy {
           this.initialUtteranceState.set(JSON.parse(JSON.stringify(u)));
         }
       }
-
     } catch (e) {
       console.error(e);
       alert('Failed to regenerate dubbing');
@@ -1156,10 +1294,8 @@ export class Editor implements OnInit, OnDestroy {
       return {
         ...prev,
         utterances: prev.utterances.map(u =>
-          u.id === utteranceId
-            ? JSON.parse(JSON.stringify(initialState))
-            : u
-        )
+          u.id === utteranceId ? JSON.parse(JSON.stringify(initialState)) : u,
+        ),
       };
     });
   }
@@ -1168,33 +1304,40 @@ export class Editor implements OnInit, OnDestroy {
     this.videoData.update(prev => {
       if (!prev) return prev;
 
-      const utteranceIndex = prev.utterances.findIndex(u => u.id === utteranceId);
+      const utteranceIndex = prev.utterances.findIndex(
+        u => u.id === utteranceId,
+      );
       if (utteranceIndex === -1) return prev;
 
       const utterance = prev.utterances[utteranceIndex];
       const newMutedState = !utterance.muted;
 
       // Update the utterance
-      const updatedUtterance = { ...utterance, muted: newMutedState };
+      const updatedUtterance = {...utterance, muted: newMutedState};
 
       if (newMutedState) {
         // Cache initial times before muting if not cached
         if (updatedUtterance.initial_translated_start_time === undefined) {
-          updatedUtterance.initial_translated_start_time = updatedUtterance.translated_start_time;
-          updatedUtterance.initial_translated_end_time = updatedUtterance.translated_end_time;
+          updatedUtterance.initial_translated_start_time =
+            updatedUtterance.translated_start_time;
+          updatedUtterance.initial_translated_end_time =
+            updatedUtterance.translated_end_time;
         }
 
         // Reset translated times to match original
-        updatedUtterance.translated_start_time = updatedUtterance.original_start_time;
-        updatedUtterance.translated_end_time = updatedUtterance.original_end_time;
-
+        updatedUtterance.translated_start_time =
+          updatedUtterance.original_start_time;
+        updatedUtterance.translated_end_time =
+          updatedUtterance.original_end_time;
       } else {
         // Restore initial times on unmute
         if (updatedUtterance.initial_translated_start_time !== undefined) {
-          updatedUtterance.translated_start_time = updatedUtterance.initial_translated_start_time;
+          updatedUtterance.translated_start_time =
+            updatedUtterance.initial_translated_start_time;
         }
         if (updatedUtterance.initial_translated_end_time !== undefined) {
-          updatedUtterance.translated_end_time = updatedUtterance.initial_translated_end_time;
+          updatedUtterance.translated_end_time =
+            updatedUtterance.initial_translated_end_time;
         }
       }
 
@@ -1203,12 +1346,14 @@ export class Editor implements OnInit, OnDestroy {
 
       return {
         ...prev,
-        utterances: newUtterances
+        utterances: newUtterances,
       };
     });
 
     // Close any open side panels if the utterance was just muted and was active
-    const updated = this.videoData()?.utterances.find(u => u.id === utteranceId);
+    const updated = this.videoData()?.utterances.find(
+      u => u.id === utteranceId,
+    );
     if (updated?.muted && this.activeUtteranceId() === utteranceId) {
       this.activePanelMode.set(null);
     }
@@ -1218,7 +1363,9 @@ export class Editor implements OnInit, OnDestroy {
     this.videoData.update(prev => {
       if (!prev) return prev;
 
-      const utteranceIndex = prev.utterances.findIndex(u => u.id === utteranceId);
+      const utteranceIndex = prev.utterances.findIndex(
+        u => u.id === utteranceId,
+      );
       if (utteranceIndex === -1) return prev;
 
       const utterance = prev.utterances[utteranceIndex];
@@ -1228,11 +1375,11 @@ export class Editor implements OnInit, OnDestroy {
 
       if (isNew && isEmpty) {
         const newUtterances = prev.utterances.filter(u => u.id !== utteranceId);
-        return { ...prev, utterances: newUtterances };
+        return {...prev, utterances: newUtterances};
       }
 
       const newRemovedState = !utterance.removed;
-      const updatedUtterance = { ...utterance, removed: newRemovedState };
+      const updatedUtterance = {...utterance, removed: newRemovedState};
 
       // Ensure mute is cancelled if remove is activated, matching legacy UI logic
       if (updatedUtterance.removed && updatedUtterance.muted) {
@@ -1244,21 +1391,24 @@ export class Editor implements OnInit, OnDestroy {
 
       return {
         ...prev,
-        utterances: newUtterances
+        utterances: newUtterances,
       };
     });
 
     // Close side panels and optionally clear active selection if utterance was removed
-    const updated = this.videoData()?.utterances.find(u => u.id === utteranceId);
-    if ((!updated || updated.removed) && this.activeUtteranceId() === utteranceId) {
+    const updated = this.videoData()?.utterances.find(
+      u => u.id === utteranceId,
+    );
+    if (
+      (!updated || updated.removed) &&
+      this.activeUtteranceId() === utteranceId
+    ) {
       this.activePanelMode.set(null);
       if (!updated) {
         this.activeUtteranceId.set(null);
       }
     }
   }
-
-
 
   get activeUtterance(): VideoUtterance | null {
     const data = this.videoData();
@@ -1274,7 +1424,8 @@ export class Editor implements OnInit, OnDestroy {
     let maxDuration = data.duration || 1;
     for (const u of data.utterances) {
       if (u.original_end_time > maxDuration) maxDuration = u.original_end_time;
-      if (u.translated_end_time > maxDuration) maxDuration = u.translated_end_time;
+      if (u.translated_end_time > maxDuration)
+        maxDuration = u.translated_end_time;
     }
 
     // Add visual padding to the right of the timeline (at least 1 second or 5%)
@@ -1310,7 +1461,7 @@ export class Editor implements OnInit, OnDestroy {
         if (msStr.length === 1) msStr += '0';
         ms = parseInt(msStr.substring(0, 2), 10) || 0;
       }
-      const val = (min * 60) + sec + (ms / 100);
+      const val = min * 60 + sec + ms / 100;
       return isNegative ? -val : val;
     } catch {
       return 0;
@@ -1324,14 +1475,16 @@ export class Editor implements OnInit, OnDestroy {
     let newEnd = this.parseTime(endStr);
 
     if (newEnd < newStart) {
-      alert("End time cannot be earlier than start time.");
+      alert('End time cannot be earlier than start time.');
       return;
     }
 
-    this.videoData.update((data) => {
+    this.videoData.update(data => {
       if (!data) return data;
       const newData = JSON.parse(JSON.stringify(data));
-      const utterance = newData.utterances.find((u: VideoUtterance) => u.id === id);
+      const utterance = newData.utterances.find(
+        (u: VideoUtterance) => u.id === id,
+      );
       if (utterance) {
         utterance.translated_start_time = newStart;
         utterance.translated_end_time = newEnd;
@@ -1351,11 +1504,14 @@ export class Editor implements OnInit, OnDestroy {
       const data = this.videoData();
       if (data && data.video_id) {
         this.originalAudio.src = this.getOriginalAudioSrc(data);
-        this.originalAudio.play().then(() => {
-          this.isPlayingOriginal.set(true);
-        }).catch(err => {
-          console.error("Error playing original audio", err);
-        });
+        this.originalAudio
+          .play()
+          .then(() => {
+            this.isPlayingOriginal.set(true);
+          })
+          .catch(err => {
+            console.error('Error playing original audio', err);
+          });
         this.originalAudio.onended = () => {
           this.isPlayingOriginal.set(false);
           this.currentTime.set(0);
@@ -1378,26 +1534,29 @@ export class Editor implements OnInit, OnDestroy {
       try {
         const res = await fetch('/generate_audio', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data),
         });
         if (res.ok) {
           const result = await res.json();
           this.translatedAudio.src = result.audio_url;
-          this.translatedAudio.play().then(() => {
-            this.isPlayingTranslated.set(true);
-          }).catch(err => {
-            console.error("Error playing translated audio", err);
-          });
+          this.translatedAudio
+            .play()
+            .then(() => {
+              this.isPlayingTranslated.set(true);
+            })
+            .catch(err => {
+              console.error('Error playing translated audio', err);
+            });
           this.translatedAudio.onended = () => {
             this.isPlayingTranslated.set(false);
             this.currentTime.set(0);
           };
         } else {
-          console.error("Failed to generate audio:", res.status);
+          console.error('Failed to generate audio:', res.status);
         }
       } catch (err) {
-        console.error("Failed to generate audio:", err);
+        console.error('Failed to generate audio:', err);
       } finally {
         this.isGeneratingAudio.set(false);
       }
@@ -1423,13 +1582,16 @@ export class Editor implements OnInit, OnDestroy {
     console.log('playOriginalUtterance with ID:', utterance.id);
     event.stopPropagation();
 
-    if (this.activeAudioPlayback?.id === utterance.id && this.activeAudioPlayback?.type === 'original') {
+    if (
+      this.activeAudioPlayback?.id === utterance.id &&
+      this.activeAudioPlayback?.type === 'original'
+    ) {
       this.stopCurrentAudio();
       return;
     }
 
     this.stopCurrentAudio();
-    this.activeAudioPlayback = { id: utterance.id, type: 'original' };
+    this.activeAudioPlayback = {id: utterance.id, type: 'original'};
 
     const data = this.videoData();
     if (data && data.video_id) {
@@ -1437,18 +1599,25 @@ export class Editor implements OnInit, OnDestroy {
 
       const playSnippet = () => {
         this.originalAudio.currentTime = utterance.original_start_time;
-        this.originalAudio.play().then(() => {
-          this.isPlayingOriginal.set(true);
-        }).catch(err => {
-          console.error("Error playing original utterance snippet", err);
-        });
+        this.originalAudio
+          .play()
+          .then(() => {
+            this.isPlayingOriginal.set(true);
+          })
+          .catch(err => {
+            console.error('Error playing original utterance snippet', err);
+          });
 
-        const duration = (utterance.original_end_time - utterance.original_start_time) * 1000;
+        const duration =
+          (utterance.original_end_time - utterance.original_start_time) * 1000;
         this.utteranceTimeoutId = setTimeout(() => {
           this.originalAudio.pause();
           this.isPlayingOriginal.set(false);
           this.currentTime.set(0);
-          if (this.activeAudioPlayback?.id === utterance.id && this.activeAudioPlayback?.type === 'original') {
+          if (
+            this.activeAudioPlayback?.id === utterance.id &&
+            this.activeAudioPlayback?.type === 'original'
+          ) {
             this.activeAudioPlayback = null;
           }
         }, duration);
@@ -1456,12 +1625,16 @@ export class Editor implements OnInit, OnDestroy {
 
       if (!this.originalAudio.src.includes(expectedSrc)) {
         this.originalAudio.src = expectedSrc;
-        this.originalAudio.addEventListener('canplay', playSnippet, { once: true });
+        this.originalAudio.addEventListener('canplay', playSnippet, {
+          once: true,
+        });
       } else {
         if (this.originalAudio.readyState >= 3) {
           playSnippet();
         } else {
-          this.originalAudio.addEventListener('canplay', playSnippet, { once: true });
+          this.originalAudio.addEventListener('canplay', playSnippet, {
+            once: true,
+          });
         }
       }
     }
@@ -1470,13 +1643,16 @@ export class Editor implements OnInit, OnDestroy {
   playTranslatedUtterance(utterance: VideoUtterance, event: Event) {
     event.stopPropagation();
 
-    if (this.activeAudioPlayback?.id === utterance.id && this.activeAudioPlayback?.type === 'translated') {
+    if (
+      this.activeAudioPlayback?.id === utterance.id &&
+      this.activeAudioPlayback?.type === 'translated'
+    ) {
       this.stopCurrentAudio();
       return;
     }
 
     this.stopCurrentAudio();
-    this.activeAudioPlayback = { id: utterance.id, type: 'translated' };
+    this.activeAudioPlayback = {id: utterance.id, type: 'translated'};
 
     if (utterance.audio_url) {
       let url = utterance.audio_url;
@@ -1485,21 +1661,27 @@ export class Editor implements OnInit, OnDestroy {
       }
       this.snippetAudio.src = url;
       this.snippetStartTime = utterance.translated_start_time;
-      this.snippetAudio.play().then(() => {
-        this.isPlayingSnippet.set(true);
-      }).catch(err => {
-        console.error("Error playing translated utterance snippet", err);
-      });
+      this.snippetAudio
+        .play()
+        .then(() => {
+          this.isPlayingSnippet.set(true);
+        })
+        .catch(err => {
+          console.error('Error playing translated utterance snippet', err);
+        });
 
       this.snippetAudio.onended = () => {
         this.isPlayingSnippet.set(false);
         this.currentTime.set(0);
-        if (this.activeAudioPlayback?.id === utterance.id && this.activeAudioPlayback?.type === 'translated') {
+        if (
+          this.activeAudioPlayback?.id === utterance.id &&
+          this.activeAudioPlayback?.type === 'translated'
+        ) {
           this.activeAudioPlayback = null;
         }
       };
     } else {
-      console.warn("No audio_url available for this translated utterance.");
+      console.warn('No audio_url available for this translated utterance.');
     }
   }
 
@@ -1531,23 +1713,25 @@ export class Editor implements OnInit, OnDestroy {
     try {
       const payload = {
         video: this.videoData(),
-        original_video_url: this.videoUrl()
+        original_video_url: this.videoUrl(),
       };
       const response = await fetch('/generate_video', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
       if (!response.ok) throw new Error('Failed to generate video');
       const result = await response.json();
 
       // Navigate to results page and pass the generated data via Router state
-      this.router.navigate(['/result'], { state: { finalVideoData: result, originalVideoData: this.videoData() } });
+      this.router.navigate(['/result'], {
+        state: {finalVideoData: result, originalVideoData: this.videoData()},
+      });
     } catch (err) {
-      console.error("Error generating video:", err);
-      alert("Failed to generate video");
+      console.error('Error generating video:', err);
+      alert('Failed to generate video');
     } finally {
       this.isGeneratingVideo.set(false);
     }
@@ -1566,13 +1750,16 @@ export class Editor implements OnInit, OnDestroy {
 
       if (hasUnregenerated && exceedsLength) {
         title = 'Multiple Issues Found';
-        message = 'You have unregenerated changes that will NOT be included in the final video. Also, one or more utterances exceed the original video length. If you proceed, the final video will be extended to match the audio, and the last frame will likely be frozen during the extended part.';
+        message =
+          'You have unregenerated changes that will NOT be included in the final video. Also, one or more utterances exceed the original video length. If you proceed, the final video will be extended to match the audio, and the last frame will likely be frozen during the extended part.';
       } else if (hasUnregenerated) {
         title = 'Unregenerated Changes';
-        message = 'You have unchanged text or voices that have not been regenerated yet. These changes will NOT be included in the final video. Do you want to proceed anyway?';
+        message =
+          'You have unchanged text or voices that have not been regenerated yet. These changes will NOT be included in the final video. Do you want to proceed anyway?';
       } else if (exceedsLength) {
         title = 'Utterances Exceed Length';
-        message = 'One or more utterances exceed the original video length. If you proceed, the final video will be extended to match the audio, and the last frame will likely be frozen during the extended part. Do you want to proceed?';
+        message =
+          'One or more utterances exceed the original video length. If you proceed, the final video will be extended to match the audio, and the last frame will likely be frozen during the extended part. Do you want to proceed?';
       }
 
       this.validationModalTitle.set(title);
@@ -1587,7 +1774,9 @@ export class Editor implements OnInit, OnDestroy {
   hasUnregeneratedChanges(): boolean {
     const data = this.videoData();
     if (!data) return false;
-    return data.utterances.some(u => u.needs_translation_regen || u.needs_dubbing_regen);
+    return data.utterances.some(
+      u => u.needs_translation_regen || u.needs_dubbing_regen,
+    );
   }
 
   checkExceedsLength(): boolean {
@@ -1595,7 +1784,9 @@ export class Editor implements OnInit, OnDestroy {
     if (!data || !data.duration || data.utterances.length === 0) {
       return false;
     }
-    const maxEndTime = Math.max(...data.utterances.map(u => u.translated_end_time));
+    const maxEndTime = Math.max(
+      ...data.utterances.map(u => u.translated_end_time),
+    );
     const exceeds = maxEndTime > data.duration;
     return exceeds;
   }
@@ -1618,10 +1809,12 @@ export class Editor implements OnInit, OnDestroy {
   getOverlappingUtterances(utterance: VideoUtterance): VideoUtterance[] {
     const data = this.videoData();
     if (!data) return [];
-    return data.utterances.filter(u =>
-      !u.removed &&
-      (u.id === utterance.id ||
-        (utterance.translated_start_time <= u.translated_end_time && utterance.translated_end_time >= u.translated_start_time))
+    return data.utterances.filter(
+      u =>
+        !u.removed &&
+        (u.id === utterance.id ||
+          (utterance.translated_start_time <= u.translated_end_time &&
+            utterance.translated_end_time >= u.translated_start_time)),
     );
   }
 
@@ -1629,7 +1822,7 @@ export class Editor implements OnInit, OnDestroy {
     const overlaps = this.getOverlappingUtterances(utterance);
     if (overlaps.length > 1) {
       this.overlappingUtterances.set(overlaps);
-      this.popupPosition.set({ x: event.clientX, y: event.clientY });
+      this.popupPosition.set({x: event.clientX, y: event.clientY});
       this.showOverlapPopup.set(true);
       clearTimeout(this.popupCloseTimeout);
     }
@@ -1667,12 +1860,20 @@ export class Editor implements OnInit, OnDestroy {
     if (utterance.muted || utterance.removed) return null;
     const data = this.videoData();
     if (!data || data.utterances.length <= 1) return null;
-    return data.utterances.find(u =>
-      u.id !== utterance.id && !u.muted && !u.removed &&
-      ((utterance.translated_start_time >= u.translated_start_time && utterance.translated_start_time < u.translated_end_time) ||
-        (utterance.translated_end_time > u.translated_start_time && utterance.translated_end_time <= u.translated_end_time) ||
-        (utterance.translated_start_time <= u.translated_start_time && utterance.translated_end_time >= u.translated_end_time))
-    ) || null;
+    return (
+      data.utterances.find(
+        u =>
+          u.id !== utterance.id &&
+          !u.muted &&
+          !u.removed &&
+          ((utterance.translated_start_time >= u.translated_start_time &&
+            utterance.translated_start_time < u.translated_end_time) ||
+            (utterance.translated_end_time > u.translated_start_time &&
+              utterance.translated_end_time <= u.translated_end_time) ||
+            (utterance.translated_start_time <= u.translated_start_time &&
+              utterance.translated_end_time >= u.translated_end_time)),
+      ) || null
+    );
   }
 
   onDragStart(event: MouseEvent, utterance: VideoUtterance) {
@@ -1686,25 +1887,32 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   onDragMove(event: MouseEvent) {
-    if (!this.isDragging() || !this.draggedUtteranceId() || !this.timelineContainer) return;
+    if (
+      !this.isDragging() ||
+      !this.draggedUtteranceId() ||
+      !this.timelineContainer
+    )
+      return;
 
     const containerWidth = this.timelineContainer.nativeElement.clientWidth;
     const duration = this.timelineDuration;
     const timePerPixel = duration / containerWidth;
 
     const deltaX = event.clientX - this.dragStartX;
-    let newStartTime = this.dragInitialStartTime + (deltaX * timePerPixel);
+    let newStartTime = this.dragInitialStartTime + deltaX * timePerPixel;
 
     // Bounds check
     if (newStartTime < 0) newStartTime = 0;
 
     this.videoData.update(prev => {
       if (!prev) return prev;
-      const index = prev.utterances.findIndex(u => u.id === this.draggedUtteranceId());
+      const index = prev.utterances.findIndex(
+        u => u.id === this.draggedUtteranceId(),
+      );
       if (index === -1) return prev;
 
       const newUtterances = [...prev.utterances];
-      const u = { ...newUtterances[index] };
+      const u = {...newUtterances[index]};
       const uDuration = u.translated_end_time - u.translated_start_time;
 
       u.translated_start_time = Number(newStartTime.toFixed(2));
@@ -1712,7 +1920,7 @@ export class Editor implements OnInit, OnDestroy {
 
       newUtterances[index] = u;
 
-      return { ...prev, utterances: newUtterances };
+      return {...prev, utterances: newUtterances};
     });
   }
 
@@ -1736,9 +1944,14 @@ export class Editor implements OnInit, OnDestroy {
 
         let newStartTime = currentUtterance.translated_end_time;
         if (isAbove) {
-          newStartTime = Math.max(0, currentUtterance.translated_start_time - 1.0);
+          newStartTime = Math.max(
+            0,
+            currentUtterance.translated_start_time - 1.0,
+          );
         }
-        let newEndTime = isAbove ? currentUtterance.translated_start_time : newStartTime + 1.0;
+        let newEndTime = isAbove
+          ? currentUtterance.translated_start_time
+          : newStartTime + 1.0;
 
         if (isAbove && newEndTime <= newStartTime) {
           newStartTime = 0;
@@ -1762,7 +1975,7 @@ export class Editor implements OnInit, OnDestroy {
           needs_translation_regen: true,
           muted: false,
           removed: false,
-          isNew: true
+          isNew: true,
         };
 
         const newUtterances = [...prev.utterances];
@@ -1772,7 +1985,7 @@ export class Editor implements OnInit, OnDestroy {
           newUtterances.splice(index + 1, 0, newUtterance);
         }
 
-        return { ...prev, utterances: newUtterances };
+        return {...prev, utterances: newUtterances};
       });
 
       const data = this.videoData();
@@ -1795,20 +2008,22 @@ export class Editor implements OnInit, OnDestroy {
         const mergedUtterance: VideoUtterance = {
           ...topUtterance,
           id: crypto.randomUUID(),
-          original_text: `${topUtterance.original_text} ${bottomUtterance.original_text}`.trim(),
-          translated_text: `${topUtterance.translated_text} ${bottomUtterance.translated_text}`.trim(),
+          original_text:
+            `${topUtterance.original_text} ${bottomUtterance.original_text}`.trim(),
+          translated_text:
+            `${topUtterance.translated_text} ${bottomUtterance.translated_text}`.trim(),
           original_end_time: bottomUtterance.original_end_time,
           translated_end_time: bottomUtterance.translated_end_time,
           needs_translation_regen: true,
           needs_dubbing_regen: true,
-          audio_url: ''
+          audio_url: '',
         };
 
         const newUtterances = [...prev.utterances];
         // Remove both top and bottom, and insert the newly merged one
         newUtterances.splice(index, 2, mergedUtterance);
 
-        return { ...prev, utterances: newUtterances };
+        return {...prev, utterances: newUtterances};
       });
 
       // Focus the new merged utterance
@@ -1841,7 +2056,10 @@ export class Editor implements OnInit, OnDestroy {
 
     // Clicks on the transparent gap between utterances (divider) should be treated as background clicks (fall through to clear).
     // But clicks on actual action buttons inside the divider or inside the utterance itself should keep it open.
-    if (targetElement.closest('.utterance-insert-divider') && !targetElement.closest('button')) {
+    if (
+      targetElement.closest('.utterance-insert-divider') &&
+      !targetElement.closest('button')
+    ) {
     } else if (targetElement.closest('[id^="utterance-"]')) {
       return;
     }
@@ -1856,7 +2074,12 @@ export class Editor implements OnInit, OnDestroy {
     if (targetElement.closest('header')) return;
 
     // Ignore clicks on custom overlays, speaker modal, or the discard modal itself
-    if (targetElement.closest('app-speaker-modal') || targetElement.closest('.cdk-overlay-container') || targetElement.closest('#discard-modal')) return;
+    if (
+      targetElement.closest('app-speaker-modal') ||
+      targetElement.closest('.cdk-overlay-container') ||
+      targetElement.closest('#discard-modal')
+    )
+      return;
 
     // Ignore clicks if the discard modal is already open
     if (this.showDiscardModal()) return;
@@ -1869,17 +2092,9 @@ export class Editor implements OnInit, OnDestroy {
     });
   }
 
-
-
-
-
-
-
-
-
-private getOriginalAudioSrc(data: VideoJob): string {
+  private getOriginalAudioSrc(data: VideoJob): string {
     const u = data.utterances.find(utt => utt.audio_url);
-  let expectedSrc = `/temp/${data.video_id}/original_audio.wav`;
+    let expectedSrc = `/temp/${data.video_id}/original_audio.wav`;
     if (u && u.audio_url) {
       let url = u.audio_url;
       if (!url.startsWith('http') && !url.startsWith('/')) {

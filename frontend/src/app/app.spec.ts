@@ -1,11 +1,11 @@
-import { TestBed } from '@angular/core/testing';
-import { RouterTestingModule } from '@angular/router/testing';
-import { App } from './app';
-import { Header } from './header/header';
+import {TestBed} from '@angular/core/testing';
+import {RouterTestingModule} from '@angular/router/testing';
+import {App} from './app';
+import {Header} from './header/header';
 
 describe('App', () => {
   beforeEach(async () => {
-    let store: { [key: string]: string } = {};
+    let store: {[key: string]: string} = {};
 
     const mockLocalStorage = {
       getItem: (key: string): string | null => {
@@ -19,12 +19,12 @@ describe('App', () => {
       },
       clear: () => {
         store = {};
-      }
+      },
     };
 
     Object.defineProperty(window, 'localStorage', {
       value: mockLocalStorage,
-      writable: true
+      writable: true,
     });
 
     Object.defineProperty(window, 'matchMedia', {

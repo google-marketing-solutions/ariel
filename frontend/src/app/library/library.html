@@ -1,136 +1,141 @@
 <div class="library-container">
-
   <!-- Header Section -->
   <div class="library-header">
     <h2>Video Library</h2>
-    <a routerLink="/" class="create-job-btn">
-      Create New Project
-    </a>
+    <a routerLink="/" class="create-job-btn"> Create New Project </a>
   </div>
 
   <!-- Videos List -->
   <div class="video-list">
-
     @if (isLoading()) {
-    <div class="loading-overlay">
-      <span class="material-symbols-outlined spinning">progress_activity</span>
-      <p>Loading videos...</p>
-    </div>
+      <div class="loading-overlay">
+        <span class="material-symbols-outlined spinning">progress_activity</span>
+        <p>Loading videos...</p>
+      </div>
     } @else if (error()) {
-    <div class="error-alert">
-      <span class="material-symbols-outlined">error</span>
-      <h3>Failed to Load Videos</h3>
-      <p>{{ error() }}</p>
-      <button (click)="fetchVideos()" class="retry-btn">Try Again</button>
-    </div>
+      <div class="error-alert">
+        <span class="material-symbols-outlined">error</span>
+        <h3>Failed to Load Videos</h3>
+        <p>{{ error() }}</p>
+        <button (click)="fetchVideos()" class="retry-btn">Try Again</button>
+      </div>
     } @else if (videos().length === 0) {
-    <div class="empty-state">
-      <span class="material-symbols-outlined">video_library</span>
-      <h3>No Videos Found</h3>
-      <p>You haven't dubbed any videos yet. Go back to the home page to start your first dubbing job.</p>
-      <a routerLink="/" class="create-link">Create New Project</a>
-    </div>
+      <div class="empty-state">
+        <span class="material-symbols-outlined">video_library</span>
+        <h3>No Videos Found</h3>
+        <p>
+          You haven't dubbed any videos yet. Go back to the home page to start your first dubbing
+          job.
+        </p>
+        <a routerLink="/" class="create-link">Create New Project</a>
+      </div>
     } @else {
-    @for (video of formattedVideos(); track video.video_id) {
-    <!-- Video Card -->
-    <div class="video-card">
+      @for (video of formattedVideos(); track video.video_id) {
+        <!-- Video Card -->
+        <div class="video-card">
+          <!-- Video Thumbnail -->
+          <div class="video-thumbnail">
+            <video controls preload="metadata" [src]="video.url"></video>
+          </div>
 
-      <!-- Video Thumbnail -->
-      <div class="video-thumbnail">
-        <video controls preload="metadata" [src]="video.url"></video>
-      </div>
+          <!-- Video Info -->
+          <div class="video-info">
+            <h3 [title]="video.name">
+              {{ video.name }}
+            </h3>
+            <p>
+              <span class="material-symbols-outlined">schedule</span>
+              {{ formatDate(video.created_at) }}
+            </p>
+            <p>
+              <span class="material-symbols-outlined">record_voice_over</span>
+              {{ getSpeakersString(video.speakers) }}
+            </p>
 
-      <!-- Video Info -->
-      <div class="video-info">
-        <h3 [title]="video.name">
-          {{ video.name }}
-        </h3>
-        <p>
-          <span class="material-symbols-outlined">schedule</span>
-          {{ formatDate(video.created_at) }}
-        </p>
-        <p>
-          <span class="material-symbols-outlined">record_voice_over</span>
-          {{ getSpeakersString(video.speakers) }}
-        </p>
-        
-        <div class="badges-row">
-          <span class="card-badge">
-            <span class="material-symbols-outlined translate-icon">translate</span>
-            {{ video.original_language || '?' }} &rarr; {{ video.translate_language || '?' }}
-          </span>
-          <span class="card-badge">
-            <span class="material-symbols-outlined timer-icon">timer</span>
-            {{ formatDuration(video.duration) }}
-          </span>
+            <div class="badges-row">
+              <span class="card-badge">
+                <span class="material-symbols-outlined translate-icon">translate</span>
+                {{ video.original_language || '?' }} &rarr; {{ video.translate_language || '?' }}
+              </span>
+              <span class="card-badge">
+                <span class="material-symbols-outlined timer-icon">timer</span>
+                {{ formatDuration(video.duration) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="card-actions">
+            <a [href]="video.download_url" [download]="video.name" class="download-btn">
+              <span class="material-symbols-outlined">download</span> Download
+            </a>
+            @if (video.has_metadata) {
+              <a
+                [routerLink]="['/editor']"
+                [queryParams]="{video_id: video.video_id}"
+                class="edit-btn"
+              >
+                <span class="material-symbols-outlined">edit</span> Edit
+              </a>
+            } @else {
+              <button
+                disabled
+                title="Legacy videos without metadata cannot be edited"
+                class="edit-btn"
+              >
+                <span class="material-symbols-outlined">edit</span> Edit
+              </button>
+            }
+            <button (click)="promptDelete(video.video_id)" class="delete-btn">
+              <span class="material-symbols-outlined">delete</span> Delete
+            </button>
+          </div>
         </div>
-      </div>
+      }
 
-      <!-- Actions -->
-      <div class="card-actions">
-        <a [href]="video.download_url" [download]="video.name" class="download-btn">
-          <span class="material-symbols-outlined">download</span> Download
-        </a>
-        @if (video.has_metadata) {
-        <a [routerLink]="['/editor']" [queryParams]="{ video_id: video.video_id }" class="edit-btn">
-          <span class="material-symbols-outlined">edit</span> Edit
-        </a>
-        } @else {
-        <button disabled title="Legacy videos without metadata cannot be edited" class="edit-btn">
-          <span class="material-symbols-outlined">edit</span> Edit
-        </button>
-        }
-        <button (click)="promptDelete(video.video_id)" class="delete-btn">
-          <span class="material-symbols-outlined">delete</span> Delete
-        </button>
-      </div>
-    </div>
+      <!-- Pagination / Load More -->
+      @if (nextPageToken()) {
+        <div class="load-more-container">
+          <button class="load-more-btn" (click)="loadMore()" [disabled]="isLoadingMore()">
+            @if (isLoadingMore()) {
+              <span class="material-symbols-outlined spinning">progress_activity</span> Loading...
+            } @else {
+              Load more
+            }
+          </button>
+        </div>
+      }
     }
-
-    <!-- Pagination / Load More -->
-    @if (nextPageToken()) {
-      <div class="load-more-container">
-        <button class="load-more-btn" (click)="loadMore()" [disabled]="isLoadingMore()">
-          @if (isLoadingMore()) {
-            <span class="material-symbols-outlined spinning">progress_activity</span> Loading...
-          } @else {
-            Load more
-          }
-        </button>
-      </div>
-    }
-    }
-
   </div>
 
   @if (isDeleteModalOpen()) {
-  <div class="modal-overlay" (click)="cancelDelete()">
-    <div class="modal-dialog" (click)="$event.stopPropagation()">
-
-      <div class="modal-header">
-        <div class="icon-wrapper">
-          <span class="material-symbols-outlined">delete_forever</span>
+    <div class="modal-overlay" (click)="cancelDelete()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="icon-wrapper">
+            <span class="material-symbols-outlined">delete_forever</span>
+          </div>
+          <div class="title-group">
+            <h2>Delete Video?</h2>
+            <p>
+              This action cannot be undone. This will permanently delete the video and its data.
+            </p>
+          </div>
         </div>
-        <div class="title-group">
-          <h2>Delete Video?</h2>
-          <p>This action cannot be undone. This will permanently delete the video and its data.</p>
-        </div>
-      </div>
 
-      <div class="modal-footer">
-        <button [disabled]="isDeleting()" (click)="cancelDelete()" class="cancel-btn">
-          Cancel
-        </button>
-        <button [disabled]="isDeleting()" (click)="deleteVideo()" class="confirm-btn">
-          @if (isDeleting()) {
-          <span class="material-symbols-outlined spinning">progress_activity</span> Deleting...
-          } @else {
-          Delete Video
-          }
-        </button>
+        <div class="modal-footer">
+          <button [disabled]="isDeleting()" (click)="cancelDelete()" class="cancel-btn">
+            Cancel
+          </button>
+          <button [disabled]="isDeleting()" (click)="deleteVideo()" class="confirm-btn">
+            @if (isDeleting()) {
+              <span class="material-symbols-outlined spinning">progress_activity</span> Deleting...
+            } @else {
+              Delete Video
+            }
+          </button>
+        </div>
       </div>
     </div>
-  </div>
   }
-
 </div>
