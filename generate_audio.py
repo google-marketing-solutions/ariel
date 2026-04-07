@@ -61,7 +61,7 @@ def generate_audio(
    language: The language to be spoken in BCP-47 format (e.g. en-US)
    voice_name: The name of the Gemini voice to use.
    speaking_rate: The speaking rate to pass to Gemini TTS.
-   output_path: Ehere to save the generated audio file.
+   output_path: Path to save the generated audio file to.
    model_name: The Gemini TTS model to use.
 
   Returns:
