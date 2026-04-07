@@ -46,29 +46,27 @@
       <!-- Voice List -->
       <div class="voice-list">
         @for (voice of filteredVoices(); track voice.name) {
-          <div class="voice-item">
-            <div class="voice-info">
-              <span>{{ voice.name }}</span>
-            </div>
-
-            <div class="voice-actions">
-              <span class="gender-badge">
-                {{ voice.gender }}
-              </span>
-
-              @if (voice.url) {
-                <button (click)="togglePlay(voice, $event)" class="control-btn">
-                  <span class="material-symbols-outlined">{{
-                    currentlyPlayingVoiceName() === voice.name ? 'stop' : 'play_arrow'
-                  }}</span>
-                </button>
-              }
-
-              <button (click)="selectVoice(voice)" class="select-btn">Select</button>
-            </div>
+        <div class="voice-item">
+          <div class="voice-info">
+            <span>{{ voice.name }}</span>
           </div>
+
+          <div class="voice-actions">
+            <span class="gender-badge"> {{ voice.gender }} </span>
+
+            @if (voice.url) {
+            <button (click)="togglePlay(voice, $event)" class="control-btn">
+              <span class="material-symbols-outlined"
+                >{{ currentlyPlayingVoiceName() === voice.name ? 'stop' : 'play_arrow' }}</span
+              >
+            </button>
+            }
+
+            <button (click)="selectVoice(voice)" class="select-btn">Select</button>
+          </div>
+        </div>
         } @empty {
-          <div class="empty-list">No voices found matching your criteria.</div>
+        <div class="empty-list">No voices found matching your criteria.</div>
         }
       </div>
     </div>

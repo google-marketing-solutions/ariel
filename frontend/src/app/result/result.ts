@@ -1,8 +1,8 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   inject,
   signal,
-  ChangeDetectionStrategy,
 } from '@angular/core';
 import {Router} from '@angular/router';
 

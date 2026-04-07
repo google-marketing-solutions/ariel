@@ -1,12 +1,12 @@
+import {CommonModule} from '@angular/common';
 import {
+  ChangeDetectionStrategy,
   Component,
-  OnInit,
-  signal,
   computed,
   inject,
-  ChangeDetectionStrategy,
+  OnInit,
+  signal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {Router} from '@angular/router';
 
@@ -65,7 +65,7 @@ export class Home implements OnInit {
   filteredGaLanguages = computed(() => {
     const query = this.searchLanguage().toLowerCase().trim();
     if (!query) return this.gaLanguages();
-    return this.gaLanguages().filter(lang =>
+    return this.gaLanguages().filter((lang) =>
       lang.name.toLowerCase().includes(query),
     );
   });
@@ -73,7 +73,7 @@ export class Home implements OnInit {
   filteredPreviewLanguages = computed(() => {
     const query = this.searchLanguage().toLowerCase().trim();
     if (!query) return this.previewLanguages();
-    return this.previewLanguages().filter(lang =>
+    return this.previewLanguages().filter((lang) =>
       lang.name.toLowerCase().includes(query),
     );
   });
@@ -82,7 +82,7 @@ export class Home implements OnInit {
     const code = this.translationLanguage();
     if (!code) return 'Please select...';
     const match = [...this.gaLanguages(), ...this.previewLanguages()].find(
-      l => l.code === code,
+      (l) => l.code === code,
     );
     return match ? match.name : 'Please select...';
   });
@@ -103,9 +103,9 @@ export class Home implements OnInit {
       const response = await fetch('languages.json');
       const languages: Language[] = await response.json();
 
-      this.gaLanguages.set(languages.filter(lang => lang.readiness === 'GA'));
+      this.gaLanguages.set(languages.filter((lang) => lang.readiness === 'GA'));
       this.previewLanguages.set(
-        languages.filter(lang => lang.readiness === 'Preview'),
+        languages.filter((lang) => lang.readiness === 'Preview'),
       );
     } catch (error) {
       console.error('Failed to fetch languages:', error);
@@ -150,7 +150,7 @@ export class Home implements OnInit {
     this.selectedVideoFile.set(file);
 
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = (e) => {
       this.videoPreviewUrl.set(e.target?.result as string);
     };
     reader.readAsDataURL(file);
@@ -197,7 +197,9 @@ export class Home implements OnInit {
     const startTime = Date.now();
     this.processingInterval = setInterval(() => {
       const elapsed = Date.now() - startTime;
-      const nextMessage = [...messages].reverse().find(m => elapsed >= m.time);
+      const nextMessage = [...messages]
+        .reverse()
+        .find((m) => elapsed >= m.time);
       if (nextMessage) {
         this.processingMessage.set(nextMessage.text);
       }

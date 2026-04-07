@@ -1,29 +1,29 @@
-import {
-  Component,
-  OnInit,
-  OnDestroy,
-  signal,
-  computed,
-  ViewChild,
-  ElementRef,
-  inject,
-  effect,
-  ChangeDetectionStrategy,
-  HostListener,
-} from '@angular/core';
-import {ActivatedRoute, Router} from '@angular/router';
-import {Subscription} from 'rxjs';
-import {VideoGenerationService} from '../services/video-generation.service';
 import {CommonModule} from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  HostListener,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+  ViewChild,
+} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {
-  MatTooltipModule,
   MAT_TOOLTIP_DEFAULT_OPTIONS,
+  MatTooltipModule,
 } from '@angular/material/tooltip';
+import {ActivatedRoute, Router} from '@angular/router';
+import {Subscription} from 'rxjs';
 import {
   Speaker,
   SpeakerModal,
 } from '../_components/speaker-modal/speaker-modal';
+import {VideoGenerationService} from '../services/video-generation.service';
 
 interface VideoSpeaker {
   speaker_id: string;
@@ -216,7 +216,7 @@ export class Editor implements OnInit, OnDestroy {
     const data = this.videoData();
     if (!data || !data.duration) return 0;
     return data.utterances.filter(
-      u => u.translated_end_time > data.duration && !u.removed,
+      (u) => u.translated_end_time > data.duration && !u.removed,
     ).length;
   });
 
@@ -241,7 +241,7 @@ export class Editor implements OnInit, OnDestroy {
 
     if (!activeId || !data || !initialState) return false;
 
-    const currentU = data.utterances.find(u => u.id === activeId);
+    const currentU = data.utterances.find((u) => u.id === activeId);
     if (!currentU) return false;
 
     return (
@@ -321,14 +321,14 @@ export class Editor implements OnInit, OnDestroy {
   filteredOriginalGaLanguages = computed(() => {
     const query = this.searchOriginalLanguage().toLowerCase().trim();
     if (!query) return this.gaLanguages();
-    return this.gaLanguages().filter(lang =>
+    return this.gaLanguages().filter((lang) =>
       lang.name.toLowerCase().includes(query),
     );
   });
   filteredOriginalPreviewLanguages = computed(() => {
     const query = this.searchOriginalLanguage().toLowerCase().trim();
     if (!query) return this.previewLanguages();
-    return this.previewLanguages().filter(lang =>
+    return this.previewLanguages().filter((lang) =>
       lang.name.toLowerCase().includes(query),
     );
   });
@@ -337,27 +337,27 @@ export class Editor implements OnInit, OnDestroy {
   filteredTranslationGaLanguages = computed(() => {
     const query = this.searchTranslationLanguage().toLowerCase().trim();
     if (!query) return this.gaLanguages();
-    return this.gaLanguages().filter(lang =>
+    return this.gaLanguages().filter((lang) =>
       lang.name.toLowerCase().includes(query),
     );
   });
   filteredTranslationPreviewLanguages = computed(() => {
     const query = this.searchTranslationLanguage().toLowerCase().trim();
     if (!query) return this.previewLanguages();
-    return this.previewLanguages().filter(lang =>
+    return this.previewLanguages().filter((lang) =>
       lang.name.toLowerCase().includes(query),
     );
   });
 
   originalLanguageLabel = computed(() => {
     const code = this.editOriginalLanguage();
-    const lang = this.languages().find(l => l.code === code);
+    const lang = this.languages().find((l) => l.code === code);
     return lang ? lang.name : 'Select Language';
   });
 
   translateLanguageLabel = computed(() => {
     const code = this.editTranslateLanguage();
-    const lang = this.languages().find(l => l.code === code);
+    const lang = this.languages().find((l) => l.code === code);
     return lang ? lang.name : 'Select Language';
   });
 
@@ -380,7 +380,7 @@ export class Editor implements OnInit, OnDestroy {
       const data = this.videoData();
       if (data) {
         const count = data.utterances.filter(
-          u => u.needs_translation_regen || u.needs_dubbing_regen,
+          (u) => u.needs_translation_regen || u.needs_dubbing_regen,
         ).length;
         this.videoGenerationService.updateUnregeneratedCount(count);
       } else {
@@ -424,7 +424,7 @@ export class Editor implements OnInit, OnDestroy {
     );
 
     this.fetchLanguages();
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.subscribe((params) => {
       const id = params['video_id'];
       if (id) {
         this.videoId.set(id);
@@ -440,9 +440,9 @@ export class Editor implements OnInit, OnDestroy {
       const response = await fetch('languages.json');
       const langs: Language[] = await response.json();
       this.languages.set(langs);
-      this.gaLanguages.set(langs.filter(lang => lang.readiness === 'GA'));
+      this.gaLanguages.set(langs.filter((lang) => lang.readiness === 'GA'));
       this.previewLanguages.set(
-        langs.filter(lang => lang.readiness === 'Preview'),
+        langs.filter((lang) => lang.readiness === 'Preview'),
       );
     } catch (error) {
       console.error('Failed to fetch languages:', error);
@@ -451,7 +451,7 @@ export class Editor implements OnInit, OnDestroy {
 
   getLanguageName(code: string | undefined): string {
     if (!code) return 'Unknown';
-    const lang = this.languages().find(l => l.code === code);
+    const lang = this.languages().find((l) => l.code === code);
     return lang ? lang.name : code;
   }
 
@@ -473,7 +473,7 @@ export class Editor implements OnInit, OnDestroy {
 
       if (!rawUrl && data.video_id) {
         // Fallback: try to deduce from utterances if available
-        const u = data.utterances.find(utt => utt.audio_url);
+        const u = data.utterances.find((utt) => utt.audio_url);
         if (u && u.audio_url) {
           let url = u.audio_url;
           if (!url.startsWith('http') && !url.startsWith('/')) {
@@ -558,8 +558,8 @@ export class Editor implements OnInit, OnDestroy {
     const editId = this.speakerToEditId();
     if (editId) {
       // Edit existing speaker voice
-      this.editSpeakers.update(speakers =>
-        speakers.map(s =>
+      this.editSpeakers.update((speakers) =>
+        speakers.map((s) =>
           s.speaker_id === editId
             ? {
                 ...s,
@@ -578,14 +578,14 @@ export class Editor implements OnInit, OnDestroy {
         voice: modalSpeaker.voice,
         gender: modalSpeaker.gender,
       };
-      this.editSpeakers.update(s => [...s, newSpeaker]);
+      this.editSpeakers.update((s) => [...s, newSpeaker]);
     }
     this.closeSpeakerModal();
   }
 
   removeEditSpeaker(speakerId: string) {
-    this.editSpeakers.update(speakers =>
-      speakers.filter(s => s.speaker_id !== speakerId),
+    this.editSpeakers.update((speakers) =>
+      speakers.filter((s) => s.speaker_id !== speakerId),
     );
   }
 
@@ -684,10 +684,10 @@ export class Editor implements OnInit, OnDestroy {
         }
       } else if (speakersChanged) {
         // Find which utterances need new dubbing (assigned to a deleted speaker, or their speaker's voice changed)
-        const utterancesToUpdate = data.utterances.filter(u => {
+        const utterancesToUpdate = data.utterances.filter((u) => {
           const oldSpeaker = u.speaker;
           const newSpeaker = newSpeakers.find(
-            s => s.speaker_id === oldSpeaker.speaker_id,
+            (s) => s.speaker_id === oldSpeaker.speaker_id,
           );
 
           if (!newSpeaker) return true; // Speaker was deleted
@@ -696,7 +696,7 @@ export class Editor implements OnInit, OnDestroy {
         });
 
         // Apply global speaker list change
-        data.speakers = newSpeakers.map(s => ({
+        data.speakers = newSpeakers.map((s) => ({
           ...s,
           speaker_name: s.speaker_name || s.name,
           gender: s.gender ? s.gender.toLowerCase() : s.gender,
@@ -705,7 +705,7 @@ export class Editor implements OnInit, OnDestroy {
         // Update speaker voices locally BEFORE regeneration, and reassign orphans to the first available speaker
         for (let u of data.utterances) {
           let newSpk = data.speakers.find(
-            s => s.speaker_id === u.speaker.speaker_id,
+            (s) => s.speaker_id === u.speaker.speaker_id,
           );
           if (!newSpk) {
             newSpk = data.speakers[0]; // Fallback to first speaker
@@ -718,9 +718,9 @@ export class Editor implements OnInit, OnDestroy {
           u.speaker.gender = newSpk.gender;
         }
 
-        const dubbingPromises = utterancesToUpdate.map(async utterance => {
+        const dubbingPromises = utterancesToUpdate.map(async (utterance) => {
           const originalIndex = data.utterances.findIndex(
-            u => u.id === utterance.id,
+            (u) => u.id === utterance.id,
           );
           const response = await fetch('/regenerate_dubbing', {
             method: 'POST',
@@ -818,7 +818,7 @@ export class Editor implements OnInit, OnDestroy {
     this.clearDrafts();
     const dataCurrent = this.videoData(); // Use a different name to avoid shadowing?
     if (dataCurrent) {
-      const u = dataCurrent.utterances.find(utt => utt.id === utteranceId);
+      const u = dataCurrent.utterances.find((utt) => utt.id === utteranceId);
       if (u) {
         this.initialUtteranceState.set(JSON.parse(JSON.stringify(u)));
       }
@@ -954,11 +954,11 @@ export class Editor implements OnInit, OnDestroy {
     const initialState = this.initialUtteranceState();
     if (!data || !activeId) return;
 
-    this.videoData.update(prev => {
+    this.videoData.update((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        utterances: prev.utterances.map(u => {
+        utterances: prev.utterances.map((u) => {
           if (u.id === activeId) {
             const updated = {...u, speaker: newSpeaker};
             updated.needs_dubbing_regen = this.checkDubbingRegen(
@@ -981,11 +981,11 @@ export class Editor implements OnInit, OnDestroy {
     const initialState = this.initialUtteranceState();
     if (!data || !activeId) return;
 
-    this.videoData.update(prev => {
+    this.videoData.update((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        utterances: prev.utterances.map(u => {
+        utterances: prev.utterances.map((u) => {
           if (u.id === activeId) {
             const updated = {...u, translation_instructions: draft};
             updated.needs_translation_regen = this.checkTranslationRegen(
@@ -1013,11 +1013,11 @@ export class Editor implements OnInit, OnDestroy {
     const initialState = this.initialUtteranceState();
     if (!data || !activeId) return;
 
-    this.videoData.update(prev => {
+    this.videoData.update((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        utterances: prev.utterances.map(u => {
+        utterances: prev.utterances.map((u) => {
           if (u.id === activeId) {
             const updated = {
               ...u,
@@ -1069,11 +1069,11 @@ export class Editor implements OnInit, OnDestroy {
 
   updateOriginalText(utteranceId: string, newText: string) {
     const initialState = this.initialUtteranceState();
-    this.videoData.update(prev => {
+    this.videoData.update((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        utterances: prev.utterances.map(u => {
+        utterances: prev.utterances.map((u) => {
           if (u.id === utteranceId) {
             const updated = {...u, original_text: newText};
             updated.needs_translation_regen = this.checkTranslationRegen(
@@ -1094,11 +1094,11 @@ export class Editor implements OnInit, OnDestroy {
 
   updateTranslatedText(utteranceId: string, newText: string) {
     const initialState = this.initialUtteranceState();
-    this.videoData.update(prev => {
+    this.videoData.update((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        utterances: prev.utterances.map(u => {
+        utterances: prev.utterances.map((u) => {
           if (u.id === utteranceId) {
             const updated = {...u, translated_text: newText};
             updated.needs_translation_regen = this.checkTranslationRegen(
@@ -1121,7 +1121,9 @@ export class Editor implements OnInit, OnDestroy {
     const data = this.videoData();
     if (!data) return;
 
-    const utteranceIndex = data.utterances.findIndex(u => u.id === utteranceId);
+    const utteranceIndex = data.utterances.findIndex(
+      (u) => u.id === utteranceId,
+    );
     if (utteranceIndex === -1) return;
 
     const utterance = data.utterances[utteranceIndex];
@@ -1166,7 +1168,7 @@ export class Editor implements OnInit, OnDestroy {
 
       const result = await response.json();
 
-      this.videoData.update(prev => {
+      this.videoData.update((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
@@ -1185,7 +1187,7 @@ export class Editor implements OnInit, OnDestroy {
 
       const updatedData = this.videoData();
       if (updatedData) {
-        const u = updatedData.utterances.find(utt => utt.id === utteranceId);
+        const u = updatedData.utterances.find((utt) => utt.id === utteranceId);
         if (u) {
           this.initialUtteranceState.set(JSON.parse(JSON.stringify(u)));
         }
@@ -1204,7 +1206,9 @@ export class Editor implements OnInit, OnDestroy {
     const data = this.videoData();
     if (!data) return;
 
-    const utteranceIndex = data.utterances.findIndex(u => u.id === utteranceId);
+    const utteranceIndex = data.utterances.findIndex(
+      (u) => u.id === utteranceId,
+    );
     if (utteranceIndex === -1) return;
 
     const utterance = data.utterances[utteranceIndex];
@@ -1249,7 +1253,7 @@ export class Editor implements OnInit, OnDestroy {
 
       const result = await response.json();
 
-      this.videoData.update(prev => {
+      this.videoData.update((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
@@ -1270,7 +1274,7 @@ export class Editor implements OnInit, OnDestroy {
 
       const updatedData = this.videoData();
       if (updatedData) {
-        const u = updatedData.utterances.find(utt => utt.id === utteranceId);
+        const u = updatedData.utterances.find((utt) => utt.id === utteranceId);
         if (u) {
           this.initialUtteranceState.set(JSON.parse(JSON.stringify(u)));
         }
@@ -1289,11 +1293,11 @@ export class Editor implements OnInit, OnDestroy {
     const initialState = this.initialUtteranceState();
     if (!initialState || initialState.id !== utteranceId) return;
 
-    this.videoData.update(prev => {
+    this.videoData.update((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        utterances: prev.utterances.map(u =>
+        utterances: prev.utterances.map((u) =>
           u.id === utteranceId ? JSON.parse(JSON.stringify(initialState)) : u,
         ),
       };
@@ -1301,11 +1305,11 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   toggleMuteUtterance(utteranceId: string) {
-    this.videoData.update(prev => {
+    this.videoData.update((prev) => {
       if (!prev) return prev;
 
       const utteranceIndex = prev.utterances.findIndex(
-        u => u.id === utteranceId,
+        (u) => u.id === utteranceId,
       );
       if (utteranceIndex === -1) return prev;
 
@@ -1352,7 +1356,7 @@ export class Editor implements OnInit, OnDestroy {
 
     // Close any open side panels if the utterance was just muted and was active
     const updated = this.videoData()?.utterances.find(
-      u => u.id === utteranceId,
+      (u) => u.id === utteranceId,
     );
     if (updated?.muted && this.activeUtteranceId() === utteranceId) {
       this.activePanelMode.set(null);
@@ -1360,11 +1364,11 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   toggleRemoveUtterance(utteranceId: string) {
-    this.videoData.update(prev => {
+    this.videoData.update((prev) => {
       if (!prev) return prev;
 
       const utteranceIndex = prev.utterances.findIndex(
-        u => u.id === utteranceId,
+        (u) => u.id === utteranceId,
       );
       if (utteranceIndex === -1) return prev;
 
@@ -1374,7 +1378,9 @@ export class Editor implements OnInit, OnDestroy {
       const isEmpty = !utterance.translated_text && !utterance.original_text;
 
       if (isNew && isEmpty) {
-        const newUtterances = prev.utterances.filter(u => u.id !== utteranceId);
+        const newUtterances = prev.utterances.filter(
+          (u) => u.id !== utteranceId,
+        );
         return {...prev, utterances: newUtterances};
       }
 
@@ -1397,7 +1403,7 @@ export class Editor implements OnInit, OnDestroy {
 
     // Close side panels and optionally clear active selection if utterance was removed
     const updated = this.videoData()?.utterances.find(
-      u => u.id === utteranceId,
+      (u) => u.id === utteranceId,
     );
     if (
       (!updated || updated.removed) &&
@@ -1414,7 +1420,7 @@ export class Editor implements OnInit, OnDestroy {
     const data = this.videoData();
     const id = this.activeUtteranceId();
     if (!data || !id) return null;
-    return data.utterances.find(u => u.id === id) || null;
+    return data.utterances.find((u) => u.id === id) || null;
   }
 
   get timelineDuration(): number {
@@ -1479,7 +1485,7 @@ export class Editor implements OnInit, OnDestroy {
       return;
     }
 
-    this.videoData.update(data => {
+    this.videoData.update((data) => {
       if (!data) return data;
       const newData = JSON.parse(JSON.stringify(data));
       const utterance = newData.utterances.find(
@@ -1509,7 +1515,7 @@ export class Editor implements OnInit, OnDestroy {
           .then(() => {
             this.isPlayingOriginal.set(true);
           })
-          .catch(err => {
+          .catch((err) => {
             console.error('Error playing original audio', err);
           });
         this.originalAudio.onended = () => {
@@ -1545,7 +1551,7 @@ export class Editor implements OnInit, OnDestroy {
             .then(() => {
               this.isPlayingTranslated.set(true);
             })
-            .catch(err => {
+            .catch((err) => {
               console.error('Error playing translated audio', err);
             });
           this.translatedAudio.onended = () => {
@@ -1604,7 +1610,7 @@ export class Editor implements OnInit, OnDestroy {
           .then(() => {
             this.isPlayingOriginal.set(true);
           })
-          .catch(err => {
+          .catch((err) => {
             console.error('Error playing original utterance snippet', err);
           });
 
@@ -1666,7 +1672,7 @@ export class Editor implements OnInit, OnDestroy {
         .then(() => {
           this.isPlayingSnippet.set(true);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error('Error playing translated utterance snippet', err);
         });
 
@@ -1775,7 +1781,7 @@ export class Editor implements OnInit, OnDestroy {
     const data = this.videoData();
     if (!data) return false;
     return data.utterances.some(
-      u => u.needs_translation_regen || u.needs_dubbing_regen,
+      (u) => u.needs_translation_regen || u.needs_dubbing_regen,
     );
   }
 
@@ -1785,7 +1791,7 @@ export class Editor implements OnInit, OnDestroy {
       return false;
     }
     const maxEndTime = Math.max(
-      ...data.utterances.map(u => u.translated_end_time),
+      ...data.utterances.map((u) => u.translated_end_time),
     );
     const exceeds = maxEndTime > data.duration;
     return exceeds;
@@ -1803,14 +1809,14 @@ export class Editor implements OnInit, OnDestroy {
   getMaxEndTime(): number {
     const data = this.videoData();
     if (!data || data.utterances.length === 0) return 0;
-    return Math.max(...data.utterances.map(u => u.translated_end_time));
+    return Math.max(...data.utterances.map((u) => u.translated_end_time));
   }
 
   getOverlappingUtterances(utterance: VideoUtterance): VideoUtterance[] {
     const data = this.videoData();
     if (!data) return [];
     return data.utterances.filter(
-      u =>
+      (u) =>
         !u.removed &&
         (u.id === utterance.id ||
           (utterance.translated_start_time <= u.translated_end_time &&
@@ -1853,7 +1859,7 @@ export class Editor implements OnInit, OnDestroy {
   getUtteranceIndex(u: VideoUtterance): number {
     const data = this.videoData();
     if (!data) return -1;
-    return data.utterances.findIndex(item => item.id === u.id);
+    return data.utterances.findIndex((item) => item.id === u.id);
   }
 
   getUtteranceOverlap(utterance: VideoUtterance): VideoUtterance | null {
@@ -1862,7 +1868,7 @@ export class Editor implements OnInit, OnDestroy {
     if (!data || data.utterances.length <= 1) return null;
     return (
       data.utterances.find(
-        u =>
+        (u) =>
           u.id !== utterance.id &&
           !u.muted &&
           !u.removed &&
@@ -1904,10 +1910,10 @@ export class Editor implements OnInit, OnDestroy {
     // Bounds check
     if (newStartTime < 0) newStartTime = 0;
 
-    this.videoData.update(prev => {
+    this.videoData.update((prev) => {
       if (!prev) return prev;
       const index = prev.utterances.findIndex(
-        u => u.id === this.draggedUtteranceId(),
+        (u) => u.id === this.draggedUtteranceId(),
       );
       if (index === -1) return prev;
 
@@ -1935,7 +1941,7 @@ export class Editor implements OnInit, OnDestroy {
     event.stopPropagation();
 
     this.executeWithDirtyCheck(() => {
-      this.videoData.update(prev => {
+      this.videoData.update((prev) => {
         if (!prev) return prev;
 
         const isAbove = index === -1;
@@ -1999,7 +2005,7 @@ export class Editor implements OnInit, OnDestroy {
     event.stopPropagation();
 
     this.executeWithDirtyCheck(() => {
-      this.videoData.update(prev => {
+      this.videoData.update((prev) => {
         if (!prev || index >= prev.utterances.length - 1) return prev;
 
         const topUtterance = prev.utterances[index];
@@ -2093,7 +2099,7 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   private getOriginalAudioSrc(data: VideoJob): string {
-    const u = data.utterances.find(utt => utt.audio_url);
+    const u = data.utterances.find((utt) => utt.audio_url);
     let expectedSrc = `/temp/${data.video_id}/original_audio.wav`;
     if (u && u.audio_url) {
       let url = u.audio_url;

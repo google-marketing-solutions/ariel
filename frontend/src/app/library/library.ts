@@ -1,9 +1,9 @@
 import {
+  ChangeDetectionStrategy,
   Component,
+  computed,
   OnInit,
   signal,
-  computed,
-  ChangeDetectionStrategy,
 } from '@angular/core';
 import {RouterLink} from '@angular/router';
 
@@ -42,7 +42,7 @@ export class Library implements OnInit {
   error = signal<string | null>(null);
 
   formattedVideos = computed(() => {
-    return this.videos().map(video => ({
+    return this.videos().map((video) => ({
       ...video,
       formattedDate: this.formatDate(video.created_at),
       formattedDuration: this.formatDuration(video.duration),
@@ -79,7 +79,7 @@ export class Library implements OnInit {
       if (reset) {
         this.videos.set(data.videos || []);
       } else {
-        this.videos.update(v => [...v, ...(data.videos || [])]);
+        this.videos.update((v) => [...v, ...(data.videos || [])]);
       }
       this.nextPageToken.set(data.next_page_token || null);
     } catch (err: unknown) {
@@ -131,7 +131,7 @@ export class Library implements OnInit {
   getSpeakersString(speakers: VideoSpeaker[]): string {
     if (!speakers || speakers.length === 0) return 'Unknown';
     const uniqueVoices = [
-      ...new Set(speakers.map(s => s.voice).filter(v => v)),
+      ...new Set(speakers.map((s) => s.voice).filter((v) => v)),
     ];
     return uniqueVoices.length > 0 ? uniqueVoices.join(', ') : 'Unknown';
   }

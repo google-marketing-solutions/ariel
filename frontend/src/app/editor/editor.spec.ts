@@ -1,10 +1,10 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {Editor} from './editor';
-import {provideRouter, Router, ActivatedRoute} from '@angular/router';
-import {VideoGenerationService} from '../services/video-generation.service';
 import {MatTooltipModule} from '@angular/material/tooltip';
+import {ActivatedRoute, provideRouter, Router} from '@angular/router';
 import {of, Subject} from 'rxjs';
 import {Speaker} from '../_components/speaker-modal/speaker-modal';
+import {VideoGenerationService} from '../services/video-generation.service';
+import {Editor} from './editor';
 
 describe('Editor', () => {
   let component: Editor;
@@ -509,7 +509,7 @@ describe('Editor', () => {
       expect(fixture.nativeElement.querySelector('.warning-banner')).toBeNull();
 
       // Make an utterance exceed duration
-      component.videoData.update(data => {
+      component.videoData.update((data) => {
         if (data) {
           const newUtterances = [...data.utterances];
           newUtterances[0] = {...newUtterances[0], translated_end_time: 12};
@@ -532,7 +532,7 @@ describe('Editor', () => {
       await fixture.whenStable();
 
       // Make an utterance exceed duration
-      component.videoData.update(data => {
+      component.videoData.update((data) => {
         if (data) {
           const newUtterances = [...data.utterances];
           newUtterances[0] = {...newUtterances[0], translated_end_time: 12};
@@ -629,8 +629,8 @@ describe('Editor', () => {
 
       const overlaps = component.getOverlappingUtterances(utterance1);
       expect(overlaps.length).toBe(2);
-      expect(overlaps.map(u => u.id)).toContain('utt_1');
-      expect(overlaps.map(u => u.id)).toContain('utt_2');
+      expect(overlaps.map((u) => u.id)).toContain('utt_1');
+      expect(overlaps.map((u) => u.id)).toContain('utt_2');
     });
   });
 

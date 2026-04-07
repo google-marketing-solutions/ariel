@@ -1,15 +1,15 @@
+import {isPlatformBrowser} from '@angular/common';
 import {
+  ChangeDetectionStrategy,
   Component,
+  inject,
   PLATFORM_ID,
   signal,
-  inject,
-  ChangeDetectionStrategy,
 } from '@angular/core';
-import {RouterOutlet, Router, NavigationEnd} from '@angular/router';
-import {Header} from './header/header';
-import {isPlatformBrowser} from '@angular/common';
 import {toSignal} from '@angular/core/rxjs-interop';
+import {NavigationEnd, Router, RouterOutlet} from '@angular/router';
 import {filter, map} from 'rxjs/operators';
+import {Header} from './header/header';
 
 @Component({
   selector: 'app-root',
@@ -47,8 +47,8 @@ export class App {
 
   isEditorRoute = toSignal(
     this.router.events.pipe(
-      filter(event => event instanceof NavigationEnd),
-      map(event =>
+      filter((event) => event instanceof NavigationEnd),
+      map((event) =>
         (event as NavigationEnd).urlAfterRedirects.includes('/editor'),
       ),
     ),

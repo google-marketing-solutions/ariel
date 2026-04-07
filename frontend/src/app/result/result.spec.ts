@@ -1,7 +1,6 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {provideRouter, Router} from '@angular/router';
 import {Result} from './result';
-import {Router} from '@angular/router';
-import {provideRouter} from '@angular/router';
 
 describe('Result', () => {
   let component: Result;
