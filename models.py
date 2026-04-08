@@ -244,6 +244,7 @@ class VideoMetadata(BaseModel):
   Attributes:
     name: The file name of the translated video.
     url: The URL to edit the project.
+    original_video_url: The URL where the original video is saved.
     download_url: The URL to download the translated video.
     created_at: When the project was created.
     original_language: The language of the original video.
@@ -257,6 +258,7 @@ class VideoMetadata(BaseModel):
 
   name: str = Field(description="The file name of the translated video.")
   url: str = Field(description="The URL to edit the project.")
+  original_video_url: str = Field("The URL where the original video is saved.")
   download_url: str = Field(
       description="The URL to download the translated video."
   )
