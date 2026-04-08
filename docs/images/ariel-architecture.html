@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>Ariel v2 — Solution Overview</title>
+     <style>
+          @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500&display=swap');
+
+          * {
+               box-sizing: border-box;
+               margin: 0;
+               padding: 0;
+          }
+
+          body {
+               background: #f0f4f9;
+               font-family: 'Google Sans', 'Roboto', Arial, sans-serif;
+               display: flex;
+               justify-content: center;
+               padding: 32px 16px 48px;
+          }
+     </style>
+</head>
+
+<body>
+     <svg viewBox="0 0 1220 960" xmlns="http://www.w3.org/2000/svg" style="width:1220px;max-width:100%;display:block;"
+          font-family="'Google Sans', 'Roboto', Arial, sans-serif">
+
+          <!-- ── Page background ── -->
+          <rect width="1220" height="960" fill="#f0f4f9" />
+
+          <!-- ══════════════════════════════════════════
+       ARROW MARKERS
+  ══════════════════════════════════════════ -->
+          <defs>
+               <marker id="ah-dark" markerWidth="10" markerHeight="10" refX="9" refY="4" orient="auto">
+                    <path d="M1,1 L9,4 L1,7 Z" fill="#3c4043" />
+               </marker>
+               <marker id="ah-green" markerWidth="10" markerHeight="10" refX="9" refY="4" orient="auto">
+                    <path d="M1,1 L9,4 L1,7 Z" fill="#137333" />
+               </marker>
+               <marker id="ah-blue" markerWidth="10" markerHeight="10" refX="9" refY="4" orient="auto">
+                    <path d="M1,1 L9,4 L1,7 Z" fill="#1a73e8" />
+               </marker>
+               <marker id="ah-amber" markerWidth="10" markerHeight="10" refX="9" refY="4" orient="auto">
+                    <path d="M1,1 L9,4 L1,7 Z" fill="#b45309" />
+               </marker>
+          </defs>
+
+          <!-- ══════════════════════════════════════════
+       TITLE
+  ══════════════════════════════════════════ -->
+          <text x="610" y="42" text-anchor="middle" font-size="26" font-weight="700" fill="#1a1a2e">Ariel — Solution
+               Overview</text>
+          <text x="610" y="66" text-anchor="middle" font-size="16" font-weight="500" fill="#3c4043">(Google Cloud &amp;
+               Local Processing)</text>
+
+          <!-- ══════════════════════════════════════════
+       OUTER: Google Cloud Project
+  ══════════════════════════════════════════ -->
+          <rect x="28" y="84" width="1168" height="792" rx="16" fill="#e8f0fe" stroke="#c5cae9" stroke-width="3" />
+          <g transform="translate(46,96)">
+               <circle cx="12" cy="12" r="12" fill="white" opacity="0.8" />
+               <path d="M12 5 A7 7 0 0 1 19 12" stroke="#EA4335" stroke-width="3" fill="none" stroke-linecap="round" />
+               <path d="M19 12 A7 7 0 0 1 12 19" stroke="#FBBC05" stroke-width="3" fill="none" stroke-linecap="round" />
+               <path d="M12 19 A7 7 0 0 1 5 12" stroke="#34A853" stroke-width="3" fill="none" stroke-linecap="round" />
+               <path d="M5 12 A7 7 0 0 1 12 5" stroke="#4285F4" stroke-width="3" fill="none" stroke-linecap="round" />
+          </g>
+          <text x="68" y="114" font-size="14" font-weight="600" fill="#3c4043">Google Cloud Project</text>
+
+          <!-- ══════════════════════════════════════
+       LAYOUT STRATEGY
+       ─────────────────────────────────────
+       Row 1 (y≈130–220):  [Angular SPA — full width of Cloud Run]
+       Row 2 (y≈230–310):  [FastAPI — full width of Cloud Run]
+       Row 3 (y≈330–480):  [① Media Proc] [② Audio Sep]   |  [③ Gemini Translation]  right panel
+       Row 4 (y≈490–580):  [⑤ Media Assembly — left panel] |  [④ Gemini TTS]           right panel
+       Row 5 (y≈600–680):  [Output — left panel]            |  [GCS Bucket]              right panel (tall)
+       
+       GCS arrows run along the very bottom, clearly separated.
+  ══════════════════════════════════════════ -->
+
+          <!-- ── Cloud Run container ── -->
+          <rect x="44" y="128" width="660" height="732" rx="12" fill="#e6f4ea" stroke="#a8d5b5" stroke-width="1.5" />
+          <g transform="translate(60,142)">
+               <rect width="20" height="20" rx="4" fill="#34A853" />
+               <path d="M4 10 L10 4 L16 10 L10 16 Z" fill="white" />
+          </g>
+          <text x="88" y="157" font-size="13" font-weight="600" fill="#137333">Application Infrastructure (Google Cloud
+               Run)</text>
+
+          <!-- ── Vertex AI container (right) ── -->
+          <rect x="782" y="128" width="400" height="476" rx="12" fill="#e8f0fe" stroke="#a8c4f5" stroke-width="1.5" />
+          <g transform="translate(798,142)">
+               <rect width="20" height="20" rx="4" fill="#4285F4" />
+               <text x="10" y="15" text-anchor="middle" font-size="12" fill="white" font-weight="700">✦</text>
+          </g>
+          <text x="826" y="157" font-size="13" font-weight="600" fill="#1a73e8">Google Cloud Vertex AI Ecosystem</text>
+
+          <!-- ── GCS container (right, below Vertex AI) ── -->
+          <rect x="782" y="616" width="400" height="172" rx="12" fill="#fef7e0" stroke="#f6d56d" stroke-width="1.5" />
+          <g transform="translate(798,630)">
+               <rect width="20" height="20" rx="4" fill="#FBBC05" />
+               <text x="10" y="15" text-anchor="middle" font-size="11" fill="white" font-weight="700">⬡</text>
+          </g>
+          <text x="826" y="645" font-size="13" font-weight="600" fill="#b45309">Google Cloud Storage (GCS Bucket)</text>
+
+          <!-- ══════════════════════════════════════════
+       BLOCK: Web Frontend (Angular SPA)
+  ══════════════════════════════════════════ -->
+          <rect x="60" y="172" width="628" height="82" rx="10" fill="white" stroke="#a8d5b5" stroke-width="1.5" />
+          <g transform="translate(76,188)">
+               <rect width="30" height="30" rx="6" fill="#DD0031" />
+               <text x="15" y="22" text-anchor="middle" font-size="17" fill="white" font-weight="700">A</text>
+          </g>
+          <text x="118" y="206" font-size="13" font-weight="700" fill="#1a1a2e">Web Frontend</text>
+          <text x="118" y="222" font-size="11" fill="#5f6368">(Angular UI — served by Cloud Run)</text>
+
+
+          <!-- ══════════════════════════════════════════
+       BLOCK: FastAPI
+  ══════════════════════════════════════════ -->
+          <rect x="60" y="294" width="628" height="70" rx="10" fill="white" stroke="#a8d5b5" stroke-width="1.5" />
+          <g transform="translate(76,310)">
+               <rect width="30" height="30" rx="6" fill="#059669" />
+               <text x="15" y="22" text-anchor="middle" font-size="17" fill="white" font-weight="700">⚡</text>
+          </g>
+          <text x="118" y="312" font-size="13" font-weight="700" fill="#1a1a2e">FastAPI Backend</text>
+          <text x="118" y="328" font-size="10.5" fill="#5f6368">/process · /generate_video · /regenerate_translation ·
+               /regenerate_dubbing · /api/videos · /api/projects/{id}</text>
+
+          <!-- SPA → FastAPI -->
+          <line x1="374" y1="254" x2="374" y2="292" stroke="#137333" stroke-width="2.5" marker-end="url(#ah-green)" />
+
+          <!-- ══════════════════════════════════════════
+       BLOCK: ① Media Processing
+  ══════════════════════════════════════════ -->
+          <rect x="60" y="404" width="186" height="132" rx="10" fill="white" stroke="#a8d5b5" stroke-width="1.5" />
+          <g transform="translate(72,418)">
+               <circle cx="18" cy="18" r="18" fill="#e6f4ea" />
+               <circle cx="18" cy="18" r="9" fill="none" stroke="#137333" stroke-width="3" />
+               <circle cx="18" cy="18" r="3.5" fill="#137333" />
+               <rect x="15" y="1" width="6" height="7" rx="2" fill="#137333" />
+               <rect x="15" y="28" width="6" height="7" rx="2" fill="#137333" />
+               <rect x="1" y="15" width="7" height="6" rx="2" fill="#137333" />
+               <rect x="28" y="15" width="7" height="6" rx="2" fill="#137333" />
+          </g>
+          <text x="120" y="424" font-size="11.5" font-weight="700" fill="#1a1a2e">① Media Processing</text>
+          <text x="120" y="440" font-size="10.5" fill="#137333">(MoviePy &amp; FFmpeg)</text>
+          <line x1="72" y1="448" x2="232" y2="448" stroke="#e8eaed" stroke-width="1" />
+          <text x="78" y="464" font-size="10" fill="#5f6368">Extract audio track</text>
+          <text x="78" y="479" font-size="10" fill="#5f6368">from video file</text>
+          <text x="78" y="494" font-size="10" fill="#5f6368">Mux final video output</text>
+
+          <!-- FastAPI → ① Media Processing -->
+          <line x1="153" y1="364" x2="153" y2="402" stroke="#137333" stroke-width="2.5" marker-end="url(#ah-green)" />
+
+          <!-- ══════════════════════════════════════════
+       BLOCK: ② Audio Separation
+  ══════════════════════════════════════════ -->
+          <rect x="326" y="404" width="200" height="132" rx="10" fill="white" stroke="#a8d5b5" stroke-width="1.5" />
+          <g transform="translate(338,418)">
+               <circle cx="18" cy="18" r="18" fill="#e6f4ea" />
+               <line x1="4" y1="18" x2="8" y2="10" stroke="#137333" stroke-width="3" stroke-linecap="round" />
+               <line x1="8" y1="10" x2="12" y2="24" stroke="#137333" stroke-width="3" stroke-linecap="round" />
+               <line x1="12" y1="24" x2="16" y2="14" stroke="#137333" stroke-width="3" stroke-linecap="round" />
+               <line x1="16" y1="14" x2="20" y2="22" stroke="#137333" stroke-width="3" stroke-linecap="round" />
+               <line x1="20" y1="22" x2="24" y2="12" stroke="#4285F4" stroke-width="3" stroke-linecap="round" />
+               <line x1="24" y1="12" x2="32" y2="18" stroke="#4285F4" stroke-width="3" stroke-linecap="round" />
+          </g>
+          <text x="384" y="424" font-size="11.5" font-weight="700" fill="#1a1a2e">② Audio Separation</text>
+          <text x="384" y="440" font-size="10.5" fill="#137333">(audio-separator)</text>
+          <line x1="338" y1="448" x2="512" y2="448" stroke="#e8eaed" stroke-width="1" />
+          <text x="344" y="464" font-size="10" fill="#5f6368">Model: HP-Karaoke-UVR</text>
+          <text x="344" y="479" font-size="10" fill="#5f6368">→ vocals.wav</text>
+          <text x="344" y="494" font-size="10" fill="#5f6368">→ background.wav</text>
+          <text x="344" y="509" font-size="10" fill="#5f6368">→ original_audio.wav</text>
+
+          <!-- ① → ② horizontal arrow -->
+          <line x1="246" y1="470" x2="324" y2="470" stroke="#137333" stroke-width="2.5" marker-end="url(#ah-green)" />
+
+          <!-- ══════════════════════════════════════════
+       BLOCK: ⑤ Media Assembly
+  ══════════════════════════════════════════ -->
+          <rect x="60" y="576" width="628" height="100" rx="10" fill="white" stroke="#a8d5b5" stroke-width="1.5" />
+          <g transform="translate(72,590)">
+               <circle cx="18" cy="18" r="18" fill="#e6f4ea" />
+               <circle cx="18" cy="18" r="9" fill="none" stroke="#137333" stroke-width="3" />
+               <circle cx="18" cy="18" r="3.5" fill="#137333" />
+               <rect x="15" y="1" width="6" height="7" rx="2" fill="#137333" />
+               <rect x="15" y="28" width="6" height="7" rx="2" fill="#137333" />
+               <rect x="1" y="15" width="7" height="6" rx="2" fill="#137333" />
+               <rect x="28" y="15" width="7" height="6" rx="2" fill="#137333" />
+          </g>
+          <text x="118" y="596" font-size="11.5" font-weight="700" fill="#1a1a2e">⑤ Media Assembly</text>
+          <text x="118" y="612" font-size="10.5" fill="#137333">(MoviePy &amp; FFmpeg)</text>
+          <line x1="118" y1="620" x2="674" y2="620" stroke="#e8eaed" stroke-width="1" />
+          <text x="118" y="636" font-size="10.5" fill="#5f6368">Merge AI voice utterances · Mix with background music ·
+               Combine with original video visuals</text>
+          <text x="118" y="652" font-size="10.5" fill="#5f6368">Export to GCS</text>
+
+          <!-- ② background.wav → ⑤ Media Assembly (vertical, inside Cloud Run) -->
+          <line x1="426" y1="536" x2="426" y2="574" stroke="#137333" stroke-width="2.5" marker-end="url(#ah-green)" />
+          <text x="436" y="555" text-anchor="start" font-size="9.5" fill="#137333" font-weight="700">passes separated
+               audio files</text>
+
+          <!-- ① video visuals → ⑤ (left side vertical) -->
+          <line x1="153" y1="536" x2="153" y2="574" stroke="#137333" stroke-width="2.5" stroke-dasharray="6,4"
+               marker-end="url(#ah-green)" />
+          <text x="143" y="555" text-anchor="end" font-size="9.5" fill="#137333" font-weight="700">video visuals</text>
+
+          <!-- ══════════════════════════════════════════
+       BLOCK: Output
+  ══════════════════════════════════════════ -->
+          <rect x="60" y="716" width="628" height="84" rx="10" fill="white" stroke="#a8d5b5" stroke-width="1.5" />
+          <g transform="translate(72,730)">
+               <rect width="30" height="30" rx="6" fill="#9aa0a6" />
+               <polygon points="8,6 8,24 22,15" fill="white" />
+               <circle cx="24" cy="24" r="6" fill="#4285F4" stroke="white" stroke-width="1.5" />
+          </g>
+          <text x="118" y="746" font-size="13" font-weight="700" fill="#1a1a2e">Output: Localized Video</text>
+          <text x="118" y="762" font-size="11" fill="#5f6368">New AI voice-over + Original background music + Original
+               visuals</text>
+          <line x1="118" y1="770" x2="674" y2="770" stroke="#e8eaed" stroke-width="1" />
+          <text x="118" y="786" font-size="10.5" fill="#5f6368">Download: Final video (.mp4) · Final audio (vocals +
+               music .wav) · Vocals only (.wav)</text>
+
+          <!-- ⑤ → Output -->
+          <line x1="374" y1="676" x2="374" y2="714" stroke="#3c4043" stroke-width="2.5" marker-end="url(#ah-dark)" />
+
+          <!-- ══════════════════════════════════════════
+       BLOCK: ③ Translation & Intelligence (Gemini)
+  ══════════════════════════════════════════ -->
+          <rect x="798" y="172" width="368" height="196" rx="10" fill="white" stroke="#a8c4f5" stroke-width="1.5" />
+          <g transform="translate(812,186)">
+               <circle cx="18" cy="18" r="18" fill="#e8f0fe" />
+               <text x="18" y="24" text-anchor="middle" font-size="22" fill="#4285F4">✦</text>
+          </g>
+          <text x="860" y="200" font-size="12" font-weight="700" fill="#1a1a2e">③ Translation &amp; Intelligence</text>
+          <text x="860" y="216" font-size="10.5" fill="#1a73e8">(Gemini Flash / Pro — Vertex AI, global region)</text>
+          <line x1="800" y1="223" x2="1152" y2="223" stroke="#e8eaed" stroke-width="1" />
+          <text x="860" y="239" font-size="10.5" fill="#5f6368">• Analyze full video directly</text>
+          <text x="860" y="255" font-size="10.5" fill="#5f6368">• Auto-detect spoken language</text>
+          <text x="860" y="271" font-size="10.5" fill="#5f6368">• Transcribe speech sentence-by-sentence with
+               timestamps</text>
+          <text x="860" y="287" font-size="10.5" fill="#5f6368">• Identify speakers + auto-assign TTS voice &amp;
+               gender</text>
+          <text x="860" y="303" font-size="10.5" fill="#5f6368">• Translate into target language</text>
+          <text x="860" y="319" font-size="10.5" fill="#5f6368">• Generate tone &amp; pacing instructions per
+               utterance</text>
+          <text x="860" y="355" font-size="10" fill="#5f6368" font-style="italic">Output: structured JSON file</text>
+
+          <!-- ══════════════════════════════════════════
+       BLOCK: ④ Voice Generation (Gemini TTS)
+  ══════════════════════════════════════════ -->
+          <rect x="798" y="426" width="368" height="146" rx="10" fill="white" stroke="#a8c4f5" stroke-width="1.5" />
+          <g transform="translate(812,440)">
+               <circle cx="18" cy="18" r="18" fill="#e8f0fe" />
+               <rect x="9" y="12" width="8" height="12" rx="2" fill="#4285F4" />
+               <polygon points="17,12 26,6 26,30 17,24" fill="#4285F4" />
+               <path d="M28 12 Q34 18 28 24" stroke="#EA4335" stroke-width="3" fill="none" stroke-linecap="round" />
+               <path d="M31 9 Q39 18 31 27" stroke="#FBBC05" stroke-width="3" fill="none" stroke-linecap="round" />
+          </g>
+          <text x="860" y="454" font-size="12" font-weight="700" fill="#1a1a2e">④ Voice Generation</text>
+          <text x="860" y="470" font-size="10.5" fill="#1a73e8">(Gemini 2.5 TTS: Flash / Pro — Vertex AI, global
+               region)</text>
+          <line x1="800" y1="477" x2="1152" y2="477" stroke="#e8eaed" stroke-width="1" />
+          <text x="860" y="493" font-size="10.5" fill="#5f6368">• Synthesise natural speech per utterance</text>
+          <text x="860" y="509" font-size="10.5" fill="#5f6368">• Applies assigned voice name + intonation
+               instructions</text>
+          <text x="860" y="525" font-size="10.5" fill="#5f6368">• Output: audio_{n}.wav file per utterance</text>
+          <text x="860" y="541" font-size="10.5" fill="#5f6368">• Duration → sets translated_end_time per
+               utterance</text>
+
+          <!-- ③ → ④ (downward inside Vertex AI) -->
+          <line x1="982" y1="368" x2="982" y2="424" stroke="#1a73e8" stroke-width="3" marker-end="url(#ah-blue)" />
+          <rect x="892" y="390" width="180" height="12" rx="3" fill="#e8f0fe" />
+          <text x="982" y="400" text-anchor="middle" font-size="9" fill="#1a73e8" font-weight="500">Translated text +
+               speaking instructions</text>
+
+          <!-- ══════════════════════════════════════════
+       GCS CONTENT
+  ══════════════════════════════════════════ -->
+          <text x="802" y="668" font-size="11" font-weight="600" fill="#b45309">Stores &amp; serves all project
+               files:</text>
+          <text x="802" y="688" font-size="10.5" fill="#5f6368">• Original video (gs:// URI — fed directly to
+               Gemini)</text>
+          <text x="802" y="706" font-size="10.5" fill="#5f6368">• Separated audio tracks (vocals.wav ·
+               background.wav)</text>
+          <text x="802" y="724" font-size="10.5" fill="#5f6368">• Generated utterance audio files (audio_0.wav …
+               audio_N.wav)</text>
+          <text x="802" y="742" font-size="10.5" fill="#5f6368">• metadata.json (speakers, utterances, timestamps, model
+               info)</text>
+          <text x="802" y="760" font-size="10.5" fill="#5f6368">• Final video &amp; audio exports (served via signed
+               URLs, 24 h)</text>
+
+          <!-- ══════════════════════════════════════════
+       PRIMARY FLOW ARROWS
+       All kept in their own clear zone — no crossings
+  ══════════════════════════════════════════ -->
+
+          <!-- FastAPI → ③ Gemini (horizontal right) -->
+          <line x1="688" y1="305" x2="788" y2="305" stroke="#1a73e8" stroke-width="3" marker-end="url(#ah-blue)" />
+          <text x="735" y="297" text-anchor="middle" font-size="10.5" fill="#1a73e8" font-weight="700">Passes full
+               video</text>
+
+          <!-- ④ TTS → ⑤ Media Assembly (horizontal left, clean) -->
+          <line x1="798" y1="500" x2="688" y2="500" stroke="#1a73e8" stroke-width="3" marker-end="url(#ah-blue)" />
+          <text x="748" y="480" text-anchor="middle" font-size="10.5" fill="#1a73e8" font-weight="700">Speech</text>
+          <text x="748" y="493" text-anchor="middle" font-size="10.5" fill="#1a73e8" font-weight="700">audio</text>
+
+          <!-- ══════════════════════════════════════════
+       GCS ARROWS
+  ══════════════════════════════════════════ -->
+
+          <!-- ⑤ Media Assembly → GCS -->
+          <line x1="688" y1="640" x2="782" y2="640" stroke="#b45309" stroke-width="3" stroke-dasharray="8,6"
+               marker-end="url(#ah-amber)" />
+          <text x="735" y="632" text-anchor="middle" font-size="10.5" fill="#b45309" font-weight="700">Save final
+               outputs</text>
+
+          <!-- GCS → Library / Output -->
+          <path d="M 782 758 L 700 758" stroke="#b45309" stroke-width="3" stroke-dasharray="8,6" fill="none"
+               marker-end="url(#ah-amber)" />
+          <text x="735" y="748" text-anchor="middle" font-size="10.5" fill="#b45309" font-weight="700">Serve signed
+               URLs</text>
+
+          <!-- ══════════════════════════════════════════
+       LEGEND
+  ══════════════════════════════════════════ -->
+          <rect x="44" y="886" width="1152" height="66" rx="10" fill="white" stroke="#e8eaed" stroke-width="1.5" />
+
+          <!-- Local Processing -->
+          <rect x="64" y="906" width="22" height="22" rx="5" fill="#e6f4ea" stroke="#a8d5b5" stroke-width="1.5" />
+          <circle cx="75" cy="917" r="6" fill="none" stroke="#137333" stroke-width="3" />
+          <circle cx="75" cy="917" r="2.5" fill="#137333" />
+          <text x="94" y="914" font-size="11.5" font-weight="600" fill="#3c4043">Local Processing</text>
+          <text x="94" y="929" font-size="10" fill="#5f6368">(Open-Source Libraries on Cloud Run)</text>
+
+          <!-- Vertex AI -->
+          <rect x="328" y="906" width="22" height="22" rx="5" fill="#e8f0fe" stroke="#a8c4f5" stroke-width="1.5" />
+          <text x="339" y="921" text-anchor="middle" font-size="12" fill="#4285F4" font-weight="700">✦</text>
+          <text x="358" y="914" font-size="11.5" font-weight="600" fill="#3c4043">Google Cloud Vertex AI</text>
+          <text x="358" y="929" font-size="10" fill="#5f6368">(Gemini Flash / Pro · Gemini 2.5 TTS)</text>
+
+          <!-- GCS -->
+          <rect x="620" y="906" width="22" height="22" rx="5" fill="#fef7e0" stroke="#f6d56d" stroke-width="1.5" />
+          <text x="631" y="921" text-anchor="middle" font-size="12" fill="#b45309">⬡</text>
+          <text x="650" y="914" font-size="11.5" font-weight="600" fill="#3c4043">Google Cloud Storage</text>
+          <text x="650" y="929" font-size="10" fill="#5f6368">(Videos · Audio · Metadata · Exports)</text>
+
+          <!-- Security shield -->
+          <path d="M 868 903 Q 868 899 873 897 L 881 895 L 889 897 Q 894 899 894 903 L 894 914 Q 894 922 881 926 Q 868 922 868 914 Z"
+               fill="#e8f0fe" stroke="#a8c4f5" stroke-width="1" />
+          <text x="881" y="914" text-anchor="middle" font-size="9" fill="#1a73e8">✓</text>
+          <text x="902" y="911" font-size="10.5" fill="#3c4043" font-weight="600">Security:</text>
+          <text x="902" y="925" font-size="10" fill="#5f6368">No data leaves Google Cloud.</text>
+
+     </svg>
+</body>
+
+</html>

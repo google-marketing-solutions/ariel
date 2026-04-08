@@ -1,0 +1,7 @@
+<div class="app-root" [class.is-editor]="isEditorRoute()">
+  <app-header [isDarkMode]="isDarkMode()" (toggleTheme)="toggleTheme()"></app-header>
+
+  <main [class.is-editor]="isEditorRoute()">
+    <router-outlet></router-outlet>
+  </main>
+</div>

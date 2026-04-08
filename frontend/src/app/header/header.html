@@ -1,0 +1,60 @@
+<header class="app-header">
+  <div class="header-left">
+    <div class="logo-section">
+      <img src="Image/Ariel_Logo.png" alt="Ariel Logo" class="logo-img" />
+      <h2>Ariel - AI Voiceover Studio</h2>
+    </div>
+
+    <!-- Navigation Menu -->
+    <div class="nav-menu">
+      <a
+        routerLink="/"
+        routerLinkActive="nav-link-active"
+        [routerLinkActiveOptions]="{exact: true}"
+        class="nav-link"
+      >
+        Home
+        <div class="active-indicator"></div>
+      </a>
+      <a routerLink="/library" routerLinkActive="nav-link-active" class="nav-link">
+        Library
+        <div class="active-indicator"></div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Actions Menu -->
+  <div class="actions-section">
+    @if (isEditorRoute()) {
+    <!-- Unregenerated Warning -->
+    @if (videoGenerationService.unregeneratedCount(); as count) {
+    <div
+      class="warning-info"
+      matTooltip="You have {{
+            count
+          }} utterance(s) with changed text or voices that have not been regenerated yet."
+    >
+      <span>{{ count }} change(s) need regeneration</span>
+      <span class="material-symbols-outlined">info</span>
+    </div>
+    }
+
+    <button
+      (click)="generateVideo()"
+      class="generate-btn"
+      [disabled]="videoGenerationService.isProcessingAudio()"
+      [class.opacity-50]="videoGenerationService.isProcessingAudio()"
+      [class.cursor-not-allowed]="videoGenerationService.isProcessingAudio()"
+    >
+      Generate Video
+    </button>
+    <div class="divider"></div>
+    }
+
+    <button (click)="onToggleTheme()" class="theme-toggle-btn">
+      <span class="material-symbols-outlined">
+        {{ isDarkMode() ? 'light_mode' : 'dark_mode' }}
+      </span>
+    </button>
+  </div>
+</header>

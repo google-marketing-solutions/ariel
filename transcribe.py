@@ -14,283 +14,140 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import dataclasses
-import json
 import logging
+from typing import cast
 
-from faster_whisper import WhisperModel
+import google.api_core.exceptions
 import google.genai
-from google.genai import types
-from pydantic import TypeAdapter
-from tenacity import retry
-from tenacity import stop_after_attempt
-from tenacity import wait_fixed
+from models import ProcessResponse
+from models import Speaker
+from models import Utterance
+import pydantic
 
 
-# Load the fasterwhisper model only once to save on processing time.
-logging.info("Loading Whisper model...")
-whisper_model = WhisperModel("small", device="cpu", compute_type="int8")
-logging.info("Whisper model loaded.")
+def transcribe_video(
+    gcs_video_path: str,
+    translate_language: str,
+    duration: float,
+    genai_client: google.genai.Client,
+    gemini_model: str,
+) -> tuple[str, list[Speaker], list[Utterance]]:
+  """Transcribes and translates a video file using the Gemini model.
 
-VOICE_OPTIONS = {
-    "Zephyr": {"gender": "female", "tone": "Bright", "pitch": "Higher"},
-    "Puck": {"gender": "male", "tone": "Upbeat", "pitch": "Middle"},
-    "Charon": {"gender": "male", "tone": "Informative", "pitch": "Lower"},
-    "Kore": {"gender": "female", "tone": "Firm", "pitch": "Middle"},
-    "Fenrir": {
-        "gender": "female",
-        "tone": "Excitable",
-        "pitch": "Lower middle",
-    },
-    "Leda": {"gender": "female", "tone": "Youthful", "pitch": "Higher"},
-    "Orus": {"gender": "male", "tone": "Firm", "pitch": "Lower middle"},
-    "Aoede": {"gender": "female", "tone": "Breezy", "pitch": "Middle"},
-    "Callirrhoe": {
-        "gender": "female",
-        "tone": "Easy-going",
-        "pitch": "Middle",
-    },
-    "Autonoe": {"gender": "female", "tone": "Bright", "pitch": "Middle"},
-    "Enceladus": {"gender": "male", "tone": "Breathy", "pitch": "Lower"},
-    "Iapetus": {"gender": "male", "tone": "Clear", "pitch": "Lower middle"},
-    "Umbriel": {
-        "gender": "male",
-        "tone": "Easy-going",
-        "pitch": "Lower middle",
-    },
-    "Algieba": {"gender": "male", "tone": "Smooth", "pitch": "Lower"},
-    "Despina": {"gender": "female", "tone": "Smooth", "pitch": "Middle"},
-    "Erinome": {"gender": "female", "tone": "Clear", "pitch": "Middle"},
-    "Algenib": {"gender": "male", "tone": "Gravelly", "pitch": "Lower"},
-    "Rasalgethi": {
-        "gender": "male",
-        "tone": "Informative",
-        "pitch": "Middle",
-    },
-    "Laomedeia": {"gender": "female", "tone": "Upbeat", "pitch": "Higher"},
-    "Achernar": {"gender": "female", "tone": "Soft", "pitch": "Higher"},
-    "Alnilam": {"gender": "male", "tone": "Firm", "pitch": "Lower middle"},
-    "Schedar": {"gender": "male", "tone": "Even", "pitch": "Lower middle"},
-    "Gacrux": {"gender": "female", "tone": "Mature", "pitch": "Middle"},
-    "Pulcherrima": {"gender": "female", "tone": "Forward", "pitch": "Middle"},
-    "Achird": {"gender": "male", "tone": "Friendly", "pitch": "Lower middle"},
-    "Zubenelgenubi": {
-        "gender": "female",
-        "tone": "Casual",
-        "pitch": "Lower middle",
-    },
-    "Vindemiatrix": {"gender": "female", "tone": "Gentle", "pitch": "Middle"},
-    "Sadachbia": {"gender": "male", "tone": "Lively", "pitch": "Lower"},
-    "Sadaltager": {
-        "gender": "male",
-        "tone": "Knowledgeable",
-        "pitch": "Middle",
-    },
-    "Sulafat": {"gender": "female", "tone": "Warm", "pitch": "Middle"},
-}
-
-
-@dataclasses.dataclass
-class TranscribeSegment:
-  """Represents one spoken segment in a transcription.
-
-  Attributes:
-    speaker_id: a unique ID for the speaker.
-    gender: the gender of the speaker.
-    transcript: the transcription of the spoken text.
-    tone: a textual description of the tone used.
-    start_time: the time in seconds from the start of the clip when the segment
-      starts.
-    end_time: the time in seconds from the start of the clip when the segment
-      ends.
-  """
-
-  speaker_id: str
-  gender: str
-  transcript: str
-  tone: str
-  start_time: float
-  end_time: float
-
-
-def annotate_transcript(
-    client: google.genai.Client,
-    model_name: str,
-    gcs_uri: str,
-    num_speakers: int,
-    script: str,
-    mime_type: str,
-) -> list[TranscribeSegment]:
-  """Annotates an audio transcription using Gemini.
-
-  Gemini is provided an audio file and it's transcription and asked to annotate
-  the transcription with the speaker, the start and end times of each utterance,
-  the gender of the speaker, and the tone of voice used.
+  This function sends a video stored in Google Cloud Storage to the Gemini
+  model for analysis. Gemini transcribes the spoken dialogue, analyzes its
+  tone, and translates the text into the specified target language.
+  It extracts detailed information about the video's content, including the
+  primary spoken language, a list of identified speakers, and a chronological
+  list of transcribed and translated utterances with associated metadata.
 
   Args:
-    client: the genai Client to use when querying Gemini.
-    model_name: the Gemini model string to use.
-    gcs_uri: the URI of the audio file on GCS.
-    num_speakers: the number of speakers in the audio.
-    script: the transcript of the audio.
-    mime_type: the mime-type of the audio (e.g. audio/wav).
+    gcs_video_path: The GCS URI of the video file to be transcribed.
+    translate_language: The target language for translating the video, specified
+      as a BCP-47 language code (e.g., "es-ES").
+    duration: The total duration of the video in seconds. This is used by
+      Gemini to ensure all timestamps fall within the video's length.
+    genai_client: An initialized `google.genai.Client` instance.
+    gemini_model: The specific Gemini model to use for transcription and
+      translation.
 
   Returns:
-    a list of annotated transcription segments.
+    A tuple containing three elements:
+    - primary_language (str): The BCP-47 language code of the primary
+      spoken language detected in the original video.
+    - speaker_list (list[Speaker]): A list of `Speaker` objects, each
+      representing a unique speaker identified in the video, with their ID,
+      name, gender, and assigned Gemini-TTS voice.
+    - utterances (list[Utterance]): A chronological list of `Utterance`
+      objects, each containing the original text, translated text, timestamps,
+      speaker assignment, and other detailed instructions for text-to-speech.
+
+  Raises:
+    google.api_core.exceptions.GoogleAPICallError: If the call to the Gemini API
+      fails.
+    pydantic.ValidationError: If the response received from the Gemini API
+      does not conform to the `ProcessResponse` schema.
   """
-  prompt = f"""
-    I am providing you an audio file alongside its transcript with timestamps.
+  system_instruction = """
+    You are an expert audio-visual localization system. Your task is to analyze
+    a provided video, transcribe its spoken dialogue, analyze the prosody and
+    tone, and translate the text into a target language.
 
-    Your Task:
-    Identify different speakers in the audio and attempt to infer their gender.
-    There are {num_speakers} speakers. If you detect more, assume they are the same person.
+    You must extract the following information and structure it strictly
+    according to the provided JSON schema:
+    1. Primary Language: Identify the primary spoken language in the video and
+       output its BCP-47 language code.
+    2. Speaker List: Create a top-level list of all unique speakers in the
+       video. Assign a unique `speaker_id`, a `speaker_name`, and `gender`.
+       Assign a compatible Gemini-TTS voice name to the `voice` field (e.g.,
+       'Achird', 'Aoede', 'Puck'). Do not use regional codes.
+    3. Sentence-by-Sentence Transcription: Transcribe the video strictly
+       sentence by sentence into `original_text`.
+    4. Timestamps: Provide `original_start_time` and `original_end_time` in
+       seconds (precision: 2 decimal places).
+    5. Speaker Assignment: Assign the correct speaker object to each utterance,
+       matching the speakers defined in your top-level Speaker List.
+    6. Speaking Instructions: In `speaking_instructions`, write detailed
+       instructions for a TTS engine describing tone, pacing, rhythm, pitch,
+       inflection, pauses, and emphasis.
+    7. Translation Instructions: In `translation_instructions`, describe
+       formality, jargon, and cultural context.
+    8. Translation: Translate the `original_text` into the Target Language and
+       place it in `translated_text`.
 
-    For each sentence, make sure to use the provided start and end times from
-    the transcript. This is ABSOLUTELY CRITICAL. Output them exactly as they were provided.
-
-    For each utterance of the transcript, describe the tone of voice used in a short sentence.
-    When assigning speaker_id, use the format "speaker_x", where x is the number
-    of the speaker in the order they are first heard in the video, starting at 1.
-
-    Transcript:
-    {script}
+    Important Constraints:
+    - Only populate fields that can be known *before* generating the translated
+      speech.
+    - For `translated_start_time` and `translated_end_time`, set to 0.0.
+    - For `speaking_rate`, set to 1.0.
+    - For `removed` and `muted`, set to False.
+    - For `audio_url`, leave as an empty string "".
+    - Ensure all timestamps fall within the provided video duration.
     """
-  media = types.Part.from_uri(file_uri=gcs_uri, mime_type=mime_type)
 
-  @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
-  def call_gemini():
-    return client.models.generate_content(
-        model=model_name,
-        contents=[media, prompt],
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_json_schema={
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "speaker_id": {"type": "string"},
-                        "gender": {"type": "string"},
-                        "transcript": {"type": "string"},
-                        "tone": {"type": "string"},
-                        "start_time": {"type": "number", "format": "float"},
-                        "end_time": {"type": "number", "format": "float"},
-                    },
-                    "required": [
-                        "speaker_id",
-                        "gender",
-                        "transcript",
-                        "tone",
-                        "start_time",
-                        "end_time",
-                    ],
-                },
-            },
-        ),
-    )
-
-  response = call_gemini()
-  logging.info(
-      "Gemini Token Count for transcribe_media: %s",
-      response.usage_metadata.total_token_count,
-  )
-  response_json = json.loads(response.text)
-  return TypeAdapter(list[TranscribeSegment]).validate_python(response_json)
-
-
-def transcribe_media(audio_file_path: str, language: str) -> str:
-  """Uses fasterwhisper to transcribe the given audio.
-
-  The returned transcription is a single string with a segment per line. Each
-  line starts with "[Xs -> Ys]" where X is the start time and Y the end time of
-  the segment.
-
-  Args:
-    audio_file_path: the local path to the file to transcribe.
-    language: the language of the audio. This shoud be the language code
-        (e.g. en or en-US)
-
-  Returns:
-    A transcript of the audio file.
-  """
-
-  # openwhisper only uses the language part of a language code.
-  if "-" in language:
-    language = language.split("-")[0]
-
-  segments, _ = whisper_model.transcribe(
-      audio_file_path, language=language, task="transcribe", beam_size=7
+  video_part = google.genai.types.Part.from_uri(
+      file_uri=gcs_video_path, mime_type="video/mp4"
   )
 
-  transcript: list[str] = []
-  for segment in segments:
-    transcript.append(f"[{segment.start}s -> {segment.end}s]  {segment.text}")
+  user_prompt = f"""
+    Please process the attached video based on the following parameters:
+    - Video Duration: {duration} seconds
+    - Target Language: {translate_language}
+    """
 
-  return "\n".join(transcript)
+  gemini_config = google.genai.types.GenerateContentConfig(
+      system_instruction=system_instruction,
+      temperature=0.2,
+      response_mime_type="application/json",
+      response_schema=ProcessResponse,
+  )
 
-
-def match_voice(
-    client: google.genai.Client,
-    model_name: str,
-    segments: list[TranscribeSegment],
-) -> dict[str, str]:
-  """Matches speakers to voices from VOICE_OPTIONS using a generative model.
-
-  Args:
-    client: The Gemini API client.
-    model_name: The name of the generative model to use.
-    segments: A list of transcription segments.
-
-  Returns:
-    A dictionary mapping speaker IDs to voice names.
-  """
-  speaker_info = {}
-  for segment in segments:
-    if segment.speaker_id not in speaker_info:
-      speaker_info[segment.speaker_id] = {
-          "gender": segment.gender,
-          "tones": [],
-      }
-    speaker_info[segment.speaker_id]["tones"].append(segment.tone)
-
-  voice_map = {}
-  for speaker_id, info in speaker_info.items():
-    prompt = f"""
-        Based on the speaker's gender and vocal tones, select the most fitting voice from the provided options.
-        Ensure that a voice option is only used for a single speaker and not for multiple speakers at the same time.
-
-
-        **Speaker Profile:**
-        - **Gender:** {info['gender']}
-        - **Vocal Tones:** {', '.join(list(set(info['tones'])))}
-
-        **Voice Options:**
-        ```json
-        {json.dumps(VOICE_OPTIONS, indent=2)}
-        ```
-
-        Analyze the voice options and choose the one that best aligns with the speaker's profile.
-        Your response must be a single JSON object with a single key, "voice_name",
-        containing the name of the selected voice.
-        """
-
-    response = client.models.generate_content(
-        model=model_name,
-        contents=[prompt],
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_json_schema={
-                "type": "object",
-                "properties": {"voice_name": {"type": "string"}},
-                "required": ["voice_name"],
-            },
-        ),
+  logging.info("Sending %s to Gemini for transcription.", gcs_video_path)
+  process_response = None
+  try:
+    response = genai_client.models.generate_content(
+        model=gemini_model,
+        contents=[video_part, user_prompt],
+        config=gemini_config,
     )
-    logging.info(
-        "Gemini Token Count for match_voice: %s",
-        response.usage_metadata.total_token_count,
-    )
-    response_json = json.loads(response.text)
-    voice_map[speaker_id] = response_json["voice_name"]
 
-  return voice_map
+    process_response = ProcessResponse.model_validate_json(
+        cast(str, response.text)
+    )
+  except google.api_core.exceptions.GoogleAPICallError as ge:
+    logging.exception("Error getting transcription from Gemini: %s", ge)
+  except pydantic.ValidationError as ve:
+    logging.exception(
+        "Error processing the transcription response from Gemini: %s", ve
+    )
+    raise ve
+
+  if process_response:
+    original_language = process_response.primary_language
+    speaker_list = process_response.speakers
+    utterances = process_response.utterances
+
+    return original_language, speaker_list, utterances
+
+  else:
+    return "", [], []

@@ -14,9 +14,9 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import io
 import unittest
 import unittest.mock
-from io import BytesIO
 
 import cloud_storage
 
@@ -27,7 +27,9 @@ class CloudStorageTest(unittest.TestCase):
   @unittest.mock.patch("cloud_storage.storage.Client")
   @unittest.mock.patch("uuid.uuid4")
   @unittest.mock.patch("datetime.datetime")
-  def test_upload_video_to_gcs(self, mock_datetime, mock_uuid, mock_storage_client):
+  def test_upload_video_to_gcs(
+      self, mock_datetime, mock_uuid, mock_storage_client
+  ):
     """Tests that upload_video_to_gcs correctly uploads a video and returns path."""
     # Setup mocks
     mock_now = unittest.mock.MagicMock()
@@ -42,12 +44,14 @@ class CloudStorageTest(unittest.TestCase):
     mock_client_instance.bucket.return_value = mock_bucket
     mock_bucket.blob.return_value = mock_blob
 
-    video_file = BytesIO(b"video data")
+    video_file = io.BytesIO(b"video data")
     video_name = "test_video.mp4"
     bucket_name = "test-bucket"
 
     # Execute
-    result = cloud_storage.upload_video_to_gcs(video_name, video_file, bucket_name)
+    result = cloud_storage.upload_video_to_gcs(
+        video_name, video_file, bucket_name
+    )
 
     # Verify
     expected_dir = "2023-01-01T12_00_00-uuid-1234-test_video.mp4"
@@ -70,12 +74,14 @@ class CloudStorageTest(unittest.TestCase):
     mock_client_instance.bucket.return_value = mock_bucket
     mock_bucket.blob.return_value = mock_blob
 
-    file_object = BytesIO(b"file data")
+    file_object = io.BytesIO(b"file data")
     target_path = "path/to/file.txt"
     bucket_name = "test-bucket"
 
     # Execute
-    result = cloud_storage.upload_file_to_gcs(target_path, file_object, bucket_name)
+    result = cloud_storage.upload_file_to_gcs(
+        target_path, file_object, bucket_name
+    )
 
     # Verify
     self.assertEqual(result, target_path)
@@ -95,12 +101,14 @@ class CloudStorageTest(unittest.TestCase):
     mock_client_instance.bucket.return_value = mock_bucket
     mock_bucket.blob.return_value = mock_blob
 
-    file_object = BytesIO(b"data")
+    file_object = io.BytesIO(b"data")
     target_path = "file.bin"
     bucket_name = "test-bucket"
     mime_type = "application/custom"
 
-    cloud_storage.upload_file_to_gcs(target_path, file_object, bucket_name, mime_type)
+    cloud_storage.upload_file_to_gcs(
+        target_path, file_object, bucket_name, mime_type
+    )
 
     mock_blob.upload_from_file.assert_called_once_with(
         file_object, content_type=mime_type
@@ -125,15 +133,25 @@ class CloudStorageTest(unittest.TestCase):
     access_token = "test-token"
 
     # Execute
-    result = cloud_storage.get_url_for_path(bucket_name, path, service_account_email=service_account_email, access_token=access_token)
+    result = cloud_storage.get_url_for_path(
+        bucket_name,
+        path,
+        service_account_email=service_account_email,
+        access_token=access_token,
+    )
 
     # Verify
     self.assertEqual(result, expected_url)
     mock_client_instance.bucket.assert_called_once_with(bucket_name)
     mock_bucket.blob.assert_called_once_with(path)
     mock_blob.generate_signed_url.assert_called_once_with(
-        version="v4", expiration=(60 * 60 * 24), method="GET", service_account_email=service_account_email, access_token=access_token
+        version="v4",
+        expiration=(60 * 60 * 24),
+        method="GET",
+        service_account_email=service_account_email,
+        access_token=access_token,
     )
+
 
 if __name__ == "__main__":
   unittest.main()

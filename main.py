@@ -1,4 +1,4 @@
-"""Entry point into the Ariel v2 solution."""
+"""Entry point into the Ariel v2.2 solution."""
 
 # Copyright 2025 Google LLC
 
@@ -19,12 +19,9 @@ import functools
 import json
 import logging
 import os
-import re
 import shutil
-from typing import Annotated
+from typing import Annotated, cast
 import uuid
-import re
-
 
 from cloud_storage import clean_video_name
 from cloud_storage import delete_video_from_gcs
@@ -34,32 +31,32 @@ from cloud_storage import upload_video_to_gcs
 from configuration import get_config
 from fastapi import FastAPI
 from fastapi import Form
+from fastapi import HTTPException
 from fastapi import Request
 from fastapi import UploadFile
+from fastapi.responses import FileResponse
 from fastapi.responses import HTMLResponse
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from generate_audio import generate_audio
-from generate_audio import shorten_audio
 from google import genai
+import google.cloud.exceptions
 import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
+from models import GenerateVideoRequest
 from models import RegenerateRequest
 from models import RegenerateResponse
-from models import Speaker
 from models import Utterance
 from models import Video
+from models import VideoMetadata
+import moviepy
 from process import combine_video_and_audio
 from process import merge_background_and_vocals
 from process import merge_vocals
 from process import separate_audio_from_video
-from transcribe import annotate_transcript
-from transcribe import transcribe_media
-from transcribe import TranscribeSegment
+import pydantic
+from transcribe import transcribe_video
 from translate import translate_text
-from models import GenerateVideoRequest
-import moviepy
 
 # Set up Google Cloud Logging
 if "K_SERVICE" in os.environ:
@@ -81,101 +78,55 @@ else:
   app.mount("/temp", StaticFiles(directory="temp"), name="temp")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
 
 config = get_config()
 
 
-@app.get("/", response_class=HTMLResponse)
-async def read_item(request: Request):
-  return templates.TemplateResponse("index.html", {"request": request})
-
-
 def _process_utterance(
     i: int,
-    t: TranscribeSegment,
-    speaker_map: dict[str, Speaker],
-    genai_client: genai.Client,
-    original_language: str,
+    u: Utterance,
     translate_language: str,
-    gemini_model: str,
     gemini_tts_model: str,
     local_dir: str,
-    adjust_speed: bool,
 ) -> Utterance:
   """Processes a single utterance: translates and generates audio.
 
   Args:
     i: The index of the utterance.
-    t: The TranscribeSegment object.
-    speaker_map: A map of speaker IDs to Speaker objects.
-    genai_client: The GenAI client.
-    original_language: The original language.
+    u: The Utterance object.
     translate_language: The target language.
-    gemini_model: The Gemini model for translation.
     gemini_tts_model: The Gemini TTS model.
     local_dir: The directory to save audio.
-    adjust_speed: Whether to adjust audio speed.
 
   Returns:
     The processed Utterance object.
   """
-  uid = str(uuid.uuid4())
-  speaker = speaker_map[t.speaker_id]
-
-  translated_text = translate_text(
-      genai_client,
-      original_language,
-      translate_language,
-      t.transcript,
-      gemini_model,
-      t.tone,
-  )
-
   local_audio_path = os.path.join(local_dir, f"audio_{i}.wav")
   audio_duration = generate_audio(
-      translated_text,
-      t.tone,
+      u.translated_text,
+      u.speaking_instructions,
       translate_language,
-      speaker.voice,
+      u.speaker.voice,
+      1.0,
       local_audio_path,
       model_name=gemini_tts_model,
   )
-  original_duration = t.end_time - t.start_time
-  if adjust_speed and audio_duration and audio_duration > original_duration:
-    audio_duration = shorten_audio(
-        local_audio_path, audio_duration, original_duration
-    )
+  translated_end_time = u.original_start_time + audio_duration
+  u.audio_url = local_audio_path
+  u.translated_start_time = u.original_start_time
+  u.translated_end_time = translated_end_time
 
-  translated_end_time = t.start_time + audio_duration
-
-  return Utterance(
-      id=uid,
-      original_text=t.transcript,
-      translated_text=translated_text,
-      instructions=t.tone,
-      speaker=speaker,
-      original_start_time=t.start_time,
-      original_end_time=t.end_time,
-      translated_start_time=t.start_time,
-      translated_end_time=translated_end_time,
-      removed=False,
-      audio_url=local_audio_path,
-  )
+  return u
 
 
 @app.post("/process")
-async def process_video(
-    original_language: Annotated[str, Form()],
+def process_video(
     translate_language: Annotated[str, Form()],
-    adjust_speed: Annotated[bool, Form()],
-    speakers: Annotated[str, Form()],
-    prompt_enhancements: Annotated[str, Form()] = "",
     use_pro_model: Annotated[bool, Form()] = False,
-    video: UploadFile = None,
-    source_video_id: Annotated[str, Form()] = None,
+    video: UploadFile | None = None,
+    source_video_id: Annotated[str, Form()] = "",
     update_existing: Annotated[bool, Form()] = False,
-) -> Video:
+) -> JSONResponse:
   """Endpoint to run the initial video processing workflow.
 
   This function provides the workflow to separate the audio from the video,
@@ -184,108 +135,106 @@ async def process_video(
   information.
 
   Args:
-    original_language: the language of speech in the original video.
     translate_language: the language to translate the video to.
-    adjust_speed: whether to automatically match the length of the generated
-      utterances to the original.
-    speakers: a list of the speakers in the video. They must be in the order
-      they speak in the video.
-    prompt_enhancements: extra instructions to send Gemini during translation
-      and audio generation.
     use_pro_model: whether to use the pro version of Gemini. If true, the pro
       model defined in the configuration will be used. Otherwise the flash
       version is used.
     video: the original video file. Optional if source_video_id is provided.
     source_video_id: the ID of an existing video to fork/process from.
-    update_existing: if true, updates the existing project in-place instead of forking.
+    update_existing: if true, updates the existing project in-place instead of
+      forking. This is used when changing the language on the editor page.
 
   Returns:
     A Video object with the information for the dubbing.
   """
   if not video and not source_video_id:
-    raise ValueError("Either video file or source_video_id must be provided")
+    raise HTTPException(
+        status_code=400,
+        detail="Either video file or source_video_id must be provided",
+    )
 
   logging.info("Starting Process Video")
 
   local_dir = ""
   video_name = ""
   local_video_path = ""
-  
-  # Logic to handle forking, update, or new upload
-  if source_video_id:
+
+  # If we're doing something with an existing video project.
+  if source_video_id and not update_existing:
     source_dir = os.path.join(mount_point, source_video_id)
     if not os.path.exists(source_dir):
-      raise FileNotFoundError(f"Source video {source_video_id} not found")
+      logging.error("Source video %s not found.", source_video_id)
+      return JSONResponse(
+          status_code=500,
+          content={"error": f"Source video {source_video_id} not found."},
+      )
 
-    # Find source video file
-    video_filename = source_video_id
-    if not os.path.exists(os.path.join(source_dir, video_filename)):
-       # Fallback to shortest .mp4 file in case of slight naming mismatch in old projects
-       source_files = [f for f in os.listdir(source_dir) if f.endswith(".mp4")]
-       if not source_files:
-           raise FileNotFoundError("Video file not found in source directory")
-       video_filename = min(source_files, key=len)
+    logging.info("Forking from source_video_id: %s", source_video_id)
+    now = datetime.datetime.now().isoformat().replace(":", "_")
 
-    if update_existing:
-        logging.info("Updating existing project: %s", source_video_id)
-        local_dir = source_dir
-        video_name = source_video_id
-        local_video_path = os.path.join(local_dir, video_filename)
+    parts = source_video_id.split("-", 3)
+    if len(parts) == 4:
+      new_id = f"{now}-{parts[3]}"
     else:
-        logging.info("Forking from source_video_id: %s", source_video_id)
-        now = datetime.datetime.now().isoformat().replace(":", "_")
-        
-        parts = source_video_id.split("-", 3)
-        if len(parts) == 4:
-            new_id = f"{now}-{parts[3]}"
-        else:
-            new_id = f"{now}-{str(uuid.uuid4())}-{video_filename}"
-            new_id = new_id.replace(":", "_")
-        
-        local_dir = os.path.join(mount_point, new_id)
-        os.makedirs(local_dir, exist_ok=True)
+      new_id = f"{now}-{uuid.uuid4()}-{source_video_id}"
+      new_id = new_id.replace(":", "_")
 
-        # Copy video file
-        local_video_path = os.path.join(local_dir, new_id)
-        shutil.copy2(os.path.join(source_dir, video_filename), local_video_path)
-        video_name = new_id
+    local_dir = os.path.join(mount_point, new_id)
+    os.makedirs(local_dir, exist_ok=True)
 
-        # Copy separated audio files if present
-        for fname in ["original_audio.wav", "background.wav", "vocals.wav"]:
-            src_file = os.path.join(source_dir, fname)
-            if os.path.exists(src_file):
-                shutil.copy2(src_file, os.path.join(local_dir, fname))
+    # Copy video file
+    local_video_path = os.path.join(local_dir, new_id)
+    shutil.copy2(os.path.join(source_dir, source_video_id), local_video_path)
+    video_name = new_id
+    gcs_object_name = f"{video_name}/{video_name}"
+    with open(local_video_path, "rb") as f:
+      upload_file_to_gcs(gcs_object_name, f, config.gcs_bucket_name)
 
+    gcs_video_path = f"gs://{config.gcs_bucket_name}/{gcs_object_name}"
+
+    # Copy separated audio files if present
+    for fname in ["original_audio.wav", "background.wav", "vocals.wav"]:
+      src_file = os.path.join(source_dir, fname)
+      if os.path.exists(src_file):
+        shutil.copy2(src_file, os.path.join(local_dir, fname))
+  elif update_existing:
+    logging.info("Updating existing project: %s", source_video_id)
+    gcs_video_path = (
+        f"gs://{config.gcs_bucket_name}/{source_video_id}/{source_video_id}"
+    )
+    source_dir = os.path.join(mount_point, source_video_id)
+    local_video_path = os.path.join(source_dir, source_video_id)
   else:
+    assert video is not None
     logging.info("Processing new video upload: %s", video.filename)
-    local_video_path, _ = save_video(video)
+    local_video_path, gcs_video_path = save_video(video)
     local_dir = os.path.dirname(local_video_path)
     video_name = video.filename
 
   # Check/Run Separation
   logging.info("Separating vocals and background music from %s", video_name)
-  
+
   # Check if files already exist (e.g. from fork)
   expected_vocals = os.path.join(local_dir, "vocals.wav")
   expected_background = os.path.join(local_dir, "background.wav")
   expected_original = os.path.join(local_dir, "original_audio.wav")
-  
+
   if os.path.exists(expected_vocals) and os.path.exists(expected_background):
-      logging.info("Found existing separated audio, skipping separation.")
-      vocals_path = expected_vocals
-      background_path = expected_background
-      # We still need original_audio_path. 
-      if os.path.exists(expected_original):
-          original_audio_path = expected_original
-      else:
-           logging.info("Original audio missing, re-running separation.")
-           original_audio_path, vocals_path, background_path = separate_audio_from_video(
-               local_video_path, local_dir
-           )
-  else:
-      original_audio_path, vocals_path, background_path = separate_audio_from_video(
-          local_video_path, local_dir
+    logging.info("Found existing separated audio, skipping separation.")
+    vocals_path = expected_vocals
+    background_path = expected_background
+    # We still need original_audio_path.
+    if os.path.exists(expected_original):
+      original_audio_path = expected_original
+    else:
+      logging.info("Original audio missing, re-running separation.")
+      original_audio_path, vocals_path, background_path = (
+          separate_audio_from_video(local_video_path, local_dir)
       )
+  else:
+    original_audio_path, vocals_path, background_path = (
+        separate_audio_from_video(local_video_path, local_dir)
+    )
 
   logging.info(
       "Uploading original audio, vocals and background music to GCS for %s",
@@ -298,49 +247,15 @@ async def process_video(
   with open(background_path, "rb") as f:
     upload_file_to_gcs(background_path, f, config.gcs_bucket_name)
 
-  gcs_original_audio_uri = (
-      f"gs://{config.gcs_bucket_name}/{original_audio_path}"
-  )
-
   genai_client = genai.Client(
       vertexai=True,
       project=config.gcp_project_id,
       location="global",
   )
-  speaker_list = json.loads(speakers)
-  speaker_list = [
-      Speaker(speaker_id=s["id"], voice=s["voice"], speaker_name=s["name"], gender=s["gender"]) for s in speaker_list
-  ]
-  speaker_map = {s.speaker_id: s for s in speaker_list}
 
-  # Transcription Logic
-  transcript = None
-  
-  if source_video_id:
-      source_metadata_path = os.path.join(mount_point, source_video_id, "metadata.json")
-      if os.path.exists(source_metadata_path):
-          try:
-              with open(source_metadata_path, "r") as f:
-                  source_metadata = json.load(f)
-              if source_metadata.get("original_language") == original_language:
-                  logging.info("Reusing transcript from source state")
-                  # Reconstruct annotated transcript segments from source utterances
-                  annotated_transcript = []
-                  for u in source_metadata.get("utterances", []):
-                    annotated_transcript.append(TranscribeSegment(
-                        transcript=u["original_text"],
-                        speaker_id=u["speaker"]["speaker_id"],
-                        start_time=u["original_start_time"],
-                        end_time=u["original_end_time"],
-                        tone=u.get("instructions", "")
-                    ))
-                  transcript = "SKIPPED_REUSED"
-          except Exception as e:
-              logging.warning(f"Failed to reuse transcript: {e}")
-
-  if transcript is None:
-    logging.info("Transcribing %s", video_name)
-    transcript = transcribe_media(original_audio_path, original_language)
+  video_clip = moviepy.VideoFileClip(local_video_path)
+  duration: float = cast(float, video_clip.duration)
+  video_clip.close()
 
   if use_pro_model:
     gemini_model = config.gemini_pro_model
@@ -349,77 +264,60 @@ async def process_video(
     gemini_model = config.gemini_flash_model
     gemini_tts_model = config.gemini_flash_tts_model
 
-  if transcript == "SKIPPED_REUSED":
-      pass # annotated_transcript is already populated
-  else:
-      logging.info("Annotating transcript for %s", video_name)
-      annotated_transcript = annotate_transcript(
-          client=genai_client,
-          model_name=gemini_model,
-          gcs_uri=gcs_original_audio_uri,
-          num_speakers=len(speaker_list),
-          script=transcript,
-          mime_type="audio/wav",
-      )
-
-  utterances: list[Utterance] = []
-  logging.info(
-      "Starting to translate utterances and generate audio for %s",
-      video_name,
+  original_language, speaker_list, utterances = transcribe_video(
+      gcs_video_path, translate_language, duration, genai_client, gemini_model
   )
 
   process_func = functools.partial(
       _process_utterance,
-      speaker_map=speaker_map,
-      genai_client=genai_client,
-      original_language=original_language,
       translate_language=translate_language,
-      gemini_model=gemini_model,
       gemini_tts_model=gemini_tts_model,
       local_dir=local_dir,
-      adjust_speed=adjust_speed,
   )
 
   with concurrent.futures.ThreadPoolExecutor() as executor:
     utterances = list(
-        executor.map(
-            process_func, range(len(annotated_transcript)), annotated_transcript
-        )
+        executor.map(process_func, range(len(utterances)), utterances)
     )
 
   to_return = Video(
       video_id=os.path.basename(local_dir),
       original_language=original_language,
       translate_language=translate_language,
-      prompt_enhancements=prompt_enhancements,
       speakers=speaker_list,
       utterances=utterances,
       model_name=gemini_model,
       tts_model_name=gemini_tts_model,
   )
-  
+
   try:
-      metadata = to_return.model_dump()
-      duration = 0
-      try:
-          video_clip = moviepy.VideoFileClip(local_video_path)
-          duration = video_clip.duration
-          video_clip.close()
-      except Exception:
-          if to_return.utterances:
-              duration = max([u.translated_end_time for u in to_return.utterances])
-      
-      metadata['duration'] = round(duration, 1)
-      
-      metadata_path = os.path.join(local_dir, "metadata.json")
-      with open(metadata_path, "w") as f:
-          json.dump(metadata, f)
-      logging.info("Saved draft metadata to %s", metadata_path)
-  except Exception as e:
-      logging.warning(f"Failed to save draft metadata: {e}")
+    metadata = to_return.model_dump()
+    duration = 0
+    try:
+      video_clip = moviepy.VideoFileClip(local_video_path)
+      duration = cast(float, video_clip.duration)
+      video_clip.close()
+    except (OSError, AttributeError, KeyError, IndexError):
+      if to_return.utterances:
+        duration = max([u.translated_end_time for u in to_return.utterances])
+
+    metadata["name"] = video_name
+    metadata["duration"] = duration
+    metadata["url"] = ""
+    metadata["download_url"] = ""
+    metadata["created_at"] = str(datetime.datetime.now())
+    metadata["has_metadata"] = True
+
+    metadata_path = os.path.join(local_dir, "metadata.json")
+    with open(metadata_path, "w") as f:
+      json.dump(metadata, f)
+    logging.info("Saved draft metadata to %s", metadata_path)
+
+  except (OSError, TypeError) as e:
+    logging.warning("Failed to save draft metadata: %s", e)
 
   logging.info("Completed processing %s", video_name)
-  return to_return
+  return JSONResponse(content=to_return.model_dump())
 
 
 @app.post("/generate_audio")
@@ -451,7 +349,7 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
   """Generates the final, translated video.
 
   Args:
-    video_data: the Video object representing the final video.
+    request: the request to create the final video.
 
   Returns:
     A JSON object with the URL to the completed video.
@@ -461,20 +359,26 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
   try:
     logging.info("Generating final video for %s", video_data.video_id)
     local_dir = os.path.join(mount_point, video_data.video_id)
-    
+
     # Find the video file dynamically
     local_video_path = os.path.join(local_dir, video_data.video_id)
     if not os.path.exists(local_video_path):
-        # Fallback to find shortest mp4
-        video_files = [f for f in os.listdir(local_dir) if f.endswith(".mp4") and not f.endswith(f".{video_data.translate_language}.mp4")]
-        if not video_files:
-            logging.error(f"No source video file found in {local_dir}")
-            return JSONResponse(status_code=500, content={"error": f"Source video file not found in {local_dir}"})
-        local_video_path = os.path.join(local_dir, min(video_files, key=len))
-    
-    background_sound_path = os.path.join(
-        local_dir, "background.wav"
-    )
+      # Fallback to find shortest mp4
+      video_files = [
+          f
+          for f in os.listdir(local_dir)
+          if f.endswith(".mp4")
+          and not f.endswith(f".{video_data.translate_language}.mp4")
+      ]
+      if not video_files:
+        logging.error("No source video file found in %s", local_dir)
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Source video file not found in {local_dir}"},
+        )
+      local_video_path = os.path.join(local_dir, min(video_files, key=len))
+
+    background_sound_path = os.path.join(local_dir, "background.wav")
     dubbed_vocals_path = merge_vocals(
         dubbed_vocals_metadata=video_data.utterances,
         output_directory=local_dir,
@@ -488,7 +392,8 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
         target_language=video_data.translate_language,
     )
     combined_video_path = os.path.join(
-        local_dir, f"{video_data.video_id}.{video_data.translate_language}.mp4"
+        local_dir,
+        f"{video_data.video_id}.{video_data.translate_language}.mp4",
     )
     combine_video_and_audio(
         local_video_path, merged_audio_path, combined_video_path
@@ -504,31 +409,46 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
 
     duration = 0
     try:
-        video_clip = moviepy.VideoFileClip(local_video_path)
-        duration = video_clip.duration
-        video_clip.close()
-    except Exception:
-        if video_data.utterances:
-            duration = max([u.translated_end_time for u in video_data.utterances])
+      video_clip = moviepy.VideoFileClip(local_video_path)
+      duration = cast(float, video_clip.duration)
+      video_clip.close()
+    except (OSError, AttributeError, KeyError, IndexError):
+      if video_data.utterances:
+        duration = max([u.translated_end_time for u in video_data.utterances])
 
     metadata = video_data.model_dump()
-    metadata['original_video_url'] = f"{mount_point}/{video_data.video_id}/{video_data.video_id}"
-    metadata['duration'] = round(duration, 1)
+    metadata["name"] = (
+        f"{video_data.video_id}.{video_data.translate_language}.mp4"
+    )
+    metadata["original_video_url"] = (
+        f"{mount_point}/{video_data.video_id}/{video_data.video_id}"
+    )
+    metadata["url"] = public_video_path
+    metadata["download_url"] = public_video_path
+    metadata["duration"] = duration
+    metadata["created_at"] = str(datetime.datetime.now())
+    metadata["has_metadata"] = True
 
     with open(os.path.join(local_dir, "metadata.json"), "w") as f:
       json.dump(metadata, f)
       print(f"metadata.json successfully saved to {local_dir}")
 
-
-    video_gcs_folder = os.path.dirname(local_video_path.split(mount_point + "/")[-1])
+    video_gcs_folder = os.path.dirname(
+        local_video_path.split(mount_point + "/")[-1]
+    )
     metadata_gcs_path = f"{video_gcs_folder}/metadata.json"
     with open(os.path.join(local_dir, "metadata.json"), "rb") as f:
-      upload_file_to_gcs(metadata_gcs_path, f, config.gcs_bucket_name, mime_type="application/json")
+      upload_file_to_gcs(
+          metadata_gcs_path,
+          f,
+          config.gcs_bucket_name,
+          mime_type="application/json",
+      )
 
     return JSONResponse(content=to_return)
 
-  except Exception as e:
-    logging.exception("Error processing video generation")
+  except (OSError, json.JSONDecodeError) as e:
+    logging.exception("Error with the metadata file: %s", e)
     return JSONResponse(status_code=500, content={"error": str(e)})
 
 
@@ -558,21 +478,11 @@ def regenerate_translation(req: RegenerateRequest) -> RegenerateResponse:
       req.video.model_name,
       req.instructions,
   )
-  target_dir = os.path.dirname(utterance.audio_url)
-  new_file_name = (
-      f"audio_{req.utterance}-" + str(uuid.uuid1()) + ".wav"
-  )  # cache busting
-  new_path = os.path.join(target_dir, new_file_name)
-  duration = generate_audio(
-      new_translation,
-      utterance.instructions,
-      req.video.translate_language,
-      utterance.speaker.voice,
-      new_path,
-      req.video.tts_model_name,
-  )
+  duration = utterance.translated_end_time - utterance.translated_start_time
   return RegenerateResponse(
-      translated_text=new_translation, audio_url=new_path, duration=duration
+      translated_text=new_translation,
+      audio_url=utterance.audio_url,
+      duration=duration,
   )
 
 
@@ -588,7 +498,7 @@ def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
     A response with the new path to the dubbed audio.
   """
   utterance = req.video.utterances[req.utterance]
-  target_dir = os.path.dirname(utterance.audio_url)
+  target_dir = os.path.join(mount_point, req.video.video_id)
   new_file_name = (
       f"audio_{req.utterance}-" + str(uuid.uuid1()) + ".wav"
   )  # cache busting
@@ -598,6 +508,7 @@ def regenerate_dubbing(req: RegenerateRequest) -> RegenerateResponse:
       req.instructions,
       req.video.translate_language,
       utterance.speaker.voice,
+      float(req.speaking_rate),
       new_path,
       req.video.tts_model_name,
   )
@@ -644,7 +555,7 @@ def sanitize_filename(orig: str) -> str:
 
   Returns:
     a sanitized version of the name. If the name is empty after sanitizing,
-        video.mp4 is returned.
+    video.mp4 is returned.
   """
   special_chars = " \"'$&*()[]{}<>|;?/~"
   trans_map = str.maketrans(dict.fromkeys(special_chars))
@@ -655,15 +566,30 @@ def sanitize_filename(orig: str) -> str:
 
 
 @app.get("/api/videos")
-def get_videos() -> list[dict]:
-  """Fetches the list of videos from the appropriate source based on environment."""
+def get_videos(
+    page_token: str = "", max_results: int = 5
+) -> dict[str, list[VideoMetadata] | str]:
+  """Fetches the list of videos based on the environment.
 
+  Args:
+    page_token: The page token used by pagination with GCS.
+    max_results: The maximum number of results to return at a time.
+
+  Returns:
+    A dict with keys:
+      videos: the list of VideoMetadata objects for the videos found.
+      next_page_token: the next page token or an empty string.
+  """
   if "K_SERVICE" in os.environ:
-    return list_all_videos(config.gcs_bucket_name)
+    return list_all_videos(
+        config.gcs_bucket_name,
+        page_token=page_token,
+        max_results=max_results,
+    )
 
-  videos_list = []
+  videos_list: list[VideoMetadata] = []
   try:
-    for root, dirs, files in os.walk(mount_point):
+    for root, _, files in os.walk(mount_point):
       for file in files:
         if file.lower().endswith(".mp4"):
           folder_name = os.path.basename(root)
@@ -673,88 +599,115 @@ def get_videos() -> list[dict]:
           relative_path = os.path.relpath(full_path, mount_point)
           web_path = f"/temp/{relative_path}".replace(os.path.sep, "/")
           creation_time = os.path.getmtime(full_path)
-
-          metadata = {
-              "original_language": "Unknown",
-              "translate_language": "Unknown",
-              "duration": 0,
-              "speakers": [],
-          }
           meta_path = os.path.join(root, "metadata.json")
           if os.path.exists(meta_path):
             try:
-              with open(meta_path, "r") as f:
-                file_data = json.load(f)
-                raw_from_file = file_data.get("speakers", [])
-                unique_clean_speakers = list(
-                    {
-                        s["voice"]: {"voice": s["voice"]}
-                        for s in raw_from_file
-                        if s.get("voice")
-                    }.values()
+              with open(meta_path) as f:
+                file_data = f.read()
+                video = VideoMetadata.model_validate_json(file_data)
+                videos_list.append(video)
+            except (OSError, pydantic.ValidationError) as e:
+              print("Error reading metadata for %s: %s", file, e)
+          else:
+            videos_list.append(
+                VideoMetadata(
+                    video_id=folder_name,
+                    name=clean_video_name(file),
+                    url=web_path,
+                    download_url=web_path,
+                    created_at=datetime.datetime.fromtimestamp(creation_time),
+                    original_language="Unknown",
+                    translate_language="Unknown",
+                    duration=0,
+                    speakers=[],
+                    has_metadata=False,
                 )
+            )
+      videos_list.sort(key=lambda x: x.created_at, reverse=True)
+  except OSError as e:
+    print("Error listing videos: %s", e)
+  return {"videos": videos_list, "next_page_token": ""}
 
-                file_data["speakers"] = unique_clean_speakers
-                metadata.update(file_data)
-            except Exception as e:
-              print(f"Error reading metadata for {file}: {e}")
-
-          videos_list.append({
-            "video_id": folder_name,
-            "name": clean_video_name(file),
-            "url": web_path,
-            "download_url": web_path,
-            "created_at": creation_time,
-            "original_language": metadata.get("original_language", "Unknown"),
-            "translate_language": metadata.get("translate_language", "Unknown"),
-            "duration": metadata.get("duration", 0),
-            "speakers": metadata.get("speakers", [])
-          })
-      videos_list.sort(key=lambda x: x["created_at"], reverse=True)
-  except Exception as e:
-    print(f"Error listing videos: {e}")
-  return videos_list
-
-
-@app.get("/library", response_class=HTMLResponse)
-def library_page(request: Request):
-  return templates.TemplateResponse("library.html", {"request": request})
 
 @app.get("/api/projects/{video_id}")
 def load_project(video_id: str):
+  """Loads and returns the metadata for a given video project.
+
+  Args:
+    video_id: The ID of the video project to load.
+
+  Returns:
+    The project metadata as a JSON object, or an error object with error
+    details.
+  """
   try:
     local_dir = os.path.join(mount_point, video_id)
     metadata_path = os.path.join(local_dir, "metadata.json")
 
-    if os.path.exists(metadata_path):
-      with open(metadata_path, "r") as f:
-        metadata = json.load(f)
-      return metadata
-    else:
-      print(f"The file doesn't exist: {metadata_path}")
-    return JSONResponse(status_code=404, content={"error": "The file doesn't exist"})
-  except Exception as e:
-    print(f"Error loading project: {e}")
-    return JSONResponse(status_code=404, content={"error": "Error loading project"})
+    with open(metadata_path) as f:
+      return json.load(f)
+  except (OSError, json.JSONDecodeError) as e:
+    logging.exception("Error loading the metadata for %s: %s", video_id, e)
+    return JSONResponse(
+        status_code=404, content={"error": "The file doesn't exist"}
+    )
+
 
 @app.delete("/api/videos/{video_id}")
-def delete_video(video_id: str):
+def delete_video(video_id: str) -> JSONResponse:
+  """Deletes the given video project from the library.
+
+  Args:
+    video_id: The ID of the video project to delete.
+
+  Returns:
+    A JSONResponse with either success or the error if one occurs.
+  """
   try:
     if "K_SERVICE" in os.environ:
       delete_video_from_gcs(config.gcs_bucket_name, video_id)
-      return JSONResponse(status_code=200, content={"message": "Video deleted successfully"})
+      return JSONResponse(
+          status_code=200,
+          content={"message": "Video deleted successfully"},
+      )
     else:
       local_dir = os.path.join(mount_point, video_id)
       if os.path.exists(local_dir):
         shutil.rmtree(local_dir)
-        return JSONResponse(status_code=200, content={"message": "Video deleted successfully"})
+        return JSONResponse(
+            status_code=200,
+            content={"message": "Video deleted successfully"},
+        )
       else:
-        return JSONResponse(status_code=404, content={"error": "Video not found"})
-  except Exception as e:
-    print(f"Error deleting video: {e}")
-    return JSONResponse(status_code=500, content={"error": "Error deleting video"})
+        return JSONResponse(
+            status_code=404, content={"error": "Video not found"}
+        )
+  except (OSError, google.cloud.exceptions.GoogleCloudError) as e:
+    print("Error deleting video project: %s", e)
+    return JSONResponse(
+        status_code=500, content={"error": f"Error deleting video: {e}"}
+    )
 
 
+@app.get("/{catchall:path}")
+async def catch_all(
+    request: Request, catchall: str  # pyright: ignore[reportUnusedParameter]
+):
+  """Used to server the frontend files or a 404.
 
+  Args:
+    request: The fastAPI request object (not used)
+    catchall: The path being requested.
 
+  Returns:
+    The contents of the file at catchall from the frontend, or a 404 response.
+  """
+  file_path = os.path.join("frontend/dist/frontend/browser", catchall)
+  if os.path.isfile(file_path):
+    return FileResponse(file_path)
 
+  index_path = os.path.join("frontend/dist/frontend/browser", "index.html")
+  if os.path.isfile(index_path):
+    return FileResponse(index_path)
+
+  return HTMLResponse(status_code=404, content="Frontend not found")

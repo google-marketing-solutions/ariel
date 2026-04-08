@@ -20,9 +20,6 @@ import wave
 from google.api_core import exceptions as api_exceptions
 from google.api_core.retry import Retry
 from google.cloud import texttospeech
-import librosa
-import numpy as np
-import soundfile
 
 
 def _process_audio_part(audio_data: bytes, path: str) -> float:
@@ -52,21 +49,23 @@ def generate_audio(
     prompt: str,
     language: str,
     voice_name: str,
+    speaking_rate: float,
     output_path: str,
-    model_name: str = "gemini-2.5-pro-tts",
+    model_name: str,
 ) -> float:
   """Uses Gemini TTS to generate audio for the given text.
 
   Args:
-   text: the text to have spoken.
-   prompt: additional instructions for the generation.
-   language: the language to be spoken in ISO format (e.g. en-US)
-   voice_name: the name of the Gemini voice to use.
-   output_path: where to save the generated audio file.
-   model_name: the Gemini model to use. Defaults to gemini-2.5-pro-tts.
+   text: The text to have spoken.
+   prompt: Additional instructions for the generation.
+   language: The language to be spoken in BCP-47 format (e.g. en-US)
+   voice_name: The name of the Gemini voice to use.
+   speaking_rate: The speaking rate to pass to Gemini TTS.
+   output_path: Path to save the generated audio file to.
+   model_name: The Gemini TTS model to use.
 
   Returns:
-   the duration of the generated file.
+    The duration of the generated file.
   """
   try:
     tts_client = texttospeech.TextToSpeechClient()
@@ -75,7 +74,8 @@ def generate_audio(
         language_code=language, name=voice_name, model_name=model_name
     )
     audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.LINEAR16
+        audio_encoding=texttospeech.AudioEncoding.LINEAR16,
+        speaking_rate=speaking_rate,
     )
     advanced_options = texttospeech.AdvancedVoiceOptions()
     # TODO: b/456676630 - add configuration flag for relaxing safety filters
@@ -108,11 +108,7 @@ def generate_audio(
   ) as api_error:
     logging.error("An error occurred calling Gemini-TTS: %s", api_error)
     return 0.0
-  except (
-      EOFError,
-      IOError,
-      wave.Error,
-  ) as sys_error:
+  except (OSError, EOFError, wave.Error) as sys_error:
     logging.error(
         "An error occurred while processing the generated audio: %s", sys_error
     )
@@ -135,53 +131,3 @@ def _call_tts(
   retry_config = Retry(initial=1, maximum=10, multiplier=2, deadline=60)
   response = tts_client.synthesize_speech(request=request, retry=retry_config)
   return response
-
-
-def strip_silence(path: str) -> float:
-  """Removes the silence from the start and end of an audio file.
-
-  Args:
-    path: the path to the file to strip.
-
-  Returns:
-    the duration of the stripped audio.
-  """
-  y, sr = librosa.load(path)
-  yt, _ = librosa.effects.trim(y)
-
-  # If the audio is all silence, librosa.effects.trim doesn't shorten it.
-  # So if the length is the same, and the audio is all zeros, then we
-  # should return an empty array.
-  if len(y) == len(yt) and np.all(y == 0):
-    yt = np.array([])
-
-  soundfile.write(path, yt, sr)
-  return librosa.get_duration(y=yt, sr=sr)
-
-
-def shorten_audio(
-    path: str, original_duration: float, target_duration: float
-) -> float:
-  """Shortens audio to a given duration.
-
-  The audio file provided will be shortened to the target duration. This can
-  cause echos and other artifacts.
-
-  Args:
-    path: the path to the audio file.
-    original_duration: the duration of the original audio.
-    target_duration: the duration to shorten the audio to.
-
-  Returns:
-    the duration of the shortened audio.
-  """
-  y, sr = librosa.load(path)
-  if original_duration == 0:
-    y_sped_up = np.array([])
-  else:
-    rate = original_duration / target_duration
-    y_sped_up = librosa.effects.time_stretch(y, rate=rate)
-
-  soundfile.write(path, y_sped_up, sr)
-
-  return librosa.get_duration(y=y_sped_up, sr=sr)

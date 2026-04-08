@@ -19,12 +19,12 @@ from google import genai
 
 
 def translate_text(
-    genai_client: genai.Client,
-    original_lang: str,
-    target_lang: str,
-    text: str,
-    model_name: str,
-    instructions: str = "",
+  genai_client: genai.Client,
+  original_lang: str,
+  target_lang: str,
+  text: str,
+  model_name: str,
+  instructions: str = "",
 ) -> str:
   """Translates text from the original to the target language.
 
@@ -32,33 +32,35 @@ def translate_text(
   provide detailed instructions on how the translation should be done.
 
   Args:
-    genai_client: the genai.Client to use for Gemini queries.
-    original_lang: the language the text is in.
-    target_lang: the language to translate to.
-    text: the text to translate.
-    model_name: the name of the model to use.
-    instructions: additional instructions to include to steer the translation.
-        Defaults to 'Nothing'
+    genai_client: The genai.Client to use for Gemini.
+    original_lang: The language the text is in.
+    target_lang: The language to translate to.
+    text: The text to translate.
+    model_name: The model string for the Gemini model to use.
+    instructions: Additional instructions to include to steer the translation.
+        Defaults to an empty string.
 
   Returns:
     the translated text.
   """
-
   prompt = f"""
   # Translation Job
   ## Instructions
   Translate the text from {original_lang} to {target_lang}. Return only the translated text.
   {instructions}
+
   ## Original text
   {text}
   """
 
   response = genai_client.models.generate_content(
-      model=model_name,
-      contents=[prompt],
+    model=model_name,
+    contents=[prompt],
   )
-  logging.info(
+  if response.usage_metadata and response.usage_metadata.total_token_count:
+    logging.info(
       "Gemini Token Count for translate_text: %s",
-      response.usage_metadata.total_token_count)
+      response.usage_metadata.total_token_count,
+    )
 
   return response.text or "TRANSLATION FAILED"

@@ -16,9 +16,7 @@
 
 import os
 import shutil
-import subprocess
 import tempfile
-from typing_extensions import override
 import unittest
 import unittest.mock
 from models import Speaker
@@ -26,6 +24,7 @@ from models import Utterance
 import moviepy
 import process
 import soundfile
+from typing_extensions import override
 
 
 class ProcessTest(unittest.TestCase):
@@ -45,7 +44,6 @@ class ProcessTest(unittest.TestCase):
 
   def test_separate_audio_from_video_success(self):
     """Tests that `separate_audio_from_video` successfully separates audio."""
-
     video_file_path = "tests/test_data/video_with_audio.mp4"
 
     original_audio_path, vocals_path, background_path = (
@@ -62,14 +60,11 @@ class ProcessTest(unittest.TestCase):
     )
     self.assertEqual(
         background_path,
-        os.path.join(
-            self.temp_dir, "background.wav"
-        ),
+        os.path.join(self.temp_dir, "background.wav"),
     )
 
   def test_separate_audio_from_video_no_audio(self):
     """Tests that `separate_audio_from_video` raises an error if no audio."""
-
     video_file_path = "tests/test_data/no_audio_video.mp4"
 
     with self.assertRaisesRegex(
@@ -80,7 +75,6 @@ class ProcessTest(unittest.TestCase):
 
   def test_separate_audio_from_video_separation_fails(self):
     """Tests that `separate_audio_from_video` raises an error if separation fails."""
-
     video_file_path = "tests/test_data/video_with_audio.mp4"
 
     # To simulate separation failure, mock the separator output
@@ -124,7 +118,12 @@ class MergeVocalsTest(unittest.TestCase):
 
   def test_merge_vocals_multiple_utterances(self):
     """Tests merging multiple valid utterances."""
-    mock_speaker = Speaker(speaker_id="speaker1", voice="fake-voice", speaker_name="Speaker 1", gender="male")
+    mock_speaker = Speaker(
+        speaker_id="speaker1",
+        voice="fake-voice",
+        speaker_name="Speaker 1",
+        gender="male",
+    )
     dubbed_vocals_metadata = [
         Utterance(
             id="1",
@@ -139,6 +138,7 @@ class MergeVocalsTest(unittest.TestCase):
             removed=False,
             muted=False,
             audio_url=self.audio_path_1,
+            speaking_rate=1.0,
         ),
         Utterance(
             id="2",
@@ -171,7 +171,12 @@ class MergeVocalsTest(unittest.TestCase):
 
   def test_merge_vocals_removed_utterance(self):
     """Tests that removed utterances are skipped."""
-    mock_speaker = Speaker(speaker_id="speaker1", voice="fake-voice", speaker_name="Speaker 1", gender="male")
+    mock_speaker = Speaker(
+        speaker_id="speaker1",
+        voice="fake-voice",
+        speaker_name="Speaker 1",
+        gender="male",
+    )
     dubbed_vocals_metadata = [
         Utterance(
             id="1",
@@ -186,6 +191,7 @@ class MergeVocalsTest(unittest.TestCase):
             removed=True,  # This utterance is removed
             muted=False,
             audio_url=self.audio_path_1,
+            speaking_rate=1.0,
         ),
         Utterance(
             id="2",
@@ -219,7 +225,12 @@ class MergeVocalsTest(unittest.TestCase):
 
   def test_merge_vocals_muted_utterance(self):
     """Tests that muted utterances use the original vocals."""
-    mock_speaker = Speaker(speaker_id="speaker1", voice="fake-voice", speaker_name="Speaker 1", gender="male")
+    mock_speaker = Speaker(
+        speaker_id="speaker1",
+        voice="fake-voice",
+        speaker_name="Speaker 1",
+        gender="male",
+    )
     dubbed_vocals_metadata = [
         Utterance(
             id="1",
@@ -234,6 +245,7 @@ class MergeVocalsTest(unittest.TestCase):
             removed=False,
             muted=True,  # This utterance is muted
             audio_url=self.audio_path_1,  # This should be ignored
+            speaking_rate=1.0,
         )
     ]
 

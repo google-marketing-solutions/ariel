@@ -18,24 +18,22 @@ import io
 import os
 import shutil
 import tempfile
-from typing_extensions import override
 import unittest
 import unittest.mock
 import wave
 
-from generate_audio import _process_audio_part
-from generate_audio import generate_audio
-from generate_audio import shorten_audio
-from generate_audio import strip_silence
-from google.api_core import exceptions as api_exceptions
-import numpy as np
-import soundfile as sf
-
 # Import TestClient and our FastAPI app
 from fastapi.testclient import TestClient
+from generate_audio import _process_audio_part
+from generate_audio import generate_audio
+from google.api_core import exceptions as api_exceptions
 from main import app
 from main import mount_point
-from models import Speaker, Utterance, Video
+from models import Speaker
+from models import Utterance
+from models import Video
+import soundfile as sf
+from typing_extensions import override
 
 
 class TestGenerateAudio(unittest.TestCase):
@@ -58,7 +56,6 @@ class TestGenerateAudio(unittest.TestCase):
     # Ensure the mount_point exists for the test
     os.makedirs(os.path.join(mount_point, self.video_id), exist_ok=True)
 
-
   @override
   def tearDown(self):
     super().tearDown()
@@ -66,8 +63,7 @@ class TestGenerateAudio(unittest.TestCase):
     # Clean up the test video directory
     test_video_dir = os.path.join(mount_point, self.video_id)
     if os.path.exists(test_video_dir):
-        shutil.rmtree(test_video_dir)
-
+      shutil.rmtree(test_video_dir)
 
   def create_in_memory_wav(
       self,
@@ -134,108 +130,6 @@ class TestGenerateAudio(unittest.TestCase):
     with wave.open(self.output_path, "rb") as wf:
       self.assertEqual(wf.getnframes(), 0)
 
-  def test_strip_silence(self):
-    """Test strip_silence removes the correct part of the file."""
-    sample_rate = 24000
-    # Create a 3 second clip with 1s silence, 1s tone, 1s silence
-    silence = np.zeros(sample_rate)
-    frequency = 440
-    t = np.linspace(0.0, 1.0, sample_rate)
-    amplitude = np.iinfo(np.int16).max * 0.5
-    tone = (amplitude * np.sin(2.0 * np.pi * frequency * t)).astype(np.int16)
-    audio_data = np.concatenate((silence, tone, silence)).astype(np.int16)
-
-    sf.write(self.output_path, audio_data, sample_rate)
-
-    new_duration = strip_silence(self.output_path)
-    self.assertAlmostEqual(new_duration, 1.0, delta=0.1)
-
-    y, sr = sf.read(self.output_path)
-    self.assertAlmostEqual(len(y) / sr, 1.0, delta=0.1)
-
-  def test_strip_silence_no_silence(self):
-    """Tests strip_silence doesn't remove anything where there is no silence."""
-    sample_rate = 24000
-    # Create a 1 second clip with a tone
-    frequency = 440
-    t = np.linspace(0.0, 1.0, sample_rate)
-    amplitude = np.iinfo(np.int16).max * 0.5
-    tone = (amplitude * np.sin(2.0 * np.pi * frequency * t)).astype(np.int16)
-
-    sf.write(self.output_path, tone, sample_rate)
-
-    new_duration = strip_silence(self.output_path)
-    self.assertAlmostEqual(new_duration, 1.0, delta=0.1)
-
-    y, sr = sf.read(self.output_path)
-    self.assertAlmostEqual(len(y) / sr, 1.0, delta=0.1)
-
-  def test_strip_silence_all_silence(self):
-    sample_rate = 24000
-    # Create a 3 second silent clip
-    silence = np.zeros(sample_rate * 3, dtype=np.int16)
-    sf.write(self.output_path, silence, sample_rate)
-
-    new_duration = strip_silence(self.output_path)
-    self.assertEqual(new_duration, 0.0)
-
-    y, _ = sf.read(self.output_path)
-    self.assertEqual(len(y), 0)
-
-  def test_shorten_audio(self):
-    """Tests shorten_audio creates a file of the correct length."""
-    sample_rate = 24000
-    original_duration = 3.0
-    target_duration = 1.5
-
-    # Create a 3-second silent clip
-    silence = np.zeros(int(sample_rate * original_duration), dtype=np.int16)
-    sf.write(self.output_path, silence, sample_rate)
-
-    new_duration = shorten_audio(
-        self.output_path, original_duration, target_duration
-    )
-    self.assertAlmostEqual(new_duration, target_duration, delta=0.05)
-
-    y, sr = sf.read(self.output_path)
-    self.assertAlmostEqual(len(y) / sr, target_duration, delta=0.05)
-
-  def test_shorten_audio_zero_length(self):
-    """Tests shorten_audio doesn't do anything with empty files."""
-    sample_rate = 24000
-    original_duration = 0.0
-    target_duration = 1.5
-
-    # Create an empty clip
-    empty_audio = np.array([], dtype=np.int16)
-    sf.write(self.output_path, empty_audio, sample_rate)
-
-    new_duration = shorten_audio(
-        self.output_path, original_duration, target_duration
-    )
-    self.assertEqual(new_duration, 0.0)
-
-    y, _ = sf.read(self.output_path)
-    self.assertEqual(len(y), 0)
-
-  def test_shorten_audio_stretch(self):
-    """Tests shorten_audio will stretch a file if given a longer target."""
-    sample_rate = 24000
-    original_duration = 1.5
-    target_duration = 3.0
-
-    # Create a 1.5-second silent clip
-    silence = np.zeros(int(sample_rate * original_duration), dtype=np.int16)
-    sf.write(self.output_path, silence, sample_rate)
-
-    new_duration = shorten_audio(
-        self.output_path, original_duration, target_duration
-    )
-    self.assertAlmostEqual(new_duration, target_duration, delta=0.05)
-
-    y, sr = sf.read(self.output_path)
-    self.assertAlmostEqual(len(y) / sr, target_duration, delta=0.05)
-
   @unittest.mock.patch("generate_audio.texttospeech.TextToSpeechClient")
   def test_generate_audio_full_run(
       self, mock_texttospeech_client: unittest.mock.Mock
@@ -257,7 +151,9 @@ class TestGenerateAudio(unittest.TestCase):
         prompt="A friendly voice.",
         language="en-US",
         voice_name="echo",
+        speaking_rate=1.0,
         output_path=self.output_path,
+        model_name="gemini-1.0-pro-tts",
     )
 
     mock_tts_client.synthesize_speech.assert_called_once()
@@ -285,6 +181,7 @@ class TestGenerateAudio(unittest.TestCase):
         prompt="A friendly voice.",
         language="en-US",
         voice_name="echo",
+        speaking_rate=1.0,
         output_path=self.output_path,
         model_name=model_name,
     )
@@ -313,7 +210,9 @@ class TestGenerateAudio(unittest.TestCase):
           prompt="Test prompt.",
           language="en-US",
           voice_name="test_voice",
+          speaking_rate=1.0,
           output_path=self.output_path,
+          model_name="gemini-1.0-pro-tts",
       )
 
       self.assertEqual(mock_call_tts.call_count, 1)
@@ -337,7 +236,9 @@ class TestGenerateAudio(unittest.TestCase):
           prompt="A test prompt.",
           language="en-US",
           voice_name="test_voice",
+          speaking_rate=1.0,
           output_path=self.output_path,
+          model_name="gemini-1.0-pro-tts",
       )
 
       self.assertEqual(mock_call_tts.call_count, 1)
@@ -363,7 +264,9 @@ class TestGenerateAudio(unittest.TestCase):
           prompt="Test prompt.",
           language="en-US",
           voice_name="test_voice",
+          speaking_rate=1.0,
           output_path=self.output_path,
+          model_name="gemini-1.0-pro-tts",
       )
 
       # _call_tts should be called 3 times due to retry logic
@@ -384,7 +287,7 @@ class TestGenerateAudio(unittest.TestCase):
     # Create a dummy audio file for the mocked path
     os.makedirs(os.path.dirname(mock_merge_vocals.return_value), exist_ok=True)
     with open(mock_merge_vocals.return_value, "w") as f:
-        f.write("dummy audio content")
+      f.write("dummy audio content")
 
     # Create a dummy Video object
     dummy_video = Video(
@@ -392,29 +295,48 @@ class TestGenerateAudio(unittest.TestCase):
         original_language="en",
         translate_language="es",
         prompt_enhancements="test prompt",
-        speakers=[Speaker(speaker_id="speaker1", voice="voice1", speaker_name="Speaker 1", gender="male")],
-        utterances=[Utterance(
-            id="utterance1",
-            original_text="Hello",
-            translated_text="Hola",
-            instructions="",
-            speaker=Speaker(speaker_id="speaker1", voice="voice1", speaker_name="Speaker 1", gender="male"),
-            original_start_time=0.0,
-            original_end_time=1.0,
-            translated_start_time=0.0,
-            translated_end_time=1.0,
-            removed=False,
-            audio_url="/path/to/audio1.wav"
-        )],
+        speakers=[
+            Speaker(
+                speaker_id="speaker1",
+                voice="voice1",
+                speaker_name="Speaker 1",
+                gender="male",
+            )
+        ],
+        utterances=[
+            Utterance(
+                id="utterance1",
+                original_text="Hello",
+                translated_text="Hola",
+                instructions="",
+                speaker=Speaker(
+                    speaker_id="speaker1",
+                    voice="voice1",
+                    speaker_name="Speaker 1",
+                    gender="male",
+                ),
+                original_start_time=0.0,
+                original_end_time=1.0,
+                translated_start_time=0.0,
+                translated_end_time=1.0,
+                removed=False,
+                audio_url="/path/to/audio1.wav",
+            )
+        ],
         model_name="flash",
-        tts_model_name="flash-tts"
+        tts_model_name="flash-tts",
     )
 
-    response = self.client.post("/generate_audio", json=dummy_video.model_dump())
+    response = self.client.post(
+        "/generate_audio", json=dummy_video.model_dump()
+    )
 
     self.assertEqual(response.status_code, 200)
     self.assertIn("audio_url", response.json())
-    self.assertIn(f"{mount_point}/{self.video_id}/dubbed_vocals.wav", response.json()["audio_url"])
+    self.assertIn(
+        f"{mount_point}/{self.video_id}/dubbed_vocals.wav",
+        response.json()["audio_url"],
+    )
     mock_merge_vocals.assert_called_once()
 
 

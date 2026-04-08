@@ -1,0 +1,165 @@
+<div class="home-container">
+  <h2 class="home-title">New Project</h2>
+
+  <!-- Drag & Drop Container -->
+  @if (!videoPreviewUrl()) {
+  <div
+    (dragover)="!isProcessing() && onDragOver($event)"
+    (drop)="!isProcessing() && onDrop($event)"
+    (click)="!isProcessing() && triggerFileInput()"
+    class="upload-box"
+    [class.pointer-events-none]="isProcessing()"
+  >
+    <div class="upload-icon-wrapper">
+      <span class="material-symbols-outlined">movie</span>
+    </div>
+    <h3>Drag & Drop video file here</h3>
+    <button (click)="$event.stopPropagation(); triggerFileInput()" [disabled]="isProcessing()">
+      Select Video from Computer
+    </button>
+  </div>
+  } @else {
+  <!-- Video Preview Container -->
+  <div class="video-preview-wrapper">
+    <div class="preview-container">
+      <video [src]="videoPreviewUrl()" controls [class.opacity-50]="isProcessing()"></video>
+      @if (!isProcessing()) {
+      <button (click)="removeVideo()" class="close-btn">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- Hidden File Input -->
+  <input type="file" id="video-input" accept="video/*" (change)="onFileSelected($event)" />
+
+  <!-- Step 1 Area -->
+  <div class="settings-container">
+    <div class="settings-grid align-center">
+      <div class="left-column">
+        <div class="form-grid">
+          <div class="form-group">
+            <div class="form-label-wrapper">
+              <h3>Translation Language</h3>
+              <a
+                href="https://docs.cloud.google.com/text-to-speech/docs/gemini-tts#available_languages"
+                target="_blank"
+                class="help-link"
+              >
+                <span
+                  class="material-symbols-outlined"
+                  title="Select the target language for dubbing"
+                  >help</span
+                >
+              </a>
+            </div>
+            <div
+              class="custom-select"
+              [class.open]="isTranslationOpen()"
+              [class.disabled]="isProcessing() || isPreprocessing()"
+              [class.dropup]="dropdownPosition() === 'top'"
+            >
+              <div class="select-trigger" (click)="toggleTranslation($event)">
+                <span class="truncate">{{ translationLanguageLabel() }}</span>
+                <span class="material-symbols-outlined select-arrow">expand_more</span>
+              </div>
+              @if (isTranslationOpen()) {
+              <div class="select-dropdown custom-scrollbar">
+                <div class="search-container" (click)="$event.stopPropagation()">
+                  <span class="material-symbols-outlined search-icon">search</span>
+                  <input
+                    type="text"
+                    [ngModel]="searchLanguage()"
+                    (ngModelChange)="searchLanguage.set($event)"
+                    placeholder="Search language..."
+                    class="language-search-input"
+                  />
+                </div>
+                @if (filteredGaLanguages().length > 0) {
+                <div class="optgroup-label">GA</div>
+                @for (lang of filteredGaLanguages(); track lang.code) {
+                <div
+                  class="option"
+                  (click)="
+                          translationLanguage.set(lang.code);
+                          isTranslationOpen.set(false);
+                          searchLanguage.set('')
+                        "
+                  [class.selected]="translationLanguage() === lang.code"
+                >
+                  {{ lang.name }}
+                </div>
+                } } @if (filteredPreviewLanguages().length > 0) {
+                <div class="optgroup-label">Preview</div>
+                @for (lang of filteredPreviewLanguages(); track lang.code) {
+                <div
+                  class="option"
+                  (click)="
+                          translationLanguage.set(lang.code);
+                          isTranslationOpen.set(false);
+                          searchLanguage.set('')
+                        "
+                  [class.selected]="translationLanguage() === lang.code"
+                >
+                  {{ lang.name }}
+                </div>
+                } } @if ( filteredGaLanguages().length === 0 && filteredPreviewLanguages().length
+                === 0 ) {
+                <div class="no-results">No languages found</div>
+                }
+              </div>
+              }
+            </div>
+          </div>
+          <div class="form-group" style="margin-left: 1.5rem">
+            <div class="form-label-wrapper">
+              <h3>Gemini Model</h3>
+            </div>
+            <div class="toggle-widget" [class.opacity-50]="isPreprocessing()">
+              <span
+                class="toggle-label-text"
+                [class.active]="!useProModel()"
+                [class.opacity-50]="useProModel()"
+                >Flash</span
+              >
+              <label class="toggle-switch">
+                <input
+                  type="checkbox"
+                  id="toggle-model-step1"
+                  [checked]="useProModel()"
+                  (change)="useProModel.set(!useProModel())"
+                  [disabled]="isPreprocessing()"
+                />
+                <span class="slider"></span>
+              </label>
+              <span
+                class="toggle-label-text"
+                [class.active]="useProModel()"
+                [class.opacity-50]="!useProModel()"
+                >Pro</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="right-column">
+        @if (videoPreviewUrl() && translationLanguage()) {
+        <button
+          (click)="processVideo()"
+          [disabled]="isPreprocessing()"
+          class="action-btn"
+          [class.processing]="isPreprocessing()"
+        >
+          @if (isPreprocessing()) {
+          <span class="material-symbols-outlined spinning">progress_activity</span>
+          {{ processingMessage() }} } @else {
+          <span class="material-symbols-outlined">auto_awesome</span>
+          Process Video }
+        </button>
+        }
+      </div>
+    </div>
+  </div>
+</div>

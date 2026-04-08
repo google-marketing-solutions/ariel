@@ -1,0 +1,74 @@
+@use '../styles/variables' as var;
+
+.app-root {
+  background-color: var.$bg-light;
+  color: var.$text-main;
+  font-family: var.$font-family-sans;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+  transition:
+    background-color 300ms,
+    color 300ms;
+  position: relative;
+  min-height: 100vh;
+
+  @include var.dark-mode {
+    background-color: var.$bg-dark;
+    color: var.$text-light;
+  }
+
+  &.is-editor {
+    height: 100vh;
+    overflow: hidden;
+    min-height: auto;
+  }
+
+  main {
+    display: flex;
+    flex: 1;
+    position: relative;
+    flex-direction: column;
+    padding: 0.5rem 1rem 1rem 1rem;
+
+    @media (min-width: 1024px) {
+      padding: 0.5rem 1.5rem 1.5rem 1.5rem;
+    }
+
+    &.is-editor {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    &:not(.is-editor) {
+      overflow-y: auto;
+
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      &::-webkit-scrollbar-thumb {
+        background-color: var.$border-main;
+        border-radius: 3px;
+        @include var.dark-mode {
+          background-color: var.$text-secondary;
+        }
+      }
+    }
+  }
+
+  .version-tag {
+    position: fixed;
+    bottom: 1rem;
+    right: 0.25rem;
+    font-size: 0.75rem;
+    color: var.$text-subtle;
+    z-index: 50;
+
+    @include var.dark-mode {
+      color: var.$text-muted;
+    }
+  }
+}

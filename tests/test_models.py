@@ -15,7 +15,11 @@
 # the License.
 
 import unittest
-from models import Speaker, Utterance, Video, RegenerateRequest, RegenerateResponse
+from models import RegenerateRequest
+from models import RegenerateResponse
+from models import Speaker
+from models import Utterance
+from models import Video
 
 
 class ModelsTest(unittest.TestCase):
@@ -23,93 +27,107 @@ class ModelsTest(unittest.TestCase):
 
   def test_speaker_model(self):
     """Tests Speaker model creation."""
-    speaker = Speaker(speaker_id="s1", voice="voice1", speaker_name="Speaker 1", gender="male")
+    speaker = Speaker(
+        speaker_id="s1", voice="voice1", speaker_name="Speaker 1", gender="male"
+    )
     self.assertEqual(speaker.speaker_id, "s1")
     self.assertEqual(speaker.voice, "voice1")
 
   def test_utterance_model(self):
     """Tests Utterance model creation and defaults."""
-    speaker = Speaker(speaker_id="s1", voice="voice1", speaker_name="Speaker 1", gender="male")
+    speaker = Speaker(
+        speaker_id="s1", voice="voice1", speaker_name="Speaker 1", gender="male"
+    )
     utterance = Utterance(
         id="u1",
         original_text="Hello",
         translated_text="Hola",
-        instructions="Translate to Spanish",
+        translation_instructions="Translate to Spanish",
         speaker=speaker,
         original_start_time=0.0,
         original_end_time=1.0,
         translated_start_time=0.0,
         translated_end_time=1.0,
-        removed=False
+        removed=False,
     )
 
     self.assertEqual(utterance.id, "u1")
-    self.assertEqual(utterance.muted, False) # Default value
-    self.assertEqual(utterance.audio_url, "") # Default value
+    self.assertEqual(utterance.muted, False)  # Default value
+    self.assertEqual(utterance.audio_url, "")  # Default value
+    self.assertEqual(utterance.speaking_rate, 1.0)  # Default value
+    self.assertEqual(utterance.speaking_instructions, "")  # Default value
+    self.assertEqual(utterance.translation_instructions, "Translate to Spanish")
 
   def test_video_model(self):
     """Tests Video model creation and defaults."""
-    speaker = Speaker(speaker_id="s1", voice="voice1", speaker_name="Speaker 1", gender="male")
+    speaker = Speaker(
+        speaker_id="s1", voice="voice1", speaker_name="Speaker 1", gender="male"
+    )
     utterance = Utterance(
         id="u1",
         original_text="Hello",
         translated_text="Hola",
-        instructions="Translate to Spanish",
+        translation_instructions="Translate to Spanish",
         speaker=speaker,
         original_start_time=0.0,
         original_end_time=1.0,
         translated_start_time=0.0,
         translated_end_time=1.0,
-        removed=False
+        removed=False,
     )
     video = Video(
         video_id="v1",
         original_language="en",
         translate_language="es",
         speakers=[speaker],
-        utterances=[utterance]
+        utterances=[utterance],
+        model_name="some-gemini-model",
+        tts_model_name="some-gemini-tts-model",
     )
 
     self.assertEqual(video.video_id, "v1")
-    self.assertEqual(video.prompt_enhancements, "") # Default
-    self.assertEqual(video.model_name, "") # Default
-    self.assertEqual(video.tts_model_name, "") # Default
+    self.assertEqual(video.prompt_enhancements, "")  # Default
+    self.assertEqual(video.model_name, "some-gemini-model")
+    self.assertEqual(video.tts_model_name, "some-gemini-tts-model")
     self.assertEqual(len(video.speakers), 1)
     self.assertEqual(len(video.utterances), 1)
 
   def test_regenerate_request(self):
     """Tests RegenerateRequest model."""
-    speaker = Speaker(speaker_id="s1", voice="voice1", speaker_name="Speaker 1", gender="male")
+    speaker = Speaker(
+        speaker_id="s1", voice="voice1", speaker_name="Speaker 1", gender="male"
+    )
     utterance = Utterance(
         id="u1",
         original_text="Hello",
         translated_text="Hola",
-        instructions="",
+        translation_instructions="",
         speaker=speaker,
         original_start_time=0.0,
         original_end_time=1.0,
         translated_start_time=0.0,
         translated_end_time=1.0,
-        removed=False
+        removed=False,
     )
     video = Video(
         video_id="v1",
         original_language="en",
         translate_language="es",
         speakers=[speaker],
-        utterances=[utterance]
+        utterances=[utterance],
+        model_name="some-gemini-model",
+        tts_model_name="some-gemini-tts-model",
     )
 
     req = RegenerateRequest(video=video, utterance=0)
     self.assertEqual(req.utterance, 0)
-    self.assertEqual(req.instructions, "") # Default value
+    self.assertEqual(req.instructions, "")  # Default value
+    self.assertEqual(req.speaking_rate, 1.0)  # Default value
 
   def test_regenerate_response(self):
     """Tests RegenerateResponse model."""
     resp = RegenerateResponse(
-        translated_text="Hola",
-        audio_url="path/to/audio.wav",
-        duration=1.5
+        translated_text="Hola", audio_url="path/to/audio.wav", duration=1.5
     )
     self.assertEqual(resp.translated_text, "Hola")
     self.assertEqual(resp.duration, 1.5)
