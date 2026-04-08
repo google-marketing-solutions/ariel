@@ -6,13 +6,13 @@ import {Subject} from 'rxjs';
 })
 export class VideoGenerationService {
   private generateVideoSource = new Subject<void>();
-  private _unregeneratedCount = signal(0);
-  private _isProcessingAudio = signal(false);
+  private privateUnregeneratedCount = signal(0);
+  private privateIsProcessingAudio = signal(false);
 
   // Observable string streams
   generateVideo$ = this.generateVideoSource.asObservable();
-  unregeneratedCount = this._unregeneratedCount.asReadonly();
-  isProcessingAudio = this._isProcessingAudio.asReadonly();
+  unregeneratedCount = this.privateUnregeneratedCount.asReadonly();
+  isProcessingAudio = this.privateIsProcessingAudio.asReadonly();
 
   // Service message commands
   triggerGenerateVideo() {
@@ -20,10 +20,10 @@ export class VideoGenerationService {
   }
 
   updateUnregeneratedCount(count: number) {
-    this._unregeneratedCount.set(count);
+    this.privateUnregeneratedCount.set(count);
   }
 
   setProcessingAudio(isProcessing: boolean) {
-    this._isProcessingAudio.set(isProcessing);
+    this.privateIsProcessingAudio.set(isProcessing);
   }
 }

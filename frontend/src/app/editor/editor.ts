@@ -64,6 +64,7 @@ interface VideoUtterance {
 
 interface VideoJob {
   video_id: string;
+  original_video_url: string;
   original_language: string;
   translate_language: string;
   prompt_enhancements: string;
@@ -398,10 +399,7 @@ export class Editor implements OnInit, OnDestroy {
   ngOnInit() {
     const updateTimeLoop = () => {
       if (this.isPlayingOriginal()) {
-        let currentVisualTime = this.originalAudio.currentTime;
-        if (this.activeAudioPlayback?.type === 'original') {
-          // Time matches originalAudio directly
-        }
+        const currentVisualTime = this.originalAudio.currentTime;
         this.currentTime.set(currentVisualTime);
       } else if (this.isPlayingTranslated()) {
         this.currentTime.set(this.translatedAudio.currentTime);
@@ -416,7 +414,6 @@ export class Editor implements OnInit, OnDestroy {
 
     this.videoGenSub = this.videoGenerationService.generateVideo$.subscribe(
       async () => {
-        console.log('generateVideo$ triggered');
         if (this.validateForGeneration()) {
           this.generateVideo();
         }
@@ -468,8 +465,7 @@ export class Editor implements OnInit, OnDestroy {
       this.videoData.set(data);
       this.initEditState();
 
-      let rawUrl = (data as VideoJob & {original_video_url?: string})
-        .original_video_url;
+      let rawUrl = data.original_video_url;
 
       if (!rawUrl && data.video_id) {
         // Fallback: try to deduce from utterances if available
@@ -704,18 +700,18 @@ export class Editor implements OnInit, OnDestroy {
 
         // Update speaker voices locally BEFORE regeneration, and reassign orphans to the first available speaker
         for (let u of data.utterances) {
-          let newSpk = data.speakers.find(
+          let newSpeaker = data.speakers.find(
             (s) => s.speaker_id === u.speaker.speaker_id,
           );
-          if (!newSpk) {
-            newSpk = data.speakers[0]; // Fallback to first speaker
+          if (!newSpeaker) {
+            newSpeaker = data.speakers[0]; // Fallback to first speaker
           }
           // Only pull fields we want to sync, to avoid losing local state
-          u.speaker.speaker_id = newSpk.speaker_id;
-          u.speaker.name = newSpk.name;
-          u.speaker.speaker_name = newSpk.speaker_name;
-          u.speaker.voice = newSpk.voice;
-          u.speaker.gender = newSpk.gender;
+          u.speaker.speaker_id = newSpeaker.speaker_id;
+          u.speaker.name = newSpeaker.name;
+          u.speaker.speaker_name = newSpeaker.speaker_name;
+          u.speaker.voice = newSpeaker.voice;
+          u.speaker.gender = newSpeaker.gender;
         }
 
         const dubbingPromises = utterancesToUpdate.map(async (utterance) => {
@@ -809,10 +805,7 @@ export class Editor implements OnInit, OnDestroy {
     this.pendingDiscardAction = null;
   }
 
-  private _focusUtteranceLogic(utteranceId: string) {
-    const prevId = this.activeUtteranceId();
-    const data = this.videoData();
-
+  private focusUtteranceLogic(utteranceId: string) {
     this.activeUtteranceId.set(utteranceId);
     this.activePanelMode.set(null);
     this.clearDrafts();
@@ -828,7 +821,7 @@ export class Editor implements OnInit, OnDestroy {
   focusUtterance(utteranceId: string) {
     if (this.activeUtteranceId() !== utteranceId) {
       this.executeWithDirtyCheck(() => {
-        this._focusUtteranceLogic(utteranceId);
+        this.focusUtteranceLogic(utteranceId);
       });
     }
   }
@@ -848,7 +841,7 @@ export class Editor implements OnInit, OnDestroy {
     } else {
       this.executeWithDirtyCheck(() => {
         if (this.activeUtteranceId() !== utteranceId) {
-          this._focusUtteranceLogic(utteranceId);
+          this.focusUtteranceLogic(utteranceId);
         }
         this.clearDrafts();
         this.activePanelMode.set(mode);
@@ -1585,7 +1578,6 @@ export class Editor implements OnInit, OnDestroy {
   }
 
   playOriginalUtterance(utterance: VideoUtterance, event: Event) {
-    console.log('playOriginalUtterance with ID:', utterance.id);
     event.stopPropagation();
 
     if (

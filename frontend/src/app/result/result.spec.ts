@@ -73,11 +73,11 @@ describe('Result', () => {
 
   it('should return cleaned video name', () => {
     const name = component.getCleanVideoName();
+    console.log(`### DEBUG - The video name is ${name}`);
     // mockOriginalData has video_id: 'user-uuid-original-id-test.mp4' and lang: 'es'
     // but the regex in getCleanVideoName expects a specific format with many dashes.
     // Let's test with a more realistic ID if needed, or just assert what it returns now.
-    expect(name).toContain('es');
-    expect(name).toContain('mp4');
+    expect(name).toEqual('user-uuid-original-id-test.mp4.es.mp4');
   });
 
   it('should redirect to home if no data is present', () => {

@@ -16,6 +16,11 @@ export interface Language {
   readiness: string;
 }
 
+enum Step {
+  Upload = 1,
+  Configure = 2,
+}
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -89,7 +94,7 @@ export class Home implements OnInit {
 
   isProcessing = signal(false);
 
-  step = signal(1); // 1 = Upload, 2 = Configure
+  step = signal(Step.Upload);
   isPreprocessing = signal(false);
   processingMessage = signal('Processing...');
   private processingInterval: any;
@@ -159,7 +164,7 @@ export class Home implements OnInit {
   removeVideo() {
     this.videoPreviewUrl.set(null);
     this.selectedVideoFile.set(null);
-    this.step.set(1);
+    this.step.set(Step.Upload);
     this.translationLanguage.set('');
     // Reset file input so selecting the same file triggers 'change' event again
     const fileInput = document.getElementById(
@@ -172,7 +177,7 @@ export class Home implements OnInit {
 
   isFormValid(): boolean {
     return (
-      this.step() === 2 &&
+      this.step() === Step.Configure &&
       !!this.selectedVideoFile() &&
       this.translationLanguage() !== ''
     );
