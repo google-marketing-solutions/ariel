@@ -163,3 +163,7 @@
     </div>
   </div>
 </div>
+
+@if (showErrorDialog()) {
+  <app-error-dialog [message]="errorMessage()" (close)="closeErrorDialog()"></app-error-dialog>
+}

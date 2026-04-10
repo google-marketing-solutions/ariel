@@ -97,4 +97,51 @@ describe('Home', () => {
       {name: 'Spanish', code: 'es', readiness: 'Preview'},
     ]);
   });
+
+  describe('video processing errors', () => {
+    beforeEach(() => {
+      // Clear previous fetch mocks for each test in this describe block
+      vi.restoreAllMocks();
+    });
+
+    it('should show an error dialog when backend returns 413 error', async () => {
+      // Mock fetch for /process endpoint to return 413
+      vi.spyOn(window, 'fetch').mockImplementation(
+        async (input: RequestInfo | URL) => {
+          if (typeof input === 'string' && input.includes('/process')) {
+            return new Response('Payload Too Large', {status: 413, statusText: 'Payload Too Large'});
+          }
+          // Fallback for other fetch requests, e.g., languages.json
+          return new Response(
+            JSON.stringify([
+              {name: 'English', code: 'en', readiness: 'GA'},
+              {name: 'Spanish', code: 'es', readiness: 'Preview'},
+            ]),
+            {status: 200},
+          );
+        },
+      );
+
+      // Simulate file selection
+      const mockFile = new File(['test content'], 'test-video.mp4', {type: 'video/mp4'});
+      component.selectedVideoFile.set(mockFile);
+      component.translationLanguage.set('en'); // Set a language for the form to be valid
+
+      // Trigger video processing
+      await component.processVideo();
+
+      // Wait for the DOM to update after signal changes
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // Assert that the error dialog is shown
+      expect(component.showErrorDialog()).toBe(true);
+      expect(component.errorMessage()).toBe('The uploaded file is too large. Please select a smaller file.');
+
+      // Assert that the error message is rendered in the DOM
+      const errorDialog = fixture.nativeElement.querySelector('app-error-dialog');
+      expect(errorDialog).toBeTruthy();
+      expect(errorDialog.textContent).toContain('The uploaded file is too large. Please select a smaller file.');
+    });
+  });
 });
