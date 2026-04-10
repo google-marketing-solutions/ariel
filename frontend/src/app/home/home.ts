@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {Router} from '@angular/router';
-import { ErrorDialog } from '../_components/error-dialog/error-dialog';
+import {ErrorDialog} from '../_components/error-dialog/error-dialog';
 
 export interface Language {
   name: string;
@@ -227,7 +227,9 @@ export class Home implements OnInit {
 
       if (!response.ok) {
         if (response.status === 413) {
-          this.errorMessage.set('The uploaded file is too large. Please select a smaller file.');
+          this.errorMessage.set(
+            'The uploaded file is too large. Please select a smaller file.',
+          );
           this.showErrorDialog.set(true);
         }
         throw new Error(`HTTP error! status: ${response.status}`);
