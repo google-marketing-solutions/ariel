@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {Router} from '@angular/router';
+import {ErrorDialog} from '../_components/error-dialog/error-dialog';
 
 export interface Language {
   name: string;
@@ -24,7 +25,7 @@ enum Step {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ErrorDialog],
   templateUrl: './home.html',
   styleUrl: './home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,6 +43,8 @@ export class Home implements OnInit {
   videoPreviewUrl = signal<string | null>(null);
   translationLanguage = signal<string>('');
   isTranslationOpen = signal(false);
+  showErrorDialog = signal(false);
+  errorMessage = signal('');
 
   dropdownPosition = signal<'bottom' | 'top'>('bottom');
 
@@ -223,6 +226,12 @@ export class Home implements OnInit {
       });
 
       if (!response.ok) {
+        if (response.status === 413) {
+          this.errorMessage.set(
+            'The uploaded file is too large. Please select a smaller file.',
+          );
+          this.showErrorDialog.set(true);
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -242,6 +251,10 @@ export class Home implements OnInit {
       this.isPreprocessing.set(false);
       this.processingMessage.set('Processing...');
     }
+  }
+
+  closeErrorDialog() {
+    this.showErrorDialog.set(false);
   }
 
   onDocumentClick(event: MouseEvent) {
