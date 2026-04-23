@@ -15,13 +15,13 @@
 # under the License.
 
 import datetime
-from enum import StrEnum
+import enum
 
 from pydantic import BaseModel
 from pydantic import Field
 
 
-class GenderEnum(StrEnum):
+class GenderEnum(enum.StrEnum):
   """Represents the gender of a Speaker."""
 
   MALE = "male"
@@ -258,7 +258,9 @@ class VideoMetadata(BaseModel):
 
   name: str = Field(description="The file name of the translated video.")
   url: str = Field(description="The URL to edit the project.")
-  original_video_url: str = Field("The URL where the original video is saved.")
+  original_video_url: str = Field(
+      description="The URL where the original video is saved."
+  )
   download_url: str = Field(
       description="The URL to download the translated video."
   )

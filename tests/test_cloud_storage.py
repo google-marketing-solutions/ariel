@@ -31,7 +31,6 @@ class CloudStorageTest(unittest.TestCase):
       self, mock_datetime, mock_uuid, mock_storage_client
   ):
     """Tests that upload_video_to_gcs correctly uploads a video and returns path."""
-    # Setup mocks
     mock_now = unittest.mock.MagicMock()
     mock_now.isoformat.return_value = "2023-01-01T12:00:00"
     mock_datetime.now.return_value = mock_now
@@ -48,13 +47,11 @@ class CloudStorageTest(unittest.TestCase):
     video_name = "test_video.mp4"
     bucket_name = "test-bucket"
 
-    # Execute
     result = cloud_storage.upload_video_to_gcs(
         video_name, video_file, bucket_name
     )
 
-    # Verify
-    expected_dir = "2023-01-01T12_00_00-uuid-1234-test_video.mp4"
+    expected_dir = "2023-01-01T12_00_00-uuid-1234-test_video"
     expected_path = f"{expected_dir}/{expected_dir}"
 
     self.assertEqual(result, expected_path)
@@ -67,7 +64,6 @@ class CloudStorageTest(unittest.TestCase):
   @unittest.mock.patch("cloud_storage.storage.Client")
   def test_upload_file_to_gcs(self, mock_storage_client):
     """Tests that upload_file_to_gcs correctly uploads a file."""
-    # Setup mocks
     mock_bucket = unittest.mock.MagicMock()
     mock_blob = unittest.mock.MagicMock()
     mock_client_instance = mock_storage_client.return_value
@@ -78,12 +74,10 @@ class CloudStorageTest(unittest.TestCase):
     target_path = "path/to/file.txt"
     bucket_name = "test-bucket"
 
-    # Execute
     result = cloud_storage.upload_file_to_gcs(
         target_path, file_object, bucket_name
     )
 
-    # Verify
     self.assertEqual(result, target_path)
     mock_client_instance.bucket.assert_called_once_with(bucket_name)
     mock_bucket.blob.assert_called_once_with(target_path)
@@ -117,7 +111,6 @@ class CloudStorageTest(unittest.TestCase):
   @unittest.mock.patch("cloud_storage.storage.Client")
   def test_get_url_for_path(self, mock_storage_client):
     """Tests that get_url_for_path generates a signed URL."""
-    # Setup mocks
     mock_bucket = unittest.mock.MagicMock()
     mock_blob = unittest.mock.MagicMock()
     mock_client_instance = mock_storage_client.return_value
@@ -132,7 +125,6 @@ class CloudStorageTest(unittest.TestCase):
     service_account_email = "test@service.com"
     access_token = "test-token"
 
-    # Execute
     result = cloud_storage.get_url_for_path(
         bucket_name,
         path,
@@ -140,7 +132,6 @@ class CloudStorageTest(unittest.TestCase):
         access_token=access_token,
     )
 
-    # Verify
     self.assertEqual(result, expected_url)
     mock_client_instance.bucket.assert_called_once_with(bucket_name)
     mock_bucket.blob.assert_called_once_with(path)

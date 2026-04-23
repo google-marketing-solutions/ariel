@@ -1,5 +1,23 @@
 """Tests Ariel's app endpoints."""
 
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+
+import json
+import os
+import tempfile
+from typing import override
 import unittest
 from unittest.mock import MagicMock
 from unittest.mock import mock_open
@@ -26,6 +44,7 @@ with patch("configuration.get_config") as mock_get_config:
 class MainTest(unittest.TestCase):
   """Test cases for the main application (Integration/API)."""
 
+  @override
   def setUp(self):
     """Creates the FastAPI TestClient to mock the server."""
     super().setUp()
@@ -36,6 +55,49 @@ class MainTest(unittest.TestCase):
     # The frontend/dist directory exists, so the catchall should return 200.
     response = self.client.get("/")
     self.assertEqual(response.status_code, 200)
+
+  def test_get_videos_endpoint(self):
+    """Tests the /api/videos endpoint returns 200."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+      # Create a dummy video and metadata
+      video_id = "test_video_id"
+      video_dir = os.path.join(tmpdir, video_id)
+      os.makedirs(video_dir)
+      video_path = os.path.join(video_dir, f"{video_id}.mp4")
+      with open(video_path, "w") as f:
+        f.write("dummy video")
+
+      metadata_path = os.path.join(video_dir, "metadata.json")
+      with open(metadata_path, "w") as f:
+        json.dump(
+            {
+                "video_id": video_id,
+                "name": "test_video.mp4",
+                "url": f"/temp/{video_id}/{video_id}.mp4",
+                "download_url": f"/temp/{video_id}/{video_id}.mp4",
+                "original_video_url": f"/temp/{video_id}/{video_id}",
+                "created_at": "2023-01-01T00:00:00",
+                "original_language": "en",
+                "translate_language": "es",
+                "duration": 10.0,
+                "speakers": [],
+                "has_metadata": True,
+            },
+            f,
+        )
+
+      # Temporarily replace the mount_point in main
+      with patch("main.mount_point", tmpdir):
+        response = self.client.get("/api/videos?max_results=5")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("videos", data)
+        self.assertGreater(len(data["videos"]), 0)
+        first_video = data["videos"][0]
+        self.assertIn("original_video_url", first_video)
+        self.assertEqual(
+            first_video["original_video_url"], f"/temp/{video_id}/{video_id}"
+        )
 
   @patch("main.upload_file_to_gcs")
   @patch("main.save_video")
@@ -68,7 +130,6 @@ class MainTest(unittest.TestCase):
         "temp/vid/bg.wav",
     )
 
-    # Use real Pydantic models to avoid validation errors
     speaker = Speaker(
         speaker_id="spk1",
         voice="voice1",
@@ -188,6 +249,46 @@ class MainTest(unittest.TestCase):
     mock_merge_vocals.assert_called_once()
     mock_merge_bg.assert_called_once()
     mock_combine.assert_called_once()
+
+  def test_process_video_missing_args(self):
+    """Tests /process endpoint with missing video and source_video_id."""
+    response = self.client.post(
+        "/process",
+        data={
+            "translate_language": "es",
+        },
+    )
+    self.assertEqual(response.status_code, 400)
+    self.assertIn(
+        "Either video file or source_video_id must be provided",
+        response.json()["detail"],
+    )
+
+  def test_process_video_source_not_found(self):
+    """Tests /process endpoint with a non-existent source_video_id."""
+    response = self.client.post(
+        "/process",
+        data={
+            "translate_language": "es",
+            "source_video_id": "non_existent_id",
+        },
+    )
+    self.assertEqual(response.status_code, 500)
+    self.assertIn(
+        "Source video non_existent_id not found.", response.json()["error"]
+    )
+
+  def test_load_project_not_found(self):
+    """Tests /api/projects/{video_id} with a non-existent video_id."""
+    response = self.client.get("/api/projects/non_existent_id")
+    self.assertEqual(response.status_code, 404)
+    self.assertEqual(response.json()["error"], "The file doesn't exist")
+
+  def test_delete_video_not_found(self):
+    """Tests DELETE /api/videos/{video_id} with a non-existent video_id."""
+    response = self.client.delete("/api/videos/non_existent_id")
+    self.assertEqual(response.status_code, 404)
+    self.assertEqual(response.json()["error"], "Video not found")
 
 
 if __name__ == "__main__":
