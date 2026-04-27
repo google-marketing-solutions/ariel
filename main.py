@@ -13,6 +13,7 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+
 import concurrent.futures
 import datetime
 import functools
@@ -77,8 +78,6 @@ else:
   mount_point = "temp"
   app.mount("/temp", StaticFiles(directory="temp"), name="temp")
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
 config = get_config()
 
 
@@ -89,7 +88,9 @@ def _process_utterance(
     gemini_tts_model: str,
     local_dir: str,
 ) -> Utterance:
-  """Processes a single utterance: translates and generates audio.
+  """Generates audio for a single utterance.
+
+  Generates audio and updates the utterance timing-related fields.
 
   Args:
     i: The index of the utterance.
@@ -301,10 +302,20 @@ def process_video(
       if to_return.utterances:
         duration = max([u.translated_end_time for u in to_return.utterances])
 
-    metadata["name"] = video_name
+    metadata["name"] = clean_video_name(video_name)
     metadata["duration"] = duration
-    metadata["url"] = ""
-    metadata["download_url"] = ""
+    if "K_SERVICE" in os.environ:
+      metadata["url"] = ""
+      metadata["download_url"] = ""
+      metadata["original_video_url"] = (
+          f"{to_return.video_id}/{to_return.video_id}"
+      )
+    else:
+      metadata["url"] = ""
+      metadata["download_url"] = ""
+      metadata["original_video_url"] = (
+          f"{mount_point}/{to_return.video_id}/{to_return.video_id}"
+      )
     metadata["created_at"] = str(datetime.datetime.now())
     metadata["has_metadata"] = True
 
@@ -418,13 +429,30 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
 
     metadata = video_data.model_dump()
     metadata["name"] = (
-        f"{video_data.video_id}.{video_data.translate_language}.mp4"
+        f"{clean_video_name(video_data.video_id)}.{video_data.translate_language}.mp4"
     )
-    metadata["original_video_url"] = (
-        f"{mount_point}/{video_data.video_id}/{video_data.video_id}"
-    )
-    metadata["url"] = public_video_path
-    metadata["download_url"] = public_video_path
+    if "K_SERVICE" in os.environ:
+      metadata["original_video_url"] = (
+          f"{video_data.video_id}/{video_data.video_id}"
+      )
+    else:
+      metadata["original_video_url"] = (
+          f"{mount_point}/{video_data.video_id}/{video_data.video_id}"
+      )
+
+    if "K_SERVICE" in os.environ:
+      # Upload the final video to GCS
+      final_video_gcs_path = (
+          f"{video_data.video_id}/{os.path.basename(combined_video_path)}"
+      )
+      with open(combined_video_path, "rb") as f:
+        upload_file_to_gcs(final_video_gcs_path, f, config.gcs_bucket_name)
+      metadata["url"] = final_video_gcs_path
+      metadata["download_url"] = final_video_gcs_path
+    else:
+      metadata["url"] = public_video_path
+      metadata["download_url"] = public_video_path
+
     metadata["duration"] = duration
     metadata["created_at"] = str(datetime.datetime.now())
     metadata["has_metadata"] = True
@@ -567,8 +595,8 @@ def sanitize_filename(orig: str) -> str:
 
 @app.get("/api/videos")
 def get_videos(
-    page_token: str = "", max_results: int = 5
-) -> dict[str, list[VideoMetadata] | str]:
+    page_token: str | None = None, max_results: int = 5
+) -> dict[str, list[VideoMetadata] | str | None]:
   """Fetches the list of videos based on the environment.
 
   Args:
@@ -621,6 +649,7 @@ def get_videos(
                     duration=0,
                     speakers=[],
                     has_metadata=False,
+                    original_video_url=f"/temp/{folder_name}/{folder_name}",
                 )
             )
       videos_list.sort(key=lambda x: x.created_at, reverse=True)

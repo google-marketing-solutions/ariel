@@ -53,7 +53,8 @@ def upload_video_to_gcs(
   """
   now = datetime.datetime.now().isoformat()
   mime_type = mimetypes.guess_type(video_name)[0] or "video/mp4"
-  dir_name = f"{now}-{uuid.uuid4()}-{video_name}"
+  video_name_without_ext, _ = os.path.splitext(video_name)
+  dir_name = f"{now}-{uuid.uuid4()}-{video_name_without_ext}"
   dir_name = dir_name.replace(":", "_")
   dest_path = f"{dir_name}/{dir_name}"
 
@@ -140,7 +141,11 @@ def get_url_for_path(
 
 
 def fetch_service_account_email() -> str:
-  """Fetches the email of the default service account."""
+  """Fetches the email of the default service account.
+
+  Returns:
+    The service account email address.
+  """
   service_account_email = ""
   try:
     credentials, _ = typing.cast(tuple[Credentials, str], google.auth.default())
@@ -154,7 +159,6 @@ def fetch_service_account_email() -> str:
   if not service_account_email or service_account_email == "default":
     # Fallback to metadata server if email is not in credentials or is 'default'
     try:
-      # Use a longer timeout and proper error handling
       metadata_url = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email"
       headers = {"Metadata-Flavor": "Google"}
       response = requests.get(metadata_url, headers=headers, timeout=5)
@@ -169,7 +173,14 @@ def fetch_service_account_email() -> str:
 
 
 def fetch_access_token() -> str:
-  """Fetches the access token for the current request."""
+  """Fetches the access token for the current request.
+
+  If the current credentials do not have a token, an attempt is made to refresh
+  the token.
+
+  Returns:
+    If available, the credentials access token, otherwise an empty string.
+  """
   access_token = ""
   try:
     credentials, _ = typing.cast(tuple[Credentials, str], google.auth.default())
@@ -187,7 +198,14 @@ def fetch_access_token() -> str:
 
 
 def clean_video_name(filename: str) -> str:
-  """Removes the timestamp and UUID prefix from the filename."""
+  """Removes the timestamp and UUID prefix from the filename.
+
+  Args:
+    filename: The original name of the file.
+
+  Returns:
+    The name without a timestamp or UUID.
+  """
   name = os.path.basename(filename)
   pattern = (
       r"^.+?-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-"
@@ -197,8 +215,8 @@ def clean_video_name(filename: str) -> str:
 
 
 def list_all_videos(
-    bucket_name: str, page_token: str = "", max_results: int = 5
-) -> dict[str, list[VideoMetadata] | str]:
+    bucket_name: str, page_token: str | None, max_results: int = 5
+) -> dict[str, list[VideoMetadata] | str | None]:
   """Returns a list of translated videos with their metadata.
 
   Args:
@@ -220,12 +238,13 @@ def list_all_videos(
       page_token=page_token,
       match_glob="**/*.??-??.mp4",
   )
+
   pages = iterator.pages
 
   try:
     page = next(pages)
     blobs: list[storage.Blob] = list(page)
-    next_page_token: str = page.next_page_token
+    next_page_token: str = iterator.next_page_token
   except StopIteration:
     blobs = []
     next_page_token = ""
@@ -233,11 +252,11 @@ def list_all_videos(
   videos: list[VideoMetadata] = []
 
   for blob in blobs:
-    if not blob.path:
+    if not blob.name:
       continue
-    blob_path = typing.cast(str, blob.path)
-    if blob_path.lower().endswith(".mp4"):
-      parts = blob_path.split("/")
+    blob_name = typing.cast(str, blob.name)
+    if blob_name.lower().endswith(".mp4"):
+      parts = blob_name.split("/")
       if len(parts) < 2:
         continue
       folder_name = parts[-2]
@@ -250,14 +269,14 @@ def list_all_videos(
         access_token = fetch_access_token()
         url = get_url_for_path(
             bucket_name,
-            blob_path,
+            blob_name,
             service_account_email=service_account_email,
             access_token=access_token,
         )
         download_url = get_url_for_path(
             bucket_name,
-            blob_path,
-            download_filename=clean_video_name(blob_path),
+            blob_name,
+            download_filename=clean_video_name(blob_name),
             service_account_email=service_account_email,
             access_token=access_token,
         )
@@ -266,24 +285,27 @@ def list_all_videos(
         url = ""
         download_url = ""
 
-      folder = str(os.path.dirname(blob_path))
+      folder = str(os.path.dirname(blob_name))
       metadata_path = f"{folder}/metadata.json"
       metadata_blob = bucket.blob(metadata_path)
-      has_metadata = metadata_blob.exists()
-      if has_metadata:
-        try:
-          json_str = metadata_blob.download_as_text()
-          video = VideoMetadata.model_validate_json(json_str)
-          videos.append(video)
-        except google.cloud.exceptions.GoogleCloudError as e:
-          logging.error("Error fetching metadata for %s: %s", blob.name, e)
-        except pydantic.ValidationError as ve:
-          logging.error("Error parsing metadata for %s: %s", blob.name, ve)
-      else:
+      try:
+        json_str = metadata_blob.download_as_text()
+        video = VideoMetadata.model_validate_json(json_str)
+        videos.append(video)
+      except google.cloud.exceptions.NotFound:
+        original_video_path = f"{folder_name}/{folder_name}"
+        original_video_url = get_url_for_path(
+            bucket_name,
+            original_video_path,
+            service_account_email=service_account_email,
+            access_token=access_token,
+        )
+        # Backwards compatibility for older deployments.
         videos.append(
             VideoMetadata(
-                name="Unknown",
+                name=clean_video_name(blob.name),
                 url=url,
+                original_video_url=original_video_url,
                 download_url=download_url,
                 created_at=blob.time_created or datetime.datetime.now(),
                 original_language="Unknown",
@@ -294,13 +316,20 @@ def list_all_videos(
                 has_metadata=False,
             )
         )
+      except (
+          google.cloud.exceptions.GoogleCloudError,
+          pydantic.ValidationError,
+      ) as e:
+        logging.error(
+            "Error fetching or parsing metadata for %s: %s", blob.name, e
+        )
 
   videos.sort(key=lambda x: x.created_at, reverse=True)
   return {"videos": videos, "next_page_token": next_page_token}
 
 
 def delete_video_from_gcs(bucket_name: str, video_id: str):
-  """Deletes a given video from the given GCS bucket.
+  """Deletes a given video project from the given GCS bucket.
 
   Args:
     bucket_name: The name of the bucket the video is in.

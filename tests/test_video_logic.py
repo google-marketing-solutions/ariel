@@ -4,12 +4,13 @@ import io
 import json
 import os
 import sys
+from typing import override
 import unittest
 from unittest.mock import MagicMock
 from unittest.mock import mock_open
 from unittest.mock import patch
 
-from main import clean_video_name
+from cloud_storage import clean_video_name
 from main import get_videos
 from main import sanitize_filename
 from main import save_video
@@ -20,6 +21,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 class TestVideoLogic(unittest.TestCase):
   """Tests for internal logic when dealing with video files and projects."""
 
+  @override
   def setUp(self):
     """Define reusable fake file system data."""
     super().setUp()
@@ -38,6 +40,7 @@ class TestVideoLogic(unittest.TestCase):
     self.fake_meta = json.dumps({
         "name": "video.mp4",
         "url": f"/temp/{self.folder_name}/{self.translated_video}",
+        "original_video_url": f"/temp/{self.folder_name}/{self.original_video}",
         "download_url": f"/temp/{self.folder_name}/{self.translated_video}",
         "created_at": "2026-01-21T09:56:05.967648",
         "original_language": "en-GB",
