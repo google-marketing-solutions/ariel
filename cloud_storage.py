@@ -291,6 +291,8 @@ def list_all_videos(
       try:
         json_str = metadata_blob.download_as_text()
         video = VideoMetadata.model_validate_json(json_str)
+        video.url = url
+        video.download_url = download_url
         videos.append(video)
       except google.cloud.exceptions.NotFound:
         original_video_path = f"{folder_name}/{folder_name}"
