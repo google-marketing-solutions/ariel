@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import datetime
 import io
 import unittest
 import unittest.mock
@@ -143,7 +144,6 @@ class CloudStorageTest(unittest.TestCase):
         access_token=access_token,
     )
 
-
   @unittest.mock.patch("cloud_storage.storage.Client")
   def test_generate_signed_upload_url(self, mock_storage_client):
     """Tests that generate_signed_upload_url generates a signed URL for PUT."""
@@ -162,7 +162,6 @@ class CloudStorageTest(unittest.TestCase):
     service_account_email = "test@service.com"
     access_token = "test-token"
 
-    import datetime
     result = cloud_storage.generate_signed_upload_url(
         bucket_name,
         object_name,
