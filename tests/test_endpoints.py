@@ -183,7 +183,9 @@ class MainTest(unittest.TestCase):
       self, mock_fetch_token, mock_fetch_email, mock_gen_url
   ):
     """Tests /api/generate-upload-url endpoint."""
-    mock_gen_url.return_value = "https://storage.googleapis.com/signed-upload-url"
+    mock_gen_url.return_value = (
+        "https://storage.googleapis.com/signed-upload-url"
+    )
     mock_fetch_email.return_value = "test@service.com"
     mock_fetch_token.return_value = "test-token"
 
@@ -196,7 +198,9 @@ class MainTest(unittest.TestCase):
     data = response.json()
     self.assertIn("url", data)
     self.assertIn("object_name", data)
-    self.assertEqual(data["url"], "https://storage.googleapis.com/signed-upload-url")
+    self.assertEqual(
+        data["url"], "https://storage.googleapis.com/signed-upload-url"
+    )
     mock_gen_url.assert_called_once()
 
   @patch("main.download_file_from_gcs")
@@ -223,7 +227,7 @@ class MainTest(unittest.TestCase):
       mock_download,
   ):
     """Tests /process endpoint with gcs_object_path."""
-    mock_exists.return_value = False # Simulate file not local
+    mock_exists.return_value = False  # Simulate file not local
     mock_download.return_value = None
     mock_separate.return_value = (
         "temp/vid/audio.wav",
@@ -363,7 +367,8 @@ class MainTest(unittest.TestCase):
     )
     self.assertEqual(response.status_code, 400)
     self.assertIn(
-        "Either video file, source_video_id, or gcs_object_path must be provided",
+        "Either video file, source_video_id, or gcs_object_path must be"
+        " provided",
         response.json()["detail"],
     )
 

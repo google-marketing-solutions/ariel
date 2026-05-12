@@ -125,7 +125,9 @@ def _process_utterance(
 
 
 @app.post("/api/generate-upload-url")
-def generate_upload_url(filename: str, content_type: str = "video/mp4") -> JSONResponse:
+def generate_upload_url(
+    filename: str, content_type: str = "video/mp4"
+) -> JSONResponse:
   """Generates a signed URL for uploading a file directly to GCS."""
   now = datetime.datetime.now().isoformat()
   video_name_without_ext, _ = os.path.splitext(filename)
@@ -172,6 +174,8 @@ def process_video(
     source_video_id: the ID of an existing video to fork/process from.
     update_existing: if true, updates the existing project in-place instead of
       forking. This is used when changing the language on the editor page.
+    gcs_object_path: the path of the video in GCS. Optional if video or
+      source_video_id is provided.
 
   Returns:
     A Video object with the information for the dubbing.
@@ -179,7 +183,10 @@ def process_video(
   if not video and not source_video_id and not gcs_object_path:
     raise HTTPException(
         status_code=400,
-        detail="Either video file, source_video_id, or gcs_object_path must be provided",
+        detail=(
+            "Either video file, source_video_id, or gcs_object_path must be"
+            " provided"
+        ),
     )
 
   logging.info("Starting Process Video")
@@ -243,7 +250,9 @@ def process_video(
     # Ensure file is local (download if not exists)
     if not os.path.exists(local_video_path):
       logging.info("Downloading video from GCS to %s", local_video_path)
-      download_file_from_gcs(config.gcs_bucket_name, gcs_object_path, local_video_path)
+      download_file_from_gcs(
+          config.gcs_bucket_name, gcs_object_path, local_video_path
+      )
 
     video_name = os.path.basename(gcs_object_path)
   else:
@@ -451,7 +460,9 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
     combine_video_and_audio(
         local_video_path, merged_audio_path, combined_video_path
     )
-    mount_path = mount_point.lstrip("/")
+    mount_path = mount_point.lstrip(
+      "/"
+    )  # avoids a double leading slash in URLs
     public_video_path = f"/{mount_path}/{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
     public_vocals_path = f"/{mount_path}/{video_data.video_id}/{os.path.basename(dubbed_vocals_path)}"
     public_merged_audio_path = f"/{mount_path}/{video_data.video_id}/{os.path.basename(merged_audio_path)}"
@@ -763,7 +774,8 @@ def delete_video(video_id: str) -> JSONResponse:
 
 @app.get("/{catchall:path}")
 async def catch_all(
-    request: Request, catchall: str  # pyright: ignore[reportUnusedParameter]
+    request: Request,
+    catchall: str,  # pyright: ignore[reportUnusedParameter]
 ):
   """Used to server the frontend files or a 404.
 

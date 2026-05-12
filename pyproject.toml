@@ -66,6 +66,7 @@ select = [
     "C4",       # flake8-comprehensions (Enforces proper comprehension usage)
     "TID",      # flake8-tidy-imports (Enforces absolute imports)
     "PL",       # Pylint (Google explicitly uses Pylint; Ruff implements many of its rules)
+    "ARG",      # flake8-unused-args (Google explicitly uses arg parsing)
     "RUF",      # Ruff-specific enhancements
 ]
 
@@ -95,6 +96,15 @@ single-line-exclusions = [
     "typing",
     "typing_extensions",
     "six.moves",
+]
+known-third-party = [
+    "cloud_storage",
+    "configuration",
+    "generate_audio",
+    "models",
+    "process",
+    "transcribe",
+    "translate"
 ]
 
 [tool.ruff.lint.flake8-tidy-imports]
