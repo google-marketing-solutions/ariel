@@ -389,7 +389,7 @@ def generate_audio_endpoint(video_data: Video) -> JSONResponse:
       output_directory=local_dir,
       target_language=video_data.translate_language,
   )
-  mount_path = mount_point.lstrip('/')
+  mount_path = mount_point.lstrip("/")
   public_vocals_path = f"/{mount_path}/{video_data.video_id}/{os.path.basename(dubbed_vocals_path)}"
   to_return = {
       "audio_url": f"{public_vocals_path}?v={uuid.uuid4()}",
@@ -451,7 +451,7 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
     combine_video_and_audio(
         local_video_path, merged_audio_path, combined_video_path
     )
-    mount_path = mount_point.lstrip('/')
+    mount_path = mount_point.lstrip("/")
     public_video_path = f"/{mount_path}/{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
     public_vocals_path = f"/{mount_path}/{video_data.video_id}/{os.path.basename(dubbed_vocals_path)}"
     public_merged_audio_path = f"/{mount_path}/{video_data.video_id}/{os.path.basename(merged_audio_path)}"
