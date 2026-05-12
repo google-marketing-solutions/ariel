@@ -144,5 +144,45 @@ class CloudStorageTest(unittest.TestCase):
     )
 
 
+  @unittest.mock.patch("cloud_storage.storage.Client")
+  def test_generate_signed_upload_url(self, mock_storage_client):
+    """Tests that generate_signed_upload_url generates a signed URL for PUT."""
+    mock_bucket = unittest.mock.MagicMock()
+    mock_blob = unittest.mock.MagicMock()
+    mock_client_instance = mock_storage_client.return_value
+    mock_client_instance.bucket.return_value = mock_bucket
+    mock_bucket.blob.return_value = mock_blob
+
+    expected_url = "https://storage.googleapis.com/signed-upload-url"
+    mock_blob.generate_signed_url.return_value = expected_url
+
+    bucket_name = "test-bucket"
+    object_name = "some/upload.mp4"
+    content_type = "video/mp4"
+    service_account_email = "test@service.com"
+    access_token = "test-token"
+
+    import datetime
+    result = cloud_storage.generate_signed_upload_url(
+        bucket_name,
+        object_name,
+        content_type=content_type,
+        service_account_email=service_account_email,
+        access_token=access_token,
+    )
+
+    self.assertEqual(result, expected_url)
+    mock_client_instance.bucket.assert_called_once_with(bucket_name)
+    mock_bucket.blob.assert_called_once_with(object_name)
+    mock_blob.generate_signed_url.assert_called_once_with(
+        version="v4",
+        expiration=datetime.timedelta(minutes=15),
+        method="PUT",
+        content_type=content_type,
+        service_account_email=service_account_email,
+        access_token=access_token,
+    )
+
+
 if __name__ == "__main__":
   unittest.main()

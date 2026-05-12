@@ -18,6 +18,7 @@ SERVICE_NAME="ariel-v2"
 REGION=$(grep "GCP_PROJECT_LOCATION" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
 GCS_BUCKET=$(grep "GCS_BUCKET_NAME" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
 PROJECT_ID=$(grep "GCP_PROJECT_ID" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
 DOCKER_REPO_NAME=gps-docker-repo
 ARTIFACT_REPOSITORY_NAME=$REGION-docker.pkg.dev/$PROJECT_ID/$DOCKER_REPO_NAME
 DOCKER_IMAGE_TAG=$ARTIFACT_REPOSITORY_NAME/ariel-process:latest
@@ -113,9 +114,6 @@ else
   echo "⚠️ Deployment failed. Retrying in 5 seconds..."
   sleep 5
 
-  # Get Project Number
-  PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
-
   if [[ -n "$PROJECT_NUMBER" ]]; then
     IAP_SERVICE_ACCOUNT="service-${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com"
     echo "🔑 Granting 'Cloud Run Invoker' role to the IAP service account ($IAP_SERVICE_ACCOUNT)..."
@@ -134,6 +132,36 @@ else
     echo "❌ Deployment failed again."
     exit 1
   fi
+fi
+
+# Get Service URLs
+echo "🌐 Fetching Cloud Run service URLs..."
+SERVICE_URL_HASH=$(gcloud run services describe "$SERVICE_NAME" --region="$REGION" --format="value(status.url)")
+SERVICE_URL_NUM="https://${SERVICE_NAME}-${PROJECT_NUMBER}.${REGION}.run.app"
+
+if [[ -n "$SERVICE_URL_HASH" ]]; then
+  echo "📝 Creating CORS configuration for origins..."
+  cat <<EOF > cors.json
+[
+  {
+    "origin": ["$SERVICE_URL_HASH", "$SERVICE_URL_NUM"],
+    "method": ["GET", "PUT", "OPTIONS"],
+    "responseHeader": ["Content-Type"],
+    "maxAgeSeconds": 3600
+  }
+]
+EOF
+
+  echo "🔑 Applying CORS configuration to bucket gs://$GCS_BUCKET..."
+  gcloud storage buckets update gs://"$GCS_BUCKET" --cors-file=cors.json
+  rm cors.json
+  echo "✅ CORS configuration applied successfully!"
+
+  echo "🚀 Service is available at:"
+  echo "🔗 $SERVICE_URL_HASH"
+  echo "🔗 $SERVICE_URL_NUM"
+else
+  echo "⚠️ Warning: Could not retrieve service URL. Skipping CORS configuration."
 fi
 
 # Stream logs

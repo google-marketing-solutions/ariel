@@ -99,6 +99,56 @@ def upload_file_to_gcs(
   return target_path
 
 
+def generate_signed_upload_url(
+    bucket_name: str,
+    object_name: str,
+    content_type: str = "video/mp4",
+    service_account_email: str = "",
+    access_token: str = "",
+) -> str:
+  """Generates a signed URL for uploading a file to GCS using PUT.
+
+  Args:
+    bucket_name: the name of the GCS bucket.
+    object_name: the path/name of the object to create.
+    content_type: the expected content type of the file to be uploaded.
+    service_account_email: optional service account email.
+    access_token: optional access token.
+
+  Returns:
+    A signed URL string.
+  """
+  storage_client = storage.Client()
+  bucket = storage_client.bucket(bucket_name)
+  blob = bucket.blob(object_name)
+
+  kwargs = {
+      "version": "v4",
+      "expiration": datetime.timedelta(minutes=15),
+      "method": "PUT",
+      "content_type": content_type,
+      "service_account_email": service_account_email,
+      "access_token": access_token,
+  }
+  url = blob.generate_signed_url(**kwargs)
+  return url
+
+
+def download_file_from_gcs(bucket_name: str, object_name: str, local_path: str):
+  """Downloads a file from GCS to a local path.
+
+  Args:
+    bucket_name: the name of the GCS bucket.
+    object_name: the path/name of the object in GCS.
+    local_path: the local path to save the file to.
+  """
+  storage_client = storage.Client()
+  bucket = storage_client.bucket(bucket_name)
+  blob = bucket.blob(object_name)
+  blob.download_to_filename(local_path)
+  logging.info("Downloaded %s from GCS to %s", object_name, local_path)
+
+
 def get_url_for_path(
     bucket_name: str,
     path: str,

@@ -73,7 +73,7 @@ export class Home implements OnInit {
   filteredGaLanguages = computed(() => {
     const query = this.searchLanguage().toLowerCase().trim();
     if (!query) return this.gaLanguages();
-    return this.gaLanguages().filter((lang) =>
+    return this.gaLanguages().filter(lang =>
       lang.name.toLowerCase().includes(query),
     );
   });
@@ -81,7 +81,7 @@ export class Home implements OnInit {
   filteredPreviewLanguages = computed(() => {
     const query = this.searchLanguage().toLowerCase().trim();
     if (!query) return this.previewLanguages();
-    return this.previewLanguages().filter((lang) =>
+    return this.previewLanguages().filter(lang =>
       lang.name.toLowerCase().includes(query),
     );
   });
@@ -90,7 +90,7 @@ export class Home implements OnInit {
     const code = this.translationLanguage();
     if (!code) return 'Please select...';
     const match = [...this.gaLanguages(), ...this.previewLanguages()].find(
-      (l) => l.code === code,
+      l => l.code === code,
     );
     return match ? match.name : 'Please select...';
   });
@@ -111,9 +111,9 @@ export class Home implements OnInit {
       const response = await fetch('languages.json');
       const languages: Language[] = await response.json();
 
-      this.gaLanguages.set(languages.filter((lang) => lang.readiness === 'GA'));
+      this.gaLanguages.set(languages.filter(lang => lang.readiness === 'GA'));
       this.previewLanguages.set(
-        languages.filter((lang) => lang.readiness === 'Preview'),
+        languages.filter(lang => lang.readiness === 'Preview'),
       );
     } catch (error) {
       console.error('Failed to fetch languages:', error);
@@ -158,7 +158,7 @@ export class Home implements OnInit {
     this.selectedVideoFile.set(file);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = e => {
       this.videoPreviewUrl.set(e.target?.result as string);
     };
     reader.readAsDataURL(file);
@@ -205,20 +205,42 @@ export class Home implements OnInit {
     const startTime = Date.now();
     this.processingInterval = setInterval(() => {
       const elapsed = Date.now() - startTime;
-      const nextMessage = [...messages]
-        .reverse()
-        .find((m) => elapsed >= m.time);
+      const nextMessage = [...messages].reverse().find(m => elapsed >= m.time);
       if (nextMessage) {
         this.processingMessage.set(nextMessage.text);
       }
     }, 1000);
 
-    const formData = new FormData();
-    formData.append('video', videoFile);
-    formData.append('translate_language', this.translationLanguage());
-    formData.append('use_pro_model', this.useProModel().toString());
-
     try {
+      const urlResponse = await fetch(
+        `/api/generate-upload-url?filename=${encodeURIComponent(videoFile.name)}&content_type=${encodeURIComponent(videoFile.type || 'video/mp4')}`,
+        {
+          method: 'POST',
+        },
+      );
+      if (!urlResponse.ok) {
+        throw new Error(`Failed to get upload URL: ${urlResponse.status}`);
+      }
+      const {url, object_name} = await urlResponse.json();
+
+      this.processingMessage.set('Uploading video to storage...');
+      const uploadResponse = await fetch(url, {
+        method: 'PUT',
+        body: videoFile,
+        headers: {
+          'Content-Type': videoFile.type || 'video/mp4',
+        },
+      });
+      if (!uploadResponse.ok) {
+        throw new Error(`Failed to upload to GCS: ${uploadResponse.status}`);
+      }
+
+      this.processingMessage.set('Processing video...');
+      const formData = new FormData();
+      formData.append('gcs_object_path', object_name);
+      formData.append('translate_language', this.translationLanguage());
+      formData.append('use_pro_model', this.useProModel().toString());
+
       console.log('Sending request to /process...');
       const response = await fetch('/process', {
         method: 'POST',
