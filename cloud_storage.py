@@ -122,15 +122,14 @@ def generate_signed_upload_url(
   bucket = storage_client.bucket(bucket_name)
   blob = bucket.blob(object_name)
 
-  kwargs = {
-      "version": "v4",
-      "expiration": datetime.timedelta(minutes=15),
-      "method": "PUT",
-      "content_type": content_type,
-      "service_account_email": service_account_email,
-      "access_token": access_token,
-  }
-  url = blob.generate_signed_url(**kwargs)
+  url = blob.generate_signed_url(
+      version="v4",
+      expiration=datetime.timedelta(minutes=15),
+      method="PUT",
+      content_type=content_type,
+      service_account_email=service_account_email,
+      access_token=access_token,
+  )
   return url
 
 
