@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import datetime
 import io
 import unittest
 import unittest.mock
@@ -60,6 +61,24 @@ class CloudStorageTest(unittest.TestCase):
     mock_blob.upload_from_file.assert_called_once_with(
         video_file, content_type="video/mp4"
     )
+
+  @unittest.mock.patch("uuid.uuid4")
+  @unittest.mock.patch("datetime.datetime")
+  def test_generate_gcs_path(self, mock_datetime, mock_uuid):
+    """Tests that generate_gcs_path returns correct path."""
+    mock_now = unittest.mock.MagicMock()
+    mock_now.isoformat.return_value = "2023-01-01T12:00:00"
+    mock_datetime.now.return_value = mock_now
+
+    mock_uuid.return_value = "uuid-1234"
+
+    filename = "test_video.mp4"
+    result = cloud_storage.generate_gcs_path(filename)
+
+    expected_dir = "2023-01-01T12_00_00-uuid-1234-test_video"
+    expected_path = f"{expected_dir}/{expected_dir}"
+
+    self.assertEqual(result, expected_path)
 
   @unittest.mock.patch("cloud_storage.storage.Client")
   def test_upload_file_to_gcs(self, mock_storage_client):
@@ -139,6 +158,44 @@ class CloudStorageTest(unittest.TestCase):
         version="v4",
         expiration=(60 * 60 * 24),
         method="GET",
+        service_account_email=service_account_email,
+        access_token=access_token,
+    )
+
+  @unittest.mock.patch("cloud_storage.storage.Client")
+  def test_generate_signed_upload_url(self, mock_storage_client):
+    """Tests that generate_signed_upload_url generates a signed URL for PUT."""
+    mock_bucket = unittest.mock.MagicMock()
+    mock_blob = unittest.mock.MagicMock()
+    mock_client_instance = mock_storage_client.return_value
+    mock_client_instance.bucket.return_value = mock_bucket
+    mock_bucket.blob.return_value = mock_blob
+
+    expected_url = "https://storage.googleapis.com/signed-upload-url"
+    mock_blob.generate_signed_url.return_value = expected_url
+
+    bucket_name = "test-bucket"
+    object_name = "some/upload.mp4"
+    content_type = "video/mp4"
+    service_account_email = "test@service.com"
+    access_token = "test-token"
+
+    result = cloud_storage.generate_signed_upload_url(
+        bucket_name,
+        object_name,
+        content_type=content_type,
+        service_account_email=service_account_email,
+        access_token=access_token,
+    )
+
+    self.assertEqual(result, expected_url)
+    mock_client_instance.bucket.assert_called_once_with(bucket_name)
+    mock_bucket.blob.assert_called_once_with(object_name)
+    mock_blob.generate_signed_url.assert_called_once_with(
+        version="v4",
+        expiration=datetime.timedelta(minutes=15),
+        method="PUT",
+        content_type=content_type,
         service_account_email=service_account_email,
         access_token=access_token,
     )

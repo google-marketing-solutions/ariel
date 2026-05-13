@@ -176,6 +176,109 @@ class MainTest(unittest.TestCase):
     mock_separate.assert_called_once()
     mock_transcribe.assert_called_once()
 
+  @patch("main.generate_signed_upload_url")
+  @patch("main.fetch_service_account_email")
+  @patch("main.fetch_access_token")
+  def test_generate_upload_url_endpoint(
+      self, mock_fetch_token, mock_fetch_email, mock_gen_url
+  ):
+    """Tests /api/generate-upload-url endpoint."""
+    mock_gen_url.return_value = (
+        "https://storage.googleapis.com/signed-upload-url"
+    )
+    mock_fetch_email.return_value = "test@service.com"
+    mock_fetch_token.return_value = "test-token"
+
+    response = self.client.post(
+        "/api/generate-upload-url",
+        params={"filename": "test.mp4", "content_type": "video/mp4"},
+    )
+
+    self.assertEqual(response.status_code, 200)
+    data = response.json()
+    self.assertIn("url", data)
+    self.assertIn("object_name", data)
+    self.assertEqual(
+        data["url"], "https://storage.googleapis.com/signed-upload-url"
+    )
+    mock_gen_url.assert_called_once()
+
+  @patch("main.download_file_from_gcs")
+  @patch("main.separate_audio_from_video")
+  @patch("main.genai.Client")
+  @patch("main.transcribe_video")
+  @patch("main.moviepy.VideoFileClip")
+  @patch("main.generate_audio")
+  @patch("builtins.open", new_callable=mock_open)
+  @patch("main.upload_file_to_gcs")
+  @patch("os.path.exists")
+  @patch("os.makedirs")
+  def test_process_video_with_gcs_path_endpoint(
+      self,
+      mock_makedirs,
+      mock_exists,
+      mock_upload_file,
+      mock_file_open,
+      mock_gen_audio,
+      mock_video_clip,
+      mock_transcribe,
+      mock_genai_client,
+      mock_separate,
+      mock_download,
+  ):
+    """Tests /process endpoint with gcs_object_path."""
+    mock_exists.return_value = False  # Simulate file not local
+    mock_download.return_value = None
+    mock_separate.return_value = (
+        "temp/vid/audio.wav",
+        "temp/vid/vocals.wav",
+        "temp/vid/bg.wav",
+    )
+
+    speaker = Speaker(
+        speaker_id="spk1",
+        voice="voice1",
+        speaker_name="Speaker 1",
+        gender=GenderEnum.NEUTRAL,
+    )
+
+    utterance = Utterance(
+        id="1",
+        original_text="original",
+        translated_text="translated",
+        speaker=speaker,
+        original_start_time=0.0,
+        original_end_time=1.0,
+        translated_start_time=0.0,
+        translated_end_time=1.0,
+        audio_url="temp/vid/audio_0.wav",
+    )
+
+    mock_transcribe.return_value = ("en", [speaker], [utterance])
+    mock_gen_audio.return_value = 1.0
+
+    mock_clip_instance = MagicMock()
+    mock_clip_instance.duration = 10.0
+    mock_video_clip.return_value = mock_clip_instance
+
+    response = self.client.post(
+        "/process",
+        data={
+            "translate_language": "es",
+            "use_pro_model": "false",
+            "gcs_object_path": "some/upload.mp4",
+        },
+    )
+
+    self.assertEqual(response.status_code, 200)
+    data = response.json()
+    self.assertEqual(data["original_language"], "en")
+    self.assertEqual(data["translate_language"], "es")
+
+    mock_download.assert_called_once()
+    mock_separate.assert_called_once()
+    mock_transcribe.assert_called_once()
+
   @patch("main.merge_vocals")
   def test_generate_audio_endpoint(self, mock_merge_vocals):
     """Tests /generate_audio endpoint."""
@@ -246,6 +349,10 @@ class MainTest(unittest.TestCase):
     self.assertIn("vocals_url", data)
     self.assertIn("merged_audio_url", data)
 
+    self.assertTrue(data["video_url"].startswith("/temp/vid1/"))
+    self.assertTrue(data["vocals_url"].startswith("/temp/vid1/"))
+    self.assertTrue(data["merged_audio_url"].startswith("/temp/vid1/"))
+
     mock_merge_vocals.assert_called_once()
     mock_merge_bg.assert_called_once()
     mock_combine.assert_called_once()
@@ -260,7 +367,8 @@ class MainTest(unittest.TestCase):
     )
     self.assertEqual(response.status_code, 400)
     self.assertIn(
-        "Either video file or source_video_id must be provided",
+        "Either video file, source_video_id, or gcs_object_path must be"
+        " provided",
         response.json()["detail"],
     )
 

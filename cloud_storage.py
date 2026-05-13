@@ -34,6 +34,22 @@ import pydantic
 import requests
 
 
+def generate_gcs_path(filename: str) -> str:
+  """Generates a unique GCS path for a file based on current time and UUID.
+
+  Args:
+    filename: The original name of the file.
+
+  Returns:
+    A string representing the GCS path in the format 'dir_name/dir_name'.
+  """
+  now = datetime.datetime.now().isoformat()
+  video_name_without_ext, _ = os.path.splitext(filename)
+  dir_name = f"{now}-{uuid.uuid4()}-{video_name_without_ext}"
+  dir_name = dir_name.replace(":", "_")
+  return f"{dir_name}/{dir_name}"
+
+
 def upload_video_to_gcs(
     video_name: str, video_file: typing.BinaryIO, bucket_name: str
 ) -> str:
@@ -51,12 +67,8 @@ def upload_video_to_gcs(
   Returns:
     The path to the uploaded file in GCS.
   """
-  now = datetime.datetime.now().isoformat()
   mime_type = mimetypes.guess_type(video_name)[0] or "video/mp4"
-  video_name_without_ext, _ = os.path.splitext(video_name)
-  dir_name = f"{now}-{uuid.uuid4()}-{video_name_without_ext}"
-  dir_name = dir_name.replace(":", "_")
-  dest_path = f"{dir_name}/{dir_name}"
+  dest_path = generate_gcs_path(video_name)
 
   storage_client = storage.Client()
   bucket = storage_client.bucket(bucket_name)
@@ -97,6 +109,55 @@ def upload_file_to_gcs(
   blob.upload_from_file(file_object, content_type=mime_type)
   logging.info("Uploaded file %s to GCS.", target_path)
   return target_path
+
+
+def generate_signed_upload_url(
+    bucket_name: str,
+    object_name: str,
+    content_type: str = "video/mp4",
+    service_account_email: str = "",
+    access_token: str = "",
+) -> str:
+  """Generates a signed URL for uploading a file to GCS using PUT.
+
+  Args:
+    bucket_name: the name of the GCS bucket.
+    object_name: the path/name of the object to create.
+    content_type: the expected content type of the file to be uploaded.
+    service_account_email: optional service account email.
+    access_token: optional access token.
+
+  Returns:
+    A signed URL string.
+  """
+  storage_client = storage.Client()
+  bucket = storage_client.bucket(bucket_name)
+  blob = bucket.blob(object_name)
+
+  url = blob.generate_signed_url(
+      version="v4",
+      expiration=datetime.timedelta(minutes=15),
+      method="PUT",
+      content_type=content_type,
+      service_account_email=service_account_email,
+      access_token=access_token,
+  )
+  return url
+
+
+def download_file_from_gcs(bucket_name: str, object_name: str, local_path: str):
+  """Downloads a file from GCS to a local path.
+
+  Args:
+    bucket_name: the name of the GCS bucket.
+    object_name: the path/name of the object in GCS.
+    local_path: the local path to save the file to.
+  """
+  storage_client = storage.Client()
+  bucket = storage_client.bucket(bucket_name)
+  blob = bucket.blob(object_name)
+  blob.download_to_filename(local_path)
+  logging.info("Downloaded %s from GCS to %s", object_name, local_path)
 
 
 def get_url_for_path(
