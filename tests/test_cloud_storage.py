@@ -62,6 +62,24 @@ class CloudStorageTest(unittest.TestCase):
         video_file, content_type="video/mp4"
     )
 
+  @unittest.mock.patch("uuid.uuid4")
+  @unittest.mock.patch("datetime.datetime")
+  def test_generate_gcs_path(self, mock_datetime, mock_uuid):
+    """Tests that generate_gcs_path returns correct path."""
+    mock_now = unittest.mock.MagicMock()
+    mock_now.isoformat.return_value = "2023-01-01T12:00:00"
+    mock_datetime.now.return_value = mock_now
+
+    mock_uuid.return_value = "uuid-1234"
+
+    filename = "test_video.mp4"
+    result = cloud_storage.generate_gcs_path(filename)
+
+    expected_dir = "2023-01-01T12_00_00-uuid-1234-test_video"
+    expected_path = f"{expected_dir}/{expected_dir}"
+
+    self.assertEqual(result, expected_path)
+
   @unittest.mock.patch("cloud_storage.storage.Client")
   def test_upload_file_to_gcs(self, mock_storage_client):
     """Tests that upload_file_to_gcs correctly uploads a file."""

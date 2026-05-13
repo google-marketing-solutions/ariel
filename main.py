@@ -29,6 +29,7 @@ from cloud_storage import delete_video_from_gcs
 from cloud_storage import download_file_from_gcs
 from cloud_storage import fetch_access_token
 from cloud_storage import fetch_service_account_email
+from cloud_storage import generate_gcs_path
 from cloud_storage import generate_signed_upload_url
 from cloud_storage import list_all_videos
 from cloud_storage import upload_file_to_gcs
@@ -129,11 +130,7 @@ def generate_upload_url(
     filename: str, content_type: str = "video/mp4"
 ) -> JSONResponse:
   """Generates a signed URL for uploading a file directly to GCS."""
-  now = datetime.datetime.now().isoformat()
-  video_name_without_ext, _ = os.path.splitext(filename)
-  dir_name = f"{now}-{uuid.uuid4()}-{video_name_without_ext}"
-  dir_name = dir_name.replace(":", "_")
-  object_name = f"{dir_name}/{dir_name}"
+  object_name = generate_gcs_path(filename)
 
   service_account_email = fetch_service_account_email()
   access_token = fetch_access_token()

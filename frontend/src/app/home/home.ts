@@ -117,6 +117,10 @@ export class Home implements OnInit {
       );
     } catch (error) {
       console.error('Failed to fetch languages:', error);
+      this.errorMessage.set(
+        'Failed to load supported languages. Please try again later.',
+      );
+      this.showErrorDialog.set(true);
     }
   }
 
@@ -190,6 +194,7 @@ export class Home implements OnInit {
     const videoFile = this.selectedVideoFile();
     if (!videoFile || !this.translationLanguage()) return;
 
+    this.errorMessage.set('');
     this.isPreprocessing.set(true);
     this.processingMessage.set('Uploading video...');
 
@@ -268,6 +273,12 @@ export class Home implements OnInit {
       }
     } catch (error) {
       console.error('Failed to process video:', error);
+      if (!this.errorMessage()) {
+        this.errorMessage.set(
+          'An error occurred while processing the video. Please try again.',
+        );
+      }
+      this.showErrorDialog.set(true);
     } finally {
       clearInterval(this.processingInterval);
       this.isPreprocessing.set(false);

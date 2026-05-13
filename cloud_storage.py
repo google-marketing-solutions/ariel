@@ -34,6 +34,22 @@ import pydantic
 import requests
 
 
+def generate_gcs_path(filename: str) -> str:
+  """Generates a unique GCS path for a file based on current time and UUID.
+
+  Args:
+    filename: The original name of the file.
+
+  Returns:
+    A string representing the GCS path in the format 'dir_name/dir_name'.
+  """
+  now = datetime.datetime.now().isoformat()
+  video_name_without_ext, _ = os.path.splitext(filename)
+  dir_name = f"{now}-{uuid.uuid4()}-{video_name_without_ext}"
+  dir_name = dir_name.replace(":", "_")
+  return f"{dir_name}/{dir_name}"
+
+
 def upload_video_to_gcs(
     video_name: str, video_file: typing.BinaryIO, bucket_name: str
 ) -> str:
@@ -51,12 +67,8 @@ def upload_video_to_gcs(
   Returns:
     The path to the uploaded file in GCS.
   """
-  now = datetime.datetime.now().isoformat()
   mime_type = mimetypes.guess_type(video_name)[0] or "video/mp4"
-  video_name_without_ext, _ = os.path.splitext(video_name)
-  dir_name = f"{now}-{uuid.uuid4()}-{video_name_without_ext}"
-  dir_name = dir_name.replace(":", "_")
-  dest_path = f"{dir_name}/{dir_name}"
+  dest_path = generate_gcs_path(video_name)
 
   storage_client = storage.Client()
   bucket = storage_client.bucket(bucket_name)
