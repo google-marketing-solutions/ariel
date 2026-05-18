@@ -207,6 +207,9 @@ def fetch_service_account_email() -> str:
   Returns:
     The service account email address.
   """
+  if "GCP_SERVICE_ACCOUNT_EMAIL" in os.environ:
+    return os.environ["GCP_SERVICE_ACCOUNT_EMAIL"]
+
   service_account_email = ""
   try:
     credentials, _ = typing.cast(tuple[Credentials, str], google.auth.default())

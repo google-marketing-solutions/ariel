@@ -157,6 +157,32 @@ deployed to Cloud Run. Keep in mind that much of the processing will then happen
 locally, so the performance of the app will be directly related to the computer
 you are using.
 
+### Local Development Setup for GCS Uploads
+
+When running locally, uploading videos to GCS may fail due to CORS or permission issues. Follow these steps to resolve them:
+
+#### 1. Service Account Impersonation (No Keys Needed)
+To allow the local server to generate signed URLs for GCS uploads without using service account keys:
+1. Ensure your user account has the **Service Account Token Creator** role (`roles/iam.serviceAccountTokenCreator`) on the target service account.
+2. Authenticate locally:
+   ```bash
+   gcloud auth application-default login
+   ```
+3. The `run_locally.sh` script automatically exports `GCP_SERVICE_ACCOUNT_EMAIL` based on your `configuration.yaml`.
+
+#### 2. Update Bucket CORS for Localhost
+To allow uploads from `localhost`, you must update the CORS configuration of your GCS bucket without overwriting the production URLs:
+
+1. Fetch the current CORS configuration:
+   ```bash
+   gsutil cors get gs://YOUR_BUCKET_NAME > current_cors.json
+   ```
+2. Edit `current_cors.json` and add `"http://localhost:8080"` (and `"http://localhost:4200"` if applicable) to the `origin` list.
+3. Apply the updated configuration:
+   ```bash
+   gcloud storage buckets update gs://YOUR_BUCKET_NAME --cors-file=current_cors.json
+   ```
+
 `setup.sh` will create the file `configuration.yaml`, which the solution uses to
 configure things like the GCP project to use when sending requests to Gemini,
 the GCS buckets to use, and the like, as well as apply the necessary roles to

@@ -351,18 +351,12 @@ def process_video(
 
     metadata["name"] = clean_video_name(video_name)
     metadata["duration"] = duration
-    if "K_SERVICE" in os.environ:
-      metadata["url"] = ""
-      metadata["download_url"] = ""
-      metadata["original_video_url"] = (
-          f"{to_return.video_id}/{to_return.video_id}"
-      )
-    else:
-      metadata["url"] = ""
-      metadata["download_url"] = ""
-      metadata["original_video_url"] = (
-          f"{mount_point}/{to_return.video_id}/{to_return.video_id}"
-      )
+    metadata["url"] = ""
+    metadata["download_url"] = ""
+    mount_path = mount_point.lstrip("/")
+    metadata["original_video_url"] = (
+        f"/{mount_path}/{to_return.video_id}/{to_return.video_id}"
+    )
     metadata["created_at"] = str(datetime.datetime.now())
     metadata["has_metadata"] = True
 
@@ -482,14 +476,10 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
     metadata["name"] = (
         f"{clean_video_name(video_data.video_id)}.{video_data.translate_language}.mp4"
     )
-    if "K_SERVICE" in os.environ:
-      metadata["original_video_url"] = (
-          f"{video_data.video_id}/{video_data.video_id}"
-      )
-    else:
-      metadata["original_video_url"] = (
-          f"{mount_point}/{video_data.video_id}/{video_data.video_id}"
-      )
+    mount_path = mount_point.lstrip("/")
+    metadata["original_video_url"] = (
+        f"/{mount_path}/{video_data.video_id}/{video_data.video_id}"
+    )
 
     if "K_SERVICE" in os.environ:
       # Upload the final video to GCS
