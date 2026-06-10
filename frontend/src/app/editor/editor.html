@@ -317,6 +317,38 @@
           >
         </div>
         <div class="utterance-list" style="padding-bottom: 12rem">
+          @if ((videoData()?.utterances?.length || 0) === 0) {
+          <div class="empty-dubbing-setup" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; margin-top: 48px; border: 2px dashed #dadce0; border-radius: 8px;">
+            <span class="material-symbols-outlined icon" style="font-size: 48px; color: #9aa0a6;">mic_off</span>
+            <h3 style="margin-top: 16px; font-size: 20px; color: #202124;">No Speech Detected</h3>
+            <p style="margin-top: 8px; color: #5f6368; text-align: center; max-width: 400px; line-height: 1.5;">
+              This video does not have any transcribed dialogue. Select the original language below to start adding dubbing blocks manually.
+            </p>
+
+            <div class="setup-controls" style="margin-top: 24px; display: flex; gap: 16px; align-items: center;">
+              <select
+                class="native-select"
+                [ngModel]="videoData()?.original_language"
+                (ngModelChange)="videoData.update(d => d ? {...d, original_language: $event} : d)"
+                style="padding: 8px 12px; border-radius: 4px; border: 1px solid #dadce0; font-size: 14px; background: white; color: #202124;"
+              >
+                <option value="Unknown" disabled>Select Original Language</option>
+                @for (lang of filteredOriginalGaLanguages(); track lang.code) {
+                  <option [value]="lang.code">{{ lang.name }}</option>
+                }
+              </select>
+
+              <button
+                (click)="createNewUtterance(0, $event); saveProjectDraft()"
+                [disabled]="!hasOriginalLanguage()"
+                class="primary"
+                style="padding: 8px 16px; display: flex; align-items: center; gap: 8px;"
+              >
+                <span class="material-symbols-outlined" style="font-size: 20px;">add</span> Add First Utterance
+              </button>
+            </div>
+          </div>
+          }
           @for (utterance of videoData()?.utterances; track utterance.id; let i = $index) {
           <div
             class="utterance-item"

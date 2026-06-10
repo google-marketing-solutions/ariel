@@ -751,4 +751,129 @@ describe('Editor', () => {
       expect(component.isEditingSettings()).toBe(false);
     });
   });
+
+  describe('Silent Videos Onboarding', () => {
+    let silentComponent: Editor;
+    let silentFixture: ComponentFixture<Editor>;
+
+    beforeEach(async () => {
+      const silentActivatedRoute = {
+        queryParams: of({video_id: 'silent-video-id'}),
+      };
+
+      vi.spyOn(window, 'fetch').mockImplementation(
+        async (input: RequestInfo | URL) => {
+          if (typeof input === 'string') {
+            if (input.includes('/api/projects/silent-video-id')) {
+              return new Response(
+                JSON.stringify({
+                  video_id: 'silent-video-id',
+                  original_language: '',
+                  translate_language: 'es',
+                  speakers: [
+                    {
+                      speaker_id: 'default_speaker',
+                      name: 'Narrator',
+                      voice: 'Aoede',
+                      gender: 'neutral',
+                    },
+                  ],
+                  utterances: [],
+                  duration: 10,
+                }),
+                {status: 200},
+              );
+            }
+            if (input.includes('/api/projects/silent-video-id/save')) {
+              return new Response(
+                JSON.stringify({status: 'success'}),
+                {status: 200},
+              );
+            }
+            if (input.includes('languages.json')) {
+              return new Response(
+                JSON.stringify([
+                  {name: 'English', code: 'en'},
+                  {name: 'Spanish', code: 'es'},
+                ]),
+                {status: 200},
+              );
+            }
+            if (input.includes('voices.json')) {
+              return new Response(JSON.stringify({}), {status: 200});
+            }
+          }
+          return Promise.reject(
+            new Error(`Unexpected fetch request: ${input}`),
+          );
+        },
+      );
+
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [Editor, MatTooltipModule],
+        providers: [
+          provideRouter([]),
+          {provide: ActivatedRoute, useValue: silentActivatedRoute},
+          {
+            provide: VideoGenerationService,
+            useValue: mockVideoGenerationService,
+          },
+        ],
+      }).compileComponents();
+
+      silentFixture = TestBed.createComponent(Editor);
+      silentComponent = silentFixture.componentInstance;
+      await silentFixture.whenStable();
+      silentFixture.detectChanges();
+    });
+
+    it('should initialize correctly with no utterances and no original language', () => {
+      expect(silentComponent.videoData()?.utterances.length).toBe(0);
+      expect(silentComponent.hasOriginalLanguage()).toBe(false);
+
+      const compiled = silentFixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('.empty-dubbing-setup')).toBeTruthy();
+    });
+
+    it('should enable Add First Utterance button when language is selected', async () => {
+      const compiled = silentFixture.nativeElement as HTMLElement;
+      const button = compiled.querySelector(
+        '.empty-dubbing-setup button',
+      ) as HTMLButtonElement;
+
+      expect(button.disabled).toBe(true);
+
+      // Select language
+      silentComponent.videoData.update((d) =>
+        d ? {...d, original_language: 'en'} : d,
+      );
+      silentFixture.detectChanges();
+
+      expect(silentComponent.hasOriginalLanguage()).toBe(true);
+      expect(button.disabled).toBe(false);
+    });
+
+    it('should create new utterance and call save when button is clicked', async () => {
+      // Set language first
+      silentComponent.videoData.update((d) =>
+        d ? {...d, original_language: 'en'} : d,
+      );
+      silentFixture.detectChanges();
+
+      const compiled = silentFixture.nativeElement as HTMLElement;
+      const button = compiled.querySelector(
+        '.empty-dubbing-setup button',
+      ) as HTMLButtonElement;
+
+      button.click();
+      silentFixture.detectChanges();
+
+      expect(silentComponent.videoData()?.utterances.length).toBe(1);
+      expect(window.fetch).toHaveBeenCalledWith(
+        '/api/projects/silent-video-id/save',
+        expect.any(Object),
+      );
+    });
+  });
 });

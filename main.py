@@ -316,6 +316,16 @@ def process_video(
       gcs_video_path, translate_language, duration, genai_client, gemini_model
   )
 
+  if not speaker_list:
+    speaker_list.append(
+        Speaker(
+            speaker_id="default_speaker",
+            voice="Aoede",
+            speaker_name="Narrator",
+            gender=GenderEnum.NEUTRAL,
+        )
+    )
+
   process_func = functools.partial(
       _process_utterance,
       translate_language=translate_language,
@@ -452,7 +462,7 @@ def generate_video(request: GenerateVideoRequest) -> JSONResponse:
         local_video_path, merged_audio_path, combined_video_path
     )
     mount_path = mount_point.lstrip(
-      "/"
+        "/"
     )  # avoids a double leading slash in URLs
     public_video_path = f"/{mount_path}/{video_data.video_id}/{video_data.video_id}.{video_data.translate_language}.mp4"
     public_vocals_path = f"/{mount_path}/{video_data.video_id}/{os.path.basename(dubbed_vocals_path)}"
@@ -721,6 +731,40 @@ def load_project(video_id: str):
     return JSONResponse(
         status_code=404, content={"error": "The file doesn't exist"}
     )
+
+
+@app.post("/api/projects/{video_id}/save")
+def save_project(video_id: str, video: Video) -> JSONResponse:
+  """Saves the project metadata locally and to GCS if applicable.
+
+  Args:
+    video_id: The ID of the video project.
+    video: The video to save the metadata for.
+
+  Returns:
+    A success message if the metadata can be saved, otherwise an error object
+    with the error details.
+  """
+  try:
+    local_dir = os.path.join(mount_point, video_id)
+    metadata_path = os.path.join(local_dir, "metadata.json")
+    metadata = video.model_dump()
+
+    metadata["has_metadata"] = True
+
+    with open(metadata_path, "w") as f:
+      json.dump(metadata, f)
+    logging.info("Saved project metadata to %s", metadata_path)
+
+    if "K_SERVICE" in os.environ:
+      gcs_metadata_path = f"{video_id}/metadata.json"
+      with open(metadata_path, "rb") as f:
+        upload_file_to_gcs(gcs_metadata_path, f, config.gcs_bucket_name)
+
+    return JSONResponse(content={"status": "success"})
+  except OSError as e:
+    logging.exception("Error saving project metadata for %s: %s", video_id, e)
+    return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 @app.delete("/api/videos/{video_id}")
