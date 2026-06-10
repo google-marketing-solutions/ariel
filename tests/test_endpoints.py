@@ -386,6 +386,76 @@ class MainTest(unittest.TestCase):
         "Source video non_existent_id not found.", response.json()["error"]
     )
 
+  @patch("main.upload_file_to_gcs")
+  @patch("main.separate_audio_from_video")
+  @patch("main.genai.Client")
+  @patch("main.transcribe_video")
+  @patch("main.moviepy.VideoFileClip")
+  @patch("main.generate_audio")
+  @patch("builtins.open", new_callable=mock_open)
+  @patch("os.path.exists")
+  def test_process_video_update_existing(
+      self,
+      mock_exists,
+      mock_file_open,
+      mock_gen_audio,
+      mock_video_clip,
+      mock_transcribe,
+      mock_genai_client,
+      mock_separate,
+      mock_upload_file,
+  ):
+    """Tests /process endpoint with update_existing=True."""
+    mock_exists.return_value = False
+
+    # Setup mocks
+    mock_separate.return_value = (
+        "temp/test_vid_id/audio.wav",
+        "temp/test_vid_id/vocals.wav",
+        "temp/test_vid_id/bg.wav",
+    )
+
+    speaker = Speaker(
+        speaker_id="spk1",
+        voice="voice1",
+        speaker_name="Speaker 1",
+        gender=GenderEnum.NEUTRAL,
+    )
+
+    utterance = Utterance(
+        id="1",
+        original_text="original",
+        translated_text="translated",
+        speaker=speaker,
+        original_start_time=0.0,
+        original_end_time=1.0,
+        translated_start_time=0.0,
+        translated_end_time=1.0,
+        audio_url="temp/test_vid_id/audio_0.wav",
+    )
+
+    mock_transcribe.return_value = ("en", [speaker], [utterance])
+    mock_gen_audio.return_value = 1.0
+
+    mock_clip_instance = MagicMock()
+    mock_clip_instance.duration = 10.0
+    mock_video_clip.return_value = mock_clip_instance
+
+    response = self.client.post(
+        "/process",
+        data={
+            "translate_language": "es",
+            "use_pro_model": "false",
+            "source_video_id": "test_vid_id",
+            "update_existing": "true",
+        },
+    )
+
+    self.assertEqual(response.status_code, 200)
+    mock_separate.assert_called_once_with(
+        "temp/test_vid_id/test_vid_id", "temp/test_vid_id"
+    )
+
   def test_load_project_not_found(self):
     """Tests /api/projects/{video_id} with a non-existent video_id."""
     response = self.client.get("/api/projects/non_existent_id")

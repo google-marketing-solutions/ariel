@@ -237,6 +237,7 @@ def process_video(
     )
     source_dir = os.path.join(mount_point, source_video_id)
     local_video_path = os.path.join(source_dir, source_video_id)
+    local_dir = source_dir
   elif gcs_object_path:
     logging.info("Processing video from GCS path: %s", gcs_object_path)
     gcs_video_path = f"gs://{config.gcs_bucket_name}/{gcs_object_path}"
