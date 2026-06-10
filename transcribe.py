@@ -45,8 +45,8 @@ def transcribe_video(
     gcs_video_path: The GCS URI of the video file to be transcribed.
     translate_language: The target language for translating the video, specified
       as a BCP-47 language code (e.g., "es-ES").
-    duration: The total duration of the video in seconds. This is used by
-      Gemini to ensure all timestamps fall within the video's length.
+    duration: The total duration of the video in seconds. This is used by Gemini
+      to ensure all timestamps fall within the video's length.
     genai_client: An initialized `google.genai.Client` instance.
     gemini_model: The specific Gemini model to use for transcription and
       translation.
@@ -96,6 +96,10 @@ def transcribe_video(
        place it in `translated_text`.
 
     Important Constraints:
+    - If no spoken dialogue is detected in the video, you MUST set
+      `primary_language` to an empty string `""`, and `speakers` and
+      `utterances` to empty lists `[]`. Do not attempt to guess or invent
+      dialogue.
     - Only populate fields that can be known *before* generating the translated
       speech.
     - For `translated_start_time` and `translated_end_time`, set to 0.0.
