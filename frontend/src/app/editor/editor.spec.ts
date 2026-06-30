@@ -1,6 +1,12 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {ElementRef} from '@angular/core';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {ActivatedRoute, provideRouter, Router} from '@angular/router';
+import {
+  ActivatedRoute,
+  Event as RouterEvent,
+  provideRouter,
+  Router,
+} from '@angular/router';
 import {of, Subject} from 'rxjs';
 import {Speaker} from '../_components/speaker-modal/speaker-modal';
 import {VideoGenerationService} from '../services/video-generation.service';
@@ -9,14 +15,14 @@ import {Editor} from './editor';
 describe('Editor', () => {
   let component: Editor;
   let fixture: ComponentFixture<Editor>;
-  let mockRouter: any;
-  let mockActivatedRoute: any;
-  let mockVideoGenerationService: any;
-  let navigationEndSubject: Subject<any>;
+  let mockRouter: Router;
+  let mockActivatedRoute: Partial<ActivatedRoute>;
+  let mockVideoGenerationService: Partial<VideoGenerationService>;
+  let navigationEndSubject: Subject<RouterEvent>;
   let generateVideoSubject: Subject<void>;
 
   beforeEach(async () => {
-    navigationEndSubject = new Subject<any>();
+    navigationEndSubject = new Subject<RouterEvent>();
     generateVideoSubject = new Subject<void>();
 
     mockActivatedRoute = {
@@ -30,7 +36,7 @@ describe('Editor', () => {
     };
 
     // Mock global Audio
-    vi.spyOn(window, 'Audio').mockImplementation(function () {
+    vi.spyOn(window, 'Audio').mockImplementation(() => {
       return {
         play: vi.fn().mockResolvedValue(undefined),
         pause: vi.fn(),
@@ -41,8 +47,8 @@ describe('Editor', () => {
         currentTime: 0,
         readyState: 4, // HAVE_ENOUGH_DATA
         onended: null,
-      };
-    } as any);
+      } as unknown as HTMLAudioElement;
+    });
 
     // Mock fetch
     vi.spyOn(window, 'fetch').mockImplementation(
@@ -161,7 +167,7 @@ describe('Editor', () => {
 
     // Mock crypto.randomUUID for createNewUtterance
     if (!window.crypto) {
-      (window as any).crypto = {};
+      Object.defineProperty(window, 'crypto', {value: {}, writable: true});
     }
     window.crypto.randomUUID = vi.fn().mockReturnValue('new-uuid');
 
@@ -221,7 +227,6 @@ describe('Editor', () => {
     });
 
     it('should update original text', () => {
-      const firstUtterance = component.videoData()?.utterances[0];
       component.updateOriginalText('utt_1', 'New Hello');
       expect(component.videoData()?.utterances[0].original_text).toBe(
         'New Hello',
@@ -310,9 +315,6 @@ describe('Editor', () => {
     });
 
     it('should update start timestamp and linked end timestamp', () => {
-      const startInput = fixture.nativeElement.querySelector(
-        '.translated-timestamps input:nth-child(1)',
-      );
       const endInput = fixture.nativeElement.querySelector(
         '.translated-timestamps div:nth-child(2) input',
       );
@@ -509,7 +511,7 @@ describe('Editor', () => {
       expect(fixture.nativeElement.querySelector('.warning-banner')).toBeNull();
 
       // Make an utterance exceed duration
-      component.videoData.update((data) => {
+      component.videoData.update(data => {
         if (data) {
           const newUtterances = [...data.utterances];
           newUtterances[0] = {...newUtterances[0], translated_end_time: 12};
@@ -532,7 +534,7 @@ describe('Editor', () => {
       await fixture.whenStable();
 
       // Make an utterance exceed duration
-      component.videoData.update((data) => {
+      component.videoData.update(data => {
         if (data) {
           const newUtterances = [...data.utterances];
           newUtterances[0] = {...newUtterances[0], translated_end_time: 12};
@@ -564,8 +566,8 @@ describe('Editor', () => {
       component.timelineContainer = {
         nativeElement: {
           clientWidth: 1000, // 1000 pixels
-        },
-      } as any;
+        } as HTMLDivElement,
+      } as ElementRef<HTMLDivElement>;
     });
 
     it('should calculate timeline duration with padding', () => {
@@ -592,7 +594,7 @@ describe('Editor', () => {
         button: 0,
         clientX: 100,
         preventDefault: vi.fn(),
-      } as any;
+      } as unknown as MouseEvent;
 
       component.onDragStart(startEvent, utterance);
       expect(component.isDragging()).toBe(true);
@@ -601,21 +603,20 @@ describe('Editor', () => {
       // Move drag: 100 pixels to the right.
       // containerWidth=1000, duration=10.1. 100 pixels = (100 / 1000) * 10.1 = 1.01 seconds.
       // Initial translated_start_time = 0. New should be ~1.01.
-      const moveEvent = {clientX: 200} as any;
+      const moveEvent = {clientX: 200} as unknown as MouseEvent;
       component.onDragMove(moveEvent);
 
       const updatedUtterance = component.videoData()?.utterances[0]!;
       expect(updatedUtterance.translated_start_time).toBeCloseTo(1.01, 2);
       expect(updatedUtterance.translated_end_time).toBeCloseTo(3.01, 2);
 
-      component.onDragEnd({} as any);
+      component.onDragEnd();
       expect(component.isDragging()).toBe(false);
       expect(component.draggedUtteranceId()).toBeNull();
     });
 
     it('should detect utterance overlaps', () => {
       const utterance1 = component.videoData()?.utterances[0]!;
-      const utterance2 = component.videoData()?.utterances[1]!;
 
       // Initially no overlap: utt1 [0,2], utt2 [2,4]
       expect(component.getUtteranceOverlap(utterance1)).toBeNull();
@@ -629,8 +630,8 @@ describe('Editor', () => {
 
       const overlaps = component.getOverlappingUtterances(utterance1);
       expect(overlaps.length).toBe(2);
-      expect(overlaps.map((u) => u.id)).toContain('utt_1');
-      expect(overlaps.map((u) => u.id)).toContain('utt_2');
+      expect(overlaps.map(u => u.id)).toContain('utt_1');
+      expect(overlaps.map(u => u.id)).toContain('utt_2');
     });
   });
 
@@ -749,6 +750,130 @@ describe('Editor', () => {
         expect.any(Object),
       );
       expect(component.isEditingSettings()).toBe(false);
+    });
+  });
+
+  describe('Silent Videos Onboarding', () => {
+    let silentComponent: Editor;
+    let silentFixture: ComponentFixture<Editor>;
+
+    beforeEach(async () => {
+      const silentActivatedRoute = {
+        queryParams: of({video_id: 'silent-video-id'}),
+      };
+
+      vi.spyOn(window, 'fetch').mockImplementation(
+        async (input: RequestInfo | URL) => {
+          if (typeof input === 'string') {
+            if (input.includes('/api/projects/silent-video-id')) {
+              return new Response(
+                JSON.stringify({
+                  video_id: 'silent-video-id',
+                  original_language: '',
+                  translate_language: 'es',
+                  speakers: [
+                    {
+                      speaker_id: 'default_speaker',
+                      name: 'Narrator',
+                      voice: 'Aoede',
+                      gender: 'neutral',
+                    },
+                  ],
+                  utterances: [],
+                  duration: 10,
+                }),
+                {status: 200},
+              );
+            }
+            if (input.includes('/api/projects/silent-video-id/save')) {
+              return new Response(JSON.stringify({status: 'success'}), {
+                status: 200,
+              });
+            }
+            if (input.includes('languages.json')) {
+              return new Response(
+                JSON.stringify([
+                  {name: 'English', code: 'en'},
+                  {name: 'Spanish', code: 'es'},
+                ]),
+                {status: 200},
+              );
+            }
+            if (input.includes('voices.json')) {
+              return new Response(JSON.stringify({}), {status: 200});
+            }
+          }
+          return Promise.reject(
+            new Error(`Unexpected fetch request: ${input}`),
+          );
+        },
+      );
+
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [Editor, MatTooltipModule],
+        providers: [
+          provideRouter([]),
+          {provide: ActivatedRoute, useValue: silentActivatedRoute},
+          {
+            provide: VideoGenerationService,
+            useValue: mockVideoGenerationService,
+          },
+        ],
+      }).compileComponents();
+
+      silentFixture = TestBed.createComponent(Editor);
+      silentComponent = silentFixture.componentInstance;
+      await silentFixture.whenStable();
+      silentFixture.detectChanges();
+    });
+
+    it('should initialize correctly with no utterances and no original language', () => {
+      expect(silentComponent.videoData()?.utterances.length).toBe(0);
+      expect(silentComponent.hasOriginalLanguage()).toBe(false);
+
+      const compiled = silentFixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('.empty-dubbing-setup')).toBeTruthy();
+    });
+
+    it('should enable Add First Utterance button when language is selected', async () => {
+      const compiled = silentFixture.nativeElement as HTMLElement;
+      const button = compiled.querySelector(
+        '.empty-dubbing-setup button',
+      ) as HTMLButtonElement;
+
+      expect(button.disabled).toBe(true);
+
+      // Select language
+      silentComponent.videoData.update(d =>
+        d ? {...d, original_language: 'en'} : d,
+      );
+      silentFixture.detectChanges();
+
+      expect(silentComponent.hasOriginalLanguage()).toBe(true);
+      expect(button.disabled).toBe(false);
+    });
+
+    it('should create new utterance and call save when button is clicked', async () => {
+      // Set language first
+      silentComponent.videoData.update(d =>
+        d ? {...d, original_language: 'en'} : d,
+      );
+      silentFixture.detectChanges();
+
+      const compiled = silentFixture.nativeElement as HTMLElement;
+      const button = compiled.querySelector(
+        '.empty-dubbing-setup button',
+      ) as HTMLButtonElement;
+
+      button.click();
+      silentFixture.detectChanges();
+
+      expect(silentComponent.videoData()?.utterances.length).toBe(1);
+      expect(window.fetch).toHaveBeenCalledWith(
+        '/api/projects/silent-video-id/save',
+        expect.any(Object),
+      );
     });
   });
 });
