@@ -49,7 +49,9 @@ from google import genai
 import google.cloud.exceptions
 import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
+from models import GenderEnum
 from models import GenerateVideoRequest
+from models import Speaker
 from models import RegenerateRequest
 from models import RegenerateResponse
 from models import Utterance
