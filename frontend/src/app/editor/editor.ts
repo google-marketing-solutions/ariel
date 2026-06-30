@@ -99,7 +99,7 @@ export type PanelMode =
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '(document:mousemove)': 'onDragMove($event)',
-    '(document:mouseup)': 'onDragEnd($event)',
+    '(document:mouseup)': 'onDragEnd()',
     '(document:click)': 'onDocumentClick($event)',
   },
 })
@@ -395,7 +395,7 @@ export class Editor implements OnInit, OnDestroy {
 
   animationFrameId: number | null = null;
 
-  ngOnInit() {
+  async ngOnInit() {
     const updateTimeLoop = () => {
       if (this.isPlayingOriginal()) {
         const currentVisualTime = this.originalAudio.currentTime;
@@ -414,19 +414,19 @@ export class Editor implements OnInit, OnDestroy {
     this.videoGenSub = this.videoGenerationService.generateVideo$.subscribe(
       async () => {
         if (this.validateForGeneration()) {
-          this.generateVideo();
+          await this.generateVideo();
         }
       },
     );
 
-    this.fetchLanguages();
-    this.route.queryParams.subscribe(params => {
+    await this.fetchLanguages();
+    this.route.queryParams.subscribe(async params => {
       const id = params['video_id'];
       if (id) {
         this.videoId.set(id);
-        this.loadProject(id);
+        await this.loadProject(id);
       } else {
-        this.router.navigate(['/']);
+        await this.router.navigate(['/']);
       }
     });
   }
@@ -468,9 +468,9 @@ export class Editor implements OnInit, OnDestroy {
 
       if (!rawUrl && data.video_id) {
         // Fallback: try to deduce from utterances if available
-        const u = data.utterances.find(utt => utt.audio_url);
-        if (u && u.audio_url) {
-          let url = u.audio_url;
+        const utterance = data.utterances.find(utt => utt.audio_url);
+        if (utterance && utterance.audio_url) {
+          let url = utterance.audio_url;
           if (!url.startsWith('http') && !url.startsWith('/')) {
             url = '/' + url;
           }
@@ -667,11 +667,11 @@ export class Editor implements OnInit, OnDestroy {
         const result = await response.json();
 
         if (result.video_id && result.video_id !== data.video_id) {
-          this.router.navigate(['/editor'], {
+          await this.router.navigate(['/editor'], {
             queryParams: {video_id: result.video_id},
           });
         } else {
-          this.loadProject(result.video_id);
+          await this.loadProject(result.video_id);
         }
       } else if (translateLangChanged) {
         // Translation change (Fork)
@@ -699,11 +699,11 @@ export class Editor implements OnInit, OnDestroy {
         const result = await response.json();
 
         if (result.video_id && result.video_id !== data.video_id) {
-          this.router.navigate(['/editor'], {
+          await this.router.navigate(['/editor'], {
             queryParams: {video_id: result.video_id},
           });
         } else {
-          this.loadProject(result.video_id);
+          await this.loadProject(result.video_id);
         }
       } else if (speakersChanged) {
         // Find which utterances need new dubbing (assigned to a deleted speaker, or their speaker's voice changed)
@@ -726,7 +726,7 @@ export class Editor implements OnInit, OnDestroy {
         }));
 
         // Update speaker voices locally BEFORE regeneration, and reassign orphans to the first available speaker
-        for (let u of data.utterances) {
+        for (const u of data.utterances) {
           let newSpeaker = data.speakers.find(
             s => s.speaker_id === u.speaker.speaker_id,
           );
@@ -902,7 +902,7 @@ export class Editor implements OnInit, OnDestroy {
     const currentDuration =
       active.translated_end_time - active.translated_start_time;
 
-    let newStart = this.parseTime(startStr);
+    const newStart = this.parseTime(startStr);
     if (!isNaN(newStart) && startStr.includes(':')) {
       const newEnd = newStart + currentDuration;
       const newEndStr = this.formatTime(newEnd);
@@ -921,9 +921,9 @@ export class Editor implements OnInit, OnDestroy {
     const currentDuration =
       active.translated_end_time - active.translated_start_time;
 
-    let newEnd = this.parseTime(endStr);
+    const newEnd = this.parseTime(endStr);
     if (!isNaN(newEnd) && endStr.includes(':')) {
-      let newStart = newEnd - currentDuration;
+      const newStart = newEnd - currentDuration;
 
       const newStartStr = this.formatTime(newStart);
       startInput.value = newStartStr;
@@ -1491,8 +1491,8 @@ export class Editor implements OnInit, OnDestroy {
   applyTimestamps(id: string | undefined, startStr: string, endStr: string) {
     if (!id) return;
 
-    let newStart = this.parseTime(startStr);
-    let newEnd = this.parseTime(endStr);
+    const newStart = this.parseTime(startStr);
+    const newEnd = this.parseTime(endStr);
 
     if (newEnd < newStart) {
       alert('End time cannot be earlier than start time.');
@@ -1745,7 +1745,7 @@ export class Editor implements OnInit, OnDestroy {
       const result = await response.json();
 
       // Navigate to results page and pass the generated data via Router state
-      this.router.navigate(['/result'], {
+      await this.router.navigate(['/result'], {
         state: {finalVideoData: result, originalVideoData: this.videoData()},
       });
     } catch (err) {
@@ -1765,7 +1765,6 @@ export class Editor implements OnInit, OnDestroy {
 
       let title = '';
       let message = '';
-      let showProceed = true;
 
       if (hasUnregenerated && exceedsLength) {
         title = 'Multiple Issues Found';
@@ -1783,7 +1782,7 @@ export class Editor implements OnInit, OnDestroy {
 
       this.validationModalTitle.set(title);
       this.validationModalMessage.set(message);
-      this.showProceedButton.set(showProceed);
+      this.showProceedButton.set(true);
 
       return false;
     }
@@ -1810,9 +1809,9 @@ export class Editor implements OnInit, OnDestroy {
     return exceeds;
   }
 
-  onConfirmValidation() {
+  async onConfirmValidation() {
     this.showValidationModal.set(false);
-    this.generateVideo();
+    await this.generateVideo();
   }
 
   onCancelValidation() {
@@ -1847,7 +1846,7 @@ export class Editor implements OnInit, OnDestroy {
     }
   }
 
-  hidePopup(event: MouseEvent) {
+  hidePopup() {
     // Delay closing to allow moving to popup
     this.popupCloseTimeout = setTimeout(() => {
       this.showOverlapPopup.set(false);
@@ -1943,7 +1942,7 @@ export class Editor implements OnInit, OnDestroy {
     });
   }
 
-  onDragEnd(event: MouseEvent) {
+  onDragEnd() {
     if (this.isDragging()) {
       this.isDragging.set(false);
       this.draggedUtteranceId.set(null);
@@ -2103,11 +2102,14 @@ export class Editor implements OnInit, OnDestroy {
 
     // Clicks on the transparent gap between utterances (divider) should be treated as background clicks (fall through to clear).
     // But clicks on actual action buttons inside the divider or inside the utterance itself should keep it open.
-    if (
+    const isDividerBackgroundClick =
       targetElement.closest('.utterance-insert-divider') &&
-      !targetElement.closest('button')
+      !targetElement.closest('button');
+
+    if (
+      !isDividerBackgroundClick &&
+      targetElement.closest('[id^="utterance-"]')
     ) {
-    } else if (targetElement.closest('[id^="utterance-"]')) {
       return;
     }
 
