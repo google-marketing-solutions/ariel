@@ -51,9 +51,9 @@ import google.cloud.logging
 from google.cloud.logging.handlers import CloudLoggingHandler
 from models import GenderEnum
 from models import GenerateVideoRequest
-from models import Speaker
 from models import RegenerateRequest
 from models import RegenerateResponse
+from models import Speaker
 from models import Utterance
 from models import Video
 from models import VideoMetadata
