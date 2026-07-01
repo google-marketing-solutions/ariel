@@ -3,7 +3,7 @@
 
   <!-- Video Player -->
   <div class="result-player">
-    <video controls [src]="finalVideoData()?.video_url">
+    <video controls [src]="$safeNavigationMigration(finalVideoData()?.video_url)">
       Your browser does not support the video tag.
     </video>
   </div>
@@ -12,11 +12,22 @@
   <div class="actions-row">
     <!-- Download Actions -->
     <div class="download-actions">
-      <a [href]="finalVideoData()?.video_url" [download]="getCleanVideoName()"> Download Video </a>
-      <a [href]="finalVideoData()?.merged_audio_url" [download]="getCleanAudioName('audio')">
+      <a
+        [href]="$safeNavigationMigration(finalVideoData()?.video_url)"
+        [download]="getCleanVideoName()"
+      >
+        Download Video
+      </a>
+      <a
+        [href]="$safeNavigationMigration(finalVideoData()?.merged_audio_url)"
+        [download]="getCleanAudioName('audio')"
+      >
         Download Final Audio
       </a>
-      <a [href]="finalVideoData()?.vocals_url" [download]="getCleanAudioName('vocals')">
+      <a
+        [href]="$safeNavigationMigration(finalVideoData()?.vocals_url)"
+        [download]="getCleanAudioName('vocals')"
+      >
         Download Vocals
       </a>
     </div>
