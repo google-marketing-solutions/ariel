@@ -36,7 +36,7 @@ describe('Editor', () => {
     };
 
     // Mock global Audio
-    vi.spyOn(window, 'Audio').mockImplementation(() => {
+    vi.spyOn(window, 'Audio').mockImplementation(function () {
       return {
         play: vi.fn().mockResolvedValue(undefined),
         pause: vi.fn(),
