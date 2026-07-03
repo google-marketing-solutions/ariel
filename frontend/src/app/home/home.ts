@@ -42,6 +42,8 @@ export class Home implements OnInit {
   selectedVideoFile = signal<File | null>(null);
   videoPreviewUrl = signal<string | null>(null);
   translationLanguage = signal<string>('');
+  translationInstructions = signal<string>('');
+  ttsGuidance = signal<string>('');
   isTranslationOpen = signal(false);
   showErrorDialog = signal(false);
   errorMessage = signal('');
@@ -173,6 +175,8 @@ export class Home implements OnInit {
     this.selectedVideoFile.set(null);
     this.step.set(Step.UPLOAD);
     this.translationLanguage.set('');
+    this.translationInstructions.set('');
+    this.ttsGuidance.set('');
     // Reset file input so selecting the same file triggers 'change' event again
     const fileInput = document.getElementById(
       'video-input',
@@ -245,6 +249,8 @@ export class Home implements OnInit {
       formData.append('gcs_object_path', object_name);
       formData.append('translate_language', this.translationLanguage());
       formData.append('use_pro_model', this.useProModel().toString());
+      formData.append('translation_instructions', this.translationInstructions());
+      formData.append('tts_guidance', this.ttsGuidance());
 
       console.log('Sending request to /process...');
       const response = await fetch('/process', {

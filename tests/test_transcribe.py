@@ -139,6 +139,33 @@ class TestTranscribeVideo(unittest.TestCase):
           gemini_model,
       )
 
+  @unittest.mock.patch("transcribe.google.genai.Client")
+  def test_transcribe_video_with_instructions(self, mock_genai_client):
+    """Tests that translation_instructions and tts_guidance are added to the prompt."""
+    mock_client = mock_genai_client.return_value
+    mock_response = unittest.mock.MagicMock()
+    mock_response.text = json.dumps({
+        "primary_language": "en-US",
+        "speakers": [],
+        "utterances": [],
+    })
+    mock_client.models.generate_content.return_value = mock_response
+
+    transcribe_video(
+        "gs://fake/video.mp4",
+        "es-ES",
+        15.0,
+        mock_client,
+        "some-model",
+        translation_instructions="Formal vocabulary",
+        tts_guidance="Enthusiastic tone",
+    )
+
+    call_args = mock_client.models.generate_content.call_args
+    prompt_str = call_args.kwargs["contents"][1]
+    self.assertIn("Additional Translation Instructions: Formal vocabulary", prompt_str)
+    self.assertIn("Additional Text-to-Speech Guidance: Enthusiastic tone", prompt_str)
+
 
 if __name__ == "__main__":
   unittest.main()

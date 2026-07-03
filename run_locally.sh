@@ -24,10 +24,12 @@ if config:
     print(f"export {k}=\"{v}\"")' < configuration.yaml)
 fi
 
-# Export service account email for local impersonation
+# Export service account email and GCP project for local SDK clients
 if [ -n "$GCP_PROJECT_ID" ]; then
+  export GOOGLE_CLOUD_PROJECT="$GCP_PROJECT_ID"
   export GCP_SERVICE_ACCOUNT_EMAIL="ariel-v2@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
   echo "💡 Exported GCP_SERVICE_ACCOUNT_EMAIL=${GCP_SERVICE_ACCOUNT_EMAIL}"
+  echo "💡 Exported GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}"
 fi
 
 uv run uvicorn main:app --host 0.0.0.0 --port 8080 --reload
