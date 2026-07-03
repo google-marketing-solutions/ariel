@@ -161,6 +161,32 @@
         }
       </div>
     </div>
+    <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 1.5rem;">
+      <div class="form-group">
+        <div class="form-label-wrapper">
+          <h3>Translation Instructions</h3>
+        </div>
+        <textarea
+          rows="3"
+          [ngModel]="translationInstructions()"
+          (ngModelChange)="translationInstructions.set($event)"
+          placeholder="e.g., Use formal business tone, preserve technical jargon..."
+          [disabled]="isProcessing() || isPreprocessing()"
+        ></textarea>
+      </div>
+      <div class="form-group">
+        <div class="form-label-wrapper">
+          <h3>Text-to-Speech Guidance</h3>
+        </div>
+        <textarea
+          rows="3"
+          [ngModel]="ttsGuidance()"
+          (ngModelChange)="ttsGuidance.set($event)"
+          placeholder="e.g., Enthusiastic tone, articulate pauses, energetic pacing..."
+          [disabled]="isProcessing() || isPreprocessing()"
+        ></textarea>
+      </div>
+    </div>
   </div>
 </div>
 
