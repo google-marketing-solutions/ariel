@@ -94,6 +94,8 @@ def _process_utterance(
     translate_language: str,
     gemini_tts_model: str,
     local_dir: str,
+    tts_guidance: str = "",
+    translation_instructions: str = "",
 ) -> Utterance:
   """Generates audio for a single utterance.
 
@@ -105,14 +107,26 @@ def _process_utterance(
     translate_language: The target language.
     gemini_tts_model: The Gemini TTS model.
     local_dir: The directory to save audio.
+    tts_guidance: Additional guidance for text to speech.
+    translation_instructions: Additional guidance for translation.
 
   Returns:
     The processed Utterance object.
   """
+  if translation_instructions and not u.translation_instructions:
+    u.translation_instructions = translation_instructions
+  prompt = u.speaking_instructions
+  if tts_guidance:
+    if not prompt:
+      prompt = tts_guidance
+    elif tts_guidance not in prompt:
+      prompt = f"{tts_guidance}\n\n{prompt}"
+    u.speaking_instructions = prompt
+
   local_audio_path = os.path.join(local_dir, f"audio_{i}.wav")
   audio_duration = generate_audio(
       u.translated_text,
-      u.speaking_instructions,
+      prompt,
       translate_language,
       u.speaker.voice,
       1.0,
@@ -156,6 +170,8 @@ def process_video(
     source_video_id: Annotated[str, Form()] = "",
     update_existing: Annotated[bool, Form()] = False,
     gcs_object_path: Annotated[str, Form()] = "",
+    translation_instructions: Annotated[str, Form()] = "",
+    tts_guidance: Annotated[str, Form()] = "",
 ) -> JSONResponse:
   """Endpoint to run the initial video processing workflow.
 
@@ -175,6 +191,8 @@ def process_video(
       forking. This is used when changing the language on the editor page.
     gcs_object_path: the path of the video in GCS. Optional if video or
       source_video_id is provided.
+    translation_instructions: additional instructions for translation.
+    tts_guidance: additional guidance for text-to-speech generation.
 
   Returns:
     A Video object with the information for the dubbing.
@@ -316,7 +334,13 @@ def process_video(
     gemini_tts_model = config.gemini_flash_tts_model
 
   original_language, speaker_list, utterances = transcribe_video(
-      gcs_video_path, translate_language, duration, genai_client, gemini_model
+      gcs_video_path,
+      translate_language,
+      duration,
+      genai_client,
+      gemini_model,
+      translation_instructions,
+      tts_guidance,
   )
 
   if not speaker_list:
@@ -334,6 +358,8 @@ def process_video(
       translate_language=translate_language,
       gemini_tts_model=gemini_tts_model,
       local_dir=local_dir,
+      tts_guidance=tts_guidance,
+      translation_instructions=translation_instructions,
   )
 
   with concurrent.futures.ThreadPoolExecutor() as executor:

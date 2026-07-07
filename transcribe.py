@@ -31,6 +31,8 @@ def transcribe_video(
     duration: float,
     genai_client: google.genai.Client,
     gemini_model: str,
+    translation_instructions: str = "",
+    tts_guidance: str = "",
 ) -> tuple[str, list[Speaker], list[Utterance]]:
   """Transcribes and translates a video file using the Gemini model.
 
@@ -50,6 +52,8 @@ def transcribe_video(
     genai_client: An initialized `google.genai.Client` instance.
     gemini_model: The specific Gemini model to use for transcription and
       translation.
+    translation_instructions: Additional instructions to guide translation.
+    tts_guidance: Additional instructions to guide text-to-speech generation.
 
   Returns:
     A tuple containing three elements:
@@ -118,6 +122,10 @@ def transcribe_video(
     - Video Duration: {duration} seconds
     - Target Language: {translate_language}
     """
+  if translation_instructions:
+    user_prompt += f"    - Additional Translation Instructions: {translation_instructions}\n"
+  if tts_guidance:
+    user_prompt += f"    - Additional Text-to-Speech Guidance: {tts_guidance}\n"
 
   gemini_config = google.genai.types.GenerateContentConfig(
       system_instruction=system_instruction,

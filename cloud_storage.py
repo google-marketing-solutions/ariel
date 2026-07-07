@@ -34,6 +34,16 @@ import pydantic
 import requests
 
 
+def _get_storage_client() -> storage.Client:
+  """Returns a GCS Client initialized with the project ID if available."""
+  project = (
+      os.environ.get("GCP_PROJECT_ID")
+      or os.environ.get("GOOGLE_CLOUD_PROJECT")
+      or None
+  )
+  return storage.Client(project=project)
+
+
 def generate_gcs_path(filename: str) -> str:
   """Generates a unique GCS path for a file based on current time and UUID.
 
@@ -70,7 +80,7 @@ def upload_video_to_gcs(
   mime_type = mimetypes.guess_type(video_name)[0] or "video/mp4"
   dest_path = generate_gcs_path(video_name)
 
-  storage_client = storage.Client()
+  storage_client = _get_storage_client()
   bucket = storage_client.bucket(bucket_name)
   blob = bucket.blob(dest_path)
 
@@ -103,7 +113,7 @@ def upload_file_to_gcs(
         mimetypes.guess_type(target_path)[0] or "application/octet-stream"
     )
 
-  storage_client = storage.Client()
+  storage_client = _get_storage_client()
   bucket = storage_client.bucket(bucket_name)
   blob = bucket.blob(target_path)
   blob.upload_from_file(file_object, content_type=mime_type)
@@ -130,7 +140,7 @@ def generate_signed_upload_url(
   Returns:
     A signed URL string.
   """
-  storage_client = storage.Client()
+  storage_client = _get_storage_client()
   bucket = storage_client.bucket(bucket_name)
   blob = bucket.blob(object_name)
 
@@ -153,7 +163,7 @@ def download_file_from_gcs(bucket_name: str, object_name: str, local_path: str):
     object_name: the path/name of the object in GCS.
     local_path: the local path to save the file to.
   """
-  storage_client = storage.Client()
+  storage_client = _get_storage_client()
   bucket = storage_client.bucket(bucket_name)
   blob = bucket.blob(object_name)
   blob.download_to_filename(local_path)
@@ -181,7 +191,7 @@ def get_url_for_path(
   Returns:
     A URL that points to the file requested. The URL is valid for 24 hours.
   """
-  storage_client = storage.Client()
+  storage_client = _get_storage_client()
 
   bucket = storage_client.bucket(bucket_name)
   blob = bucket.blob(path)
@@ -291,7 +301,7 @@ def list_all_videos(
   Returns:
     A dict with 'videos' list and 'next_page_token' string.
   """
-  storage_client = storage.Client()
+  storage_client = _get_storage_client()
   bucket = storage_client.bucket(bucket_name)
 
   # The match_glob filters out uncompleted/raw video files,
@@ -405,7 +415,7 @@ def delete_video_from_gcs(bucket_name: str, video_id: str):
     google.cloud.exceptions.GoogleCloudError: raised if there is an issue
     removing the project.
   """
-  storage_client = storage.Client()
+  storage_client = _get_storage_client()
   bucket = storage_client.bucket(bucket_name)
   blobs: list[storage.Blob] = list(bucket.list_blobs(prefix=video_id))
 

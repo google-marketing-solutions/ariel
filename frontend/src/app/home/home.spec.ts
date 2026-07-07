@@ -143,5 +143,40 @@ describe('Home', () => {
       expect(errorDialog).toBeTruthy();
       expect(errorDialog.textContent).toContain('The uploaded file is too large. Please select a smaller file.');
     });
+
+    it('should include translation_instructions and tts_guidance in processVideo formData and reset in removeVideo', async () => {
+      let sentFormData: FormData | null = null;
+      vi.spyOn(window, 'fetch').mockImplementation(
+        async (input: RequestInfo | URL, init?: RequestInit) => {
+          if (typeof input === 'string' && input.includes('/api/generate-upload-url')) {
+            return new Response(JSON.stringify({url: 'http://fake-upload', object_name: 'fake-obj'}), {status: 200});
+          }
+          if (typeof input === 'string' && input === 'http://fake-upload') {
+            return new Response('ok', {status: 200});
+          }
+          if (typeof input === 'string' && input.includes('/process')) {
+            sentFormData = init?.body as FormData;
+            return new Response(JSON.stringify({video_id: 'abc-123'}), {status: 200});
+          }
+          return new Response('[]', {status: 200});
+        },
+      );
+
+      const mockFile = new File(['test content'], 'test-video.mp4', {type: 'video/mp4'});
+      component.selectedVideoFile.set(mockFile);
+      component.translationLanguage.set('es');
+      component.translationInstructions.set('Use formal Spanish');
+      component.ttsGuidance.set('Speak warmly');
+
+      await component.processVideo();
+
+      expect(sentFormData).toBeTruthy();
+      expect((sentFormData as unknown as FormData)?.get('translation_instructions')).toBe('Use formal Spanish');
+      expect((sentFormData as unknown as FormData)?.get('tts_guidance')).toBe('Speak warmly');
+
+      component.removeVideo();
+      expect(component.translationInstructions()).toBe('');
+      expect(component.ttsGuidance()).toBe('');
+    });
   });
 });

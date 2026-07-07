@@ -16,5 +16,5 @@
 set -e
 
 uv sync --dev
-python -m unittest discover -v -s tests
-npm test
+uv run python -m unittest discover -v -s tests
+npm --prefix frontend test -- --watch=false
