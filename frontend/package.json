@@ -31,7 +31,7 @@
     "@angular/language-service": "^22.0.4",
     "autoprefixer": "^10.4.27",
     "jsdom": "^28.0.0",
-    "postcss": "^8.5.8",
+    "postcss": "^8.5.25",
     "prettier": "^3.8.1",
     "typescript": "~6.0.3",
     "typescript-language-server": "^5.1.3",
