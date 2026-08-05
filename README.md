@@ -14,6 +14,13 @@
  under the License.
 -->
 
+Note: This solution uses AI to edit or generate assets for your ads. Whether your
+content requires labeling depends on the nature of your assets, where your ads
+serve, and specific legal obligations that apply to you. In some circumstances
+Google may automatically apply a label. Please consult with your legal team to
+determine if/when a label is required for your ads. You can add labels in
+Google’s Ads products using the AI label setting.
+
 # gTech Ads Ariel for AI Video Ad Dubbing
 
 Ariel is a tool for translating video voice tracks. It provides an easy to use
