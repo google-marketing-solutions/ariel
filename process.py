@@ -18,13 +18,15 @@ import os
 import pathlib
 
 from audio_separator.separator import Separator
-import moviepy
-
+import configuration
 from models import Utterance
+import moviepy
 
 
 def separate_audio_from_video(
-  video_file_path: str, output_local_path: str
+  video_file_path: str,
+  output_local_path: str,
+  model_name: str | None = None,
 ) -> tuple[str, str, str]:
   """Separates the music and vocals from the input video file.
 
@@ -32,6 +34,8 @@ def separate_audio_from_video(
     video_file_path: Path to the input video file containing both speech and
       music.
     output_local_path: Path to save the separated audio files.
+    model_name: Optional name of the model to use for audio separation. If not
+      provided, the model specified in the configuration will be used.
 
   Returns:
     A tuple with the following three strings:
@@ -57,7 +61,10 @@ def separate_audio_from_video(
 
   separator = Separator(output_dir=output_local_path)
   output_file_names = {"Vocals": "vocals", "Instrumental": "background"}
-  separator.load_model(model_filename="5_HP-Karaoke-UVR.pth")
+  separation_model = (
+    model_name or configuration.get_config().audio_separation_model
+  )
+  separator.load_model(model_filename=separation_model)
   output_files: list[str] = separator.separate(
     original_audio_path, output_file_names
   )
@@ -153,7 +160,7 @@ def merge_vocals(
     target_path.touch()
     return target_file
   silent_audio = moviepy.AudioClip(
-    frame_function=lambda t: [0, 0], duration=max_end_time
+    frame_function=lambda _t: [0, 0], duration=max_end_time
   )
   audio_parts.append(silent_audio)
 

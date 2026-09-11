@@ -31,6 +31,8 @@ class Config:
     gemini_flash_tts_model: The model string to use with TTS when flash is
     chosen.
     gemini_pro_tts_model: The model string to use with TTS when pro is chosen.
+    audio_separation_model: The model string or filename to use for audio
+      separation.
   """
 
   gcp_project_id: str
@@ -40,6 +42,7 @@ class Config:
   gemini_pro_model: str
   gemini_flash_tts_model: str
   gemini_pro_tts_model: str
+  audio_separation_model: str
 
 
 def get_config() -> Config:
@@ -59,5 +62,8 @@ def get_config() -> Config:
       ),
       gemini_pro_tts_model=os.environ.get(
           "GEMINI_PRO_TTS_MODEL", "gemini-2.5-pro-tts"
+      ),
+      audio_separation_model=os.environ.get(
+          "AUDIO_SEPARATION_MODEL", "model_bs_roformer_ep_317_sdr_12.9755.ckpt"
       ),
   )

@@ -148,6 +148,18 @@ To update the model, follow these steps:
 1. If needed, you can also update the models being used for text-to-speech by updating the lines starting with `GEMINI_TTS`.
 1. Redeploy the solution by running `deploy.sh`.
 
+### Updating Audio Separation Model
+
+Ariel uses `audio-separator` to split the original video's audio into vocals (speech) and background (music and sound effects). By default, the high-quality **BS-RoFormer** model (`model_bs_roformer_ep_317_sdr_12.9755.ckpt`) is used to minimize vocal bleed.
+
+To update the separation model:
+
+1. Edit the file `configuration.yaml`, updating the line starting with `AUDIO_SEPARATION_MODEL`. Common options include:
+   * `model_bs_roformer_ep_317_sdr_12.9755.ckpt`: Highest separation quality (SOTA), minimal vocal bleed into background.
+   * `MDX23C-8KFFT-InstVoc_HQ.ckpt`: High quality, faster inference on CPU.
+   * `UVR-MDX-NET-Inst_HQ_4.onnx`: Fast CPU inference via ONNX Runtime.
+   * `5_HP-Karaoke-UVR.pth`: Legacy UVR model.
+1. Redeploy the solution by running `deploy.sh`.
 
 `configuration.yaml` is created by `setup.sh` during the initial deployment. If you no longer have this file, you can manually create it using the template and filling in the appropriate values for your project.
 

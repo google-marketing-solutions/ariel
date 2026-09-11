@@ -18,6 +18,7 @@ SERVICE_NAME="ariel-v2"
 REGION=$(grep "GCP_PROJECT_LOCATION" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
 GCS_BUCKET=$(grep "GCS_BUCKET_NAME" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
 PROJECT_ID=$(grep "GCP_PROJECT_ID" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
+AUDIO_SEP_MODEL=$(grep "AUDIO_SEPARATION_MODEL" configuration.yaml | awk -F': "' '{print $2}' | tr -d '"')
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
 DOCKER_REPO_NAME=gps-docker-repo
 ARTIFACT_REPOSITORY_NAME=$REGION-docker.pkg.dev/$PROJECT_ID/$DOCKER_REPO_NAME
@@ -27,6 +28,10 @@ if [[ -z "$REGION" || -z "$GCS_BUCKET" || -z "$PROJECT_ID" ]]; then
   echo "❌ Error: Could not read configuration from configuration.yaml."
   echo "Please run setup.sh first."
   exit 1
+fi
+
+if [[ -n "$AUDIO_SEP_MODEL" ]]; then
+  echo "🎵 Configured audio separation model: $AUDIO_SEP_MODEL"
 fi
 
 DOCKER_AVAILABLE=$(docker info >/dev/null 2>&1 && echo "true" || echo "false")

@@ -17,3 +17,10 @@ GEMINI_FLASH_MODEL: "gemini-3-flash-preview"
 GEMINI_TTS_FLASH_MODEL: "gemini-2.5-flash-preview-tts"
 GEMINI_TTS_PRO_MODEL: "gemini-2.5-pro-preview-tts"
 
+# Audio Separation Model
+# Options include:
+# - "model_bs_roformer_ep_317_sdr_12.9755.ckpt" (SOTA quality, minimal vocal bleed)
+# - "MDX23C-8KFFT-InstVoc_HQ.ckpt" (High quality, faster CPU inference)
+# - "5_HP-Karaoke-UVR.pth" (Legacy UVR model)
+AUDIO_SEPARATION_MODEL: "model_bs_roformer_ep_317_sdr_12.9755.ckpt"
+
