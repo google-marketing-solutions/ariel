@@ -38,6 +38,9 @@ with patch("configuration.get_config") as mock_get_config:
   mock_config.gemini_pro_model = "pro-model"
   mock_config.gemini_flash_tts_model = "flash-tts"
   mock_config.gemini_pro_tts_model = "pro-tts"
+  mock_config.audio_separation_model = (
+      "model_bs_roformer_ep_317_sdr_12.9755.ckpt"
+  )
   mock_get_config.return_value = mock_config
 
 
@@ -453,7 +456,9 @@ class MainTest(unittest.TestCase):
 
     self.assertEqual(response.status_code, 200)
     mock_separate.assert_called_once_with(
-        "temp/test_vid_id/test_vid_id", "temp/test_vid_id"
+        "temp/test_vid_id/test_vid_id",
+        "temp/test_vid_id",
+        model_name="model_bs_roformer_ep_317_sdr_12.9755.ckpt",
     )
 
   def test_load_project_not_found(self):

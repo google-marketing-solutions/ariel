@@ -127,6 +127,24 @@ EOF
   fi
 done
 
+# Prompt for Audio Separation Model
+echo "🎵 Audio separation model choices:"
+echo "  1) BS-RoFormer (model_bs_roformer_ep_317_sdr_12.9755.ckpt) - Highest quality, SOTA vocal isolation [Default]"
+echo "  2) MDX23C (MDX23C-8KFFT-InstVoc_HQ.ckpt) - High quality, faster inference on CPU"
+echo "  3) Legacy UVR (5_HP-Karaoke-UVR.pth) - Fast, lightweight"
+echo "  4) Custom model filename"
+read -r -p "Select audio separation model [1-4, default: 1]: " MODEL_CHOICE
+case "$MODEL_CHOICE" in
+  2) AUDIO_MODEL="MDX23C-8KFFT-InstVoc_HQ.ckpt" ;;
+  3) AUDIO_MODEL="5_HP-Karaoke-UVR.pth" ;;
+  4)
+    read -r -p "Enter custom model filename: " CUSTOM_MODEL
+    AUDIO_MODEL=${CUSTOM_MODEL:-model_bs_roformer_ep_317_sdr_12.9755.ckpt}
+    ;;
+  *) AUDIO_MODEL="model_bs_roformer_ep_317_sdr_12.9755.ckpt" ;;
+esac
+echo "✅ Using audio separation model: $AUDIO_MODEL"
+
 # Create configuration.yaml from template
 echo "📝 Creating configuration.yaml..."
 cp configuration.template.yaml configuration.yaml
@@ -136,11 +154,13 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   sed -i "" "s/enter project id here/$PROJECT_ID/g" configuration.yaml
   sed -i "" "s/enter project location here/$REGION/g" configuration.yaml
   sed -i "" "s/enter bucket name here/$BUCKET_NAME/g" configuration.yaml
+  sed -i "" "s/AUDIO_SEPARATION_MODEL: .*/AUDIO_SEPARATION_MODEL: \"$AUDIO_MODEL\"/g" configuration.yaml
 else
   # Linux (GNU sed) does not
   sed -i "s/enter project id here/$PROJECT_ID/g" configuration.yaml
   sed -i "s/enter project location here/$REGION/g" configuration.yaml
   sed -i "s/enter bucket name here/$BUCKET_NAME/g" configuration.yaml
+  sed -i "s/AUDIO_SEPARATION_MODEL: .*/AUDIO_SEPARATION_MODEL: \"$AUDIO_MODEL\"/g" configuration.yaml
 fi
 
 echo "✅ configuration.yaml created."
