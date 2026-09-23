@@ -19,6 +19,7 @@ import shutil
 import tempfile
 import unittest
 import unittest.mock
+
 from models import Speaker
 from models import Utterance
 import moviepy
@@ -46,22 +47,40 @@ class ProcessTest(unittest.TestCase):
     """Tests that `separate_audio_from_video` successfully separates audio."""
     video_file_path = "tests/test_data/video_with_audio.mp4"
 
-    original_audio_path, vocals_path, background_path = (
-        process.separate_audio_from_video(video_file_path, self.temp_dir)
-    )
+    with (
+        unittest.mock.patch("process.Separator.load_model"),
+        unittest.mock.patch("process.Separator.separate") as mock_separate,
+    ):
+      def fake_separate(audio_path, output_file_names):
+        del audio_path, output_file_names
+        vocals = os.path.join(self.temp_dir, "vocals.wav")
+        background = os.path.join(self.temp_dir, "background.wav")
+        with open(vocals, "w") as f:
+          f.write("vocals")
+        with open(background, "w") as f:
+          f.write("background")
+        return ["vocals.wav", "background.wav"]
 
-    self.assertTrue(os.path.exists(original_audio_path))
-    self.assertTrue(os.path.exists(vocals_path))
-    self.assertTrue(os.path.exists(background_path))
-    self.assertEqual(original_audio_path, f"{self.temp_dir}/original_audio.wav")
-    self.assertEqual(
-        vocals_path,
-        os.path.join(self.temp_dir, "vocals.wav"),
-    )
-    self.assertEqual(
-        background_path,
-        os.path.join(self.temp_dir, "background.wav"),
-    )
+      mock_separate.side_effect = fake_separate
+
+      original_audio_path, vocals_path, background_path = (
+          process.separate_audio_from_video(video_file_path, self.temp_dir)
+      )
+
+      self.assertTrue(os.path.exists(original_audio_path))
+      self.assertTrue(os.path.exists(vocals_path))
+      self.assertTrue(os.path.exists(background_path))
+      self.assertEqual(
+          original_audio_path, f"{self.temp_dir}/original_audio.wav"
+      )
+      self.assertEqual(
+          vocals_path,
+          os.path.join(self.temp_dir, "vocals.wav"),
+      )
+      self.assertEqual(
+          background_path,
+          os.path.join(self.temp_dir, "background.wav"),
+      )
 
   def test_separate_audio_from_video_no_audio(self):
     """Tests that `separate_audio_from_video` raises an error if no audio."""
@@ -70,19 +89,61 @@ class ProcessTest(unittest.TestCase):
     with self.assertRaisesRegex(
         RuntimeError, f"Could not extract audio from {video_file_path}"
     ):
-
       process.separate_audio_from_video(video_file_path, self.temp_dir)
 
   def test_separate_audio_from_video_separation_fails(self):
     """Tests that `separate_audio_from_video` raises an error if separation fails."""
     video_file_path = "tests/test_data/video_with_audio.mp4"
 
-    # To simulate separation failure, mock the separator output
-    with unittest.mock.patch("process.Separator.separate") as mock_separate:
-      mock_separate.side_effect = Exception("separation failed")
+    with (
+        unittest.mock.patch("process.Separator.load_model"),
+        unittest.mock.patch("process.Separator.separate") as mock_separate,
+    ):
+      mock_separate.side_effect = RuntimeError("separation failed")
 
-      with self.assertRaises(Exception):
+      with self.assertRaises(RuntimeError):
         process.separate_audio_from_video(video_file_path, self.temp_dir)
+
+  def test_separate_audio_from_video_uses_explicit_model(self):
+    """Tests that `separate_audio_from_video` uses the provided model_name."""
+    video_file_path = "tests/test_data/video_with_audio.mp4"
+
+    with (
+        unittest.mock.patch("process.Separator.load_model") as mock_load,
+        unittest.mock.patch("process.Separator.separate") as mock_separate,
+    ):
+      mock_separate.return_value = ["vocals.wav", "background.wav"]
+      with open(os.path.join(self.temp_dir, "vocals.wav"), "w") as f:
+        f.write("vocals")
+      with open(os.path.join(self.temp_dir, "background.wav"), "w") as f:
+        f.write("background")
+
+      process.separate_audio_from_video(
+          video_file_path, self.temp_dir, model_name="custom_model.ckpt"
+      )
+
+      mock_load.assert_called_once_with(model_filename="custom_model.ckpt")
+
+  def test_separate_audio_from_video_uses_configured_model(self):
+    """Tests that `separate_audio_from_video` defaults to configured model."""
+    video_file_path = "tests/test_data/video_with_audio.mp4"
+
+    with (
+        unittest.mock.patch.dict(
+            os.environ, {"AUDIO_SEPARATION_MODEL": "env_model.ckpt"}
+        ),
+        unittest.mock.patch("process.Separator.load_model") as mock_load,
+        unittest.mock.patch("process.Separator.separate") as mock_separate,
+    ):
+      mock_separate.return_value = ["vocals.wav", "background.wav"]
+      with open(os.path.join(self.temp_dir, "vocals.wav"), "w") as f:
+        f.write("vocals")
+      with open(os.path.join(self.temp_dir, "background.wav"), "w") as f:
+        f.write("background")
+
+      process.separate_audio_from_video(video_file_path, self.temp_dir)
+
+      mock_load.assert_called_once_with(model_filename="env_model.ckpt")
 
 
 class MergeVocalsTest(unittest.TestCase):
@@ -300,7 +361,6 @@ class MergeBackgroundAndVocalsTest(unittest.TestCase):
 
   def test_merge_background_and_vocals_success(self):
     """Tests that `merge_background_and_vocals` successfully merges audio."""
-
     output_path = process.merge_background_and_vocals(
         background_audio_file=self.background_audio_path,
         dubbed_vocals_path=self.vocals_path,

@@ -41,6 +41,10 @@ class ConfigurationTest(unittest.TestCase):
     self.assertEqual(config.gemini_pro_model, "gemini-3.1-pro-preview")
     self.assertEqual(config.gemini_flash_tts_model, "gemini-2.5-flash-tts")
     self.assertEqual(config.gemini_pro_tts_model, "gemini-2.5-pro-tts")
+    self.assertEqual(
+        config.audio_separation_model,
+        "model_bs_roformer_ep_317_sdr_12.9755.ckpt",
+    )
 
   @unittest.mock.patch.dict(os.environ, {
       "GCP_PROJECT_ID": "test-project",
@@ -50,6 +54,7 @@ class ConfigurationTest(unittest.TestCase):
       "GEMINI_PRO_MODEL": "custom-pro",
       "GEMINI_FLASH_TTS_MODEL": "custom-flash-tts",
       "GEMINI_PRO_TTS_MODEL": "custom-pro-tts",
+      "AUDIO_SEPARATION_MODEL": "custom-audio-model",
   })
   def test_get_config_overrides(self):
     """Tests that get_config respects environment variable overrides."""
@@ -59,6 +64,7 @@ class ConfigurationTest(unittest.TestCase):
     self.assertEqual(config.gemini_pro_model, "custom-pro")
     self.assertEqual(config.gemini_flash_tts_model, "custom-flash-tts")
     self.assertEqual(config.gemini_pro_tts_model, "custom-pro-tts")
+    self.assertEqual(config.audio_separation_model, "custom-audio-model")
 
 
 if __name__ == "__main__":

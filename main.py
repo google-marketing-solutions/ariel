@@ -298,11 +298,19 @@ def process_video(
     else:
       logging.info("Original audio missing, re-running separation.")
       original_audio_path, vocals_path, background_path = (
-          separate_audio_from_video(local_video_path, local_dir)
+          separate_audio_from_video(
+              local_video_path,
+              local_dir,
+              model_name=config.audio_separation_model,
+          )
       )
   else:
     original_audio_path, vocals_path, background_path = (
-        separate_audio_from_video(local_video_path, local_dir)
+        separate_audio_from_video(
+            local_video_path,
+            local_dir,
+            model_name=config.audio_separation_model,
+        )
     )
 
   logging.info(
