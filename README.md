@@ -194,7 +194,7 @@ To allow uploads from `localhost`, you must update the CORS configuration of you
 
 1. Fetch the current CORS configuration:
    ```bash
-   gsutil cors get gs://YOUR_BUCKET_NAME > current_cors.json
+   gcloud storage buckets describe --format="default(cors)" gs://YOUR_BUCKET_NAME > current_cors.json
    ```
 2. Edit `current_cors.json` and add `"http://localhost:8080"` (and `"http://localhost:4200"` if applicable) to the `origin` list.
 3. Apply the updated configuration:
