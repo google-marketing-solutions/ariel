@@ -11,11 +11,11 @@ GCS_BUCKET_NAME: "enter bucket name here"
 
 # Gemini Model for transcription
 GEMINI_PRO_MODEL: "gemini-3.1-pro-preview"
-GEMINI_FLASH_MODEL: "gemini-3-flash-preview"
+GEMINI_FLASH_MODEL: "gemini-3.8-flash"
 
 # Gemini Model for TTS
-GEMINI_TTS_FLASH_MODEL: "gemini-2.5-flash-preview-tts"
-GEMINI_TTS_PRO_MODEL: "gemini-2.5-pro-preview-tts"
+GEMINI_TTS_FLASH_MODEL: "gemini-3.1-flash-tts-preview"
+GEMINI_TTS_PRO_MODEL: "gemini-3.1-flash-tts-preview"
 
 # Audio Separation Model
 # Options include:

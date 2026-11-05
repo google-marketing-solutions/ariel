@@ -52,16 +52,16 @@ def get_config() -> Config:
       gcp_project_location=os.environ.get("GCP_PROJECT_LOCATION") or "",
       gcs_bucket_name=os.environ.get("GCS_BUCKET_NAME") or "",
       gemini_flash_model=os.environ.get(
-          "GEMINI_FLASH_MODEL", "gemini-3-flash-preview"
+          "GEMINI_FLASH_MODEL", "gemini-3.8-flash"
       ),
       gemini_pro_model=os.environ.get(
           "GEMINI_PRO_MODEL", "gemini-3.1-pro-preview"
       ),
       gemini_flash_tts_model=os.environ.get(
-          "GEMINI_FLASH_TTS_MODEL", "gemini-2.5-flash-tts"
+          "GEMINI_TTS_FLASH_MODEL", "gemini-3.1-flash-tts-preview"
       ),
       gemini_pro_tts_model=os.environ.get(
-          "GEMINI_PRO_TTS_MODEL", "gemini-2.5-pro-tts"
+          "GEMINI_TTS_PRO_MODEL", "gemini-3.1-flash-tts-preview"
       ),
       audio_separation_model=os.environ.get(
           "AUDIO_SEPARATION_MODEL", "model_bs_roformer_ep_317_sdr_12.9755.ckpt"
