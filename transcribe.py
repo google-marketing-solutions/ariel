@@ -129,7 +129,6 @@ def transcribe_video(
 
   gemini_config = google.genai.types.GenerateContentConfig(
       system_instruction=system_instruction,
-      temperature=0.2,
       response_mime_type="application/json",
       response_schema=ProcessResponse,
   )
